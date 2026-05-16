@@ -59,6 +59,9 @@ Desktop.ini
 !.yarn/sdks
 !.yarn/versions
 
+# Raw ISTAT data (use generated comuni.json instead)
+frontend/src/data/comuni.csv
+
 # Android
 android/.gradle/
 android/local.properties

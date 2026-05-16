@@ -26,6 +26,7 @@ const adminNavItems = [
   { label: 'Eventi', to: '/events' },
   { label: 'Stand', to: '/stands' },
   { label: 'Utenti', to: '/users' },
+  { label: 'Ruoli', to: '/user-roles' },
   { label: 'Staff', to: '/staff' },
   { label: 'Partecipanti', to: '/event-users' },
 ]

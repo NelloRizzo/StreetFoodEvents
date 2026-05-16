@@ -10,12 +10,12 @@ export const coordinatesSchema = new Schema(
         },
         coordinates: {
             type: [Number],
-            required: true,
+            required: false,
             validate: {
-                validator(value: number[]) {
-                    if (value.length !== 2) {
-                        return false;
-                    }
+                validator(value: number[] | undefined | null) {
+                    if (value == null || value.length === 0) return true;
+
+                    if (value.length !== 2) return false;
 
                     const [longitude, latitude] = value;
 

@@ -16,6 +16,8 @@ export type AuthUser = {
   email: string
   avatar: { url: string; publicId: string; width: number; height: number; format: string; bytes: number } | null
   isAdmin?: boolean
+  isPlatformAdmin?: boolean
+  adminEventIds?: string[]
 }
 
 type LoginInput = {
@@ -23,11 +25,17 @@ type LoginInput = {
   password: string
 }
 
+type RegisterInput = LoginInput & {
+  firstName: string
+  lastName: string
+}
+
 type AuthContextValue = {
   isLoading: boolean
   isAuthenticated: boolean
   user: AuthUser | null
   login: (input: LoginInput) => Promise<void>
+  register: (input: RegisterInput) => Promise<void>
   logout: () => Promise<void>
   refreshSession: () => Promise<void>
 }
@@ -65,6 +73,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setUser(response.user)
   }
 
+  const register = async (input: RegisterInput) => {
+    const response = await apiRequest<{ user: AuthUser }>('/auth/register', {
+      method: 'POST',
+      bodyJson: input,
+    })
+
+    setUser(response.user)
+  }
+
   const logout = async () => {
     await apiRequest<{ success: boolean }>('/auth/logout', {
       method: 'POST',
@@ -79,6 +96,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isAuthenticated: user !== null,
       user,
       login,
+      register,
       logout,
       refreshSession,
     }),

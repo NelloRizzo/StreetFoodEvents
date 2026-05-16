@@ -54,7 +54,7 @@ export const locationSchema = new Schema(
         },
         coordinates: {
             type: coordinatesSchema,
-            required: true
+            required: false
         },
         googleMapsUrl: {
             type: String,

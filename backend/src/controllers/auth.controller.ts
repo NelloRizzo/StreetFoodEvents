@@ -19,14 +19,27 @@ import {
   setSessionCookie
 } from '../utils/session';
 
-async function isPlatformAdmin(userId: string): Promise<boolean> {
+async function getUserAdminInfo(userId: string) {
   const platformRoleIds = await RoleModel.find({ scope: 'platform' }).distinct('_id');
-  const hasRole = await UserRoleModel.exists({
+  const eventRoleIds = await RoleModel.find({ scope: 'event' }).distinct('_id');
+
+  const userRoles = await UserRoleModel.find({
     userId,
-    roleId: { $in: platformRoleIds },
+    roleId: { $in: [...platformRoleIds, ...eventRoleIds] },
     isActive: true
   });
-  return !!hasRole;
+
+  const isPlatformAdmin = userRoles.some((ur) =>
+    platformRoleIds.some((id) => id.toString() === ur.roleId.toString())
+  );
+
+  const eventScopedRoles = userRoles.filter((ur) =>
+    eventRoleIds.some((id) => id.toString() === ur.roleId.toString()) && ur.eventId
+  );
+
+  const adminEventIds = [...new Set(eventScopedRoles.map((ur) => ur.eventId!.toString()))];
+
+  return { isPlatformAdmin, isEventAdmin: eventScopedRoles.length > 0, adminEventIds };
 }
 
 async function toAuthUserResponse(user: {
@@ -37,6 +50,7 @@ async function toAuthUserResponse(user: {
   phone?: string | null;
   avatar?: unknown | null;
 }) {
+  const adminInfo = await getUserAdminInfo(user._id.toString());
   return {
     id: user._id.toString(),
     firstName: user.firstName,
@@ -44,7 +58,9 @@ async function toAuthUserResponse(user: {
     email: user.email,
     phone: user.phone ?? null,
     avatar: user.avatar ?? null,
-    isAdmin: await isPlatformAdmin(user._id.toString())
+    isAdmin: adminInfo.isPlatformAdmin || adminInfo.isEventAdmin,
+    isPlatformAdmin: adminInfo.isPlatformAdmin,
+    adminEventIds: adminInfo.adminEventIds,
   };
 }
 
@@ -83,6 +99,19 @@ export async function register(req: Request, res: Response) {
     passwordHash,
     isActive: true
   });
+
+  const userCount = await UserModel.countDocuments();
+  if (userCount === 1) {
+    const platformAdminRole = await RoleModel.findOne({ slug: 'platform-admin', scope: 'platform' });
+    if (platformAdminRole) {
+      await UserRoleModel.create({
+        userId: user._id,
+        roleId: platformAdminRole._id,
+        assignedBy: user._id,
+        isActive: true
+      });
+    }
+  }
 
   const sessionToken = generateSessionToken();
   const expiresAt = getSessionExpiryDate();

@@ -105,6 +105,10 @@ export function LoginPage() {
             </button>
           </form>
 
+          <p className={styles.switchLink}>
+            Non hai un account?{' '}
+            <Link to="/register">Registrati</Link>
+          </p>
           <Link className={styles.backLink} to="/">
             Torna alla presentazione
           </Link>

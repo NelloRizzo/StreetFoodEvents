@@ -10,12 +10,14 @@ import { FavoritesPage } from './pages/FavoritesPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NewOrderPage } from './pages/NewOrderPage'
+import { RegisterPage } from './pages/RegisterPage'
 import { PlatformPage } from './pages/PlatformPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { ProductsPage } from './pages/ProductsPage'
 import { StaffPage } from './pages/StaffPage'
+import { UserRolesPage } from './pages/UserRolesPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventStandMenuPage } from './pages/EventStandMenuPage'
 import { StandDetailPage } from './pages/StandDetailPage'
@@ -41,6 +43,10 @@ export const router = createBrowserRouter([
       {
         path: 'login',
         element: <LoginPage />,
+      },
+      {
+        path: 'register',
+        element: <RegisterPage />,
       },
       {
         path: 'events/:eventId',
@@ -116,6 +122,10 @@ export const router = createBrowserRouter([
           {
             path: 'users',
             element: <UsersPage />,
+          },
+          {
+            path: 'user-roles',
+            element: <UserRolesPage />,
           },
         ],
       },

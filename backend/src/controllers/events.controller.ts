@@ -11,6 +11,29 @@ function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
 }
 
+function generateGoogleMapsUrl(location: {
+    addressLine1?: string | null;
+    coordinates?: { coordinates?: number[] } | null;
+    city?: string | null;
+}): string | null {
+    if (location.addressLine1) {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.addressLine1)}`;
+    }
+
+    if (location.coordinates?.coordinates?.length === 2) {
+        const [lng, lat] = location.coordinates.coordinates;
+        if (lat !== 0 || lng !== 0) {
+            return `https://www.google.com/maps/?q=${lat},${lng}`;
+        }
+    }
+
+    if (location.city) {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.city)}`;
+    }
+
+    return null;
+}
+
 function toEventResponse(event: {
     _id: Types.ObjectId;
     name: string;
@@ -146,6 +169,10 @@ export async function createEvent(req: Request, res: Response) {
         gallery
     } = req.body;
 
+    if (location && !location.googleMapsUrl) {
+        location.googleMapsUrl = generateGoogleMapsUrl(location);
+    }
+
     const event = await EventModel.create({
         name,
         location,
@@ -211,6 +238,9 @@ export async function updateEvent(req: Request, res: Response) {
     }
 
     if (location !== undefined) {
+        if (!location.googleMapsUrl) {
+            location.googleMapsUrl = generateGoogleMapsUrl(location);
+        }
         event.location = location;
     }
 

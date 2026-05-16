@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
+import { apiRequest } from '../lib/api'
 import {
   fetchOrders,
   updateOrderStatus,
@@ -24,15 +25,29 @@ export function StandOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('')
+  const [filterEventId, setFilterEventId] = useState<string>('')
+  const [events, setEvents] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    if (!standId) return
+    apiRequest<{ items: { id: string; name: string }[] }>(`/stands?eventId=&_=${standId}`)
+      .then(() => {
+        apiRequest<{ items: { id: string; name: string }[] }>('/events')
+          .then((d) => setEvents(d.items))
+          .catch(() => {})
+      })
+      .catch(() => {})
+  }, [standId])
 
   const load = useCallback(async () => {
     if (!standId) return
-    const params: { standId: string; status?: string } = { standId }
+    const params: Record<string, string> = { standId }
     if (filterStatus) params.status = filterStatus
+    if (filterEventId) params.eventId = filterEventId
     const data = await fetchOrders(params)
     setOrders(data.items)
     setIsLoading(false)
-  }, [standId, filterStatus])
+  }, [standId, filterStatus, filterEventId])
 
   useEffect(() => { void load() }, [load])
 
@@ -72,6 +87,16 @@ export function StandOrdersPage() {
             <h1 className={styles.title}>Ordini dello stand</h1>
           </div>
           <div className={styles.headerActions}>
+            <select
+              value={filterEventId}
+              onChange={(e) => { setFilterEventId(e.target.value); setIsLoading(true) }}
+              className={styles.filterSelect}
+            >
+              <option value="">Tutti gli eventi</option>
+              {events.map((ev) => (
+                <option key={ev.id} value={ev.id}>{ev.name}</option>
+              ))}
+            </select>
             <select
               value={filterStatus}
               onChange={(e) => { setFilterStatus(e.target.value); setIsLoading(true) }}

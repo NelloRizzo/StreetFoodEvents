@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { useAuth } from '../features/auth/auth-context'
 import { apiRequest } from '../lib/api'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { type UploadedImage } from '../lib/upload'
@@ -31,6 +32,7 @@ type StandFormData = {
 const emptyForm: StandFormData = { name: '', slogan: '', description: '', eventIds: [], coverImage: null, gallery: [] }
 
 export function StandsPage() {
+  const { user } = useAuth()
   const [stands, setStands] = useState<Stand[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -42,7 +44,12 @@ export function StandsPage() {
 
   const fetchStands = async () => {
     const data = await apiRequest<{ items: Stand[] }>('/stands')
-    setStands(data.items)
+    let items = data.items
+    if (user?.isPlatformAdmin === false && user?.adminEventIds && user.adminEventIds.length > 0) {
+      const adminSet = new Set(user.adminEventIds)
+      items = items.filter((s) => s.eventIds.some((eid) => adminSet.has(eid)))
+    }
+    setStands(items)
     setIsLoading(false)
   }
 

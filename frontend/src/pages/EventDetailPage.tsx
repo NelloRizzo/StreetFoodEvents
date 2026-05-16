@@ -9,7 +9,7 @@ import styles from './EventDetailPage.module.scss'
 type Event = {
   id: string
   name: string
-  location: { label: string; city?: string | null }
+  location: { label: string; city?: string | null; googleMapsUrl?: string | null }
   startDate: string
   endDate: string
   currencyName: string
@@ -108,6 +108,11 @@ export function EventDetailPage() {
             {event.location.label}
             {event.location.city ? `, ${event.location.city}` : ''}
           </span>
+          {event.location.googleMapsUrl && (
+            <a href={event.location.googleMapsUrl} target="_blank" rel="noopener noreferrer" className={styles.metaItem}>
+              📍 Apri in Google Maps
+            </a>
+          )}
         </div>
 
         {event.longDescription && (

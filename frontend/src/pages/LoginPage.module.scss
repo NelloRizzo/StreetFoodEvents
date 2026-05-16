@@ -131,9 +131,21 @@
   cursor: wait;
 }
 
-.backLink {
+.backLink,
+.switchLink {
   color: var(--color-ink-soft);
   font-weight: 600;
+}
+
+.switchLink {
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
 }
 
 @media (min-width: 64rem) {

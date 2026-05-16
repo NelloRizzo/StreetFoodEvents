@@ -17,14 +17,17 @@ const statusLabels: Record<string, string> = {
 export function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [filterEventId, setFilterEventId] = useState('')
   const [filterStandId, setFilterStandId] = useState('')
   const [filterStationId, setFilterStationId] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [events, setEvents] = useState<{ id: string; name: string }[]>([])
   const [stands, setStands] = useState<{ id: string; name: string }[]>([])
   const [stations, setStations] = useState<{ id: string; name: string; standId: string }[]>([])
 
-  const load = async (standId?: string, stationId?: string, status?: string) => {
+  const load = async (eventId?: string, standId?: string, stationId?: string, status?: string) => {
     const params: Record<string, string> = {}
+    if (eventId) params.eventId = eventId
     if (standId) params.standId = standId
     if (stationId) params.stationId = stationId
     if (status) params.status = status
@@ -35,10 +38,23 @@ export function OrdersPage() {
 
   useEffect(() => {
     load()
-    apiRequest<{ items: { id: string; name: string }[] }>('/stands')
-      .then((d) => setStands(d.items))
+    apiRequest<{ items: { id: string; name: string }[] }>('/events')
+      .then((d) => setEvents(d.items))
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    setFilterStandId('')
+    setFilterStationId('')
+    setStations([])
+    if (!filterEventId) {
+      setStands([])
+      return
+    }
+    apiRequest<{ items: { id: string; name: string }[] }>(`/stands?eventId=${filterEventId}`)
+      .then((d) => setStands(d.items))
+      .catch(() => setStands([]))
+  }, [filterEventId])
 
   useEffect(() => {
     setFilterStationId('')
@@ -53,22 +69,22 @@ export function OrdersPage() {
 
   const handleFilter = () => {
     setIsLoading(true)
-    load(filterStandId || undefined, filterStationId || undefined, filterStatus || undefined)
+    load(filterEventId || undefined, filterStandId || undefined, filterStationId || undefined, filterStatus || undefined)
   }
 
   const handlePay = async (orderId: string) => {
     await payOrder(orderId, 0)
-    load(filterStandId || undefined, filterStationId || undefined, filterStatus || undefined)
+    handleFilter()
   }
 
   const handleCancel = async (orderId: string) => {
     await cancelOrder(orderId)
-    load(filterStandId || undefined, filterStationId || undefined, filterStatus || undefined)
+    handleFilter()
   }
 
   const handleStatus = async (orderId: string, status: string) => {
     await updateOrderStatus(orderId, status)
-    load(filterStandId || undefined, filterStationId || undefined, filterStatus || undefined)
+    handleFilter()
   }
 
   function stationNames(items: Order['items']): string[] {
@@ -91,7 +107,13 @@ export function OrdersPage() {
         </div>
 
         <div className={styles.filters}>
-          <select value={filterStandId} onChange={(e) => setFilterStandId(e.target.value)}>
+          <select value={filterEventId} onChange={(e) => setFilterEventId(e.target.value)}>
+            <option value="">Tutti gli eventi</option>
+            {events.map((ev) => (
+              <option key={ev.id} value={ev.id}>{ev.name}</option>
+            ))}
+          </select>
+          <select value={filterStandId} onChange={(e) => setFilterStandId(e.target.value)} disabled={!filterEventId}>
             <option value="">Tutti gli stand</option>
             {stands.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
