@@ -59,6 +59,10 @@ Desktop.ini
 !.yarn/sdks
 !.yarn/versions
 
+# Android
+android/.gradle/
+android/local.properties
+
 # Misc
 .cache/
 .eslintcache
