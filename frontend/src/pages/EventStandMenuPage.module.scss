@@ -1,0 +1,297 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.backLink {
+  display: inline-flex;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  color: var(--color-ink-strong);
+  margin-top: 0.5rem;
+}
+
+.slogan {
+  color: var(--color-ink-soft);
+  margin-top: 0.5rem;
+  font-size: 1rem;
+}
+
+.layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 64rem) {
+  .layout {
+    grid-template-columns: 1fr 380px;
+  }
+}
+
+.left {
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
+}
+
+.right {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.menuSection {
+  margin-top: 0.5rem;
+}
+
+.sectionTitle {
+  color: var(--color-ink-strong);
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+}
+
+.menuList {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.menuCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.menuInfo {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.menuName {
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+}
+
+.menuIngredients {
+  color: var(--color-ink-soft);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.menuPrice {
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.addBtn {
+  padding: 0.4rem 0.9rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.addBtn:hover {
+  opacity: 0.9;
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  padding: 2rem 0;
+}
+
+.cartCard {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+  position: sticky;
+  top: 6rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field label {
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.field input {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+}
+
+.emptyCart {
+  color: var(--color-ink-soft);
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.cartItems {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.cartItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.cartItemInfo {
+  display: grid;
+  gap: 0.15rem;
+  color: var(--color-ink-strong);
+  font-size: 0.9rem;
+}
+
+.cartItemPrice {
+  color: var(--color-brand);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.cartItemActions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.qtyBtn {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.qtyValue {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 700;
+  color: var(--color-ink-strong);
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.1rem;
+  color: var(--color-ink-strong);
+  padding-top: 0.5rem;
+}
+
+.paymentOptions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-ink-strong);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.creditField {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.creditField label {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.creditField input {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+  max-width: 120px;
+}
+
+.remainingHint {
+  color: var(--color-olive);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submitBtn {
+  width: 100%;
+}
+
+@media (min-width: 48rem) {
+  .menuCard {
+    padding: 1rem 1.25rem;
+  }
+}

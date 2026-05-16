@@ -1,0 +1,86 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  color: var(--color-ink-strong);
+  margin-top: 0.5rem;
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+  flex-wrap: wrap;
+}
+
+.cardBody {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cardName {
+  color: var(--color-ink-strong);
+  font-size: 1.05rem;
+}
+
+.cardSlogan {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+}
+
+.cardTag {
+  color: var(--color-brand);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.textBtn {
+  background: none;
+  border: none;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  text-decoration: none;
+}
+
+.dangerBtn {
+  background: none;
+  border: none;
+  color: #c0392b;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  padding: 1.5rem 0;
+  text-align: center;
+}

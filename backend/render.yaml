@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: streetfoodevents-api
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: '4000'
+      - key: AUTH_SESSION_COOKIE_NAME
+        value: sid
+      - key: AUTH_SESSION_TTL_HOURS
+        value: '12'
+      - key: CLIENT_URL
+        value: https://nellorizzo.github.io/streetfoodevents
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: street-food-events
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false

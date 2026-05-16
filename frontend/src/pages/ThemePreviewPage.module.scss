@@ -1,0 +1,187 @@
+.page {
+  padding: 2rem 0 4rem;
+}
+
+.header {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  color: var(--color-ink-strong);
+}
+
+.copy {
+  color: var(--color-ink-soft);
+  line-height: 1.6;
+}
+
+.grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.themeCard {
+  border: 2px solid var(--color-line);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color var(--ease-standard), box-shadow var(--ease-standard);
+  background: var(--color-surface);
+
+  &:hover {
+    border-color: var(--color-brand);
+  }
+}
+
+.active {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--color-brand-soft), var(--color-shadow);
+}
+
+.cardInner {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cardIcon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.cardLabel {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--color-ink-strong);
+}
+
+.cardBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: var(--color-surface-strong);
+  margin-left: auto;
+}
+
+.sampleSection {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.sampleEyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-brand-deep);
+}
+
+.sampleTitle {
+  font-size: 1.3rem;
+  color: var(--color-ink-strong);
+}
+
+.sampleCopy {
+  color: var(--color-ink-soft);
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.sampleActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sampleBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: var(--color-surface-strong);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.sampleBtnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line-strong);
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.sampleCard {
+  display: grid;
+  gap: 0.25rem;
+  padding: 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-strong);
+}
+
+.sampleCardLabel {
+  color: var(--color-ink-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sampleCardValue {
+  color: var(--color-ink-strong);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.sampleCurrency {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.swatchGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-line);
+}
+
+@media (min-width: 48rem) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 72rem) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

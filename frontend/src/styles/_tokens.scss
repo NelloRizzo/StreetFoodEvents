@@ -1,0 +1,35 @@
+:root {
+  --font-sans: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Consolas", "SFMono-Regular", "Liberation Mono", monospace;
+
+  --color-ink-strong: #14261f;
+  --color-ink: #264137;
+  --color-ink-soft: #587065;
+  --color-surface: #f7f2e8;
+  --color-surface-raised: rgba(255, 251, 245, 0.88);
+  --color-surface-strong: #fffaf2;
+  --color-line: rgba(38, 65, 55, 0.12);
+  --color-line-strong: rgba(38, 65, 55, 0.22);
+  --color-brand: #bf5a2a;
+  --color-brand-deep: #8d3f17;
+  --color-brand-soft: rgba(191, 90, 42, 0.12);
+  --color-olive: #6c7a35;
+  --color-highlight: #f4c978;
+  --color-shadow: 0 18px 40px rgba(45, 37, 26, 0.12);
+
+  --radius-card: 8px;
+  --radius-pill: 999px;
+
+  --container-max: 1200px;
+  --page-gutter: 1rem;
+  --section-gap: clamp(3rem, 8vw, 6rem);
+
+  --ease-standard: 180ms ease;
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --page-gutter: 1.5rem;
+  }
+}

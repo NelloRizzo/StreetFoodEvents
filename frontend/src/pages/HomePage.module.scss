@@ -1,0 +1,64 @@
+.eventsSection {
+  padding: 0 0 var(--section-gap);
+}
+
+.sectionTitle {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-ink-strong);
+  margin-bottom: 1.25rem;
+}
+
+.eventGrid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.eventCard {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+  text-decoration: none;
+  transition: border-color var(--ease-standard), box-shadow var(--ease-standard);
+}
+
+.eventCard:hover {
+  border-color: var(--color-brand);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+}
+
+.eventName {
+  font-size: 1.15rem;
+  color: var(--color-ink-strong);
+}
+
+.eventDesc {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.eventDate {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+}
+
+.eventLocation {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  padding: 2rem 0;
+}
+
+@media (min-width: 48rem) {
+  .eventGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,0 +1,90 @@
+.wrapper {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.label {
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.dropZone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 8rem;
+  padding: 1rem;
+  border: 2px dashed var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.6);
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+
+.dropZone:hover,
+.dropZone:focus-visible {
+  border-color: var(--color-brand);
+  background: rgba(191, 90, 42, 0.06);
+}
+
+.dragOver {
+  border-color: var(--color-brand);
+  background: rgba(191, 90, 42, 0.1);
+}
+
+.uploading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.hint {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.previewGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.previewCard {
+  position: relative;
+  width: 6rem;
+  height: 6rem;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+}
+
+.previewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.removeBtn {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.previewCard:hover .removeBtn {
+  opacity: 1;
+}

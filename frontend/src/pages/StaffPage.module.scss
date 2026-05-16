@@ -1,0 +1,117 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  color: var(--color-ink-strong);
+  margin-top: 0.5rem;
+}
+
+.filters {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filters select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+  min-width: 220px;
+}
+
+.section {
+  margin-bottom: 1.5rem;
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  color: var(--color-ink-strong);
+  margin-bottom: 1rem;
+}
+
+.assignRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.assignRow select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+  min-width: 280px;
+  flex: 1;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  white-space: nowrap;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.cardName {
+  color: var(--color-ink-strong);
+  font-weight: 600;
+}
+
+.dangerBtn {
+  background: none;
+  border: none;
+  color: #c0392b;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  padding: 1rem 0;
+}

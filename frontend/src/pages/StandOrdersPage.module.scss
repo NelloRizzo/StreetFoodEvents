@@ -1,0 +1,225 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.backLink {
+  display: inline-flex;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.title {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  color: var(--color-ink-strong);
+  margin-top: 0.75rem;
+}
+
+.filterSelect {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+}
+
+.orderList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.orderCard {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.orderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.orderNumber {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--color-ink-strong);
+}
+
+.orderBadges {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.customerName {
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.statusBadge {
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.status_pending { background: var(--color-brand-soft); color: var(--color-brand-deep); }
+.status_confirmed { background: #d4edda; color: #155724; }
+.status_preparing { background: #fff3cd; color: #856404; }
+.status_ready { background: #cce5ff; color: #004085; }
+.status_completed { background: #d4edda; color: #155724; }
+.status_cancelled { background: #f8d7da; color: #721c24; }
+
+.paymentBadge {
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.orderTotal {
+  font-weight: 700;
+  color: var(--color-brand);
+  font-size: 0.9rem;
+}
+
+.stationGroups {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.stationGroup {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.stationName {
+  font-size: 0.85rem;
+  color: var(--color-brand-deep);
+  font-weight: 600;
+}
+
+.items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.item {
+  font-size: 0.85rem;
+  color: var(--color-ink-strong);
+  padding: 0.2rem 0.5rem;
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-card);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.itemReady {
+  opacity: 0.55;
+}
+
+.readyMark {
+  color: #28a745;
+  font-weight: 700;
+}
+
+.orderActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.readyBtn {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: #007bff;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.readyBtn:hover {
+  opacity: 0.9;
+}
+
+.completeBtn {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: #28a745;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.completeBtn:hover {
+  opacity: 0.9;
+}
+
+.dangerBtn {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: #c0392b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.dangerBtn:hover {
+  opacity: 0.9;
+}
+
+.secondaryBtn {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.secondaryBtn:hover {
+  background: var(--color-surface-soft);
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  padding: 2rem 0;
+}

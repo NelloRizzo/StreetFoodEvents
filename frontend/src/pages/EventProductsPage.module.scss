@@ -1,0 +1,172 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  color: var(--color-ink-strong);
+  margin-top: 0.5rem;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line-strong);
+  background: transparent;
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field label {
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.field input,
+.field select {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+}
+
+.hint {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.checkboxGroup {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+  flex-wrap: wrap;
+}
+
+.cardBody {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cardName {
+  color: var(--color-ink-strong);
+  font-size: 1.1rem;
+}
+
+.cardEvent {
+  color: var(--color-brand-deep);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.cardStations {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+}
+
+.cardPrice {
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.dangerBtn {
+  background: none;
+  border: none;
+  color: #c0392b;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  padding: 2rem 0;
+  text-align: center;
+}

@@ -1,0 +1,411 @@
+.app {
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.heroSection {
+  padding: 2rem 0 3.5rem;
+}
+
+.heroLayout {
+  display: grid;
+  gap: 2rem;
+}
+
+.heroContent {
+  display: grid;
+  gap: 1.25rem;
+  padding-top: 1rem;
+}
+
+.heroTitle {
+  max-width: 11ch;
+  font-family: var(--font-display);
+  font-size: clamp(2.7rem, 11vw, 5.4rem);
+  line-height: 0.95;
+  color: var(--color-ink-strong);
+}
+
+.heroCopy {
+  max-width: 36rem;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--color-ink-soft);
+}
+
+.heroActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.25rem;
+  padding: 0.9rem 1.2rem;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+}
+
+.primaryAction {
+  background: var(--color-brand);
+  color: #fffaf2;
+}
+
+.secondaryAction {
+  border: 1px solid var(--color-line-strong);
+  background: rgba(255, 250, 242, 0.72);
+  color: var(--color-ink-strong);
+}
+
+.heroHighlights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.heroHighlights li {
+  min-height: 6.25rem;
+  padding: 0.95rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.78);
+}
+
+.heroHighlights strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--color-ink-strong);
+  font-size: 1.35rem;
+}
+
+.heroHighlights span {
+  color: var(--color-ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.heroVisual {
+  position: relative;
+}
+
+.dashboardCard {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 250, 242, 0.5);
+  border-radius: var(--radius-card);
+  background:
+    linear-gradient(180deg, rgba(16, 35, 29, 0.18), rgba(16, 35, 29, 0.04)),
+    linear-gradient(145deg, #264137 0%, #182e27 100%);
+  box-shadow: var(--color-shadow);
+}
+
+.dashboardImage {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  opacity: 0.36;
+  mix-blend-mode: screen;
+}
+
+.dashboardOverlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: space-between;
+  padding: 1rem;
+}
+
+.dashboardMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: rgba(255, 250, 242, 0.9);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.liveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 250, 242, 0.14);
+}
+
+.liveBadge::before {
+  content: '';
+  width: 0.45rem;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: #8fe36e;
+}
+
+.dashboardPanels {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.panel {
+  padding: 0.95rem;
+  border: 1px solid rgba(255, 250, 242, 0.14);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.08);
+  color: #fffaf2;
+  backdrop-filter: blur(8px);
+}
+
+.panelLabel {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: rgba(255, 250, 242, 0.72);
+  font-size: 0.82rem;
+}
+
+.panelValue {
+  display: block;
+  color: #fffaf2;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.panelHint {
+  display: block;
+  margin-top: 0.35rem;
+  color: rgba(255, 250, 242, 0.72);
+  font-size: 0.85rem;
+}
+
+.storySection,
+.featureSection,
+.workflowSection {
+  padding: 0 0 var(--section-gap);
+}
+
+.storyGrid,
+.workflowGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.storyCard,
+.workflowCard {
+  padding: 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.72);
+}
+
+.storyCard strong,
+.workflowCard strong {
+  display: block;
+  margin-bottom: 0.6rem;
+  color: var(--color-ink-strong);
+  font-size: 1.1rem;
+}
+
+.storyCard p,
+.workflowCard p {
+  color: var(--color-ink-soft);
+  line-height: 1.65;
+}
+
+.featureHeader,
+.workflowHeader {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.featureGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.featureCard {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.featureBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  aspect-ratio: 1;
+  border-radius: 0.8rem;
+  background: var(--color-brand-soft);
+  color: var(--color-brand-deep);
+  font-weight: 800;
+}
+
+.featureCard h3 {
+  font-size: 1.2rem;
+  color: var(--color-ink-strong);
+}
+
+.featureCard p {
+  color: var(--color-ink-soft);
+  line-height: 1.65;
+}
+
+.workflowCard {
+  position: relative;
+  padding-top: 3.25rem;
+}
+
+.step {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink-strong);
+  color: #fffaf2;
+  font-weight: 700;
+}
+
+.footer {
+  padding: 0 0 2rem;
+}
+
+.loginTeaserSection {
+  padding: 0 0 var(--section-gap);
+}
+
+.loginTeaser {
+  display: grid;
+  gap: 1rem;
+}
+
+.loginTeaserCopy {
+  display: grid;
+  gap: 1rem;
+}
+
+.loginCard {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.loginLabel {
+  color: var(--color-brand-deep);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.loginTitle {
+  color: var(--color-ink-strong);
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+
+.loginHint {
+  color: var(--color-ink-soft);
+  line-height: 1.65;
+}
+
+.loginAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+}
+
+.footerInner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-ink-soft);
+  font-size: 0.92rem;
+}
+
+@media (min-width: 48rem) {
+  .heroSection {
+    padding: 3rem 0 4.75rem;
+  }
+
+  .heroActions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .primaryAction,
+  .secondaryAction {
+    width: auto;
+  }
+
+  .heroHighlights {
+    max-width: 34rem;
+  }
+
+  .storyGrid,
+  .workflowGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .featureGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .loginTeaser {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+    align-items: center;
+  }
+
+  .footerInner {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+@media (min-width: 72rem) {
+  .heroLayout {
+    grid-template-columns: minmax(0, 1.05fr) minmax(20rem, 0.95fr);
+    align-items: center;
+    gap: 3rem;
+  }
+
+  .heroContent {
+    padding-top: 0;
+  }
+
+  .featureHeader,
+  .workflowHeader {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+    align-items: end;
+  }
+
+  .featureGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

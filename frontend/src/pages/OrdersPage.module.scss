@@ -1,0 +1,178 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  color: var(--color-ink-strong);
+  margin-top: 0.5rem;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line-strong);
+  background: transparent;
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filters {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filters select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+  min-width: 180px;
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.cardHeader {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.statusBadge {
+  display: inline-flex;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.status_pending { background: var(--color-brand-soft); color: var(--color-brand-deep); }
+.status_confirmed { background: #d4edda; color: #155724; }
+.status_preparing { background: #fff3cd; color: #856404; }
+.status_ready { background: #cce5ff; color: #004085; }
+.status_completed { background: #d4edda; color: #155724; }
+.status_cancelled { background: #f8d7da; color: #721c24; }
+
+.paymentBadge {
+  display: inline-flex;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.payment_unpaid { background: #f8d7da; color: #721c24; }
+.payment_paid { background: #d4edda; color: #155724; }
+.payment_refunded { background: #fff3cd; color: #856404; }
+
+.cardTotal {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+}
+
+.cardBody {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cardName {
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+}
+
+.cardMeta {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+}
+
+.cardCredit {
+  color: var(--color-olive);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.cardStations {
+  color: var(--color-ink-soft);
+  font-size: 0.78rem;
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.textBtn {
+  background: none;
+  border: none;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  text-decoration: none;
+}
+
+.dangerBtn {
+  background: none;
+  border: none;
+  color: #c0392b;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  padding: 2rem 0;
+  text-align: center;
+}

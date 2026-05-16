@@ -1,0 +1,148 @@
+.page {
+  min-height: calc(100vh - 4.5rem);
+  padding: 1.5rem 0 3rem;
+}
+
+.layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.panel,
+.formCard {
+  padding: 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.panelTitle {
+  max-width: 12ch;
+  font-size: clamp(2.3rem, 8vw, 4.4rem);
+  line-height: 0.96;
+  color: var(--color-ink-strong);
+}
+
+.panelCopy {
+  max-width: 34rem;
+  color: var(--color-ink-soft);
+  line-height: 1.7;
+}
+
+.bulletList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.bulletList li {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.66);
+}
+
+.bulletList strong {
+  color: var(--color-ink-strong);
+}
+
+.bulletList span {
+  color: var(--color-ink-soft);
+  line-height: 1.55;
+}
+
+.formCard {
+  display: grid;
+  gap: 1rem;
+}
+
+.formHeader {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.formHeader strong {
+  color: var(--color-ink-strong);
+  font-size: 1.35rem;
+}
+
+.formHeader p {
+  color: var(--color-ink-soft);
+  line-height: 1.6;
+}
+
+.form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field label {
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.field input {
+  min-height: 3rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffdf8;
+  color: var(--color-ink-strong);
+}
+
+.field input:focus {
+  outline: 2px solid rgba(191, 90, 42, 0.2);
+  border-color: var(--color-brand);
+}
+
+.error {
+  min-height: 1.4rem;
+  color: #9f2f1d;
+  font-size: 0.92rem;
+}
+
+.submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.backLink {
+  color: var(--color-ink-soft);
+  font-weight: 600;
+}
+
+@media (min-width: 64rem) {
+  .page {
+    padding: 2rem 0 4rem;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1.05fr) minmax(22rem, 0.85fr);
+    align-items: start;
+  }
+}

@@ -1,0 +1,122 @@
+.page {
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.queue {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 48rem;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 5rem;
+  color: #28a745;
+}
+
+.emptyText {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #28a745;
+}
+
+.emptyHint {
+  font-size: 1.2rem;
+  color: #888;
+}
+
+.orderCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #16213e;
+  border-radius: 1rem;
+  border: 2px solid #0f3460;
+}
+
+.orderNumber {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #e94560;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.itemName {
+  font-size: 1.4rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.itemQty {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #e94560;
+  flex-shrink: 0;
+}
+
+.itemReady {
+  text-decoration: line-through;
+  opacity: 0.45;
+}
+
+.readyBtn {
+  flex-shrink: 0;
+  padding: 0.7rem 1.8rem;
+  border: none;
+  border-radius: 1rem;
+  background: #28a745;
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.readyBtn:hover {
+  background: #34ce57;
+}
+
+.readyBtn:active {
+  transform: scale(0.97);
+}
+
+.doneBadge {
+  flex-shrink: 0;
+  font-size: 1.6rem;
+  color: #28a745;
+  font-weight: 800;
+}

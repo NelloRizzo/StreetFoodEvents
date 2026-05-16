@@ -1,0 +1,131 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal {
+  background: var(--color-surface-strong);
+  border-radius: 12px;
+  max-width: 420px;
+  width: 100%;
+  padding: 1.5rem;
+  position: relative;
+  box-shadow: var(--color-shadow);
+}
+
+.closeBtn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  padding: 0.25rem;
+  background: none;
+  border: none;
+}
+
+.closeBtn:hover {
+  color: var(--color-ink-strong);
+}
+
+.title {
+  font-size: 1.15rem;
+  color: var(--color-ink-strong);
+  margin: 0 0 0.25rem;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--color-ink-soft);
+  margin: 0 0 1rem;
+}
+
+.camRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.camLabel {
+  font-size: 0.85rem;
+  color: var(--color-ink-soft);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.camSelect {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-strong);
+  color: var(--color-ink-strong);
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viewport {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+.reader {
+  width: 100%;
+}
+
+.reader :global(.qr-shaded-region) {
+  display: none !important;
+}
+
+.overlayMsg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.errorIcon {
+  font-size: 1.6rem;
+}
+
+.cancelBtn {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-strong);
+  color: var(--color-ink-soft);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: 1px solid var(--color-line-strong);
+  text-align: center;
+}
+
+.cancelBtn:hover {
+  color: var(--color-ink-strong);
+  border-color: var(--color-ink-soft);
+}
