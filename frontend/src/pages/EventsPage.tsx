@@ -393,7 +393,7 @@ export function EventsPage() {
         province: getProvinceSigla(fullProvince) || fullProvince || prev.province,
         region: a.region || prev.region,
         country: a.country || prev.country,
-        postalCode: a.postcode || prev.postcode,
+        postalCode: a.postcode || prev.postalCode,
       }))
     } catch {
       // Nominatim fallito — lat/lng già inserite
