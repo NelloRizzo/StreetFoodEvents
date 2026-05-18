@@ -1,5 +1,7 @@
 import { apiRequest } from './api'
 
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
+
 export type UploadedImage = {
   url: string
   publicId: string
@@ -13,7 +15,7 @@ async function uploadFile<T>(path: string, file: File, fieldName: string): Promi
   const formData = new FormData()
   formData.append(fieldName, file)
 
-  const response = await fetch(`/api${path}`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
     credentials: 'include',
     body: formData,
@@ -39,7 +41,7 @@ export async function uploadGallery(files: File[]): Promise<UploadedImage[]> {
     formData.append('images', file)
   }
 
-  const response = await fetch('/api/upload/gallery', {
+  const response = await fetch(`${API_BASE_URL}/upload/gallery`, {
     method: 'POST',
     credentials: 'include',
     body: formData,

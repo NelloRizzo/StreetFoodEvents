@@ -41,12 +41,11 @@ jobs:
       - run: npm run build
         env:
           VITE_BASE_URL: /streetfoodevents/
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
           VITE_GTM_ID: ${{ vars.VITE_GTM_ID }}
           VITE_PRIVACY_EMAIL: ${{ vars.VITE_PRIVACY_EMAIL }}
 
       - uses: actions/configure-pages@v4
-        with:
-          static_site_generator: next
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
