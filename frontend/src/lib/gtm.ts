@@ -12,7 +12,7 @@ export function getGtmId(): string {
 }
 
 function ensureDataLayer(): void {
-  if (!Array.isArray(window.dataLayer)) {
+  if (!window.dataLayer) {
     window.dataLayer = []
   }
 }

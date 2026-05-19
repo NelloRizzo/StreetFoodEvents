@@ -43,6 +43,7 @@ type StationInfo = {
   name: string
   standId: string | null
   standName: string | null
+  isAssigned?: boolean
 }
 
 function CurrencyDisplay({ currencyName, currencySymbol }: { currencyName: string; currencySymbol: CurrencySymbol }) {
@@ -112,24 +113,56 @@ export function DashboardPage() {
         {(stands.length > 0 || stations.length > 0) && (
           <section className={styles.manageSection}>
             <h2 className={styles.sectionTitle}>Gestione stand</h2>
-            <div className={styles.manageGrid}>
-              {stands.map((s) => (
-                <Link key={s.id} to={`/orders/stand/${s.id}`} className={styles.manageCard}>
-                  <span className={styles.manageIcon}>&#127968;</span>
-                  <span className={styles.manageName}>{s.name}</span>
-                  <span className={styles.manageHint}>Gestisci ordini</span>
-                </Link>
-              ))}
-              {stations.map((s) => (
-                <Link key={s.id} to={`/orders/station/${s.id}`} className={styles.manageCard}>
-                  <span className={styles.manageIcon}>&#9881;</span>
-                  <span className={styles.manageName}>{s.name}</span>
-                  <span className={styles.manageHint}>
-                    {s.standName ? `${s.standName} · ` : ''}Coda postazione
-                  </span>
-                </Link>
-              ))}
-            </div>
+
+            {/* Stand cards with their stations */}
+            {stands.map((s) => {
+              const standStations = stations.filter((st) => st.standId === s.id)
+              return (
+                <div key={s.id} className={styles.standBlock}>
+                  <Link to={`/orders/stand/${s.id}`} className={styles.standBlockHeader}>
+                    <span className={styles.manageIcon}>&#127968;</span>
+                    <span className={styles.standBlockName}>{s.name}</span>
+                    <span className={styles.manageHint}>Gestisci ordini</span>
+                  </Link>
+                  {standStations.length > 0 && (
+                    <div className={styles.stationList}>
+                      {standStations.map((st) => (
+                        <Link
+                          key={st.id}
+                          to={`/orders/station/${st.id}`}
+                          className={styles.stationChip}
+                        >
+                          <span className={styles.stationChipIcon}>&#9881;</span>
+                          <span className={styles.stationChipName}>{st.name}</span>
+                          <span className={styles.manageHint}>Coda postazione</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            {/* Any stations not linked to a managed stand (direct assignments) */}
+            {stations.filter((st) => !stands.some((s) => s.id === st.standId)).length > 0 && (
+              <div className={styles.stationList}>
+                {stations
+                  .filter((st) => !stands.some((s) => s.id === st.standId))
+                  .map((st) => (
+                    <Link
+                      key={st.id}
+                      to={`/orders/station/${st.id}`}
+                      className={styles.manageCard}
+                    >
+                      <span className={styles.manageIcon}>&#9881;</span>
+                      <span className={styles.manageName}>{st.name}</span>
+                      <span className={styles.manageHint}>
+                        {st.standName ? `${st.standName} · ` : ''}Coda postazione
+                      </span>
+                    </Link>
+                  ))}
+              </div>
+            )}
           </section>
         )}
 

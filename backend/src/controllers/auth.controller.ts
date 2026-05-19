@@ -346,13 +346,6 @@ export async function getMyStands(req: Request, res: Response) {
 
   const userId = req.user.id;
 
-  const userStations = await UserStationModel.find({ userId, isActive: true });
-  const stationIds = userStations.map((us) => us.stationId);
-
-  const stations = stationIds.length > 0
-    ? await StationModel.find({ _id: { $in: stationIds } }).populate('standId', 'name')
-    : [];
-
   const standRoleIds = await RoleModel.find({ scope: 'stand' }).distinct('_id');
   const userRoles = await UserRoleModel.find({
     userId,
@@ -366,16 +359,29 @@ export async function getMyStands(req: Request, res: Response) {
     ? await StandModel.find({ _id: { $in: roleStandIds } })
     : [];
 
+  const standStations = roleStandIds.length > 0
+    ? await StationModel.find({ standId: { $in: roleStandIds } }).populate('standId', 'name')
+    : [];
+
+  const userStations = await UserStationModel.find({ userId, isActive: true });
+  const userStationIds = new Set(userStations.map((us) => us.stationId.toString()));
+
+  const stationMap = new Map<string, { id: string; name: string; standId: string | null; standName: string | null; isAssigned: boolean }>();
+
+  for (const s of standStations) {
+    const sDoc = s as unknown as { _id: { toString(): string }; name: string; standId: { _id: { toString(): string }; name: string } | null };
+    const id = sDoc._id.toString();
+    stationMap.set(id, {
+      id,
+      name: sDoc.name,
+      standId: sDoc.standId?._id?.toString() ?? null,
+      standName: sDoc.standId?.name ?? null,
+      isAssigned: userStationIds.has(id),
+    });
+  }
+
   return res.status(200).json({
     stands: roleStands.map((s) => ({ id: s._id.toString(), name: s.name })),
-    stations: stations.map((s) => {
-      const sDoc = s as unknown as { _id: { toString(): string }; name: string; standId: { _id: { toString(): string }; name: string } | null };
-      return {
-        id: sDoc._id.toString(),
-        name: sDoc.name,
-        standId: sDoc.standId?._id?.toString() ?? null,
-        standName: sDoc.standId?.name ?? null,
-      };
-    }),
+    stations: Array.from(stationMap.values()),
   });
 }
