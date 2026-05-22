@@ -8,8 +8,8 @@ type Role = { id: string; name: string; slug: string; scope: string; isSystem: b
 type Event = { id: string; name: string }
 type Stand = { id: string; name: string }
 
-type PopulatedUser = { _id: string; firstName: string; lastName: string; email: string }
-type PopulatedRole = { _id: string; name: string; slug: string; scope: string }
+type PopulatedUser = { _id: string; firstName: string; lastName: string; email: string } | null
+type PopulatedRole = { _id: string; name: string; slug: string; scope: string } | null
 
 type UserRole = {
   id: string
@@ -104,10 +104,12 @@ export function UserRolesPage() {
   }
 
   function userName(u: PopulatedUser) {
+    if (!u) return 'Utente sconosciuto'
     return `${u.firstName} ${u.lastName}`
   }
 
   function roleName(r: PopulatedRole) {
+    if (!r) return 'Ruolo sconosciuto'
     return `${r.name} (${scopeLabels[r.scope] ?? r.scope})`
   }
 
