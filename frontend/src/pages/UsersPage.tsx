@@ -83,7 +83,7 @@ export function UsersPage() {
         avatar: form.avatar,
         isActive: form.isActive,
       }
-      if (form.password) body.passwordHash = form.password
+      if (form.password) body.password = form.password
       await apiRequest(`/users/${editingId}`, { method: 'PATCH', bodyJson: body })
     } else {
       await apiRequest('/users', {
@@ -92,7 +92,7 @@ export function UsersPage() {
           firstName: form.firstName,
           lastName: form.lastName,
           email: form.email,
-          passwordHash: form.password,
+          password: form.password,
           phone: form.phone || null,
           avatar: form.avatar,
           isActive: form.isActive,

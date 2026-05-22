@@ -1,3 +1,4 @@
+import * as argon2 from 'argon2';
 import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 
@@ -66,7 +67,13 @@ export async function getUserById(req: Request, res: Response) {
 }
 
 export async function createUser(req: Request, res: Response) {
-  const { firstName, lastName, email, passwordHash, phone, avatar, isActive } = req.body;
+  const { firstName, lastName, email, password, phone, avatar, isActive } = req.body;
+
+  if (!password || typeof password !== 'string' || password.length < 8) {
+    return res.status(400).json({
+      message: 'Password must be at least 8 characters'
+    });
+  }
 
   const existingUser = await UserModel.findOne({
     email: String(email).toLowerCase().trim()
@@ -77,6 +84,8 @@ export async function createUser(req: Request, res: Response) {
       message: 'A user with this email already exists'
     });
   }
+
+  const passwordHash = await argon2.hash(password);
 
   const user = await UserModel.create({
     firstName,
@@ -151,6 +160,13 @@ export async function updateUser(req: Request, res: Response) {
 
   if (lastLoginAt !== undefined) {
     user.lastLoginAt = lastLoginAt;
+  }
+
+  if (req.body.password && typeof req.body.password === 'string') {
+    if (req.body.password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+    user.passwordHash = await argon2.hash(req.body.password);
   }
 
   await user.save();
