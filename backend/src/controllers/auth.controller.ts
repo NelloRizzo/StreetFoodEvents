@@ -97,7 +97,8 @@ export async function register(req: Request, res: Response) {
     lastName,
     email,
     passwordHash,
-    isActive: true
+    isActive: true,
+    lastLoginAt: new Date()
   });
 
   const userCount = await UserModel.countDocuments();
@@ -124,9 +125,6 @@ export async function register(req: Request, res: Response) {
     userAgent: req.get('user-agent') ?? null,
     ipAddress: req.ip ?? null
   });
-
-  user.lastLoginAt = new Date();
-  await user.save();
 
   setSessionCookie(res, sessionToken, expiresAt);
 

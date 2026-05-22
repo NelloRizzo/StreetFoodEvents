@@ -53,14 +53,24 @@ export function NewOrderPage() {
 
   useEffect(() => {
     apiRequest<{ items: { id: string; name: string }[] }>('/events')
-      .then((d) => setEvents(d.items))
+      .then((d) => {
+        setEvents(d.items)
+        if (d.items.length > 0) {
+          setSelectedEventId(d.items[0].id)
+        }
+      })
       .catch(() => {})
   }, [])
 
   useEffect(() => {
     if (!selectedEventId) { setStands([]); return }
     apiRequest<{ items: { id: string; name: string }[] }>(`/stands?eventId=${selectedEventId}`)
-      .then((d) => setStands(d.items))
+      .then((d) => {
+        setStands(d.items)
+        if (d.items.length > 0) {
+          setSelectedStandId(d.items[0].id)
+        }
+      })
       .catch(() => {})
   }, [selectedEventId])
 
