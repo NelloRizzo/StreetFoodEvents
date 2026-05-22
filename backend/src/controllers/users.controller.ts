@@ -67,9 +67,11 @@ export async function getUserById(req: Request, res: Response) {
 }
 
 export async function createUser(req: Request, res: Response) {
-  const { firstName, lastName, email, password, phone, avatar, isActive } = req.body;
+  const { firstName, lastName, email, password, passwordHash: rawPassword, phone, avatar, isActive } = req.body;
 
-  if (!password || typeof password !== 'string' || password.length < 8) {
+  const plainPassword = password || rawPassword;
+
+  if (!plainPassword || typeof plainPassword !== 'string' || plainPassword.length < 8) {
     return res.status(400).json({
       message: 'Password must be at least 8 characters'
     });
@@ -85,7 +87,7 @@ export async function createUser(req: Request, res: Response) {
     });
   }
 
-  const passwordHash = await argon2.hash(password);
+  const passwordHash = await argon2.hash(plainPassword);
 
   const user = await UserModel.create({
     firstName,
