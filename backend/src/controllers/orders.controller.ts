@@ -501,7 +501,10 @@ export async function payOrder(req: Request, res: Response) {
         });
     }
 
-    const creditAmount = Math.max(0, Math.min(Number(req.body.creditAmount) || order.total, order.total));
+    const creditAmount = Math.max(0, Math.min(
+        req.body.creditAmount !== undefined ? Number(req.body.creditAmount) : order.total,
+        order.total
+    ));
 
     const session = await mongoose.startSession();
 
