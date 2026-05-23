@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import {
     cancelOrder,
+    cancelOrderItems,
     createOrder,
     getOrderById,
     getStandReport,
@@ -27,6 +28,7 @@ ordersRouter.post('/', asyncHandler(createOrder));
 ordersRouter.get('/:orderId', asyncHandler(getOrderById));
 ordersRouter.patch('/:orderId/status', asyncHandler(updateOrderStatus));
 ordersRouter.post('/:orderId/cancel', asyncHandler(cancelOrder));
+ordersRouter.patch('/:orderId/cancel-items', asyncHandler(cancelOrderItems));
 ordersRouter.post('/:orderId/pay', asyncHandler(payOrder));
 ordersRouter.patch('/:orderId/mark-station-ready', asyncHandler(markStationReady));
 ordersRouter.patch('/:orderId/mark-item-ready', asyncHandler(markItemReady));

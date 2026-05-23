@@ -65,7 +65,7 @@ export type StandReport = {
   orders: Order[]
 }
 
-export function fetchOrders(params?: { eventId?: string; standId?: string; status?: string; userId?: string; customerId?: string; stationId?: string }) {
+export function fetchOrders(params?: { eventId?: string; standId?: string; status?: string; userId?: string; customerId?: string; stationId?: string; startDate?: string; endDate?: string }) {
   const query = new URLSearchParams()
   if (params?.eventId) query.set('eventId', params.eventId)
   if (params?.standId) query.set('standId', params.standId)
@@ -73,6 +73,8 @@ export function fetchOrders(params?: { eventId?: string; standId?: string; statu
   if (params?.userId) query.set('userId', params.userId)
   if (params?.customerId) query.set('customerId', params.customerId)
   if (params?.stationId) query.set('stationId', params.stationId)
+  if (params?.startDate) query.set('startDate', params.startDate)
+  if (params?.endDate) query.set('endDate', params.endDate)
   const qs = query.toString()
   return apiRequest<{ items: Order[] }>(`/orders${qs ? `?${qs}` : ''}`)
 }
@@ -99,6 +101,13 @@ export function cancelOrder(orderId: string, reason?: string) {
   return apiRequest<{ item: Order }>(`/orders/${orderId}/cancel`, {
     method: 'POST',
     bodyJson: { reason },
+  })
+}
+
+export function cancelOrderItems(orderId: string, itemIds: string[]) {
+  return apiRequest<{ item: Order }>(`/orders/${orderId}/cancel-items`, {
+    method: 'PATCH',
+    bodyJson: { itemIds },
   })
 }
 
@@ -130,7 +139,11 @@ export function resetOrderCounter(standId: string) {
   })
 }
 
-export function fetchStandReport(standId: string, eventId?: string) {
-  const query = eventId ? `?eventId=${eventId}` : ''
-  return apiRequest<StandReport>(`/orders/report/stand/${standId}${query}`)
+export function fetchStandReport(standId: string, eventId?: string, startDate?: string, endDate?: string) {
+  const params = new URLSearchParams()
+  if (eventId) params.set('eventId', eventId)
+  if (startDate) params.set('startDate', startDate)
+  if (endDate) params.set('endDate', endDate)
+  const qs = params.toString()
+  return apiRequest<StandReport>(`/orders/report/stand/${standId}${qs ? `?${qs}` : ''}`)
 }

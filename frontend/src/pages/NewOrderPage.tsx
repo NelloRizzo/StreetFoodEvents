@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { createOrder } from '../lib/orders'
-import { useAuth } from '../features/auth/auth-context'
+import { QRScanner } from '../components/QRScanner'
 import styles from './NewOrderPage.module.scss'
 
 type EventProduct = {
@@ -26,6 +26,13 @@ type Station = {
   name: string
 }
 
+type User = {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+}
+
 type CartItem = {
   eventProductId: string
   productName: string
@@ -37,7 +44,6 @@ type CartItem = {
 
 export function NewOrderPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
   const [events, setEvents] = useState<{ id: string; name: string }[]>([])
   const [stands, setStands] = useState<{ id: string; name: string }[]>([])
   const [selectedEventId, setSelectedEventId] = useState('')
@@ -47,9 +53,18 @@ export function NewOrderPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [payWithCredits, setPayWithCredits] = useState(false)
   const [creditAmount, setCreditAmount] = useState(0)
-  const [customerName, setCustomerName] = useState('')
+  const [customerMode, setCustomerMode] = useState<'registered' | 'custom'>('registered')
+  const [users, setUsers] = useState<User[]>([])
+  const [selectedCustomerId, setSelectedCustomerId] = useState('')
+  const [customCustomerName, setCustomCustomerName] = useState('')
+  const [showScanner, setShowScanner] = useState(false)
 
   const total = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+
+  const selectedUser = users.find((u) => u.id === selectedCustomerId)
+  const customerName = customerMode === 'registered' && selectedUser
+    ? `${selectedUser.firstName} ${selectedUser.lastName}`
+    : customCustomerName
 
   useEffect(() => {
     apiRequest<{ items: { id: string; name: string }[] }>('/events')
@@ -98,8 +113,26 @@ export function NewOrderPage() {
   }, [selectedEventId, selectedStandId])
 
   useEffect(() => {
-    if (user) setCustomerName(`${user.firstName} ${user.lastName}`)
-  }, [user])
+    apiRequest<{ items: User[] }>('/users')
+      .then((d) => setUsers(d.items))
+      .catch(() => {})
+  }, [])
+
+  const handleQrScan = useCallback(async (decodedText: string) => {
+    try {
+      const data = await apiRequest<{ item: User }>(`/users/${decodedText}`)
+      const found = data.item
+      if (found && users.some((u) => u.id === found.id)) {
+        setSelectedCustomerId(found.id)
+        setCustomerMode('registered')
+      } else {
+        alert('Utente non trovato')
+      }
+    } catch {
+      alert('QR Code non valido')
+    }
+    setShowScanner(false)
+  }, [users])
 
   const addToCart = (ep: EventProduct & { product?: Product; stations?: Station[] }, stationId: string, stationName: string) => {
     if (!ep.product) return
@@ -146,6 +179,7 @@ export function NewOrderPage() {
       await createOrder({
         eventId: selectedEventId,
         standId: selectedStandId,
+        customerId: customerMode === 'registered' && selectedCustomerId ? selectedCustomerId : undefined,
         customerName: customerName || undefined,
         items: cart.map((i) => ({
           eventProductId: i.eventProductId,
@@ -224,7 +258,49 @@ export function NewOrderPage() {
 
               <div className={styles.field}>
                 <label>Cliente</label>
-                <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Nome cliente" />
+                <div className={styles.customerRow}>
+                  <select
+                    value={customerMode === 'registered' ? selectedCustomerId : ''}
+                    onChange={(e) => {
+                      setCustomerMode('registered')
+                      setSelectedCustomerId(e.target.value)
+                    }}
+                    className={styles.customerSelect}
+                  >
+                    <option value="">Seleziona utente</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.email})</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className={styles.qrBtn}
+                    onClick={() => setShowScanner(true)}
+                    title="Scansiona QR code"
+                  >
+                    &#128247;
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className={styles.toggleMode}
+                  onClick={() => setCustomerMode(customerMode === 'registered' ? 'custom' : 'registered')}
+                >
+                  {customerMode === 'registered' ? 'Cliente non registrato?' : 'Seleziona cliente registrato?'}
+                </button>
+                {customerMode === 'custom' && (
+                  <input
+                    value={customCustomerName}
+                    onChange={(e) => setCustomCustomerName(e.target.value)}
+                    placeholder="Nome cliente"
+                    className={styles.customerInput}
+                  />
+                )}
+                {customerMode === 'registered' && selectedUser && (
+                  <span className={styles.customerHint}>
+                    Crediti evento: usabili tramite pagamento con crediti
+                  </span>
+                )}
               </div>
 
               {cart.length === 0 ? (
@@ -289,6 +365,13 @@ export function NewOrderPage() {
           </div>
         </div>
       </div>
+
+      {showScanner && (
+        <QRScanner
+          onScan={handleQrScan}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   )
 }

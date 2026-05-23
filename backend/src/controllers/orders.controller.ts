@@ -97,6 +97,16 @@ export async function listOrders(req: Request, res: Response) {
         filter['items.stationId'] = new Types.ObjectId(req.query.stationId as string);
     }
 
+    if (req.query.startDate) {
+        filter.createdAt = { $gte: new Date(req.query.startDate as string) };
+    }
+
+    if (req.query.endDate) {
+        const end = new Date(req.query.endDate as string);
+        end.setHours(23, 59, 59, 999);
+        filter.createdAt = { ...((filter.createdAt as object) || {}), $lte: end };
+    }
+
     const items = await OrderModel.find(filter).sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -659,6 +669,107 @@ export async function markItemReady(req: Request, res: Response) {
     });
 }
 
+export async function cancelOrderItems(req: Request, res: Response) {
+    const orderId = req.params.orderId;
+    const { itemIds } = req.body;
+
+    if (!isValidObjectId(orderId)) {
+        return res.status(400).json({ message: 'Invalid order id' });
+    }
+
+    if (!Array.isArray(itemIds) || itemIds.length === 0) {
+        return res.status(400).json({ message: 'itemIds array is required and must not be empty' });
+    }
+
+    for (const id of itemIds) {
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({ message: `Invalid item id: ${id}` });
+        }
+    }
+
+    const order = await OrderModel.findById(orderId);
+
+    if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (order.status === 'completed' || order.status === 'cancelled') {
+        return res.status(400).json({
+            message: `Cannot cancel items from an order with status ${order.status}`
+        });
+    }
+
+    const itemIdSet = new Set(itemIds.map((id: string) => id.toString()));
+    const removedItems = order.items.filter((item) => itemIdSet.has(item.eventProductId.toString()));
+
+    if (removedItems.length === 0) {
+        return res.status(400).json({ message: 'No matching items found to cancel' });
+    }
+
+    const remainingItems = order.items.filter((item) => !itemIdSet.has(item.eventProductId.toString()));
+
+    if (remainingItems.length === 0) {
+        return res.status(400).json({ message: 'Cannot cancel all items. Use cancelOrder to cancel the entire order.' });
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+        session.startTransaction();
+
+        order.items.splice(0, order.items.length, ...remainingItems);
+        order.total = remainingItems.reduce((sum, item) => sum + item.subtotal, 0);
+
+        if (order.paymentStatus === 'paid' && order.creditAmountUsed > order.total) {
+            const excessCredits = order.creditAmountUsed - order.total;
+
+            const eventUser = await EventUserModel.findOne({
+                eventId: order.eventId,
+                userId: order.customerId ?? order.userId
+            }).session(session);
+
+            if (eventUser) {
+                await createEventUserTransaction({
+                    eventUserId: eventUser._id,
+                    type: 'refund',
+                    direction: 'credit',
+                    amount: excessCredits,
+                    description: `Rimborso per annullamento parziale ordine #${order.orderNumber}`,
+                    performedByUserId: req.user?.id ?? null,
+                    referenceType: 'order',
+                    referenceId: order._id,
+                    session
+                });
+            }
+
+            order.creditAmountUsed = order.total;
+        }
+
+        const allReady = order.items.every((item) => item.ready);
+
+        if (allReady && order.status !== 'ready') {
+            order.status = 'ready';
+        }
+
+        await order.save({ session });
+        await session.commitTransaction();
+
+        return res.status(200).json({
+            item: toOrderResponse(order)
+        });
+    } catch (error) {
+        await session.abortTransaction();
+
+        if (error instanceof Error) {
+            return res.status(400).json({ message: error.message });
+        }
+
+        throw error;
+    } finally {
+        await session.endSession();
+    }
+}
+
 export async function resetOrderCounter(req: Request, res: Response) {
     const { standId } = req.body;
 
@@ -693,6 +804,16 @@ export async function getStandReport(req: Request, res: Response) {
 
     if (stationId && isValidObjectId(stationId)) {
         matchFilter['items.stationId'] = new Types.ObjectId(stationId);
+    }
+
+    if (req.query.startDate) {
+        matchFilter.createdAt = { $gte: new Date(req.query.startDate as string) };
+    }
+
+    if (req.query.endDate) {
+        const end = new Date(req.query.endDate as string);
+        end.setHours(23, 59, 59, 999);
+        matchFilter.createdAt = { ...((matchFilter.createdAt as object) || {}), $lte: end };
     }
 
     const [summary] = await OrderModel.aggregate([

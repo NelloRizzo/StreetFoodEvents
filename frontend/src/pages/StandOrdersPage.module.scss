@@ -52,12 +52,17 @@
   background: rgba(255, 250, 242, 0.84);
 }
 
+.orderCardAllReady {
+  border-color: #28a745;
+  box-shadow: 0 0 0 1px rgba(40, 167, 69, 0.3);
+}
+
 .orderHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -103,10 +108,53 @@
   color: #721c24;
 }
 
+.paymentBadge.payment_paid {
+  background: #d4edda;
+  color: #155724;
+}
+
+.paymentBadge.payment_refunded {
+  background: #e2d5f0;
+  color: #6c3a9e;
+}
+
 .orderTotal {
   font-weight: 700;
   color: var(--color-brand);
   font-size: 0.9rem;
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.progressBar {
+  flex: 1;
+  height: 6px;
+  background: var(--color-line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-brand);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progressLabel {
+  font-size: 0.78rem;
+  color: var(--color-ink-soft);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.progressDone {
+  color: #28a745;
 }
 
 .stationGroups {
@@ -118,12 +166,28 @@
 .stationGroup {
   display: grid;
   gap: 0.25rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-card);
+  transition: background 0.2s;
+}
+
+.stationReady {
+  background: #d4edda;
 }
 
 .stationName {
   font-size: 0.85rem;
   color: var(--color-brand-deep);
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stationReadyBadge {
+  font-size: 0.72rem;
+  color: #28a745;
+  font-weight: 700;
 }
 
 .items {
@@ -141,10 +205,14 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
+  border-left: 3px solid transparent;
 }
 
 .itemReady {
-  opacity: 0.55;
+  background: #d4edda;
+  border-left-color: #28a745;
+  text-decoration: line-through;
+  opacity: 0.85;
 }
 
 .readyMark {
@@ -155,6 +223,7 @@
 .orderActions {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .readyBtn {
@@ -170,6 +239,32 @@
 
 .readyBtn:hover {
   opacity: 0.9;
+}
+
+.pulseBtn {
+  animation: pulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.5);
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.5); }
+  50% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(0, 123, 255, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+}
+
+.partialBtn {
+  padding: 0.4rem 1rem;
+  border: 1px solid #fd7e14;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: #fd7e14;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.partialBtn:hover {
+  background: #fff3e0;
 }
 
 .completeBtn {
@@ -216,6 +311,150 @@
 
 .secondaryBtn:hover {
   background: var(--color-surface-soft);
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.partialPanel {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid #fd7e14;
+  border-radius: var(--radius-card);
+  background: #fffbf0;
+}
+
+.partialTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-ink-strong);
+  margin: 0;
+}
+
+.partialItems {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.partialItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--color-ink-strong);
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.partialItem input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.partialReady {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.partialActions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.35rem;
+}
+
+.dateGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.dateLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+
+.dateInput {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+  font-size: 0.82rem;
+}
+
+.reportCard {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--color-brand);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.reportHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.reportTitle {
+  font-weight: 800;
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+}
+
+.reportPeriod {
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  font-weight: 600;
+}
+
+.reportStats {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.reportStat {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.reportStatValue {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--color-ink-strong);
+}
+
+.reportStatLabel {
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.reportRefunded {
+  color: #c0392b;
 }
 
 .empty {

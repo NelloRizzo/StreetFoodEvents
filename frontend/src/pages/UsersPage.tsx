@@ -133,11 +133,11 @@ export function UsersPage() {
             <div className={styles.fieldRow}>
               <div className={styles.field}>
                 <label htmlFor="u-first">Nome *</label>
-                <input id="u-first" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
+                <input id="u-first" type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
               </div>
               <div className={styles.field}>
                 <label htmlFor="u-last">Cognome *</label>
-                <input id="u-last" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
+                <input id="u-last" type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
               </div>
             </div>
             <div className={styles.field}>
