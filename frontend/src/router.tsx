@@ -26,6 +26,7 @@ import { StationQueuePage } from './pages/StationQueuePage'
 import { ThemePreviewPage } from './pages/ThemePreviewPage'
 import { UsersPage } from './pages/UsersPage'
 import { StandsPage } from './pages/StandsPage'
+import { CashierOrderPage } from './pages/CashierOrderPage'
 
 export const router = createBrowserRouter([
   {
@@ -114,6 +115,14 @@ export const router = createBrowserRouter([
           {
             path: 'orders/stand/:standId',
             element: <StandOrdersPage />,
+          },
+          {
+            path: 'events/:eventId/stands/:standId/orders',
+            element: <StandOrdersPage />,
+          },
+          {
+            path: 'events/:eventId/stands/:standId/order',
+            element: <CashierOrderPage />,
           },
           {
             path: 'staff',

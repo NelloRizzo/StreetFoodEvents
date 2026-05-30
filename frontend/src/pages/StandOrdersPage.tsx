@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import {
@@ -26,12 +26,16 @@ const statusLabels: Record<string, string> = {
 const today = () => new Date().toISOString().split('T')[0]
 
 export function StandOrdersPage() {
-  const { standId } = useParams<{ standId: string }>()
+  const { standId, eventId: urlEventId } = useParams<{ standId: string; eventId?: string }>()
+  const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [forbidden, setForbidden] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>('')
-  const [filterEventId, setFilterEventId] = useState<string>('')
+  const [filterEventId, setFilterEventId] = useState<string>(urlEventId ?? '')
   const [events, setEvents] = useState<{ id: string; name: string }[]>([])
+  const [standName, setStandName] = useState('')
+  const [eventName, setEventName] = useState('')
   const [partialOrderId, setPartialOrderId] = useState<string | null>(null)
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
   const [startDate, setStartDate] = useState(today())
@@ -40,14 +44,22 @@ export function StandOrdersPage() {
 
   useEffect(() => {
     if (!standId) return
-    apiRequest<{ items: { id: string; name: string }[] }>(`/stands?eventId=&_=${standId}`)
-      .then(() => {
-        apiRequest<{ items: { id: string; name: string }[] }>('/events')
-          .then((d) => setEvents(d.items))
-          .catch(() => {})
-      })
-      .catch(() => {})
-  }, [standId])
+    const checkAccess = async () => {
+      try {
+        const { stands } = await apiRequest<{ stands: { id: string; name: string }[] }>('/auth/me/stands')
+        const found = stands.find((s) => s.id === standId)
+        if (!found) { setForbidden(true); setIsLoading(false); return }
+        setStandName(found.name)
+        if (urlEventId) {
+          try {
+            const ev = await apiRequest<{ item: { name: string } }>(`/events/${urlEventId}`)
+            setEventName(ev.item.name)
+          } catch {}
+        }
+      } catch { setForbidden(true); setIsLoading(false) }
+    }
+    checkAccess()
+  }, [standId, urlEventId])
 
   const load = useCallback(async () => {
     if (!standId) return
@@ -70,6 +82,14 @@ export function StandOrdersPage() {
       .then((r) => setReport(r))
       .catch(() => {})
   }, [standId, filterEventId, startDate, endDate])
+
+  useEffect(() => {
+    if (!urlEventId) {
+      apiRequest<{ items: { id: string; name: string }[] }>('/events')
+        .then((d) => setEvents(d.items))
+        .catch(() => {})
+    }
+  }, [urlEventId])
 
   const handleComplete = async (orderId: string) => {
     await updateOrderStatus(orderId, 'completed')
@@ -120,17 +140,30 @@ export function StandOrdersPage() {
   }
 
   if (isLoading) return null
+  if (forbidden) return <div className={styles.page}><div className="page-shell"><p className={styles.empty}>Accesso negato.</p></div></div>
   if (!standId) return null
+
+  const eventFilterDisabled = Boolean(urlEventId)
+  const backLink = urlEventId ? `/events/${urlEventId}` : '/dashboard'
+  const backLabel = urlEventId ? 'Torna all\'evento' : 'Dashboard'
+  const title = urlEventId && eventName ? `Ordini — ${eventName}` : 'Ordini dello stand'
+  const newOrderLink = urlEventId
+    ? `/events/${urlEventId}/stands/${standId}/order`
+    : `/orders/new`
 
   return (
     <div className={styles.page}>
       <div className="page-shell">
         <div className={styles.header}>
           <div>
-            <Link to="/dashboard" className={styles.backLink}>&larr; Dashboard</Link>
-            <h1 className={styles.title}>Ordini dello stand</h1>
+            <Link to={backLink} className={styles.backLink}>&larr; {backLabel}</Link>
+            <h1 className={styles.title}>{title}</h1>
+            {standName && <span className={styles.standLabel}>{standName}</span>}
           </div>
           <div className={styles.headerActions}>
+            <Link className={styles.primaryBtn} to={newOrderLink}>
+              Nuovo ordine
+            </Link>
             <div className={styles.dateGroup}>
               <label className={styles.dateLabel}>Da</label>
               <input
@@ -151,9 +184,14 @@ export function StandOrdersPage() {
               value={filterEventId}
               onChange={(e) => { setFilterEventId(e.target.value); setIsLoading(true) }}
               className={styles.filterSelect}
+              disabled={eventFilterDisabled}
             >
-              <option value="">Tutti gli eventi</option>
-              {events.map((ev) => (
+              {urlEventId ? (
+                <option value={urlEventId}>{eventName || 'Caricamento...'}</option>
+              ) : (
+                <option value="">Tutti gli eventi</option>
+              )}
+              {!urlEventId && events.map((ev) => (
                 <option key={ev.id} value={ev.id}>{ev.name}</option>
               ))}
             </select>
@@ -277,6 +315,7 @@ export function StandOrdersPage() {
                           {group.items.map((item, idx) => (
                             <span key={idx} className={`${styles.item} ${item.ready ? styles.itemReady : ''}`}>
                               {item.productName} x{item.quantity}
+                              {item.notes && <span className={styles.itemNote}>({item.notes})</span>}
                               {item.ready && <span className={styles.readyMark}>&#10003;</span>}
                             </span>
                           ))}
@@ -303,6 +342,7 @@ export function StandOrdersPage() {
                             />
                             <span>
                               {item.productName} x{item.quantity} ({item.stationName})
+                              {item.notes && <span className={styles.itemNote}> {item.notes}</span>}
                               {item.ready && <span className={styles.readyMark}> &#10003;</span>}
                             </span>
                           </label>

@@ -95,13 +95,18 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: rgba(255, 250, 242, 0.84);
-  text-decoration: none;
   transition: border-color var(--ease-standard), box-shadow var(--ease-standard);
 }
 
 .standCard:hover {
   border-color: var(--color-brand);
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+}
+
+.standCardLink {
+  display: grid;
+  gap: 0.3rem;
+  text-decoration: none;
 }
 
 .standName {
@@ -112,6 +117,34 @@
 .standSlogan {
   color: var(--color-ink-soft);
   font-size: 0.85rem;
+}
+
+.standActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.manageLink {
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.cashierLink {
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-brand);
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-decoration: none;
 }
 
 .empty {

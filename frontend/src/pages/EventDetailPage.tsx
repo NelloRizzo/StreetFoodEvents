@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import styles from './EventDetailPage.module.scss'
@@ -34,6 +35,7 @@ type Stand = {
 
 export function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>()
+  const { isAuthenticated } = useAuth()
   const [event, setEvent] = useState<Event | null>(null)
   const [stands, setStands] = useState<Stand[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -133,16 +135,33 @@ export function EventDetailPage() {
 
           <div className={styles.standGrid}>
             {stands.map((stand) => (
-              <Link
-                key={stand.id}
-                to={`/events/${eventId}/stands/${stand.id}`}
-                className={styles.standCard}
-              >
-                <strong className={styles.standName}>{stand.name}</strong>
-                {stand.slogan && (
-                  <span className={styles.standSlogan}>{stand.slogan}</span>
+              <div key={stand.id} className={styles.standCard}>
+                <Link
+                  to={`/events/${eventId}/stands/${stand.id}`}
+                  className={styles.standCardLink}
+                >
+                  <strong className={styles.standName}>{stand.name}</strong>
+                  {stand.slogan && (
+                    <span className={styles.standSlogan}>{stand.slogan}</span>
+                  )}
+                </Link>
+                {isAuthenticated && (
+                  <div className={styles.standActions}>
+                    <Link
+                      to={`/events/${eventId}/stands/${stand.id}/orders`}
+                      className={styles.manageLink}
+                    >
+                      Gestisci ordini
+                    </Link>
+                    <Link
+                      to={`/events/${eventId}/stands/${stand.id}/order`}
+                      className={styles.cashierLink}
+                    >
+                      Nuovo ordine
+                    </Link>
+                  </div>
                 )}
-              </Link>
+              </div>
             ))}
           </div>
         </section>

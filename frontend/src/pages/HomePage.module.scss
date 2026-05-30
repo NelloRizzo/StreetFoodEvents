@@ -1,33 +1,77 @@
-.eventsSection {
-  padding: 0 0 var(--section-gap);
+.page {
+  min-height: 100%;
 }
 
-.sectionTitle {
-  font-size: 1.6rem;
+.showcase {
+  padding: 2.5rem 0 4rem;
+}
+
+.showcaseHeader {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  font-size: 0.82rem;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-brand);
+}
+
+.showcaseTitle {
+  font-family: var(--font-display, inherit);
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.05;
   color: var(--color-ink-strong);
-  margin-bottom: 1.25rem;
+  margin: 0;
+}
+
+.showcaseCopy {
+  color: var(--color-ink-soft);
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 32rem;
 }
 
 .eventGrid {
   display: grid;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .eventCard {
   display: grid;
-  gap: 0.4rem;
-  padding: 1.2rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: rgba(255, 250, 242, 0.84);
   text-decoration: none;
+  overflow: hidden;
   transition: border-color var(--ease-standard), box-shadow var(--ease-standard);
 }
 
 .eventCard:hover {
   border-color: var(--color-brand);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.cardCover {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--color-surface-soft);
+}
+
+.cardCover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cardBody {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1.2rem 1.2rem;
 }
 
 .eventName {
@@ -57,8 +101,50 @@
   padding: 2rem 0;
 }
 
+.ctaSection {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.7rem 1.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ctaSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.7rem 1.5rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line-strong);
+  background: transparent;
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  text-decoration: none;
+}
+
 @media (min-width: 48rem) {
   .eventGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 72rem) {
+  .eventGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
