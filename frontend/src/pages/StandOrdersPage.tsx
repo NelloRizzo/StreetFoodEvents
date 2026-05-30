@@ -27,7 +27,6 @@ const today = () => new Date().toISOString().split('T')[0]
 
 export function StandOrdersPage() {
   const { standId, eventId: urlEventId } = useParams<{ standId: string; eventId?: string }>()
-  const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [forbidden, setForbidden] = useState(false)
