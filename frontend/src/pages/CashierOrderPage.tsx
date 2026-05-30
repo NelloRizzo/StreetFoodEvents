@@ -244,8 +244,6 @@ export function CashierOrderPage() {
     ? menu.filter((ep) => ep.stationIds.includes(activeStationId))
     : menu
 
-  const selectedUser = users.find((u) => u.id === selectedCustomerId)
-
   return (
     <div className={styles.page}>
       <div className={styles.topBar}>
