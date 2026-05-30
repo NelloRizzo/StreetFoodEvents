@@ -68,6 +68,7 @@ export function StandDetailPage() {
   const [productForm, setProductForm] = useState<ProductFormData>(emptyProductForm)
   const [showNewProductForm, setShowNewProductForm] = useState(false)
   const [newProductForm, setNewProductForm] = useState({ name: '', ingredients: '', price: '', coverImage: null as UploadedImage | null, gallery: [] as UploadedImage[] })
+  const [selectedActionEventId, setSelectedActionEventId] = useState('')
 
   const fetchStand = async () => {
     const data = await apiRequest<{ item: Stand }>(`/stands/${standId}`)
@@ -192,6 +193,13 @@ export function StandDetailPage() {
     }
   }, [eventProducts])
 
+  useEffect(() => {
+    if (stand && events.length > 0 && !selectedActionEventId) {
+      const first = stand.eventIds.find((id) => events.some((e) => e.id === id))
+      if (first) setSelectedActionEventId(first)
+    }
+  }, [stand, events, selectedActionEventId])
+
   const toggleProductStation = (stationId: string) => {
     setProductForm((prev) => ({
       ...prev,
@@ -272,10 +280,38 @@ export function StandDetailPage() {
           <div className={styles.desc} dangerouslySetInnerHTML={{ __html: stand.description }} />
         )}
 
-        <div className={styles.actions}>
-          <Link className={styles.primaryBtn} to={`/orders/stand/${standId}`}>
-            Gestisci ordini
-          </Link>
+        <div className={styles.actionSection}>
+          <div className={styles.actionRow}>
+            <label className={styles.actionLabel}>Evento</label>
+            <select
+              value={selectedActionEventId}
+              onChange={(e) => setSelectedActionEventId(e.target.value)}
+              className={styles.actionSelect}
+            >
+              {events.filter((ev) => stand.eventIds.includes(ev.id)).length === 0 && (
+                <option value="">Nessun evento</option>
+              )}
+              {events.filter((ev) => stand.eventIds.includes(ev.id)).map((ev) => (
+                <option key={ev.id} value={ev.id}>{ev.name}</option>
+              ))}
+            </select>
+          </div>
+          {selectedActionEventId && (
+            <div className={styles.actionRow}>
+              <Link
+                className={styles.primaryBtn}
+                to={`/events/${selectedActionEventId}/stands/${standId}/orders`}
+              >
+                Gestisci ordini
+              </Link>
+              <Link
+                className={styles.cashierBtn}
+                to={`/events/${selectedActionEventId}/stands/${standId}/order`}
+              >
+                Nuovo ordine
+              </Link>
+            </div>
+          )}
         </div>
 
         <section className={styles.section}>
