@@ -477,6 +477,36 @@
   color: #c0392b;
 }
 
+.totalsBar {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-strong);
+  margin-bottom: 1.5rem;
+}
+
+.totalItem {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.totalLabel {
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.totalValue {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-ink-strong);
+}
+
 .empty {
   color: var(--color-ink-soft);
   font-size: 0.9rem;

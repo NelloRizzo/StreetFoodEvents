@@ -170,6 +170,25 @@ export function EventOrdersPage() {
           </div>
         </div>
 
+        <div className={styles.totalsBar}>
+          <div className={styles.totalItem}>
+            <span className={styles.totalLabel}>Ordini</span>
+            <span className={styles.totalValue}>{orders.length}</span>
+          </div>
+          <div className={styles.totalItem}>
+            <span className={styles.totalLabel}>Importo totale</span>
+            <span className={styles.totalValue}>&euro;{orders.reduce((s, o) => s + o.total, 0).toFixed(2)}</span>
+          </div>
+          <div className={styles.totalItem}>
+            <span className={styles.totalLabel}>Pagati</span>
+            <span className={styles.totalValue}>&euro;{orders.filter((o) => o.paymentStatus === 'paid').reduce((s, o) => s + o.total, 0).toFixed(2)}</span>
+          </div>
+          <div className={styles.totalItem}>
+            <span className={styles.totalLabel}>Da pagare</span>
+            <span className={styles.totalValue}>&euro;{orders.filter((o) => o.paymentStatus !== 'paid').reduce((s, o) => s + o.total, 0).toFixed(2)}</span>
+          </div>
+        </div>
+
         {orders.length === 0 && (
           <p className={styles.empty}>Nessun ordine trovato.</p>
         )}
