@@ -72,7 +72,7 @@ type RoleInfo = {
 }
 
 export function DashboardPage() {
-  const { user, viewMode } = useAuth()
+  const { user, viewMode, setViewMode } = useAuth()
   const [data, setData] = useState<HomeData | null>(null)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [showAllEvents, setShowAllEvents] = useState(false)
