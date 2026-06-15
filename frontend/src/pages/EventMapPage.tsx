@@ -61,9 +61,11 @@ export function EventMapPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const mapRef = useRef<L.Map | null>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
+  const markersGroupRef = useRef<L.FeatureGroup | null>(null)
   const [event, setEvent] = useState<EventData | null>(null)
   const [stands, setStands] = useState<StandData[]>([])
   const [pois, setPois] = useState<PoiData[]>([])
+  const [selectedStandId, setSelectedStandId] = useState('')
 
   useEffect(() => {
     if (!eventId) return
@@ -75,19 +77,32 @@ export function EventMapPage() {
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
 
-    mapRef.current = L.map(mapContainerRef.current, {
+    const map = L.map(mapContainerRef.current, {
       center: [45.0700, 7.6860],
       zoom: 16,
       zoomControl: true,
     })
+    mapRef.current = map
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19,
-    }).addTo(mapRef.current)
+    const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      maxZoom: 20,
+    })
+
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+      maxZoom: 20,
+    })
+
+    streetLayer.addTo(map)
+
+    L.control.layers({
+      'Mappa': streetLayer,
+      'Satellite': satelliteLayer,
+    }, undefined, { position: 'bottomleft' }).addTo(map)
 
     return () => {
-      mapRef.current?.remove()
+      map.remove()
       mapRef.current = null
     }
   }, [])
@@ -118,6 +133,7 @@ export function EventMapPage() {
 
     const group = L.featureGroup(markers)
     group.addTo(map)
+    markersGroupRef.current = group
 
     if (markers.length > 0) {
       map.fitBounds(group.getBounds().pad(0.15))
@@ -125,6 +141,7 @@ export function EventMapPage() {
 
     return () => {
       group.remove()
+      markersGroupRef.current = null
     }
   }, [stands, pois, eventId])
 
@@ -133,6 +150,67 @@ export function EventMapPage() {
       <div className="page-shell">
         <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
         <h1 className={styles.title}>{event?.name ?? 'Caricamento...'} — Mappa</h1>
+      </div>
+
+      <div className={styles.toolbar}>
+        <select
+          className={styles.toolbarSelect}
+          value={selectedStandId}
+          onChange={(e) => {
+            const id = e.target.value
+            setSelectedStandId(id)
+            const map = mapRef.current
+            if (!map) return
+            if (!id) {
+              const g = markersGroupRef.current
+              if (g) map.fitBounds(g.getBounds().pad(0.15))
+              return
+            }
+            const stand = stands.find((s) => s.id === id)
+            if (!stand?.location?.coordinates) return
+            const [lng, lat] = stand.location.coordinates
+            map.setView([lat, lng], 19)
+            markersGroupRef.current?.eachLayer((layer) => {
+              if (layer instanceof L.Marker) {
+                const ll = layer.getLatLng()
+                if (ll.lat === lat && ll.lng === lng) layer.openPopup()
+              }
+            })
+          }}
+        >
+          <option value="">Tutti gli stand</option>
+          {stands.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
+
+        <button
+          className={styles.toolbarBtn}
+          onClick={() => {
+            setSelectedStandId('')
+            const map = mapRef.current
+            const g = markersGroupRef.current
+            if (map && g) map.fitBounds(g.getBounds().pad(0.15))
+          }}
+        >
+          🔄 Reset zoom
+        </button>
+
+        {selectedStandId && (() => {
+          const stand = stands.find((s) => s.id === selectedStandId)
+          if (!stand?.location?.coordinates) return null
+          const [lng, lat] = stand.location.coordinates
+          return (
+            <a
+              className={styles.toolbarLink}
+              href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              🗺️ Google Maps
+            </a>
+          )
+        })()}
       </div>
 
       <div ref={mapContainerRef} className={styles.mapContainer} />
