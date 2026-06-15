@@ -11,6 +11,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "populate:database": "tsx src/scripts/populate-database.ts",
+    "reset:database": "tsx src/scripts/reset-database.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",

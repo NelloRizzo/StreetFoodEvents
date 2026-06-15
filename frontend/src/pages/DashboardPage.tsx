@@ -130,8 +130,27 @@ export function DashboardPage() {
             Bentornat{user?.firstName.endsWith('a') ? 'a' : 'o'}, {user?.firstName ?? 'operatore'}.
           </h1>
           <p className={styles.heroCopy}>
-            I tuoi eventi preferiti e il saldo wallet a colpo d'occhio.
+            {viewMode === 'user'
+              ? 'I tuoi eventi preferiti e il saldo wallet a colpo d\'occhio.'
+              : 'Gestisci stand, eventi e wallet della piattaforma.'}
           </p>
+
+          <div className={styles.viewModeToggle}>
+            <button
+              type="button"
+              className={`${styles.viewModeBtn} ${viewMode === 'user' ? styles.viewModeActive : ''}`}
+              onClick={() => setViewMode('user')}
+            >
+              Utente
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewModeBtn} ${viewMode === 'operator' ? styles.viewModeActive : ''}`}
+              onClick={() => setViewMode('operator')}
+            >
+              Operatore
+            </button>
+          </div>
         </section>
 
 {viewMode === 'user' ? (
@@ -225,6 +244,31 @@ export function DashboardPage() {
           </>
         ) : (
           <>
+            {eventRoles.length > 0 && eventRoleEvents.length > 0 && (
+              <section className={styles.manageSection}>
+                <h2 className={styles.sectionTitle}>Gestione eventi</h2>
+                <div className={styles.manageGrid}>
+                  {eventRoleEvents.map((ev) => (
+                    <div key={ev.id} className={styles.manageCardGroup}>
+                      <span className={styles.manageCardGroupName}>{ev.name}</span>
+                      <div className={styles.manageGrid}>
+                        <Link to={`/events/${ev.id}/cashier`} className={styles.manageCard}>
+                          <span className={styles.manageIcon}>&#128176;</span>
+                          <span className={styles.manageName}>Cassa unica</span>
+                          <span className={styles.manageHint}>Nuovo ordine</span>
+                        </Link>
+                        <Link to={`/events/${ev.id}/orders`} className={styles.manageCard}>
+                          <span className={styles.manageIcon}>&#128196;</span>
+                          <span className={styles.manageName}>Ordini evento</span>
+                          <span className={styles.manageHint}>Gestisci ordini</span>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {(stands.length > 0 || stations.length > 0) && (
               <section className={styles.manageSection}>
                 <h2 className={styles.sectionTitle}>Gestione stand</h2>
@@ -276,31 +320,6 @@ export function DashboardPage() {
                       ))}
                   </div>
                 )}
-              </section>
-            )}
-
-            {eventRoles.length > 0 && eventRoleEvents.length > 0 && (
-              <section className={styles.manageSection}>
-                <h2 className={styles.sectionTitle}>Gestione eventi</h2>
-                <div className={styles.manageGrid}>
-                  {eventRoleEvents.map((ev) => (
-                    <div key={ev.id} className={styles.manageCardGroup}>
-                      <span className={styles.manageCardGroupName}>{ev.name}</span>
-                      <div className={styles.manageGrid}>
-                        <Link to={`/events/${ev.id}/cashier`} className={styles.manageCard}>
-                          <span className={styles.manageIcon}>&#128176;</span>
-                          <span className={styles.manageName}>Cassa unica</span>
-                          <span className={styles.manageHint}>Nuovo ordine</span>
-                        </Link>
-                        <Link to={`/events/${ev.id}/orders`} className={styles.manageCard}>
-                          <span className={styles.manageIcon}>&#128196;</span>
-                          <span className={styles.manageName}>Ordini evento</span>
-                          <span className={styles.manageHint}>Gestisci ordini</span>
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </section>
             )}
 

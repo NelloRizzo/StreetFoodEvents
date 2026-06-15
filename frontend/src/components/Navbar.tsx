@@ -42,7 +42,7 @@ export function Navbar({
   user: _user,
   onLogout,
 }: NavbarProps) {
-  const { isAuthenticated, user, viewMode, setViewMode } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isAdminOpen, setIsAdminOpen] = useState(false)
@@ -124,17 +124,6 @@ export function Navbar({
                     {item.label}
                   </NavLink>
                 ))}
-              </div>
-
-              <div className={styles.toggleSection}>
-                <button
-                  type="button"
-                  className={`${styles.viewToggle} ${viewMode === 'operator' ? styles.viewToggleActive : ''}`}
-                  onClick={() => setViewMode(viewMode === 'user' ? 'operator' : 'user')}
-                >
-                  <span className={styles.viewToggleOption} data-active={viewMode === 'user'}>Utente</span>
-                  <span className={styles.viewToggleOption} data-active={viewMode === 'operator'}>Operatore</span>
-                </button>
               </div>
 
               <div className={styles.eventsSection} ref={eventsMenuRef}>

@@ -107,6 +107,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | `npm run format` | `prettier . --write` (no config file found) |
 | `npm run test` | `vitest run` (80 tests) |
 | `npm run populate:database` | `tsx src/scripts/populate-database.ts` |
+| `npm run reset:database` | `tsx src/scripts/reset-database.ts --password=<password>` |
 
 ### Gotchas
 

@@ -20,6 +20,31 @@
   line-height: 1.7;
 }
 
+.viewModeToggle {
+  display: flex;
+  gap: 0;
+  width: fit-content;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.viewModeBtn {
+  padding: 0.4rem 1rem;
+  border: 0;
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--ease-standard), color var(--ease-standard);
+}
+
+.viewModeActive {
+  background: var(--color-brand);
+  color: #fffaf2;
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;
