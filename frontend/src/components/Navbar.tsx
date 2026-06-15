@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 
-import type { AuthUser } from '../features/auth/auth-context'
 import { apiRequest } from '../lib/api'
+import { useAuth } from '../features/auth/auth-context'
 import { Avatar } from './Avatar'
 import styles from './Navbar.module.scss'
 
@@ -33,15 +33,16 @@ const adminNavItems = [
 
 type NavbarProps = {
   isAuthenticated?: boolean
-  user?: AuthUser | null
+  user?: import('../features/auth/auth-context').AuthUser | null
   onLogout?: () => Promise<void> | void
 }
 
 export function Navbar({
-  isAuthenticated = false,
-  user = null,
+  isAuthenticated: _isAuthenticated,
+  user: _user,
   onLogout,
 }: NavbarProps) {
+  const { isAuthenticated, user, viewMode, setViewMode } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isAdminOpen, setIsAdminOpen] = useState(false)
@@ -123,6 +124,17 @@ export function Navbar({
                     {item.label}
                   </NavLink>
                 ))}
+              </div>
+
+              <div className={styles.toggleSection}>
+                <button
+                  type="button"
+                  className={`${styles.viewToggle} ${viewMode === 'operator' ? styles.viewToggleActive : ''}`}
+                  onClick={() => setViewMode(viewMode === 'user' ? 'operator' : 'user')}
+                >
+                  <span className={styles.viewToggleOption} data-active={viewMode === 'user'}>Utente</span>
+                  <span className={styles.viewToggleOption} data-active={viewMode === 'operator'}>Operatore</span>
+                </button>
               </div>
 
               <div className={styles.eventsSection} ref={eventsMenuRef}>

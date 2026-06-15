@@ -6,6 +6,7 @@ async function upsertStand(input: {
   slogan: string;
   description: string;
   eventIds: string[];
+  location?: { type: 'Point'; coordinates: [number, number] } | null;
 }) {
   return StandModel.findOneAndUpdate(
     { name: input.name },
@@ -20,6 +21,7 @@ export async function populateStands(seedEvents: SeedEventsResult) {
     slogan: 'Il meglio della cucina di strada',
     description: 'Specialità gourmet in versione street food. Dai nostri food truck serviamo piatti preparati al momento con ingredienti selezionati.',
     eventIds: [seedEvents.springEvent._id.toString(), seedEvents.lakeEvent._id.toString()],
+    location: { type: 'Point', coordinates: [7.6845, 45.0700] },
   });
 
   const bbqStand = await upsertStand({
@@ -27,6 +29,7 @@ export async function populateStands(seedEvents: SeedEventsResult) {
     slogan: 'Affumicatura e griglia',
     description: 'Carni selezionate, affumicate a bassa temperatura e grigliate alla perfezione.',
     eventIds: [seedEvents.springEvent._id.toString()],
+    location: { type: 'Point', coordinates: [7.6905, 45.0725] },
   });
 
   const sweetStand = await upsertStand({
@@ -34,6 +37,7 @@ export async function populateStands(seedEvents: SeedEventsResult) {
     slogan: 'Dolce tentazione',
     description: 'Dessert artigianali, crêpes e gelati per concludere in bellezza.',
     eventIds: [seedEvents.springEvent._id.toString(), seedEvents.lakeEvent._id.toString()],
+    location: { type: 'Point', coordinates: [7.6820, 45.0680] },
   });
 
   if (!gourmetStand || !bbqStand || !sweetStand) {

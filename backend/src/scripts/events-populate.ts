@@ -127,6 +127,26 @@ export async function populateEvents(
     { upsert: true, new: true },
   );
 
+  await UserRoleModel.findOneAndUpdate(
+    {
+      userId: seedUsers.cashierUser._id,
+      roleId: seedRoles.eventCashierRole._id,
+      eventId: springEvent._id,
+      standId: null,
+    },
+    {
+      $set: {
+        userId: seedUsers.cashierUser._id,
+        roleId: seedRoles.eventCashierRole._id,
+        eventId: springEvent._id,
+        standId: null,
+        assignedBy: seedUsers.adminUser._id,
+        isActive: true,
+      },
+    },
+    { upsert: true, new: true },
+  );
+
   const customerSpringWallet = await EventUserModel.findOneAndUpdate(
     {
       eventId: springEvent._id,

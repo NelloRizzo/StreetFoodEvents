@@ -11,37 +11,41 @@ const locationSchema = new Schema(
         },
         coordinates: {
             type: [Number],
-            default: null
+            required: true
         }
     },
     { _id: false }
 );
 
-const standSchema = new Schema(
+const poiSchema = new Schema(
     {
+        eventId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Event',
+            required: true
+        },
         name: {
             type: String,
             required: true,
             trim: true,
             maxlength: 160
         },
-        slogan: {
-            type: String,
-            trim: true,
-            default: null,
-            maxlength: 280
-        },
         description: {
             type: String,
             trim: true,
             default: null
         },
-        eventIds: {
-            type: [{ type: Schema.Types.ObjectId, ref: 'Event' }],
-            default: []
-        },
         location: {
             type: locationSchema,
+            required: true
+        },
+        iconType: {
+            type: String,
+            enum: ['toilet', 'info', 'entrance', 'parking', 'stage', 'food', 'drink', 'other'],
+            default: null
+        },
+        iconImage: {
+            type: imageSchema,
             default: null
         },
         coverImage: {
@@ -59,9 +63,8 @@ const standSchema = new Schema(
     }
 );
 
-standSchema.index({ eventIds: 1 });
-standSchema.index({ name: 1 });
+poiSchema.index({ eventId: 1 });
 
-export type Stand = InferSchemaType<typeof standSchema>;
+export type POI = InferSchemaType<typeof poiSchema>;
 
-export const StandModel = model('Stand', standSchema);
+export const POIModel = model('POI', poiSchema);

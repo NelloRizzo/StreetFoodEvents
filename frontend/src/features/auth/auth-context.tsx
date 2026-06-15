@@ -38,6 +38,8 @@ type AuthContextValue = {
   register: (input: RegisterInput) => Promise<void>
   logout: () => Promise<void>
   refreshSession: () => Promise<void>
+  viewMode: 'user' | 'operator'
+  setViewMode: (mode: 'user' | 'operator') => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -45,6 +47,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'user' | 'operator'>('user')
 
   const refreshSession = async () => {
     try {
@@ -99,8 +102,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       register,
       logout,
       refreshSession,
+      viewMode,
+      setViewMode,
     }),
-    [isLoading, user],
+    [isLoading, user, viewMode],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

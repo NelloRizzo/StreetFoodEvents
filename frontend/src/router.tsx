@@ -27,6 +27,10 @@ import { ThemePreviewPage } from './pages/ThemePreviewPage'
 import { UsersPage } from './pages/UsersPage'
 import { StandsPage } from './pages/StandsPage'
 import { CashierOrderPage } from './pages/CashierOrderPage'
+import { EventCashierPage } from './pages/EventCashierPage'
+import { EventMapPage } from './pages/EventMapPage'
+import { EventOrdersPage } from './pages/EventOrdersPage'
+import { PoiDetailPage } from './pages/PoiDetailPage'
 
 export const router = createBrowserRouter([
   {
@@ -52,6 +56,14 @@ export const router = createBrowserRouter([
       {
         path: 'events/:eventId',
         element: <EventDetailPage />,
+      },
+      {
+        path: 'events/:eventId/mappa',
+        element: <EventMapPage />,
+      },
+      {
+        path: 'events/:eventId/pois/:poiId',
+        element: <PoiDetailPage />,
       },
       {
         path: 'events/:eventId/stands/:standId',
@@ -123,6 +135,14 @@ export const router = createBrowserRouter([
           {
             path: 'events/:eventId/stands/:standId/order',
             element: <CashierOrderPage />,
+          },
+          {
+            path: 'events/:eventId/cashier',
+            element: <EventCashierPage />,
+          },
+          {
+            path: 'events/:eventId/orders',
+            element: <EventOrdersPage />,
           },
           {
             path: 'staff',

@@ -129,6 +129,37 @@
   }
 }
 
+.toggleSection {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.viewToggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-soft);
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+}
+
+.viewToggleOption {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  transition: background var(--ease-standard), color var(--ease-standard);
+
+  &[data-active='true'] {
+    background: var(--color-brand);
+    color: #fffaf2;
+  }
+}
+
 .eventsSection {
   display: grid;
   gap: 0.35rem;
@@ -451,6 +482,11 @@
       background: var(--color-brand-soft);
       color: var(--color-brand-deep);
     }
+  }
+
+  .toggleSection {
+    padding-top: 0;
+    border-top: 0;
   }
 
   .eventsSection {

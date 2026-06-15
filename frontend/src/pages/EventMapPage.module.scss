@@ -1,0 +1,60 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.backLink {
+  display: inline-flex;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  color: var(--color-ink-strong);
+  margin-bottom: 1rem;
+}
+
+.mapContainer {
+  width: 100%;
+  height: 60vh;
+  min-height: 400px;
+  margin-bottom: 1rem;
+}
+
+.legend {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--color-ink-soft);
+}
+
+.standMarkerSmall {
+  font-size: 1.3rem;
+}
+
+.poiMarkerSmall {
+  font-size: 1.3rem;
+}
+
+.standMarker {
+  background: none !important;
+  border: none !important;
+  font-size: 1.6rem;
+  text-align: center;
+}
+
+.poiMarker {
+  background: none !important;
+  border: none !important;
+  font-size: 1.6rem;
+  text-align: center;
+}

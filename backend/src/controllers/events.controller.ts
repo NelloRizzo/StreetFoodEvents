@@ -79,7 +79,7 @@ function toEventResponse(event: {
 }
 
 export async function listEvents(_req: Request, res: Response) {
-    const items = await EventModel.find().sort({ startDate: -1, createdAt: -1 });
+    const items = await EventModel.find().sort({ startDate: 1, createdAt: -1 });
 
     return res.status(200).json({
         items: items.map(toEventResponse)

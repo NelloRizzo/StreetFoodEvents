@@ -20,6 +20,7 @@ import { uploadRouter } from './routes/upload.routes';
 import { userRolesRouter } from './routes/user-roles.routes';
 import { userStationsRouter } from './routes/user-stations.routes';
 import { usersRouter } from './routes/users.routes';
+import { poisRouter } from './routes/pois.routes';
 
 export const app = express();
 
@@ -59,6 +60,7 @@ app.use('/api/user-roles', userRolesRouter);
 app.use('/api/user-stations', userStationsRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/pois', poisRouter);
 
 app.use((req, res) => {
     return res.status(404).json({

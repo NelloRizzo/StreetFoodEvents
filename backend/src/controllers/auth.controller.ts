@@ -344,21 +344,42 @@ export async function getMyStands(req: Request, res: Response) {
 
   const userId = req.user.id;
 
+  // Stand-level roles → specific stand IDs
   const standRoleIds = await RoleModel.find({ scope: 'stand' }).distinct('_id');
-  const userRoles = await UserRoleModel.find({
+  const userStandRoles = await UserRoleModel.find({
     userId,
     roleId: { $in: standRoleIds },
     standId: { $ne: null },
     isActive: true
   });
-  const roleStandIds = [...new Set(userRoles.map((ur) => ur.standId!.toString()))];
+  const roleStandIds = new Set(userStandRoles.map((ur) => ur.standId!.toString()));
 
-  const roleStands = roleStandIds.length > 0
-    ? await StandModel.find({ _id: { $in: roleStandIds } })
+  // Event-level roles → all stands for those events
+  const eventRoleIds = await RoleModel.find({ scope: 'event' }).distinct('_id');
+  const userEventRoles = await UserRoleModel.find({
+    userId,
+    roleId: { $in: eventRoleIds },
+    eventId: { $ne: null },
+    isActive: true
+  });
+  const eventIds = [...new Set(userEventRoles.map((ur) => ur.eventId!.toString()))];
+
+  const eventStands = eventIds.length > 0
+    ? await StandModel.find({ eventIds: { $in: eventIds } })
     : [];
 
-  const standStations = roleStandIds.length > 0
-    ? await StationModel.find({ standId: { $in: roleStandIds } }).populate('standId', 'name')
+  for (const s of eventStands) {
+    roleStandIds.add(s._id.toString());
+  }
+
+  const allStandIds = [...roleStandIds];
+
+  const stands = allStandIds.length > 0
+    ? await StandModel.find({ _id: { $in: allStandIds } })
+    : [];
+
+  const standStations = allStandIds.length > 0
+    ? await StationModel.find({ standId: { $in: allStandIds } }).populate('standId', 'name')
     : [];
 
   const userStations = await UserStationModel.find({ userId, isActive: true });
@@ -379,7 +400,7 @@ export async function getMyStands(req: Request, res: Response) {
   }
 
   return res.status(200).json({
-    stands: roleStands.map((s) => ({ id: s._id.toString(), name: s.name })),
+    stands: stands.map((s) => ({ id: s._id.toString(), name: s.name })),
     stations: Array.from(stationMap.values()),
   });
 }

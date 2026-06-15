@@ -39,6 +39,7 @@ export function EventDetailPage() {
   const [event, setEvent] = useState<Event | null>(null)
   const [stands, setStands] = useState<Stand[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [hasEventRole, setHasEventRole] = useState(false)
 
   const themeData = useMemo(
     () =>
@@ -70,6 +71,18 @@ export function EventDetailPage() {
       .catch(() => setIsLoading(false))
   }, [eventId])
 
+  useEffect(() => {
+    if (!eventId || !isAuthenticated) return
+    apiRequest<{ roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles')
+      .then((data) => {
+        const hasAccess = data.roles.some(
+          (r) => r.scope === 'platform' || (r.scope === 'event' && r.eventId === eventId)
+        )
+        setHasEventRole(hasAccess)
+      })
+      .catch(() => {})
+  }, [eventId, isAuthenticated])
+
   if (isLoading || !event) return null
 
   return (
@@ -87,6 +100,19 @@ export function EventDetailPage() {
               <span className={styles.currencyBadge}>
                 {event.currencySymbol} {event.currencyName}
               </span>
+            )}
+            <Link to={`/events/${eventId}/mappa`} className={styles.cashierLink}>
+              Mappa
+            </Link>
+            {hasEventRole && (
+              <>
+                <Link to={`/events/${eventId}/cashier`} className={styles.cashierLink}>
+                  Cassa unica
+                </Link>
+                <Link to={`/events/${eventId}/orders`} className={styles.manageLink}>
+                  Gestisci ordini evento
+                </Link>
+              </>
             )}
             <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} />
           </div>

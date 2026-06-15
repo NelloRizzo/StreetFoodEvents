@@ -63,7 +63,15 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     permissions: ['menu:read', 'orders:read', 'orders:update'],
   });
 
-  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole) {
+  const eventCashierRole = await upsertRole({
+    name: 'Event Cashier',
+    slug: 'event-cashier',
+    scope: 'event',
+    description: 'Gestisce la cassa unica per un evento, ordini per tutti gli stand.',
+    permissions: ['orders:read', 'orders:create', 'orders:update', 'payments:read', 'payments:create'],
+  });
+
+  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole || !eventCashierRole) {
     throw new Error('Failed to seed roles');
   }
 
@@ -92,6 +100,7 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     eventAdminRole,
     cashierRole,
     kitchenRole,
+    eventCashierRole,
   };
 }
 

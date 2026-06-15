@@ -15,6 +15,7 @@ function toStandResponse(stand: {
     slogan?: string | null;
     description?: string | null;
     eventIds: Types.ObjectId[];
+    location?: Record<string, unknown> | null;
     coverImage?: unknown | null;
     gallery?: unknown[];
     createdAt: Date;
@@ -26,6 +27,7 @@ function toStandResponse(stand: {
         slogan: stand.slogan ?? null,
         description: stand.description ?? null,
         eventIds: stand.eventIds.map((id) => id.toString()),
+        location: stand.location ?? null,
         coverImage: stand.coverImage ?? null,
         gallery: stand.gallery ?? [],
         createdAt: stand.createdAt,
@@ -75,6 +77,7 @@ export async function createStand(req: Request, res: Response) {
         slogan,
         description,
         eventIds,
+        location,
         coverImage,
         gallery
     } = req.body;
@@ -84,6 +87,7 @@ export async function createStand(req: Request, res: Response) {
         slogan: slogan ?? null,
         description: sanitizeHtmlContent(description),
         eventIds: Array.isArray(eventIds) ? eventIds : [],
+        location: location ?? null,
         coverImage: coverImage ?? null,
         gallery: gallery ?? []
     });
@@ -115,6 +119,7 @@ export async function updateStand(req: Request, res: Response) {
         slogan,
         description,
         eventIds,
+        location,
         coverImage,
         gallery
     } = req.body;
@@ -133,6 +138,10 @@ export async function updateStand(req: Request, res: Response) {
 
     if (eventIds !== undefined) {
         stand.eventIds = eventIds;
+    }
+
+    if (location !== undefined) {
+        stand.location = location;
     }
 
     if (coverImage !== undefined) {

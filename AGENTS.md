@@ -56,6 +56,41 @@ Two independent npm packages in `backend/` and `frontend/`. No monorepo tool —
 - [x] **Pagina EventUsers** — gestione delle associazioni utente-evento
 - [x] **Test** — scritti con vitest: 80 test backend (models, utils, services, controllers) + 16 test frontend (lib/api, lib/theme)
 
+### Cassa Unica (Jun 2026)
+
+- [x] **Ruolo `event-cashier`** — ruolo scope `event` con permessi ordini/pagamenti. Seed in `roles-populate.ts`
+- [x] **Assegnazione ruolo** — Marco (cashierUser) riceve `event-cashier` per Spring Event
+- [x] **`GET /auth/me/stands`** — esteso per includere stand da ruoli evento
+- [x] **`EventCashierPage`** — `/events/:eventId/cashier` — selettore stand + griglia prodotti, crea ordini per lo stand selezionato
+- [x] **`EventOrdersPage`** — `/events/:eventId/orders` — tutti gli ordini dell'evento, filtrabili per stand
+- [x] **EventDetailPage** — pulsanti "Cassa unica" + "Gestisci ordini evento"
+
+### Coordinate Stand & Mappa (Jun 2026)
+
+- [x] **`location` su Stand model** — campo GeoJSON `{ type: 'Point', coordinates: [lng, lat] }`
+- [x] **Controller stand** — include `location` in response e CRUD
+- [x] **Seed coordinate** — coordinate realistiche per ogni stand seed
+- [x] **`EventMapPage`** — `/events/:eventId/mappa` — Leaflet mappa con marker stand + POI
+
+### POI — Points of Interest (Jun 2026)
+
+- [x] **Modello `POI`** — name, description, coverImage, gallery, location, iconType, iconImage, eventId
+- [x] **CRUD API POI** — `GET/POST/PATCH/DELETE /api/pois`
+- [x] **Seed POI** — punti di esempio per Spring Event
+- [x] **`PoiDetailPage`** — `/events/:eventId/pois/:poiId` — dettaglio con cover, gallery, descrizione
+- [ ] **Gestione POI in EventDetailPage** — sezione admin per creare/modificare/eliminare POI (da fare)
+
+### Due Dashboard con Toggle (Jun 2026)
+
+- [x] **`viewMode` in AuthContext** — `'user' | 'operator'`, default in base ai ruoli
+- [x] **Navbar** — cambia navigazione in base al viewMode attivo
+- [x] **DashboardPage** — mostra contenuti diversi in base al viewMode
+- [x] **Toggle** — pulsante per passare da vista utente a operatore
+
+### Home Page ordinata (Jun 2026)
+
+- [x] **`listEvents` sort** — cambiato da `{ startDate: -1 }` a `{ startDate: 1 }` (prima i più prossimi)
+
 ## Backend (`backend/`)
 
 Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Node ≥22.
@@ -90,6 +125,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | `GET /health` | No |
 | `/api/auth/*` | Login no, logout/me yes |
 | `/api/events/*` | GET public, POST/PATCH/DELETE protected |
+| `/api/pois/*` | GET public, POST/PATCH/DELETE protected |
 | `/api/stands/*` | GET public, POST/PATCH/DELETE protected |
 | `/api/stations/*` | GET public, POST/PATCH/DELETE protected |
 | `/api/products/*` | GET public, POST/PATCH/DELETE protected |
@@ -249,3 +285,32 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
   - Submit & reset — dopo l'invio con successo il carrello viene svuotato e la pagina resta pronta per un nuovo ordine
 - **StandOrdersPage**: accetta `eventId` opzionale da URL per filtrare ordini per evento; verifica ruolo stand via `GET /api/auth/me/stands`.
 - **Role check**: tutte le pagine ordini/cassa verificano che l'utente abbia un ruolo sullo stand chiamando `GET /api/auth/me/stands` al mount.
+
+### Cassa unica — implementazione (Jun 2026)
+- **Ruolo `event-cashier`**: aggiunto in `roles-populate.ts` con scope `event`, permessi `orders:*` e `payments:*`. Assegnato a Marco per Spring Event in `events-populate.ts`.
+- **`getMyStands`**: esteso in `auth.controller.ts` per includere stand da ruoli evento (oltre a ruoli stand). Usa `RoleModel.find({ scope: 'event' })` per trovare i roleId evento, poi cerca UserRole con eventId non nullo, e infine recupera tutti gli stand per quegli eventi tramite `StandModel.find({ eventIds: eventId })`.
+- **`EventCashierPage`**: nuova pagina a `/events/:eventId/cashier`. Layout a due colonne (menu/carrello) come CashierOrderPage, ma con un selettore stand in alto. Verifica ruolo event-cashier via `/auth/me/roles`. Fetcha prodotti/postazioni/utenti per lo stand selezionato.
+- **`EventOrdersPage`**: nuova pagina a `/events/:eventId/orders`. Mostra tutti gli ordini dell'evento filtrabili per stand. Stesse azioni di StandOrdersPage (pronto, consegna, annulla). Report aggregato.
+- **Router**: nuove rotte `/events/:eventId/cashier` e `/events/:eventId/orders` (protette).
+- **EventDetailPage**: pulsanti "Cassa unica" e "Gestisci ordini evento" visibili solo se l'utente ha ruolo event-cashier o platform-admin per quell'evento.
+- **DashboardPage**: sezione "Gestione eventi" con link per ogni evento dove l'utente ha ruolo event-level.
+
+### Coordinate Stand & POI Map (Jun 2026)
+- **Stand location**: aggiunto campo `location` (GeoJSON Point) a `stand.model.ts`. CRUD aggiornato in `stands.controller.ts`.
+- **Seed coordinate**: coordinate realistiche per Gourmet Street, BBQ Revolution e Sweet Corner (`stands-populate.ts`).
+- **POI model**: creato `poi.model.ts` con `{ name, description, location, iconType, iconImage, coverImage, gallery, eventId }`.
+- **POI controller**: CRUD completo in `pois.controller.ts`, route `/api/pois/*` in `pois.routes.ts`.
+- **Seed POI**: 5 punti di esempio per Spring Event (Info Point, Ingresso, Parcheggio, Palco, Bagni) in `pois-populate.ts`.
+- **EventMapPage**: nuova pagina a `/events/:eventId/mappa` con Leaflet. Mostra marker stand (🏪) e POI (emoji per tipo). Popup con link a stand/POI detail.
+- **PoiDetailPage**: nuova pagina a `/events/:eventId/pois/:poiId` con cover image, galleria, descrizione, coordinate.
+- **Router**: nuove rotte `/events/:eventId/mappa` e `/events/:eventId/pois/:poiId`.
+- **EventDetailPage**: pulsante "Mappa" sempre visibile nell'header.
+
+### Due Dashboard con Toggle (Jun 2026)
+- **`viewMode` in AuthContext**: stato `'user' | 'operator'` con `setViewMode`. Default `'user'`.
+- **Navbar toggle**: segment control "Utente / Operatore" nella navbar (mobile e desktop). Cambia navigazione in base a `viewMode`.
+- **DashboardPage duale**: vista utente mostra eventi/wallet/QR; vista operatore mostra gestione stand/eventi/wallet admin.
+- **Navbar**: usa `useAuth()` direttamente invece di props per accesso a `viewMode`/`setViewMode`.
+
+### Home page ordinata (Jun 2026)
+- **`listEvents` sort**: `startDate: -1` → `startDate: 1` (eventi più prossimi per primi) in `events.controller.ts`.
