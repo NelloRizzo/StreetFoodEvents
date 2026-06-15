@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { createOrder } from '../lib/orders'
@@ -53,7 +53,6 @@ type NotesModalState = {
 
 export function CashierOrderPage() {
   const { eventId, standId } = useParams<{ eventId: string; standId: string }>()
-  const navigate = useNavigate()
 
   const [eventName, setEventName] = useState('')
   const [standName, setStandName] = useState('')
@@ -211,6 +210,14 @@ export function CashierOrderPage() {
     setShowScanner(false)
   }, [users])
 
+  const resetOrder = () => {
+    setSelectedCustomerId('')
+    setIsDirectOrder(false)
+    setPayWithCredits(false)
+    setCreditAmount(0)
+    setCart([])
+  }
+
   const handleSubmit = async () => {
     if (cart.length === 0) return
     setIsSubmitting(true)
@@ -229,7 +236,7 @@ export function CashierOrderPage() {
         })),
         paymentOnCreate: effectiveCredit > 0 ? { creditAmount: effectiveCredit } : undefined,
       })
-      navigate(`/events/${eventId}/stands/${standId}/orders`)
+      resetOrder()
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
     }

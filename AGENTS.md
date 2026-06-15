@@ -228,3 +228,24 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
   - **"Nuovo prodotto"** — form con nome, ingredienti, prezzo standard, cover image e galleria. Alla creazione (`POST /products`) il prodotto viene salvato nel catalogo globale e il form passa automaticamente alla schermata di associazione con il nuovo prodotto già preselezionato.
   - **"Aggiungi esistente"** — form per associare un prodotto già esistente allo stand: selezione evento (filtrato tra quelli dello stand), prodotto (dal catalogo), prezzo personalizzato opzionale, e postazioni (checkbox). Crea un `EventProduct` via `POST /event-products`.
   - **Elenco** dei prodotti associati con nome, evento, postazioni, prezzo e pulsante "Rimuovi" (`DELETE /event-products/:id`).
+
+### Homepage & Cashier POS (May 2026)
+- **Homepage**: riscritta come event showcase (`HomePage.tsx`) — griglia di card evento con cover image, nome, data, luogo. Ogni card linka a `/events/:eventId`.
+- **Router (frontend/src/router.tsx)**: nuove rotte protette:
+  - `/events/:eventId/stands/:standId/orders` → `StandOrdersPage` (event-filtered)
+  - `/events/:eventId/stands/:standId/order` → `CashierOrderPage` (POS cassa)
+- **EventDetailPage**: mostra pulsanti "Gestisci ordini" e "Nuovo ordine" per ogni stand quando l'utente è autenticato.
+- **Event-aware StandDetailPage**: il vecchio pulsante "Gestisci ordini" → `/orders/stand/:standId` è stato sostituito con un pannello contenente:
+  - Selettore a discesa degli eventi associati allo stand (da `stand.eventIds` filtrato sulla lista `events` fetchata)
+  - Primo evento preselezionato automaticamente
+  - Due pulsanti: **"Gestisci ordini"** → `/events/:eventId/stands/:standId/orders` e **"Nuovo ordine"** → `/events/:eventId/stands/:standId/order`
+- **CashierOrderPage**: POS layout calculator-style con:
+  - Top bar: selezione cliente (dropdown, QR scan o "Ordine diretto")
+  - Station tabs per filtrare i prodotti
+  - Griglia di pulsanti prodotto grandi (tipo calcolatrice)
+  - Notes modal: quantità + note testuali + selettore stazione (se > 1)
+  - Pannello carrello laterale con riepilogo
+  - Pagamento con crediti misti
+  - Submit & reset — dopo l'invio con successo il carrello viene svuotato e la pagina resta pronta per un nuovo ordine
+- **StandOrdersPage**: accetta `eventId` opzionale da URL per filtrare ordini per evento; verifica ruolo stand via `GET /api/auth/me/stands`.
+- **Role check**: tutte le pagine ordini/cassa verificano che l'utente abbia un ruolo sullo stand chiamando `GET /api/auth/me/stands` al mount.
