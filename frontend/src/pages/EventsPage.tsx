@@ -742,7 +742,7 @@ export function EventsPage() {
                 <strong className={styles.cardName}>{ev.name}</strong>
                 <span className={styles.cardDate}>{fmtDate(ev.startDate)} &ndash; {fmtDate(ev.endDate)}</span>
                 <span className={styles.cardLocation}>{ev.location.label}</span>
-                {ev.shortDescription && <span className={styles.cardDesc}>{ev.shortDescription}</span>}
+                {ev.shortDescription && <span className={styles.cardDesc} dangerouslySetInnerHTML={{ __html: ev.shortDescription }} />}
               </div>
               <div className={styles.cardActions}>
                 <Link className={styles.textBtn} to={`/events/${ev.id}`}>
