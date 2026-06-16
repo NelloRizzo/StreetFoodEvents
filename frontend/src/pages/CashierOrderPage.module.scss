@@ -522,3 +522,184 @@
   padding: 2rem 1rem;
   text-align: center;
 }
+
+/* ── Confirm modal ── */
+.confirmModal {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: #16213e;
+  border: 1px solid #0f3460;
+  width: 360px;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.confirmTitle {
+  font-size: 1rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.confirmOrderNumber {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #e94560;
+  line-height: 1;
+  margin: 0.25rem 0;
+}
+
+.confirmStand {
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.confirmItems {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid #0f3460;
+  border-bottom: 1px solid #0f3460;
+  text-align: left;
+}
+
+.confirmItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #ddd;
+}
+
+.confirmTotal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f0f0f0;
+}
+
+.confirmTotal strong {
+  color: #e94560;
+}
+
+.confirmCredits {
+  font-size: 0.78rem;
+  color: #4caf50;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.printBtn {
+  flex: 1;
+  padding: 0.7rem;
+  border: none;
+  border-radius: 8px;
+  background: #e94560;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.confirmCloseBtn {
+  padding: 0.7rem 1rem;
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  background: transparent;
+  color: #888;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── Print receipt ── */
+.printReceipt {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .printReceipt,
+  .printReceipt * {
+    visibility: visible;
+  }
+
+  .printReceipt {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    position: fixed;
+    inset: 0;
+    padding: 2rem;
+    background: #fff;
+    color: #000;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    max-width: 300px;
+    margin: 0 auto;
+    justify-content: center;
+  }
+
+  .printHeader {
+    display: grid;
+    gap: 0.2rem;
+    text-align: center;
+    font-size: 16px;
+    margin-bottom: 1rem;
+  }
+
+  .printHeader strong {
+    font-size: 18px;
+  }
+
+  .printOrderNumber {
+    font-size: 48px;
+    font-weight: 900;
+    text-align: center;
+    margin: 1rem 0;
+    color: #000;
+  }
+
+  .printItems {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.75rem 0;
+    border-top: 2px dashed #000;
+    border-bottom: 2px dashed #000;
+  }
+
+  .printItem {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+  }
+
+  .printTotal {
+    display: flex;
+    justify-content: space-between;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .printCredits {
+    font-size: 12px;
+    color: #555;
+    text-align: center;
+  }
+
+  .printFooter {
+    font-size: 11px;
+    text-align: center;
+    color: #888;
+    margin-top: 1rem;
+  }
+}

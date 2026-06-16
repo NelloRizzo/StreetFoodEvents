@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
-import { createOrder } from '../lib/orders'
+import { createOrder, type Order } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
 import styles from './CashierOrderPage.module.scss'
 
@@ -76,6 +76,7 @@ export function EventCashierPage() {
   const [payWithCredits, setPayWithCredits] = useState(false)
   const [creditAmount, setCreditAmount] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [createdOrder, setCreatedOrder] = useState<Order | null>(null)
 
   const [notesModal, setNotesModal] = useState<NotesModalState>({
     open: false,
@@ -237,7 +238,7 @@ export function EventCashierPage() {
     setIsSubmitting(true)
     try {
       const effectiveCredit = payWithCredits ? Math.min(creditAmount || total, total) : 0
-      await createOrder({
+      const response = await createOrder({
         eventId,
         standId: selectedStandId,
         customerId: !isDirectOrder && selectedCustomerId ? selectedCustomerId : undefined,
@@ -250,6 +251,7 @@ export function EventCashierPage() {
         })),
         paymentOnCreate: effectiveCredit > 0 ? { creditAmount: effectiveCredit } : undefined,
       })
+      setCreatedOrder(response.item)
       resetOrder()
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
@@ -487,6 +489,72 @@ export function EventCashierPage() {
           </div>
         </div>
       )}
+
+      {createdOrder && (
+        <div className={styles.overlay} onClick={() => setCreatedOrder(null)}>
+          <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.confirmTitle}>Ordine creato</h2>
+            <div className={styles.confirmOrderNumber}>#{createdOrder.orderNumber}</div>
+            <div className={styles.confirmStand}>{standName}</div>
+            <div className={styles.confirmItems}>
+              {createdOrder.items.map((item, idx) => (
+                <div key={idx} className={styles.confirmItem}>
+                  <span>{item.productName} x{item.quantity}</span>
+                  <span>&euro;{item.subtotal.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+            <div className={styles.confirmTotal}>
+              <span>Totale</span>
+              <strong>&euro;{createdOrder.total.toFixed(2)}</strong>
+            </div>
+            {createdOrder.creditAmountUsed > 0 && (
+              <div className={styles.confirmCredits}>
+                Pagato &euro;{createdOrder.creditAmountUsed.toFixed(2)} con crediti
+              </div>
+            )}
+            <div className={styles.confirmActions}>
+              <button className={styles.printBtn} onClick={() => window.print()}>
+                Stampa scontrino
+              </button>
+              <button className={styles.confirmCloseBtn} onClick={() => setCreatedOrder(null)}>
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print-only receipt */}
+      <div className={styles.printReceipt}>
+        <div className={styles.printHeader}>
+          <strong>{eventName}</strong>
+          <span>{standName}</span>
+        </div>
+        <div className={styles.printOrderNumber}>
+          Ordine #{createdOrder?.orderNumber}
+        </div>
+        <div className={styles.printItems}>
+          {createdOrder?.items.map((item, idx) => (
+            <div key={idx} className={styles.printItem}>
+              <span>{item.productName} x{item.quantity}</span>
+              <span>&euro;{item.subtotal.toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+        <div className={styles.printTotal}>
+          <span>Totale</span>
+          <strong>&euro;{createdOrder?.total.toFixed(2)}</strong>
+        </div>
+        {createdOrder?.creditAmountUsed ? (
+          <div className={styles.printCredits}>
+            Crediti: &euro;{createdOrder.creditAmountUsed.toFixed(2)}
+          </div>
+        ) : null}
+        <div className={styles.printFooter}>
+          {new Date().toLocaleString('it-IT')}
+        </div>
+      </div>
 
       {showScanner && (
         <QRScanner

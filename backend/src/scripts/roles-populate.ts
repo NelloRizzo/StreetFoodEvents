@@ -71,7 +71,15 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     permissions: ['orders:read', 'orders:create', 'orders:update', 'payments:read', 'payments:create'],
   });
 
-  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole || !eventCashierRole) {
+  const standPickupRole = await upsertRole({
+    name: 'Addetto Ritiro',
+    slug: 'stand-pickup',
+    scope: 'stand',
+    description: 'Conferma la consegna degli ordini allo stand, senza poter creare ordini o gestire pagamenti.',
+    permissions: ['orders:read', 'orders:update'],
+  });
+
+  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole) {
     throw new Error('Failed to seed roles');
   }
 
@@ -101,6 +109,7 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     cashierRole,
     kitchenRole,
     eventCashierRole,
+    standPickupRole,
   };
 }
 

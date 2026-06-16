@@ -314,7 +314,7 @@ export async function createOrder(req: Request, res: Response) {
                     userId: req.user.id,
                     customerId: effectiveCustomerId,
                     customerName: effectiveCustomerName,
-                    status: 'pending',
+                    status: paymentOnCreate ? 'confirmed' : 'pending',
                     items: orderItems,
                     total,
                     creditAmountUsed: creditAmount,

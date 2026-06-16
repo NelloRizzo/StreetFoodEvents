@@ -1,19 +1,45 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 
 import { useAuth } from '../features/auth/auth-context'
 import { fetchOrders, markItemReady, type Order } from '../lib/orders'
 import styles from './StationQueuePage.module.scss'
 
+function playBeep() {
+  try {
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.frequency.value = 880
+    osc.type = 'sine'
+    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.3)
+  } catch { /* ignore */ }
+}
+
 export function StationQueuePage() {
   const { stationId } = useParams<{ stationId: string }>()
   const { isAuthenticated, isLoading } = useAuth()
   const [orders, setOrders] = useState<Order[]>([])
+  const prevOrderIdsRef = useRef<Set<string>>(new Set())
 
   const load = useCallback(async () => {
     if (!stationId) return
     try {
       const data = await fetchOrders({ stationId, status: 'preparing' })
+
+      const currentIds = new Set(data.items.map((o) => o.id))
+      const prevIds = prevOrderIdsRef.current
+      if (prevIds.size > 0) {
+        const hasNew = data.items.some((o) => !prevIds.has(o.id))
+        if (hasNew) playBeep()
+      }
+      prevOrderIdsRef.current = currentIds
+
       setOrders(data.items)
     } catch { /* ignore */ }
   }, [stationId])
