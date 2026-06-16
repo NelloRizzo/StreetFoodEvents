@@ -88,12 +88,24 @@
   color: var(--color-ink-soft);
 }
 
+.eventMarkerSmall {
+  font-size: 1.5rem;
+}
+
 .standMarkerSmall {
   font-size: 1.3rem;
 }
 
 .poiMarkerSmall {
   font-size: 1.3rem;
+}
+
+.eventMarker {
+  background: none !important;
+  border: none !important;
+  font-size: 2rem;
+  text-align: center;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
 }
 
 .standMarker {

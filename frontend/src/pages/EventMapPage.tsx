@@ -31,6 +31,13 @@ type PoiData = {
   coverImage: unknown | null
 }
 
+const eventIcon = L.divIcon({
+  className: styles.eventMarker,
+  html: '<span>📍</span>',
+  iconSize: [36, 36],
+  iconAnchor: [18, 36],
+})
+
 const standIcon = L.divIcon({
   className: styles.standMarker,
   html: '<span>🏪</span>',
@@ -39,7 +46,7 @@ const standIcon = L.divIcon({
 })
 
 function createPoiIcon(type: string | null) {
-  let emoji = '📍'
+  let emoji = '📌'
   switch (type) {
     case 'toilet': emoji = '🚻'; break
     case 'info': emoji = 'ℹ️'; break
@@ -113,6 +120,13 @@ export function EventMapPage() {
 
     const markers: L.Layer[] = []
 
+    if (event?.location?.coordinates?.coordinates) {
+      const [lng, lat] = event.location.coordinates.coordinates
+      const marker = L.marker([lat, lng], { icon: eventIcon })
+        .bindPopup(`<strong>${event.name}</strong><br/>${event.location.label}`)
+      markers.push(marker)
+    }
+
     stands.forEach((s) => {
       if (!s.location?.coordinates) return
       const [lng, lat] = s.location.coordinates
@@ -143,7 +157,7 @@ export function EventMapPage() {
       group.remove()
       markersGroupRef.current = null
     }
-  }, [stands, pois, eventId])
+  }, [event, stands, pois, eventId])
 
   return (
     <div className={styles.page}>
@@ -217,8 +231,9 @@ export function EventMapPage() {
 
       <div className="page-shell">
         <div className={styles.legend}>
+          <span className={styles.legendItem}><span className={styles.eventMarkerSmall}>📍</span> Evento</span>
           <span className={styles.legendItem}><span className={styles.standMarkerSmall}>🏪</span> Stand</span>
-          <span className={styles.legendItem}><span className={styles.poiMarkerSmall}>📍</span> Punto di interesse</span>
+          <span className={styles.legendItem}><span className={styles.poiMarkerSmall}>📌</span> Punto di interesse</span>
         </div>
       </div>
     </div>
