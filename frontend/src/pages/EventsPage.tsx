@@ -269,6 +269,13 @@ export function EventsPage() {
     setShowCitySuggestions(false)
   }
 
+  const normalizeCountry = (c: string | null | undefined): string => {
+    if (!c) return 'ITA'
+    const upper = c.toUpperCase().trim()
+    if (upper === 'ITALIA' || upper === 'ITALY' || upper === 'IT') return 'ITA'
+    return c
+  }
+
   const openEdit = (ev: EventItem) => {
     setUrlEditMode(false)
     setForm({
@@ -279,7 +286,7 @@ export function EventsPage() {
       city: ev.location.city ?? '',
       province: getProvinceSigla(ev.location.province ?? '') || ev.location.province || '',
       region: ev.location.region ?? '',
-      country: ev.location.country || 'ITA',
+      country: normalizeCountry(ev.location.country),
       postalCode: ev.location.postalCode ?? '',
       latitude: ev.location.coordinates ? String(ev.location.coordinates.coordinates[1] ?? '') : '',
       longitude: ev.location.coordinates ? String(ev.location.coordinates.coordinates[0] ?? '') : '',

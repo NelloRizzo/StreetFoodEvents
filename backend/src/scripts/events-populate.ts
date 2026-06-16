@@ -61,7 +61,7 @@ export async function populateEvents(
       city: 'Torino',
       province: 'TO',
       region: 'Piemonte',
-      country: 'Italia',
+      country: 'ITA',
       postalCode: '10122',
       coordinates: {
         type: 'Point',
@@ -86,7 +86,7 @@ export async function populateEvents(
       city: 'Lecco',
       province: 'LC',
       region: 'Lombardia',
-      country: 'Italia',
+      country: 'ITA',
       postalCode: '23900',
       coordinates: {
         type: 'Point',
