@@ -68,7 +68,7 @@ export function HomePage() {
                 <div className={homeStyles.cardBody}>
                   <strong className={homeStyles.eventName}>{event.name}</strong>
                   {event.shortDescription && (
-                    <span className={homeStyles.eventDesc}>{event.shortDescription}</span>
+                    <span className={homeStyles.eventDesc} dangerouslySetInnerHTML={{ __html: event.shortDescription }} />
                   )}
                   <span className={homeStyles.eventDate}>
                     {new Date(event.startDate).toLocaleDateString('it-IT', {

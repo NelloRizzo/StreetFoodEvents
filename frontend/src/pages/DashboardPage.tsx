@@ -186,7 +186,7 @@ export function DashboardPage() {
                     <div className={styles.eventBody}>
                       <strong className={styles.eventName}>{event.name}</strong>
                       {event.shortDescription && (
-                        <span className={styles.eventDesc}>{event.shortDescription}</span>
+                        <span className={styles.eventDesc} dangerouslySetInnerHTML={{ __html: event.shortDescription }} />
                       )}
                       <span className={styles.eventDate}>
                         {new Date(event.startDate).toLocaleDateString('it-IT', {
