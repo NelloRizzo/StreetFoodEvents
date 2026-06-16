@@ -164,7 +164,7 @@ export function EventDetailPage() {
         </div>
 
         {event.shortDescription && (
-          <p className={styles.shortDesc}>{event.shortDescription}</p>
+          <div className={styles.shortDesc} dangerouslySetInnerHTML={{ __html: event.shortDescription }} />
         )}
 
         <div className={styles.meta}>

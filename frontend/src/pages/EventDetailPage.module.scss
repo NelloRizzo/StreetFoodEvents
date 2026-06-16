@@ -52,6 +52,20 @@
   line-height: 1.55;
   margin-bottom: 1rem;
   max-width: 36rem;
+
+  ul, ol {
+    padding-left: 1.5rem;
+    margin: 0.4rem 0;
+  }
+
+  li {
+    margin-bottom: 0.25rem;
+  }
+
+  a {
+    color: var(--color-brand);
+    text-decoration: underline;
+  }
 }
 
 .meta {
@@ -71,6 +85,20 @@
   line-height: 1.7;
   margin-bottom: 2rem;
   max-width: 42rem;
+
+  ul, ol {
+    padding-left: 1.5rem;
+    margin: 0.4rem 0;
+  }
+
+  li {
+    margin-bottom: 0.25rem;
+  }
+
+  a {
+    color: var(--color-brand);
+    text-decoration: underline;
+  }
 }
 
 .standsSection {
