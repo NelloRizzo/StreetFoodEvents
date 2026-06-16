@@ -16,15 +16,15 @@ function generateGoogleMapsUrl(location: {
     coordinates?: { coordinates?: number[] } | null;
     city?: string | null;
 }): string | null {
-    if (location.addressLine1) {
-        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.addressLine1)}`;
-    }
-
     if (location.coordinates?.coordinates?.length === 2) {
         const [lng, lat] = location.coordinates.coordinates;
         if (lat !== 0 || lng !== 0) {
             return `https://www.google.com/maps/?q=${lat},${lng}`;
         }
+    }
+
+    if (location.addressLine1) {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.addressLine1)}`;
     }
 
     if (location.city) {
