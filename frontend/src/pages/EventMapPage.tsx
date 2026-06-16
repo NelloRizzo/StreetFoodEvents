@@ -86,7 +86,7 @@ export function EventMapPage() {
 
     const map = L.map(mapContainerRef.current, {
       center: [45.0700, 7.6860],
-      zoom: 16,
+      zoom: 14,
       zoomControl: true,
     })
     mapRef.current = map
@@ -150,7 +150,7 @@ export function EventMapPage() {
     markersGroupRef.current = group
 
     if (markers.length > 0) {
-      map.fitBounds(group.getBounds().pad(0.15))
+      map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 15 })
     }
 
     return () => {
@@ -177,13 +177,13 @@ export function EventMapPage() {
             if (!map) return
             if (!id) {
               const g = markersGroupRef.current
-              if (g) map.fitBounds(g.getBounds().pad(0.15))
+              if (g) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 15 })
               return
             }
             const stand = stands.find((s) => s.id === id)
             if (!stand?.location?.coordinates) return
             const [lng, lat] = stand.location.coordinates
-            map.setView([lat, lng], 19)
+            map.setView([lat, lng], 16)
             markersGroupRef.current?.eachLayer((layer) => {
               if (layer instanceof L.Marker) {
                 const ll = layer.getLatLng()
@@ -204,7 +204,7 @@ export function EventMapPage() {
             setSelectedStandId('')
             const map = mapRef.current
             const g = markersGroupRef.current
-            if (map && g) map.fitBounds(g.getBounds().pad(0.15))
+            if (map && g) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 15 })
           }}
         >
           🔄 Reset zoom

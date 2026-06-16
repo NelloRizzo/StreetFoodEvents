@@ -596,11 +596,11 @@ export function EventsPage() {
               <div className={styles.fieldRow}>
                 <div className={styles.field}>
                   <label htmlFor="ev-lat">Latitudine</label>
-                  <input id="ev-lat" type="number" step="any" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} />
+                  <input id="ev-lat" type="text" inputMode="decimal" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value.replace(',', '.') })} />
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="ev-lng">Longitudine</label>
-                  <input id="ev-lng" type="number" step="any" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} />
+                  <input id="ev-lng" type="text" inputMode="decimal" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value.replace(',', '.') })} />
                 </div>
                 <div className={styles.field} style={{ alignSelf: 'flex-end' }}>
                   <button type="button" className={styles.secondaryBtn} onClick={handleGeolocate} style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}>
