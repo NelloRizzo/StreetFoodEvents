@@ -6,6 +6,7 @@ import { apiRequest } from '../lib/api'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
+import { RichEditor } from '../components/RichEditor'
 import { useItalianComuni, searchComuni, getProvinces, getProvinceName, getProvinceSigla } from '../lib/italian-comuni'
 import type { ComuneEntry } from '../lib/italian-comuni'
 import styles from './EventsPage.module.scss'
@@ -642,11 +643,20 @@ export function EventsPage() {
               <legend className={styles.legend}>Descrizione</legend>
               <div className={styles.field}>
                 <label htmlFor="ev-short">Descrizione breve</label>
-                <textarea id="ev-short" maxLength={500} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} />
+                <RichEditor
+                  value={form.shortDescription}
+                  onChange={(html) => setForm({ ...form, shortDescription: html })}
+                  placeholder="Breve descrizione dell'evento..."
+                  maxLength={500}
+                />
               </div>
               <div className={styles.field}>
                 <label htmlFor="ev-long">Descrizione lunga</label>
-                <textarea id="ev-long" rows={6} value={form.longDescription} onChange={(e) => setForm({ ...form, longDescription: e.target.value })} />
+                <RichEditor
+                  value={form.longDescription}
+                  onChange={(html) => setForm({ ...form, longDescription: html })}
+                  placeholder="Descrizione completa con formattazione..."
+                />
               </div>
             </fieldset>
 

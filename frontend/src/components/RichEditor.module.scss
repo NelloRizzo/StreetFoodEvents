@@ -1,0 +1,137 @@
+.wrapper {
+  border: 1px solid var(--color-line, #ccc);
+  border-radius: var(--radius-card, 8px);
+  overflow: hidden;
+  background: var(--color-surface, #fff);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--color-line, #ccc);
+  background: var(--color-surface-soft, #f8f8f8);
+}
+
+.toolBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 30px;
+  padding: 0 0.4rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-ink, #333);
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.toolBtn:hover {
+  background: var(--color-line, #ddd);
+}
+
+.toolBtnActive {
+  background: var(--color-brand, #bf5a2a);
+  color: #fff;
+}
+
+.separator {
+  display: inline-block;
+  width: 1px;
+  margin: 0 0.25rem;
+  background: var(--color-line, #ccc);
+  align-self: stretch;
+}
+
+.editor {
+  padding: 0.75rem 1rem;
+  min-height: 120px;
+  outline: none;
+  line-height: 1.6;
+  color: var(--color-ink, #333);
+}
+
+.editor p {
+  margin: 0 0 0.5rem;
+}
+
+.editor p:last-child {
+  margin-bottom: 0;
+}
+
+.editor h2 {
+  font-size: 1.3rem;
+  margin: 1rem 0 0.5rem;
+  font-weight: 700;
+}
+
+.editor h3 {
+  font-size: 1.1rem;
+  margin: 0.75rem 0 0.4rem;
+  font-weight: 700;
+}
+
+.editor h4 {
+  font-size: 1rem;
+  margin: 0.5rem 0 0.3rem;
+  font-weight: 700;
+}
+
+.editor ul,
+.editor ol {
+  padding-left: 1.5rem;
+  margin: 0.4rem 0;
+}
+
+.editor li {
+  margin-bottom: 0.25rem;
+}
+
+.editor blockquote {
+  border-left: 3px solid var(--color-brand, #bf5a2a);
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  color: var(--color-ink-soft, #666);
+  font-style: italic;
+}
+
+.editor pre {
+  background: #f4f4f4;
+  border-radius: 4px;
+  padding: 0.75rem;
+  overflow-x: auto;
+  font-size: 0.88rem;
+}
+
+.editor code {
+  background: #f4f4f4;
+  border-radius: 3px;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.88rem;
+}
+
+.editor a {
+  color: var(--color-brand, #bf5a2a);
+  text-decoration: underline;
+}
+
+.editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
+
+.counter {
+  text-align: right;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--color-ink-soft, #888);
+  border-top: 1px solid var(--color-line, #ccc);
+}

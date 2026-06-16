@@ -5,6 +5,7 @@ import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
+import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import styles from './EventDetailPage.module.scss'
 
 type Event = {
@@ -40,6 +41,9 @@ export function EventDetailPage() {
   const [stands, setStands] = useState<Stand[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [hasEventRole, setHasEventRole] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
+  const [favId, setFavId] = useState<string | null>(null)
+  const [favLoading, setFavLoading] = useState(false)
 
   const themeData = useMemo(
     () =>
@@ -72,6 +76,23 @@ export function EventDetailPage() {
   }, [eventId])
 
   useEffect(() => {
+    if (!eventId) return
+    fetchFavorites()
+      .then((data) => {
+        for (const fav of data.items) {
+          if (fav.event?.id === eventId) {
+            setIsFavorite(true)
+            setFavId(fav.id)
+            return
+          }
+        }
+        setIsFavorite(false)
+        setFavId(null)
+      })
+      .catch(() => {})
+  }, [eventId])
+
+  useEffect(() => {
     if (!eventId || !isAuthenticated) return
     apiRequest<{ roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles')
       .then((data) => {
@@ -82,6 +103,23 @@ export function EventDetailPage() {
       })
       .catch(() => {})
   }, [eventId, isAuthenticated])
+
+  const toggleFavorite = async () => {
+    if (!eventId || favLoading) return
+    setFavLoading(true)
+    try {
+      if (isFavorite && favId) {
+        await deleteFavorite(favId)
+        setIsFavorite(false)
+        setFavId(null)
+      } else {
+        const data = await createFavorite({ eventId })
+        setIsFavorite(true)
+        setFavId(data.item.id)
+      }
+    } catch { /* not required */ }
+    setFavLoading(false)
+  }
 
   if (isLoading || !event) return null
 
@@ -101,6 +139,13 @@ export function EventDetailPage() {
                 {event.currencySymbol} {event.currencyName}
               </span>
             )}
+            <button
+              className={`${styles.favBtn} ${isFavorite ? styles.favBtnActive : ''}`}
+              onClick={toggleFavorite}
+              aria-label={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+            >
+              {isFavorite ? '\u2764' : '\u2661'}
+            </button>
             <Link to={`/events/${eventId}/mappa`} className={styles.cashierLink}>
               Mappa
             </Link>

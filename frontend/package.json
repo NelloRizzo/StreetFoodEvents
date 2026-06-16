@@ -13,6 +13,11 @@
     "convert-comuni": "node scripts/convert-comuni.mjs"
   },
   "dependencies": {
+    "@tiptap/extension-link": "^3.26.1",
+    "@tiptap/extension-underline": "^3.26.1",
+    "@tiptap/pm": "^3.26.1",
+    "@tiptap/react": "^3.26.1",
+    "@tiptap/starter-kit": "^3.26.1",
     "html5-qrcode": "^2.3.8",
     "leaflet": "^1.9.4",
     "react": "^19.2.5",
