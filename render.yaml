@@ -6,6 +6,8 @@ services:
     region: frankfurt
     plan: free
     rootDir: backend
+    ignoreCommand: >
+      git diff --name-only HEAD~1 HEAD | grep -v '^AGENTS\.md$' | grep -q .
     buildCommand: npm ci && npm run build
     startCommand: npm run start
     healthCheckPath: /health
@@ -34,6 +36,8 @@ services:
     region: frankfurt
     plan: free
     rootDir: frontend
+    ignoreCommand: >
+      git diff --name-only HEAD~1 HEAD | grep -v '^AGENTS\.md$' | grep -q .
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npx serve -s dist -l $PORT
     envVars:
