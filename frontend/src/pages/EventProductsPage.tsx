@@ -120,6 +120,7 @@ export function EventProductsPage() {
   }
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('Rimuovere questa associazione?')) return
     await apiRequest(`/event-products/${id}`, { method: 'DELETE' })
     await fetchItems()
   }

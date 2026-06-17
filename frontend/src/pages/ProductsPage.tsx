@@ -89,6 +89,7 @@ export function ProductsPage() {
   }
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('Eliminare questo prodotto?')) return
     await apiRequest(`/products/${id}`, { method: 'DELETE' })
     await fetchProducts()
   }
