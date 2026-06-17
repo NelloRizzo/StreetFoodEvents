@@ -328,6 +328,9 @@ export function EventOrdersPage() {
                       Annulla
                     </button>
                   )}
+                  <Link className={styles.textBtn} to={`/receipt/${order.id}`} target="_blank" rel="noopener noreferrer">
+                    Ricevuta
+                  </Link>
                 </div>
               </article>
             )

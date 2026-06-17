@@ -14,6 +14,7 @@ type EventProduct = {
   productId: string
   stationIds: string[]
   priceOverride: number | null
+  available: boolean
 }
 
 type Product = {
@@ -231,7 +232,7 @@ export function NewOrderPage() {
             {selectedStandId && menu.length > 0 && (
               <div className={styles.menu}>
                 <h2 className={styles.sectionTitle}>Menu</h2>
-                {menu.map((ep) => (
+                {menu.filter((ep) => ep.available !== false).map((ep) => (
                   <div key={ep.id} className={styles.menuItem}>
                     <div className={styles.menuItemInfo}>
                       <strong>{ep.product?.name ?? 'Caricamento...'}</strong>

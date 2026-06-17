@@ -21,6 +21,7 @@ function toEventProductResponse(ep: {
     productId: Types.ObjectId | PopulatedProduct;
     stationIds: Types.ObjectId[];
     priceOverride?: number | null;
+    available?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -42,6 +43,7 @@ function toEventProductResponse(ep: {
             : null,
         stationIds: ep.stationIds.map((id) => id.toString()),
         priceOverride: ep.priceOverride ?? null,
+        available: ep.available ?? true,
         createdAt: ep.createdAt,
         updatedAt: ep.updatedAt
     };
@@ -166,7 +168,8 @@ export async function updateEventProduct(req: Request, res: Response) {
 
     const {
         stationIds,
-        priceOverride
+        priceOverride,
+        available
     } = req.body;
 
     if (stationIds !== undefined) {
@@ -181,6 +184,10 @@ export async function updateEventProduct(req: Request, res: Response) {
 
     if (priceOverride !== undefined) {
         ep.priceOverride = priceOverride;
+    }
+
+    if (available !== undefined) {
+        ep.available = available;
     }
 
     await ep.save();

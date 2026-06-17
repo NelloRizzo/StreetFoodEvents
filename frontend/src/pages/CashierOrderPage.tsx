@@ -14,6 +14,7 @@ type EventProduct = {
   productId: string
   stationIds: string[]
   priceOverride: number | null
+  available: boolean
 }
 
 type Product = {
@@ -249,9 +250,7 @@ export function CashierOrderPage() {
   if (forbidden) return <div className={styles.page}><div className="page-shell"><p className={styles.empty}>Accesso negato.</p></div></div>
   if (!eventId || !standId) return null
 
-  const filteredMenu = activeStationId
-    ? menu.filter((ep) => ep.stationIds.includes(activeStationId))
-    : menu
+  const filteredMenu = menu.filter((ep) => ep.available !== false && (!activeStationId || ep.stationIds.includes(activeStationId)))
 
   return (
     <div className={styles.page}>

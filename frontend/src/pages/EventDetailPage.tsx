@@ -65,12 +65,15 @@ export function EventDetailPage() {
   const [stands, setStands] = useState<Stand[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [hasEventRole, setHasEventRole] = useState(false)
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [favId, setFavId] = useState<string | null>(null)
   const [favLoading, setFavLoading] = useState(false)
   const [pois, setPois] = useState<PoiItem[]>([])
   const [showPoiForm, setShowPoiForm] = useState(false)
   const [editingPoiId, setEditingPoiId] = useState<string | null>(null)
+  const [deleteOrdersTarget, setDeleteOrdersTarget] = useState(false)
+  const [deletingOrders, setDeletingOrders] = useState(false)
   const [poiForm, setPoiForm] = useState({
     name: '',
     description: '',
@@ -137,12 +140,13 @@ export function EventDetailPage() {
 
   useEffect(() => {
     if (!eventId || !isAuthenticated) return
-    apiRequest<{ roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles')
+    apiRequest<{ isPlatformAdmin: boolean; roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles')
       .then((data) => {
         const hasAccess = data.roles.some(
           (r) => r.scope === 'platform' || (r.scope === 'event' && r.eventId === eventId)
         )
         setHasEventRole(hasAccess)
+        setIsPlatformAdmin(data.isPlatformAdmin)
       })
       .catch(() => {})
   }, [eventId, isAuthenticated])
@@ -280,6 +284,11 @@ export function EventDetailPage() {
                   Gestisci ordini evento
                 </Link>
               </>
+            )}
+            {isPlatformAdmin && (
+              <button className={styles.dangerBtn} onClick={() => setDeleteOrdersTarget(true)}>
+                Cancella tutti gli ordini
+              </button>
             )}
             <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} />
           </div>
@@ -477,6 +486,29 @@ export function EventDetailPage() {
           if (modal.variant === 'alert') setModal((prev) => ({ ...prev, open: false }))
         }}
         onCancel={() => setModal((prev) => ({ ...prev, open: false }))}
+      />
+
+      <ConfirmModal
+        open={deleteOrdersTarget}
+        variant="confirm"
+        title="Cancellare tutti gli ordini?"
+        message="Tutti gli ordini per questo evento verranno eliminati definitivamente e i contatori degli ordini verranno azzerati. Operazione irreversibile."
+        confirmLabel={deletingOrders ? 'Eliminazione...' : 'Cancella tutto'}
+        danger
+        onConfirm={async () => {
+          if (!eventId || deletingOrders) return
+          setDeletingOrders(true)
+          try {
+            await apiRequest(`/orders/event/${eventId}`, { method: 'DELETE' })
+            setModal({ open: true, variant: 'alert', title: 'Ordini cancellati', message: 'Tutti gli ordini dell\'evento sono stati cancellati.' })
+          } catch {
+            setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Impossibile cancellare gli ordini.' })
+          } finally {
+            setDeletingOrders(false)
+            setDeleteOrdersTarget(false)
+          }
+        }}
+        onCancel={() => setDeleteOrdersTarget(false)}
       />
     </div>
   )

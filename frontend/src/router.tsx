@@ -31,6 +31,8 @@ import { EventCashierPage } from './pages/EventCashierPage'
 import { EventMapPage } from './pages/EventMapPage'
 import { EventOrdersPage } from './pages/EventOrdersPage'
 import { PoiDetailPage } from './pages/PoiDetailPage'
+import { ReceiptPage } from './pages/ReceiptPage'
+import { GuidePage } from './pages/GuidePage'
 
 export const router = createBrowserRouter([
   {
@@ -76,6 +78,14 @@ export const router = createBrowserRouter([
       {
         path: 'privacy',
         element: <PrivacyPage />,
+      },
+      {
+        path: 'guide/:role',
+        element: <GuidePage />,
+      },
+      {
+        path: 'receipt/:orderId',
+        element: <ReceiptPage />,
       },
       {
         element: <RequireAuth />,

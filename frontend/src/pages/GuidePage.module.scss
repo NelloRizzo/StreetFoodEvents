@@ -1,0 +1,231 @@
+.page {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.shell {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+/* ── Switcher ── */
+.switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.switchLink {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  color: #333;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.switchLink:hover {
+  border-color: #bf5a2a;
+  color: #bf5a2a;
+}
+
+.switchActive {
+  background: #bf5a2a;
+  color: #fff !important;
+  border-color: #bf5a2a;
+}
+
+/* ── Landing ── */
+.landing {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.landing h1 {
+  font-size: 1.8rem;
+  color: #222;
+  margin: 0 0 0.5rem;
+}
+
+.landing p {
+  color: #666;
+  font-size: 1rem;
+}
+
+/* ── Stamp header ── */
+.stampHeader {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stampDate {
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+/* ── Sections ── */
+.section {
+  margin-bottom: 2rem;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  color: #bf5a2a;
+  margin: 0 0 1rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid #bf5a2a;
+}
+
+/* ── Q&A ── */
+.qaList {
+  margin: 0;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.qaItem {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.question {
+  font-weight: 700;
+  color: #222;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.answer {
+  color: #444;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.qLabel {
+  color: #bf5a2a;
+  font-weight: 800;
+  margin-right: 0.25rem;
+}
+
+.aLabel {
+  color: #2e7d32;
+  font-weight: 800;
+  margin-right: 0.25rem;
+}
+
+/* ── Glossary ── */
+.glossary {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #ddd;
+}
+
+.glossaryTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.glossaryTable th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  background: #f0f0f0;
+  color: #333;
+  font-weight: 700;
+  border: 1px solid #ddd;
+}
+
+.glossaryTable td {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #ddd;
+  color: #444;
+}
+
+.glossaryTerm {
+  font-weight: 700;
+  color: #222;
+  white-space: nowrap;
+}
+
+.glossaryRef {
+  color: #666;
+}
+
+.glossaryTable tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+/* ── Print ── */
+@media print {
+  .page {
+    background: #fff;
+  }
+
+  .shell {
+    max-width: none;
+    padding: 0;
+  }
+
+  .switcher {
+    display: none;
+  }
+
+  .stampHeader {
+    font-size: 10pt;
+    color: #666;
+    border-bottom: 1px solid #999;
+  }
+
+  .stampDate {
+    color: #888;
+  }
+
+  .sectionTitle {
+    font-size: 14pt;
+    border-bottom: 1.5px solid #000;
+    color: #000;
+  }
+
+  .question {
+    font-size: 11pt;
+    color: #000;
+  }
+
+  .answer {
+    font-size: 10pt;
+    color: #333;
+  }
+
+  .qLabel {
+    color: #000;
+  }
+
+  .aLabel {
+    color: #333;
+  }
+
+  .glossary {
+    break-inside: avoid;
+  }
+
+  .glossaryTable th {
+    background: #eee;
+    border-color: #999;
+  }
+
+  .glossaryTable td {
+    border-color: #999;
+  }
+}

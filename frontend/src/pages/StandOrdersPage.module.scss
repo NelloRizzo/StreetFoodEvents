@@ -512,3 +512,21 @@
   font-size: 0.9rem;
   padding: 2rem 0;
 }
+
+.textBtn {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.textBtn:hover {
+  text-decoration: underline;
+}

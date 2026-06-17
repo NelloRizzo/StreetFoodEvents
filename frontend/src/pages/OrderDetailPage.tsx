@@ -231,6 +231,9 @@ export function OrderDetailPage() {
               Annulla ordine
             </button>
           )}
+          <Link className={styles.primaryBtn} to={`/receipt/${order.id}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+            Ricevuta
+          </Link>
         </section>
       </div>
       <ConfirmModal

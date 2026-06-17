@@ -244,6 +244,13 @@ export function Navbar({
                       >
                         Il mio profilo
                       </Link>
+                      <Link
+                        className={styles.dropdownAction}
+                        to="/guide/event-cashier"
+                        onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false) }}
+                      >
+                        Guide
+                      </Link>
                       <button
                         type="button"
                         className={styles.dropdownAction}

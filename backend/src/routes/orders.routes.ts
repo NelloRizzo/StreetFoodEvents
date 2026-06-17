@@ -4,7 +4,10 @@ import {
     cancelOrder,
     cancelOrderItems,
     createOrder,
+    deleteEventOrders,
     getOrderById,
+    getOrderReceipt,
+    getOrderReceiptQrCode,
     getStandReport,
     listMyStationOrders,
     listOrders,
@@ -19,8 +22,13 @@ import { asyncHandler } from '../utils/async-handler';
 
 export const ordersRouter = Router();
 
+ordersRouter.get('/:orderId/receipt', asyncHandler(getOrderReceipt));
+
 ordersRouter.use(asyncHandler(authMiddleware));
 
+ordersRouter.get('/:orderId/receipt-qrcode', asyncHandler(getOrderReceiptQrCode));
+
+ordersRouter.delete('/event/:eventId', asyncHandler(deleteEventOrders));
 ordersRouter.get('/', asyncHandler(listOrders));
 ordersRouter.get('/my-station', asyncHandler(listMyStationOrders));
 ordersRouter.get('/report/stand/:standId', asyncHandler(getStandReport));

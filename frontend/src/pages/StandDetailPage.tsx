@@ -34,6 +34,7 @@ type EventProduct = {
   productId: string
   stationIds: string[]
   priceOverride: number | null
+  available: boolean
   createdAt: string
   updatedAt: string
 }
@@ -488,6 +489,17 @@ export function StandDetailPage() {
                   )}
                 </div>
                 <div className={styles.productCardActions}>
+                  <button
+                    className={`${styles.availabilityBtn} ${ep.available ? '' : styles.unavailableBtn}`}
+                    onClick={async () => {
+                      try {
+                        await apiRequest(`/event-products/${ep.id}`, { method: 'PATCH', bodyJson: { available: !ep.available } })
+                        setEventProducts((prev) => prev.map((p) => p.id === ep.id ? { ...p, available: !p.available } : p))
+                      } catch {}
+                    }}
+                  >
+                    {ep.available ? 'Disponibile' : 'Non disp.'}
+                  </button>
                   <button className={styles.dangerBtn} onClick={() => deleteEventProduct(ep.id)}>
                     Rimuovi
                   </button>

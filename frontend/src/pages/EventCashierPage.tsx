@@ -14,6 +14,7 @@ type EventProduct = {
   productId: string
   stationIds: string[]
   priceOverride: number | null
+  available: boolean
 }
 
 type Product = {
@@ -265,9 +266,7 @@ export function EventCashierPage() {
   if (forbidden) return <div className={styles.page}><div className="page-shell"><p className={styles.empty}>Accesso negato.</p></div></div>
   if (!eventId) return null
 
-  const filteredMenu = activeStationId
-    ? menu.filter((ep) => ep.stationIds.includes(activeStationId))
-    : menu
+  const filteredMenu = menu.filter((ep) => ep.available !== false && (!activeStationId || ep.stationIds.includes(activeStationId)))
 
   return (
     <div className={styles.page}>
@@ -515,6 +514,14 @@ export function EventCashierPage() {
                 Pagato &euro;{createdOrder.creditAmountUsed.toFixed(2)} con crediti
               </div>
             )}
+            {createdOrder.receiptQrCode && (
+              <div className={styles.qrSection}>
+                <img src={createdOrder.receiptQrCode} alt="QR ricevuta" className={styles.qrImg} />
+                <a href={`/receipt/${createdOrder.id}`} target="_blank" rel="noopener noreferrer" className={styles.qrLink}>
+                  Apri ricevuta
+                </a>
+              </div>
+            )}
             <div className={styles.confirmActions}>
               <button className={styles.printBtn} onClick={() => window.print()}>
                 Stampa scontrino
@@ -553,6 +560,11 @@ export function EventCashierPage() {
             Crediti: &euro;{createdOrder.creditAmountUsed.toFixed(2)}
           </div>
         ) : null}
+        {createdOrder?.receiptQrCode && (
+          <div className={styles.printQr}>
+            <img src={createdOrder.receiptQrCode} alt="QR ricevuta" />
+          </div>
+        )}
         <div className={styles.printFooter}>
           {new Date().toLocaleString('it-IT')}
         </div>

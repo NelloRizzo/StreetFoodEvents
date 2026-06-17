@@ -34,6 +34,10 @@ const eventProductSchema = new Schema(
             type: Number,
             default: null,
             min: 0
+        },
+        available: {
+            type: Boolean,
+            default: true
         }
     },
     {

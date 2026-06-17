@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import mongoose, { Types } from 'mongoose';
+import * as qrcode from 'qrcode';
 
 import { CounterModel } from '../models/counter.model';
 import { EventProductModel } from '../models/event-product.model';
@@ -8,6 +9,10 @@ import { OrderModel } from '../models/order.model';
 import { StationModel } from '../models/station.model';
 import { UserStationModel } from '../models/user-station.model';
 import { createEventUserTransaction, EventUserTransactionError } from '../services/event-user-transactions.service';
+import { EventModel } from '../models/event.model';
+import { StandModel } from '../models/stand.model';
+import { RoleModel } from '../models/role.model';
+import { UserRoleModel } from '../models/user-role.model';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -45,7 +50,7 @@ function toOrderResponse(order: {
     cancelReason?: string | null;
     createdAt: Date;
     updatedAt: Date;
-}) {
+}, receiptQrCode?: string | null) {
     return {
         id: order._id.toString(),
         eventId: order.eventId.toString(),
@@ -77,7 +82,8 @@ function toOrderResponse(order: {
         cancelledAt: order.cancelledAt ?? null,
         cancelReason: order.cancelReason ?? null,
         createdAt: order.createdAt,
-        updatedAt: order.updatedAt
+        updatedAt: order.updatedAt,
+        receiptQrCode: receiptQrCode ?? null
     };
 }
 
@@ -110,7 +116,7 @@ export async function listOrders(req: Request, res: Response) {
     const items = await OrderModel.find(filter).sort({ createdAt: -1 });
 
     return res.status(200).json({
-        items: items.map(toOrderResponse)
+        items: items.map((o) => toOrderResponse(o))
     });
 }
 
@@ -141,7 +147,7 @@ export async function listMyStationOrders(req: Request, res: Response) {
     const items = await OrderModel.find(filter).sort({ createdAt: -1 });
 
     return res.status(200).json({
-        items: items.map(toOrderResponse)
+        items: items.map((o) => toOrderResponse(o))
     });
 }
 
@@ -170,6 +176,76 @@ async function getNextOrderNumber(standId: string): Promise<number> {
         { upsert: true, new: true }
     );
     return counter.seq;
+}
+
+export async function getOrderReceipt(req: Request, res: Response) {
+    const orderId = req.params.orderId;
+
+    if (!isValidObjectId(orderId)) {
+        return res.status(400).json({ message: 'Invalid order id' });
+    }
+
+    const order = await OrderModel.findById(orderId).lean();
+
+    if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const [event, stand] = await Promise.all([
+        EventModel.findById(order.eventId).select('name').lean(),
+        StandModel.findById(order.standId).select('name').lean(),
+    ]);
+
+    if (!event || !stand) {
+        return res.status(404).json({ message: 'Event or stand not found' });
+    }
+
+    return res.status(200).json({
+        item: {
+            id: order._id.toString(),
+            orderNumber: order.orderNumber,
+            status: order.status,
+            eventName: event.name,
+            standName: stand.name,
+            standId: order.standId.toString(),
+            items: order.items.map((item) => ({
+                productName: item.productName,
+                quantity: item.quantity,
+                subtotal: item.subtotal,
+            })),
+            total: order.total,
+            creditAmountUsed: order.creditAmountUsed,
+            createdAt: order.createdAt,
+        },
+    });
+}
+
+export async function getOrderReceiptQrCode(req: Request, res: Response) {
+    const orderId = req.params.orderId;
+
+    if (!isValidObjectId(orderId)) {
+        return res.status(400).json({ message: 'Invalid order id' });
+    }
+
+    const order = await OrderModel.findById(orderId).lean();
+
+    if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const origin = req.headers.origin ?? `${req.protocol}://${req.headers.host}`;
+    const receiptUrl = `${origin}/receipt/${order._id.toString()}`;
+
+    const qrDataUrl = await qrcode.toDataURL(receiptUrl, {
+        width: 400,
+        margin: 2,
+        color: {
+            dark: '#264137',
+            light: '#ffffff',
+        },
+    });
+
+    return res.status(200).json({ qrCode: qrDataUrl });
 }
 
 export async function createOrder(req: Request, res: Response) {
@@ -338,8 +414,19 @@ export async function createOrder(req: Request, res: Response) {
 
         await session.commitTransaction();
 
+        let qrDataUrl: string | null = null;
+        try {
+            const origin = req.headers.origin ?? `${req.protocol}://${req.headers.host}`;
+            const receiptUrl = `${origin}/receipt/${order._id.toString()}`;
+            qrDataUrl = await qrcode.toDataURL(receiptUrl, {
+                width: 400,
+                margin: 2,
+                color: { dark: '#264137', light: '#ffffff' },
+            });
+        } catch { /* QR generation is optional */ }
+
         return res.status(201).json({
-            item: toOrderResponse(order)
+            item: toOrderResponse(order, qrDataUrl)
         });
     } catch (error) {
         await session.abortTransaction();
@@ -773,6 +860,46 @@ export async function cancelOrderItems(req: Request, res: Response) {
     }
 }
 
+export async function deleteEventOrders(req: Request, res: Response) {
+    const { eventId } = req.params;
+
+    if (!isValidObjectId(eventId)) {
+        return res.status(400).json({ message: 'Invalid event id' });
+    }
+
+    const userId = req.user!.id;
+
+    const platformAdminRole = await RoleModel.findOne({ slug: 'platform-admin', scope: 'platform' });
+    if (!platformAdminRole) {
+        return res.status(500).json({ message: 'Platform admin role not found' });
+    }
+
+    const userRole = await UserRoleModel.findOne({
+        userId: new Types.ObjectId(userId),
+        roleId: platformAdminRole._id,
+        isActive: true
+    });
+
+    if (!userRole) {
+        return res.status(403).json({ message: 'Only platform administrators can delete event orders' });
+    }
+
+    const eventObjectId = new Types.ObjectId(eventId);
+
+    const deleteResult = await OrderModel.deleteMany({ eventId: eventObjectId });
+
+    const stands = await StandModel.find({ eventIds: eventObjectId }).select('_id');
+    const standIds = stands.map((s) => s._id);
+
+    if (standIds.length > 0) {
+        await CounterModel.deleteMany({ standId: { $in: standIds } });
+    }
+
+    return res.status(200).json({
+        message: `Deleted ${deleteResult.deletedCount} orders and reset counters for ${standIds.length} stands`
+    });
+}
+
 export async function resetOrderCounter(req: Request, res: Response) {
     const { standId } = req.body;
 
@@ -884,6 +1011,6 @@ export async function getStandReport(req: Request, res: Response) {
             status: s._id,
             count: s.count
         })),
-        orders: orders.map(toOrderResponse)
+        orders: orders.map((o) => toOrderResponse(o))
     });
 }

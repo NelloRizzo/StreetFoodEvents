@@ -34,6 +34,7 @@ export type Order = {
   cancelReason: string | null
   createdAt: string
   updatedAt: string
+  receiptQrCode?: string | null
 }
 
 export type CreateOrderInput = {
