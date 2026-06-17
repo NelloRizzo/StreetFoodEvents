@@ -45,6 +45,9 @@ export function FavoritesPage() {
                 {item.event && (
                   <>
                     <strong className={styles.cardName}>{item.event.name}</strong>
+                    {item.event.shortDescription && (
+                      <span className={styles.cardDesc} dangerouslySetInnerHTML={{ __html: item.event.shortDescription }} />
+                    )}
                     <span className={styles.cardTag}>Evento</span>
                   </>
                 )}

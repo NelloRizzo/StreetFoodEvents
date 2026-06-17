@@ -12,7 +12,7 @@ function toFavoriteResponse(fav: any) {
     return {
         id: fav._id.toString(),
         userId: fav.userId.toString(),
-        event: fav.eventId ? { id: fav.eventId._id.toString(), name: fav.eventId.name } : null,
+        event: fav.eventId ? { id: fav.eventId._id.toString(), name: fav.eventId.name, shortDescription: fav.eventId.shortDescription ?? null } : null,
         stand: fav.standId ? { id: fav.standId._id.toString(), name: fav.standId.name, slogan: fav.standId.slogan ?? null } : null,
         createdAt: fav.createdAt,
         updatedAt: fav.updatedAt

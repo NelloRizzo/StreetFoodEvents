@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+import { type UploadedImage } from '../lib/upload'
+import { ImageUploader } from '../components/ImageUploader'
 import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
@@ -34,6 +36,27 @@ type Stand = {
   coverImage: unknown | null
 }
 
+type PoiItem = {
+  id: string
+  name: string
+  description: string | null
+  location: { type: string; coordinates: [number, number] }
+  iconType: string | null
+  coverImage: UploadedImage | null
+  gallery: UploadedImage[]
+}
+
+const POI_ICONS = [
+  { value: '', label: '📍 Predefinito' },
+  { value: 'toilet', label: '🚻 Bagni' },
+  { value: 'info', label: 'ℹ️ Info' },
+  { value: 'entrance', label: '🚪 Ingresso' },
+  { value: 'parking', label: '🅿️ Parcheggio' },
+  { value: 'stage', label: '🎵 Palco' },
+  { value: 'food', label: '🍽️ Cibo' },
+  { value: 'drink', label: '🍺 Bibite' },
+]
+
 export function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const { isAuthenticated } = useAuth()
@@ -44,6 +67,19 @@ export function EventDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false)
   const [favId, setFavId] = useState<string | null>(null)
   const [favLoading, setFavLoading] = useState(false)
+  const [pois, setPois] = useState<PoiItem[]>([])
+  const [showPoiForm, setShowPoiForm] = useState(false)
+  const [editingPoiId, setEditingPoiId] = useState<string | null>(null)
+  const [poiForm, setPoiForm] = useState({
+    name: '',
+    description: '',
+    latitude: '',
+    longitude: '',
+    iconType: '',
+    coverImage: null as UploadedImage | null,
+    gallery: [] as UploadedImage[],
+  })
+  const [savingPoi, setSavingPoi] = useState(false)
 
   const themeData = useMemo(
     () =>
@@ -93,6 +129,11 @@ export function EventDetailPage() {
   }, [eventId])
 
   useEffect(() => {
+    if (!eventId) return
+    apiRequest<{ items: PoiItem[] }>(`/pois?eventId=${eventId}`).then((d) => setPois(d.items)).catch(() => {})
+  }, [eventId])
+
+  useEffect(() => {
     if (!eventId || !isAuthenticated) return
     apiRequest<{ roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles')
       .then((data) => {
@@ -119,6 +160,65 @@ export function EventDetailPage() {
       }
     } catch { /* not required */ }
     setFavLoading(false)
+  }
+
+  const resetPoiForm = () => {
+    setPoiForm({ name: '', description: '', latitude: '', longitude: '', iconType: '', coverImage: null, gallery: [] })
+    setEditingPoiId(null)
+    setShowPoiForm(false)
+  }
+
+  const openEditPoi = (poi: PoiItem) => {
+    setPoiForm({
+      name: poi.name,
+      description: poi.description ?? '',
+      latitude: String(poi.location.coordinates[1]),
+      longitude: String(poi.location.coordinates[0]),
+      iconType: poi.iconType ?? '',
+      coverImage: poi.coverImage,
+      gallery: poi.gallery,
+    })
+    setEditingPoiId(poi.id)
+    setShowPoiForm(true)
+  }
+
+  const savePoi = async () => {
+    if (!eventId || savingPoi) return
+    setSavingPoi(true)
+    try {
+      const lng = Number(poiForm.longitude.replace(',', '.'))
+      const lat = Number(poiForm.latitude.replace(',', '.'))
+      if (!poiForm.name.trim()) { window.alert('Inserisci un nome'); return }
+      if (isNaN(lat) || isNaN(lng)) { window.alert('Inserisci coordinate valide'); return }
+      const body = {
+        eventId,
+        name: poiForm.name.trim(),
+        description: poiForm.description.trim() || null,
+        location: { type: 'Point', coordinates: [lng, lat] },
+        iconType: poiForm.iconType || null,
+        coverImage: poiForm.coverImage,
+        gallery: poiForm.gallery,
+      }
+      if (editingPoiId) {
+        await apiRequest(`/pois/${editingPoiId}`, { method: 'PATCH', bodyJson: body })
+        window.alert('POI aggiornato')
+      } else {
+        await apiRequest('/pois', { method: 'POST', bodyJson: body })
+        window.alert('POI creato')
+      }
+      const data = await apiRequest<{ items: PoiItem[] }>(`/pois?eventId=${eventId}`)
+      setPois(data.items)
+      resetPoiForm()
+    } catch { window.alert('Errore salvataggio POI') }
+    setSavingPoi(false)
+  }
+
+  const deletePoi = async (poiId: string) => {
+    if (!window.confirm('Eliminare questo POI?')) return
+    try {
+      await apiRequest(`/pois/${poiId}`, { method: 'DELETE' })
+      setPois((prev) => prev.filter((p) => p.id !== poiId))
+    } catch { window.alert('Errore eliminazione POI') }
   }
 
   if (isLoading || !event) return null
@@ -236,6 +336,111 @@ export function EventDetailPage() {
             ))}
           </div>
         </section>
+
+        {hasEventRole && (
+          <section className={styles.poiSection}>
+            <h2 className={styles.sectionTitle}>
+              Punti di Interesse ({pois.length})
+              <button className={styles.poiToggleBtn} onClick={() => setShowPoiForm((p) => !p)}>
+                {showPoiForm ? 'Chiudi' : editingPoiId ? 'Modifica POI' : 'Nuovo POI'}
+              </button>
+            </h2>
+
+            {showPoiForm && (
+              <div className={styles.poiForm}>
+                <label className={styles.poiField}>
+                  Nome
+                  <input
+                    type="text"
+                    value={poiForm.name}
+                    onChange={(e) => setPoiForm((p) => ({ ...p, name: e.target.value }))}
+                  />
+                </label>
+                <label className={styles.poiField}>
+                  Descrizione
+                  <textarea
+                    rows={3}
+                    value={poiForm.description}
+                    onChange={(e) => setPoiForm((p) => ({ ...p, description: e.target.value }))}
+                  />
+                </label>
+                <div className={styles.poiCoordRow}>
+                  <label className={styles.poiField}>
+                    Latitudine
+                    <input
+                      type="text" inputMode="decimal"
+                      value={poiForm.latitude}
+                      onChange={(e) => setPoiForm((p) => ({ ...p, latitude: e.target.value.replace(',', '.') }))}
+                    />
+                  </label>
+                  <label className={styles.poiField}>
+                    Longitudine
+                    <input
+                      type="text" inputMode="decimal"
+                      value={poiForm.longitude}
+                      onChange={(e) => setPoiForm((p) => ({ ...p, longitude: e.target.value.replace(',', '.') }))}
+                    />
+                  </label>
+                </div>
+                <label className={styles.poiField}>
+                  Icona
+                  <select
+                    value={poiForm.iconType}
+                    onChange={(e) => setPoiForm((p) => ({ ...p, iconType: e.target.value }))}
+                  >
+                    {POI_ICONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className={styles.poiField}>
+                  <span>Immagine di copertina</span>
+                  <ImageUploader
+                    mode="single"
+                    value={poiForm.coverImage}
+                    onChange={(data) => setPoiForm((p) => ({ ...p, coverImage: data as UploadedImage | null }))}
+                  />
+                </div>
+                <div className={styles.poiField}>
+                  <span>Galleria</span>
+                  <ImageUploader
+                    mode="multiple"
+                    value={poiForm.gallery}
+                    onChange={(data) => setPoiForm((p) => ({ ...p, gallery: data as UploadedImage[] }))}
+                  />
+                </div>
+                <div className={styles.poiFormActions}>
+                  <button className={styles.saveBtn} onClick={savePoi} disabled={savingPoi}>
+                    {savingPoi ? 'Salvataggio...' : editingPoiId ? 'Aggiorna POI' : 'Crea POI'}
+                  </button>
+                  <button className={styles.cancelBtn} onClick={resetPoiForm}>Annulla</button>
+                </div>
+              </div>
+            )}
+
+            {pois.length === 0 && !showPoiForm && (
+              <p className={styles.empty}>Nessun POI. Clicca "Nuovo POI" per aggiungerne uno.</p>
+            )}
+
+            <div className={styles.poiList}>
+              {pois.map((poi) => (
+                <div key={poi.id} className={styles.poiCard}>
+                  <div className={styles.poiCardBody}>
+                    <strong className={styles.poiCardName}>{poi.iconType ? POI_ICONS.find((i) => i.value === poi.iconType)?.label.split(' ')[0] : '\u{1F4CD}'} {poi.name}</strong>
+                    {poi.description && <span className={styles.poiCardDesc}>{poi.description}</span>}
+                    <span className={styles.poiCoords}>
+                      {poi.location.coordinates[1]}, {poi.location.coordinates[0]}
+                    </span>
+                  </div>
+                  <div className={styles.poiCardActions}>
+                    <button className={styles.textBtn} onClick={() => openEditPoi(poi)}>Modifica</button>
+                    <button className={styles.dangerBtn} onClick={() => deletePoi(poi.id)}>Elimina</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   )

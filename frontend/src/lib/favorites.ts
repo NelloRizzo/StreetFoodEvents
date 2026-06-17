@@ -3,7 +3,7 @@ import { apiRequest } from './api'
 export type FavoriteItem = {
   id: string
   userId: string
-  event: { id: string; name: string } | null
+  event: { id: string; name: string; shortDescription: string | null } | null
   stand: { id: string; name: string; slogan: string | null } | null
   createdAt: string
   updatedAt: string

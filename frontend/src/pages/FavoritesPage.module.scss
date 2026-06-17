@@ -44,6 +44,25 @@
   font-size: 0.9rem;
 }
 
+.cardDesc {
+  color: var(--color-ink-soft);
+  font-size: 0.82rem;
+  font-style: italic;
+
+  ul, ol {
+    padding-left: 1.2rem;
+    margin: 0.2rem 0;
+  }
+
+  li {
+    margin-bottom: 0.15rem;
+  }
+
+  a {
+    color: var(--color-brand);
+  }
+}
+
 .cardTag {
   color: var(--color-brand);
   font-size: 0.78rem;

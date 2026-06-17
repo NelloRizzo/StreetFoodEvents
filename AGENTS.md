@@ -80,7 +80,7 @@ Two independent npm packages in `backend/` and `frontend/`. No monorepo tool —
 - [x] **CRUD API POI** — `GET/POST/PATCH/DELETE /api/pois`
 - [x] **Seed POI** — punti di esempio per Spring Event
 - [x] **`PoiDetailPage`** — `/events/:eventId/pois/:poiId` — dettaglio con cover, gallery, descrizione
-- [ ] **Gestione POI in EventDetailPage** — sezione admin per creare/modificare/eliminare POI (da fare)
+- [x] **Gestione POI in EventDetailPage** — sezione admin per creare/modificare/eliminare POI
 
 ### Due Dashboard con Toggle (Jun 2026)
 
@@ -318,6 +318,11 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Home page ordinata (Jun 2026)
 - **`listEvents` sort**: `startDate: -1` → `startDate: 1` (eventi più prossimi per primi) in `events.controller.ts`.
 
+### POI Management admin su EventDetailPage (Jun 2026)
+- **Sezione "Punti di Interesse"** su EventDetailPage — visibile solo a utenti con ruolo evento (`hasEventRole`). Form inline per creare/modificare POI: nome, descrizione, coordinate (lat/lng con virgola), icona (select), cover image (ImageUploader single), galleria (ImageUploader multiple). Elenco POI con pulsanti Modifica/Elimina. API CRUD via `GET/POST/PATCH/DELETE /api/pois/*`.
+- **UseEffect separato** per fetch POI all'apertura pagina (`GET /pois?eventId=${eventId}`).
+- **Salvataggio** con `bodyJson` di `apiRequest`, coordinate convertite da stringa a numero con `replace(',', '.')`.
+
 ### Descrizioni HTML — RichEditor (Jun 2026)
 - **RichEditor component**: `frontend/src/components/RichEditor.tsx`, basato su TipTap (StarterKit + Underline + Link). Toolbar: B/I/U/S, H2/H3, bullet/ordered lists, blockquote, link. Integrato in EventsPage per `shortDescription` e `longDescription`.
 - **EventDetailPage rendering**: `shortDescription` passato da `<p>{text}</p>` a `<div dangerouslySetInnerHTML>`. CSS liste (`ul/ol/li`) e link (`a`) aggiunti per `.shortDesc` e `.longDesc`.
@@ -338,6 +343,7 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### HTML descrizioni su tutte le pagine (Jun 2026)
 - **HomePage & DashboardPage**: shortDescription resa con `dangerouslySetInnerHTML` + CSS liste/link (prima era testo piano).
 - **Lista Eventi (EventsPage)**: stesso fix sulla card lista (`<span>` → `dangerouslySetInnerHTML`).
+- **FavoritesPage**: shortDescription resa con `dangerouslySetInnerHTML` + CSS `ul/ol/li/a` su `.cardDesc`.
 - CSS per `ul/ol/li` e `a` aggiunto a tutti gli stili `.shortDesc`, `.longDesc`, `.cardDesc`, `.eventDesc`.
 
 ### Mappa Eventi — marker e zoom (Jun 2026)

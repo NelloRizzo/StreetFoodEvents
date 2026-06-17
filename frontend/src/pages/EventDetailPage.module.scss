@@ -204,6 +204,152 @@
   background: rgba(233, 69, 96, 0.08);
 }
 
+.poiSection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.poiToggleBtn {
+  margin-left: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--color-brand);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.poiForm {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.poiField {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--color-ink-soft);
+
+  input, textarea, select {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    background: #fff;
+  }
+}
+
+.poiCoordRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.poiFormActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.saveBtn {
+  padding: 0.45rem 1rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.saveBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.poiList {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.poiCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+  flex-wrap: wrap;
+}
+
+.poiCardBody {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.poiCardName {
+  font-size: 1rem;
+  color: var(--color-ink-strong);
+}
+
+.poiCardDesc {
+  font-size: 0.82rem;
+  color: var(--color-ink-soft);
+}
+
+.poiCoords {
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+  font-family: monospace;
+}
+
+.poiCardActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.textBtn {
+  background: none;
+  border: none;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
+.dangerBtn {
+  background: none;
+  border: none;
+  color: #c0392b;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
 @media (min-width: 48rem) {
   .standGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
