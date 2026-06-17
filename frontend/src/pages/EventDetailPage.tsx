@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
+import { ConfirmModal } from '../components/ConfirmModal'
 import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
@@ -80,6 +81,7 @@ export function EventDetailPage() {
     gallery: [] as UploadedImage[],
   })
   const [savingPoi, setSavingPoi] = useState(false)
+  const [modal, setModal] = useState<{ open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }>({ open: false, variant: 'alert', title: '', message: '' })
 
   const themeData = useMemo(
     () =>
@@ -188,8 +190,14 @@ export function EventDetailPage() {
     try {
       const lng = Number(poiForm.longitude.replace(',', '.'))
       const lat = Number(poiForm.latitude.replace(',', '.'))
-      if (!poiForm.name.trim()) { window.alert('Inserisci un nome'); return }
-      if (isNaN(lat) || isNaN(lng)) { window.alert('Inserisci coordinate valide'); return }
+      if (!poiForm.name.trim()) {
+        setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Inserisci un nome.' })
+        return
+      }
+      if (isNaN(lat) || isNaN(lng)) {
+        setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Inserisci coordinate valide.' })
+        return
+      }
       const body = {
         eventId,
         name: poiForm.name.trim(),
@@ -201,24 +209,38 @@ export function EventDetailPage() {
       }
       if (editingPoiId) {
         await apiRequest(`/pois/${editingPoiId}`, { method: 'PATCH', bodyJson: body })
-        window.alert('POI aggiornato')
+        setModal({ open: true, variant: 'alert', title: 'Fatto', message: 'POI aggiornato.' })
       } else {
         await apiRequest('/pois', { method: 'POST', bodyJson: body })
-        window.alert('POI creato')
+        setModal({ open: true, variant: 'alert', title: 'Fatto', message: 'POI creato.' })
       }
       const data = await apiRequest<{ items: PoiItem[] }>(`/pois?eventId=${eventId}`)
       setPois(data.items)
       resetPoiForm()
-    } catch { window.alert('Errore salvataggio POI') }
-    setSavingPoi(false)
+    } catch {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Salvataggio POI fallito.' })
+    } finally {
+      setSavingPoi(false)
+    }
   }
 
   const deletePoi = async (poiId: string) => {
-    if (!window.confirm('Eliminare questo POI?')) return
-    try {
-      await apiRequest(`/pois/${poiId}`, { method: 'DELETE' })
-      setPois((prev) => prev.filter((p) => p.id !== poiId))
-    } catch { window.alert('Errore eliminazione POI') }
+    setModal({
+      open: true,
+      variant: 'confirm',
+      title: 'Eliminare POI?',
+      message: 'Questa azione è irreversibile.',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await apiRequest(`/pois/${poiId}`, { method: 'DELETE' })
+          setPois((prev) => prev.filter((p) => p.id !== poiId))
+        } catch {
+          setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Eliminazione POI fallita.' })
+        }
+        setModal((prev) => ({ ...prev, open: false }))
+      },
+    })
   }
 
   if (isLoading || !event) return null
@@ -442,6 +464,20 @@ export function EventDetailPage() {
           </section>
         )}
       </div>
+
+      <ConfirmModal
+        open={modal.open}
+        variant={modal.variant}
+        title={modal.title}
+        message={modal.message}
+        danger={modal.danger}
+        confirmLabel={modal.variant === 'confirm' ? 'Elimina' : 'OK'}
+        onConfirm={() => {
+          modal.onConfirm?.()
+          if (modal.variant === 'alert') setModal((prev) => ({ ...prev, open: false }))
+        }}
+        onCancel={() => setModal((prev) => ({ ...prev, open: false }))}
+      />
     </div>
   )
 }

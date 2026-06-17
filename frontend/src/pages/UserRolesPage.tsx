@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
+import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './EventUsersPage.module.scss'
+
+type ModalState = { open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }
 
 type User = { id: string; firstName: string; lastName: string; email: string }
 type Role = { id: string; name: string; slug: string; scope: string; isSystem: boolean }
@@ -41,6 +44,8 @@ export function UserRolesPage() {
   const [selectedEventId, setSelectedEventId] = useState('')
   const [selectedStandId, setSelectedStandId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [modal, setModal] = useState<ModalState>({ open: false, variant: 'alert', title: '', message: '' })
 
   const loadAssignments = () => {
     apiRequest<{ items: UserRole[] }>('/user-roles')
@@ -82,7 +87,7 @@ export function UserRolesPage() {
       setSelectedEventId('')
       setSelectedStandId('')
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Errore')
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: err instanceof Error ? err.message : 'Errore' })
     } finally {
       setIsSubmitting(false)
     }
@@ -96,9 +101,14 @@ export function UserRolesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Rimuovere questa assegnazione di ruolo?')) return
+    setDeleteTarget(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     try {
-      await apiRequest(`/user-roles/${id}`, { method: 'DELETE' })
+      await apiRequest(`/user-roles/${deleteTarget}`, { method: 'DELETE' })
+      setDeleteTarget(null)
       loadAssignments()
     } catch { }
   }
@@ -194,6 +204,31 @@ export function UserRolesPage() {
           </div>
         </section>
       </div>
+
+      <ConfirmModal
+        open={modal.open}
+        variant={modal.variant}
+        title={modal.title}
+        message={modal.message}
+        danger={modal.danger}
+        confirmLabel={modal.variant === 'confirm' ? 'Rimuovi' : 'OK'}
+        onConfirm={() => {
+          modal.onConfirm?.()
+          if (modal.variant === 'alert') setModal((prev) => ({ ...prev, open: false }))
+        }}
+        onCancel={() => { setModal((prev) => ({ ...prev, open: false })); setDeleteTarget(null) }}
+      />
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        variant="confirm"
+        title="Rimuovere ruolo?"
+        message="Questa azione è irreversibile."
+        danger
+        confirmLabel="Rimuovi"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

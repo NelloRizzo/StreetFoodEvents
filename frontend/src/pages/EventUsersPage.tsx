@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
 import { QRScanner } from '../components/QRScanner'
+import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './EventUsersPage.module.scss'
 
 type Event = { id: string; name: string; currencyName: string }
@@ -42,6 +43,7 @@ export function EventUsersPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   const [showScanner, setShowScanner] = useState(false)
+  const [alertMsg, setAlertMsg] = useState<string | null>(null)
 
   const [txnType] = useState<'top-up' | 'purchase' | 'refund' | 'manual_adjustment' | 'bonus'>('top-up')
   const [txnDirection, setTxnDirection] = useState<'credit' | 'debit'>('credit')
@@ -78,7 +80,7 @@ export function EventUsersPage() {
       const res = await apiRequest<{ item: User }>(`/users/${userId}`)
       setSelectedUserId(res.item.id)
     } catch {
-      alert('Utente non trovato. Il QR code non corrisponde a un utente valido.')
+      setAlertMsg('Utente non trovato. Il QR code non corrisponde a un utente valido.')
     }
   }, [])
 
@@ -256,6 +258,16 @@ export function EventUsersPage() {
           </>
         )}
       </div>
+
+      <ConfirmModal
+        open={alertMsg !== null}
+        variant="alert"
+        title="Attenzione"
+        message={alertMsg ?? ''}
+        confirmLabel="OK"
+        onConfirm={() => setAlertMsg(null)}
+        onCancel={() => setAlertMsg(null)}
+      />
     </div>
   )
 }

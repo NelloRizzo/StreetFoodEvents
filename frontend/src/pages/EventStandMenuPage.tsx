@@ -5,6 +5,7 @@ import { apiRequest } from '../lib/api'
 import { createOrder } from '../lib/orders'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { useAuth } from '../features/auth/auth-context'
+import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './EventStandMenuPage.module.scss'
 
 type MenuItem = {
@@ -59,6 +60,7 @@ export function EventStandMenuPage() {
   const [payWithCredits, setPayWithCredits] = useState(false)
   const [creditAmount, setCreditAmount] = useState(0)
   const [customerName, setCustomerName] = useState('')
+  const [alertMsg, setAlertMsg] = useState<string | null>(null)
 
   const total = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
 
@@ -153,7 +155,7 @@ export function EventStandMenuPage() {
       })
       navigate('/orders')
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
+      setAlertMsg(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
     }
     setIsSubmitting(false)
   }
@@ -321,6 +323,17 @@ export function EventStandMenuPage() {
           )}
         </div>
       </div>
+      {alertMsg && (
+        <ConfirmModal
+          open={alertMsg !== null}
+          variant="alert"
+          title="Attenzione"
+          message={alertMsg}
+          confirmLabel="OK"
+          onConfirm={() => setAlertMsg(null)}
+          onCancel={() => setAlertMsg(null)}
+        />
+      )}
     </div>
   )
 }

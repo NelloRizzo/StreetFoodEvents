@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { fetchOrder, updateOrderStatus, cancelOrder, payOrder, markStationReady, type Order } from '../lib/orders'
+import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './OrderDetailPage.module.scss'
 
 const statusLabels: Record<string, string> = {
@@ -27,6 +28,7 @@ export function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [creditPayAmount, setCreditPayAmount] = useState(0)
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null)
 
   const load = async () => {
     if (!orderId) return
@@ -44,11 +46,9 @@ export function OrderDetailPage() {
     await load()
   }
 
-  const handleCancel = async () => {
+  const handleCancel = () => {
     if (!orderId) return
-    const reason = prompt("Motivo dell'annullamento (opzionale):")
-    await cancelOrder(orderId, reason ?? undefined)
-    await load()
+    setCancelTarget(orderId)
   }
 
   const handlePay = async () => {
@@ -233,6 +233,21 @@ export function OrderDetailPage() {
           )}
         </section>
       </div>
+      <ConfirmModal
+        open={cancelTarget !== null}
+        variant="prompt"
+        title="Annullare ordine?"
+        message="Inserisci un motivo opzionale."
+        confirmLabel="Annulla ordine"
+        danger
+        onConfirm={async (reason) => {
+          if (!cancelTarget) return
+          await cancelOrder(cancelTarget, reason || undefined)
+          setCancelTarget(null)
+          await load()
+        }}
+        onCancel={() => setCancelTarget(null)}
+      />
     </div>
   )
 }

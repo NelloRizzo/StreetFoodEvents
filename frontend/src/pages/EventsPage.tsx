@@ -8,6 +8,7 @@ import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { RichEditor } from '../components/RichEditor'
 import { useItalianComuni, searchComuni, getProvinces, getProvinceName, getProvinceSigla } from '../lib/italian-comuni'
+import { ConfirmModal } from '../components/ConfirmModal'
 import type { ComuneEntry } from '../lib/italian-comuni'
 import styles from './EventsPage.module.scss'
 
@@ -118,6 +119,7 @@ export function EventsPage() {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [savingStands, setSavingStands] = useState<Set<string>>(new Set())
   const [urlEditMode, setUrlEditMode] = useState(false)
+  const [alertMsg, setAlertMsg] = useState<string | null>(null)
   const comuni = useItalianComuni()
   const [cityQuery, setCityQuery] = useState('')
   const [citySuggestions, setCitySuggestions] = useState<ComuneEntry[]>([])
@@ -408,7 +410,7 @@ export function EventsPage() {
 
   const handleGeolocate = () => {
     if (!navigator.geolocation) {
-      alert('Geolocalizzazione non supportata dal browser.')
+      setAlertMsg('Geolocalizzazione non supportata dal browser.')
       return
     }
 
@@ -424,7 +426,7 @@ export function EventsPage() {
         fillFromNominatim(lat, lng)
       },
       (err) => {
-        alert(`Impossibile rilevare la posizione: ${err.message}`)
+        setAlertMsg(`Impossibile rilevare la posizione: ${err.message}`)
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
@@ -793,6 +795,16 @@ export function EventsPage() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={alertMsg !== null}
+        variant="alert"
+        title="Attenzione"
+        message={alertMsg ?? ''}
+        confirmLabel="OK"
+        onConfirm={() => setAlertMsg(null)}
+        onCancel={() => setAlertMsg(null)}
+      />
     </div>
   )
 }

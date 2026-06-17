@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { apiRequest } from '../lib/api'
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
+import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './ProductsPage.module.scss'
 
 type Product = {
@@ -32,6 +33,7 @@ export function ProductsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<ProductFormData>(emptyForm)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   const fetchProducts = async () => {
     const data = await apiRequest<{ items: Product[] }>('/products')
@@ -89,9 +91,7 @@ export function ProductsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Eliminare questo prodotto?')) return
-    await apiRequest(`/products/${id}`, { method: 'DELETE' })
-    await fetchProducts()
+    setDeleteTarget(id)
   }
 
   if (isLoading) return null
@@ -177,6 +177,22 @@ export function ProductsPage() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        variant="confirm"
+        title="Eliminare prodotto?"
+        message="Questa azione è irreversibile."
+        danger
+        confirmLabel="Elimina"
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          await apiRequest(`/products/${deleteTarget}`, { method: 'DELETE' })
+          setDeleteTarget(null)
+          await fetchProducts()
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

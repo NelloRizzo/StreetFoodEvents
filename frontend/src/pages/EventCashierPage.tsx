@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { createOrder, type Order } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
+import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './CashierOrderPage.module.scss'
 
 type EventProduct = {
@@ -77,6 +78,7 @@ export function EventCashierPage() {
   const [creditAmount, setCreditAmount] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null)
+  const [alertMsg, setAlertMsg] = useState<string | null>(null)
 
   const [notesModal, setNotesModal] = useState<NotesModalState>({
     open: false,
@@ -217,10 +219,10 @@ export function EventCashierPage() {
         setSelectedCustomerId(found.id)
         setIsDirectOrder(false)
       } else {
-        alert('Utente non trovato')
+        setAlertMsg('Utente non trovato')
       }
     } catch {
-      alert('QR Code non valido')
+      setAlertMsg('QR Code non valido')
     }
     setShowScanner(false)
   }, [users])
@@ -254,7 +256,7 @@ export function EventCashierPage() {
       setCreatedOrder(response.item)
       resetOrder()
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
+      setAlertMsg(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
     }
     setIsSubmitting(false)
   }
@@ -562,6 +564,16 @@ export function EventCashierPage() {
           onClose={() => setShowScanner(false)}
         />
       )}
+
+      <ConfirmModal
+        open={alertMsg !== null}
+        variant="alert"
+        title="Attenzione"
+        message={alertMsg ?? ''}
+        confirmLabel="OK"
+        onConfirm={() => setAlertMsg(null)}
+        onCancel={() => setAlertMsg(null)}
+      />
     </div>
   )
 }

@@ -9,6 +9,7 @@ import {
   cancelOrderItems,
   type Order,
 } from '../lib/orders'
+import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './StandOrdersPage.module.scss'
 
 const statusLabels: Record<string, string> = {
@@ -37,6 +38,7 @@ export function EventOrdersPage() {
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
   const [startDate, setStartDate] = useState(today())
   const [endDate, setEndDate] = useState(today())
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null)
 
   useEffect(() => {
     if (!eventId) return
@@ -80,10 +82,8 @@ export function EventOrdersPage() {
     await load()
   }
 
-  const handleCancel = async (orderId: string) => {
-    const reason = prompt("Motivo dell'annullamento (opzionale):")
-    await cancelOrder(orderId, reason ?? undefined)
-    await load()
+  const handleCancel = (orderId: string) => {
+    setCancelTarget(orderId)
   }
 
   const handlePartialCancel = async () => {
@@ -334,6 +334,21 @@ export function EventOrdersPage() {
           })}
         </div>
       </div>
+      <ConfirmModal
+        open={cancelTarget !== null}
+        variant="prompt"
+        title="Annullare ordine?"
+        message="Inserisci un motivo opzionale."
+        confirmLabel="Annulla ordine"
+        danger
+        onConfirm={async (reason) => {
+          if (!cancelTarget) return
+          await cancelOrder(cancelTarget, reason || undefined)
+          setCancelTarget(null)
+          await load()
+        }}
+        onCancel={() => setCancelTarget(null)}
+      />
     </div>
   )
 }

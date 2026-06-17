@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+import { ConfirmModal } from '../components/ConfirmModal'
 import {
   fetchOrders,
   fetchStandReport,
@@ -40,6 +41,8 @@ export function StandOrdersPage() {
   const [startDate, setStartDate] = useState(today())
   const [endDate, setEndDate] = useState(today())
   const [report, setReport] = useState<StandReport | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null)
+  const [confirmReset, setConfirmReset] = useState(false)
 
   useEffect(() => {
     if (!standId) return
@@ -100,10 +103,8 @@ export function StandOrdersPage() {
     await load()
   }
 
-  const handleCancel = async (orderId: string) => {
-    const reason = prompt("Motivo dell'annullamento (opzionale):")
-    await cancelOrder(orderId, reason ?? undefined)
-    await load()
+  const handleCancel = (orderId: string) => {
+    setCancelTarget(orderId)
   }
 
   const handlePartialCancel = async () => {
@@ -132,10 +133,7 @@ export function StandOrdersPage() {
 
   const handleResetCounter = async () => {
     if (!standId) return
-    const ok = window.confirm('Azzerare il contatore ordini? Gli ordini esistenti manterranno il loro numero.')
-    if (!ok) return
-    await resetOrderCounter(standId)
-    alert('Contatore azzerato.')
+    setConfirmReset(true)
   }
 
   if (isLoading) return null
@@ -390,6 +388,37 @@ export function StandOrdersPage() {
           })}
         </div>
       </div>
+
+      <ConfirmModal
+        open={cancelTarget !== null}
+        variant="prompt"
+        title="Annullare ordine?"
+        message="Inserisci un motivo opzionale."
+        confirmLabel="Annulla ordine"
+        danger
+        onConfirm={async (reason) => {
+          if (!cancelTarget) return
+          await cancelOrder(cancelTarget, reason || undefined)
+          setCancelTarget(null)
+          await load()
+        }}
+        onCancel={() => setCancelTarget(null)}
+      />
+
+      <ConfirmModal
+        open={confirmReset}
+        variant="confirm"
+        title="Azzerare contatore?"
+        message="Gli ordini esistenti manterranno il loro numero."
+        danger
+        confirmLabel="Azera"
+        onConfirm={async () => {
+          if (!standId) return
+          await resetOrderCounter(standId)
+          setConfirmReset(false)
+        }}
+        onCancel={() => setConfirmReset(false)}
+      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
+import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './EventProductsPage.module.scss'
 
 type EventProduct = {
@@ -39,6 +40,7 @@ export function EventProductsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormData>(emptyForm)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   const fetchItems = async () => {
     const data = await apiRequest<{ items: EventProduct[] }>('/event-products')
@@ -120,9 +122,7 @@ export function EventProductsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Rimuovere questa associazione?')) return
-    await apiRequest(`/event-products/${id}`, { method: 'DELETE' })
-    await fetchItems()
+    setDeleteTarget(id)
   }
 
   const eventName = (id: string) => events.find((e) => e.id === id)?.name ?? id
@@ -240,6 +240,22 @@ export function EventProductsPage() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        variant="confirm"
+        title="Rimuovere associazione?"
+        message="Questa azione è irreversibile."
+        danger
+        confirmLabel="Rimuovi"
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          await apiRequest(`/event-products/${deleteTarget}`, { method: 'DELETE' })
+          setDeleteTarget(null)
+          await fetchItems()
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }
