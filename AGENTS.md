@@ -57,6 +57,9 @@ Two independent npm packages in `backend/` and `frontend/`. No monorepo tool —
 - [x] **Pagina Utenti** — gestione CRUD degli utenti nel frontend
 - [x] **Pagina EventUsers** — gestione delle associazioni utente-evento
 - [x] **Test** — scritti con vitest: 80 test backend (models, utils, services, controllers) + 16 test frontend (lib/api, lib/theme)
+- [x] **Disponibilità prodotto** — `EventProduct.available` booleano, toggle in admin, esclusione da ordini
+- [x] **Receipt & QR code** — ricevuta pubblica + QR code per ordini
+- [x] **Guide stampabili** — `/guide/:role` con 4 guide operative Q&A
 
 ### Cassa Unica (Jun 2026)
 
@@ -136,7 +139,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | `/api/event-users/*` | All protected |
 | `/api/event-products/*` | All protected |
 | `/api/favorites/*` | All protected |
-| `/api/orders/*` | All protected (list, create, status, cancel, pay, stand report) |
+| `/api/orders/*` | All protected (list, create, status, cancel, pay, stand report). `DELETE /event/:eventId` requires platform-admin. `GET /:orderId/receipt` is public (before auth) |
 | `/api/upload/*` | All protected (POST image/gallery, DELETE image/gallery) |
 
 ## Frontend (`frontend/`)
@@ -358,6 +361,29 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 
 ### Favicon (Jun 2026)
 - **`frontend/public/favicon.svg`**: forchetta + coltello bianchi su sfondo brand `#bf5a2a`, rounded square.
+
+### Eliminazione ordini evento & disponibilità prodotto (Jun 2026)
+- **`deleteEventOrders`**: `DELETE /api/orders/event/:eventId` (platform-admin only) — cancella tutti gli ordini di un evento e azzera i counter degli stand. Pensato per pulire dati di test/dimostrazioni.
+- **`available` su EventProduct**: campo booleano default `true`. `PATCH /event-products/:id` accetta `{ available: bool }`. Toggle "Disponibile / Non disp." su StandDetailPage e EventProductsPage.
+- **Ordini filtrano prodotti**: CashierOrderPage, EventCashierPage, NewOrderPage escludono i prodotti con `available === false`.
+
+### Ricevuta e QR code ordini (Jun 2026)
+- **`GET /api/orders/:orderId/receipt`** (pubblica): restituisce numero ordine, status, eventName, standName, prodotti, totali, crediti, data.
+- **`GET /api/orders/:orderId/receipt-qrcode`** (protetta): rigenera il QR code per la ricevuta.
+- **`createOrder` response**: include `receiptQrCode` (data URL che punta a `/receipt/:orderId`).
+- **`Order.receiptQrCode`**: campo opzionale nel tipo TypeScript frontend.
+- **EventCashierPage**: QR code nel popup di conferma + nella sezione `@media print`.
+- **`/receipt/:orderId`**: pagina pubblica con dettaglio ricevuta e pulsante "Segna come ritirato" per utenti autorizzati.
+- **Link "Ricevuta"**: aggiunto a OrderDetailPage, StandOrdersPage, EventOrdersPage.
+
+### Guide stampabili (Jun 2026)
+- **`GuidePage`** a `/guide/:role`: 4 guide operative in formato Q&A con glossario finale:
+  - `event-admin` — Amministratore Evento (accesso evento, POI, cassa unica, prodotti non disp., cancellazione ordini)
+  - `event-cashier` — Cassiere Unico (cassa unica, selezione stand/cliente, pagamento crediti, scontrino)
+  - `station-attendant` — Addetto a Postazione (coda postazione, refresh 5s, segnalazione pronto)
+  - `stand-cashier` — Cassiere Stand (vista operatore, creazione ordini, stati, resoconti)
+- **Stampa A4**: `@media print` rimuove il selettore ruoli, layout pulito.
+- **Link "Guide"** nel dropdown utente della navbar.
 
 ## Render deploy
 
