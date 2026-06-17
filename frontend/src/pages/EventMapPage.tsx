@@ -88,24 +88,27 @@ export function EventMapPage() {
       center: [45.0700, 7.6860],
       zoom: 14,
       zoomControl: true,
+      maxZoom: 20,
     })
     mapRef.current = map
 
     const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      maxZoom: 20,
+      maxZoom: 19,
+      maxNativeZoom: 19,
     })
 
     const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
       maxZoom: 20,
+      maxNativeZoom: 20,
     })
 
-    streetLayer.addTo(map)
+    satelliteLayer.addTo(map)
 
     L.control.layers({
-      'Mappa': streetLayer,
       'Satellite': satelliteLayer,
+      'Mappa': streetLayer,
     }, undefined, { position: 'bottomleft' }).addTo(map)
 
     return () => {
@@ -150,7 +153,7 @@ export function EventMapPage() {
     markersGroupRef.current = group
 
     if (markers.length > 0) {
-      map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 15 })
+      map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 18 })
     }
 
     return () => {
@@ -177,13 +180,13 @@ export function EventMapPage() {
             if (!map) return
             if (!id) {
               const g = markersGroupRef.current
-              if (g) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 15 })
+              if (g) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 18 })
               return
             }
             const stand = stands.find((s) => s.id === id)
             if (!stand?.location?.coordinates) return
             const [lng, lat] = stand.location.coordinates
-            map.setView([lat, lng], 16)
+            map.setView([lat, lng], 18)
             markersGroupRef.current?.eachLayer((layer) => {
               if (layer instanceof L.Marker) {
                 const ll = layer.getLatLng()
@@ -204,7 +207,7 @@ export function EventMapPage() {
             setSelectedStandId('')
             const map = mapRef.current
             const g = markersGroupRef.current
-            if (map && g) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 15 })
+            if (map && g) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 18 })
           }}
         >
           🔄 Reset zoom
