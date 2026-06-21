@@ -192,3 +192,83 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+@media print {
+  .page {
+    padding-bottom: 1rem;
+  }
+
+  .hero {
+    padding: 1.5rem 0 1rem;
+    break-after: avoid;
+  }
+
+  .heroTitle {
+    font-size: 2.2rem;
+  }
+
+  .heroCopy {
+    font-size: 0.85rem;
+  }
+
+  .heroCta {
+    display: none;
+  }
+
+  .stats {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 100%;
+  }
+
+  .stat {
+    padding: 0.5rem;
+  }
+
+  .statValue {
+    font-size: 1.2rem;
+  }
+
+  .statLabel {
+    font-size: 0.7rem;
+  }
+
+  .featureGroup {
+    break-inside: avoid;
+    padding: 0 0 0.75rem;
+  }
+
+  .groupHeader {
+    margin-bottom: 0.5rem;
+  }
+
+  .groupIcon {
+    font-size: 1.2rem;
+  }
+
+  .groupTitle {
+    font-size: 1.3rem;
+  }
+
+  .featureGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .featureCard {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .featureName {
+    font-size: 0.78rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .featureDesc {
+    font-size: 0.7rem;
+    line-height: 1.35;
+  }
+
+  .ctaSection {
+    display: none;
+  }
+}
