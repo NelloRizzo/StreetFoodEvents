@@ -162,18 +162,8 @@ p {
 }
 
 @media print {
-  html, body, #root, #top {
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-  }
-
   header, footer, .cookie-consent-banner {
     display: none !important;
-  }
-
-  body {
-    background: #fffaf2 !important;
   }
 }
 

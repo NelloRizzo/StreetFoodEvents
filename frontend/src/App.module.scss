@@ -3,6 +3,13 @@
   overflow-y: auto;
 }
 
+@media print {
+  .app {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
+
 .heroSection {
   padding: 2rem 0 3.5rem;
 }
