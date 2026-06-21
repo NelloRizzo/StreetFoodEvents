@@ -246,6 +246,13 @@ export function Navbar({
                       </Link>
                       <Link
                         className={styles.dropdownAction}
+                        to="/flyer"
+                        onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false) }}
+                      >
+                        Volantino
+                      </Link>
+                      <Link
+                        className={styles.dropdownAction}
                         to="/guide/event-cashier"
                         onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false) }}
                       >
@@ -269,6 +276,12 @@ export function Navbar({
             </div>
           ) : (
             <div className={styles.authGroup}>
+              <Link
+                className={styles.secondaryCta}
+                to="/flyer"
+              >
+                Volantino
+              </Link>
               <Link
                 className={styles.secondaryCta}
                 to="/platform"
