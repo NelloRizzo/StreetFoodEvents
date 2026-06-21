@@ -5,12 +5,8 @@
 
 @media print {
   .app {
-    display: block !important;
-    position: static !important;
+    display: contents !important;
     height: auto !important;
-    min-height: 0 !important;
-    width: 100% !important;
-    max-height: none !important;
     overflow: visible !important;
   }
 }
