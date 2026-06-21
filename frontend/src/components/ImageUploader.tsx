@@ -8,9 +8,10 @@ type ImageUploaderProps = {
   value?: UploadedImage | UploadedImage[] | null
   onChange: (data: UploadedImage | UploadedImage[] | null) => void
   label?: string
+  type?: 'stand' | 'event' | 'product' | 'user' | 'poi'
 }
 
-export function ImageUploader({ mode, value, onChange, label }: ImageUploaderProps) {
+export function ImageUploader({ mode, value, onChange, label, type }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -23,16 +24,16 @@ export function ImageUploader({ mode, value, onChange, label }: ImageUploaderPro
     setIsUploading(true)
     try {
       if (mode === 'single') {
-        const img = await uploadImage(files[0]!)
+        const img = await uploadImage(files[0]!, type)
         onChange(img)
       } else {
-        const imgs = await uploadGallery(Array.from(files))
+        const imgs = await uploadGallery(Array.from(files), type)
         onChange([...images, ...imgs])
       }
     } finally {
       setIsUploading(false)
     }
-  }, [mode, onChange, images])
+  }, [mode, onChange, images, type])
 
   const handleDrop = useCallback((event: DragEvent) => {
     event.preventDefault()

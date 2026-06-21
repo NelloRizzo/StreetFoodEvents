@@ -396,12 +396,14 @@ export function StandDetailPage() {
               </div>
               <ImageUploader
                 mode="single"
+                type="product"
                 value={newProductForm.coverImage}
                 onChange={(data) => setNewProductForm({ ...newProductForm, coverImage: data as UploadedImage | null })}
                 label="Immagine di copertina"
               />
               <ImageUploader
                 mode="multiple"
+                type="product"
                 value={newProductForm.gallery}
                 onChange={(data) => setNewProductForm({ ...newProductForm, gallery: data as UploadedImage[] })}
                 label="Galleria"

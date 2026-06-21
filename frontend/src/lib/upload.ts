@@ -11,11 +11,12 @@ export type UploadedImage = {
   bytes: number
 }
 
-async function uploadFile<T>(path: string, file: File, fieldName: string): Promise<T> {
+async function uploadFile<T>(path: string, file: File, fieldName: string, type?: string): Promise<T> {
   const formData = new FormData()
   formData.append(fieldName, file)
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const query = type ? `?type=${encodeURIComponent(type)}` : ''
+  const response = await fetch(`${API_BASE_URL}${path}${query}`, {
     method: 'POST',
     credentials: 'include',
     body: formData,
@@ -30,18 +31,19 @@ async function uploadFile<T>(path: string, file: File, fieldName: string): Promi
   return payload as T
 }
 
-export async function uploadImage(file: File): Promise<UploadedImage> {
-  const data = await uploadFile<{ item: UploadedImage }>('/upload/image', file, 'image')
+export async function uploadImage(file: File, type?: string): Promise<UploadedImage> {
+  const data = await uploadFile<{ item: UploadedImage }>('/upload/image', file, 'image', type)
   return data.item
 }
 
-export async function uploadGallery(files: File[]): Promise<UploadedImage[]> {
+export async function uploadGallery(files: File[], type?: string): Promise<UploadedImage[]> {
   const formData = new FormData()
   for (const file of files) {
     formData.append('images', file)
   }
 
-  const response = await fetch(`${API_BASE_URL}/upload/gallery`, {
+  const query = type ? `?type=${encodeURIComponent(type)}` : ''
+  const response = await fetch(`${API_BASE_URL}/upload/gallery${query}`, {
     method: 'POST',
     credentials: 'include',
     body: formData,

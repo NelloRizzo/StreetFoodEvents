@@ -198,18 +198,20 @@ export function StandsPage() {
             </div>
 
             <ImageUploader
-              mode="single"
-              value={form.coverImage}
-              onChange={(data) => setForm({ ...form, coverImage: data as UploadedImage | null })}
-              label="Immagine di copertina"
-            />
+                mode="single"
+                type="stand"
+                value={form.coverImage}
+                onChange={(data) => setForm({ ...form, coverImage: data as UploadedImage | null })}
+                label="Immagine di copertina"
+              />
 
             <ImageUploader
-              mode="multiple"
-              value={form.gallery}
-              onChange={(data) => setForm({ ...form, gallery: data as UploadedImage[] })}
-              label="Galleria"
-            />
+                mode="multiple"
+                type="stand"
+                value={form.gallery}
+                onChange={(data) => setForm({ ...form, gallery: data as UploadedImage[] })}
+                label="Galleria"
+              />
 
             <div className={styles.formActions}>
               <button type="submit" className={styles.primaryBtn}>

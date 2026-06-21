@@ -428,6 +428,7 @@ export function EventDetailPage() {
                   <span>Immagine di copertina</span>
                   <ImageUploader
                     mode="single"
+                    type="poi"
                     value={poiForm.coverImage}
                     onChange={(data) => setPoiForm((p) => ({ ...p, coverImage: data as UploadedImage | null }))}
                   />
@@ -436,6 +437,7 @@ export function EventDetailPage() {
                   <span>Galleria</span>
                   <ImageUploader
                     mode="multiple"
+                    type="poi"
                     value={poiForm.gallery}
                     onChange={(data) => setPoiForm((p) => ({ ...p, gallery: data as UploadedImage[] }))}
                   />

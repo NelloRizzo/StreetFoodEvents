@@ -708,18 +708,21 @@ export function EventsPage() {
               <legend className={styles.legend}>Immagini</legend>
               <ImageUploader
                 mode="single"
+                type="event"
                 value={form.coverImage}
                 onChange={(data) => setForm({ ...form, coverImage: data as UploadedImage | null })}
                 label="Immagine di copertina"
               />
               <ImageUploader
                 mode="single"
+                type="event"
                 value={form.logo}
                 onChange={(data) => setForm({ ...form, logo: data as UploadedImage | null })}
                 label="Logo"
               />
               <ImageUploader
                 mode="multiple"
+                type="event"
                 value={form.gallery}
                 onChange={(data) => setForm({ ...form, gallery: data as UploadedImage[] })}
                 label="Galleria"

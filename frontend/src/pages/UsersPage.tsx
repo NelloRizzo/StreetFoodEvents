@@ -159,11 +159,12 @@ export function UsersPage() {
               </label>
             </div>
             <ImageUploader
-              mode="single"
-              value={form.avatar}
-              onChange={(data) => setForm({ ...form, avatar: data as UploadedImage | null })}
-              label="Avatar"
-            />
+                mode="single"
+                type="user"
+                value={form.avatar}
+                onChange={(data) => setForm({ ...form, avatar: data as UploadedImage | null })}
+                label="Avatar"
+              />
             <div className={styles.formActions}>
               <button type="submit" className={styles.primaryBtn}>
                 {editingId ? 'Salva modifiche' : 'Crea utente'}
