@@ -33,7 +33,6 @@ import { EventOrdersPage } from './pages/EventOrdersPage'
 import { PoiDetailPage } from './pages/PoiDetailPage'
 import { ReceiptPage } from './pages/ReceiptPage'
 import { GuidePage } from './pages/GuidePage'
-import { FlyerPage } from './pages/FlyerPage'
 
 export const router = createBrowserRouter([
   {
@@ -87,10 +86,6 @@ export const router = createBrowserRouter([
       {
         path: 'receipt/:orderId',
         element: <ReceiptPage />,
-      },
-      {
-        path: 'flyer',
-        element: <FlyerPage />,
       },
       {
         element: <RequireAuth />,
