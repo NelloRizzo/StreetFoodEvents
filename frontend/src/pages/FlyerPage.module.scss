@@ -195,24 +195,23 @@
 
 @media print {
   @page {
-    margin: 1.2cm;
+    margin: 0.8cm;
   }
 
   .page {
-    padding-bottom: 1rem;
+    padding-bottom: 0;
   }
 
   .hero {
-    padding: 1.5rem 0 1rem;
-    break-after: avoid;
+    padding: 0.6rem 0 0.3rem;
   }
 
   .heroTitle {
-    font-size: 2.2rem;
+    font-size: 1.6rem;
   }
 
   .heroCopy {
-    font-size: 0.85rem;
+    font-size: 0.72rem;
   }
 
   .heroCta {
@@ -222,54 +221,55 @@
   .stats {
     grid-template-columns: repeat(4, 1fr);
     max-width: 100%;
+    gap: 0.35rem;
   }
 
   .stat {
-    padding: 0.5rem;
+    padding: 0.3rem 0.4rem;
   }
 
   .statValue {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
 
   .statLabel {
-    font-size: 0.7rem;
+    font-size: 0.6rem;
   }
 
   .featureGroup {
-    break-inside: avoid;
-    padding: 0 0 0.75rem;
+    padding: 0 0 0.4rem;
   }
 
   .groupHeader {
-    margin-bottom: 0.5rem;
-  }
-
-  .groupIcon {
-    font-size: 1.2rem;
-  }
-
-  .groupTitle {
-    font-size: 1.3rem;
-  }
-
-  .featureGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 0.3rem;
     gap: 0.4rem;
   }
 
+  .groupIcon {
+    font-size: 1rem;
+  }
+
+  .groupTitle {
+    font-size: 1rem;
+  }
+
+  .featureGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.25rem;
+  }
+
   .featureCard {
-    padding: 0.5rem 0.6rem;
+    padding: 0.3rem 0.4rem;
   }
 
   .featureName {
-    font-size: 0.78rem;
-    margin-bottom: 0.15rem;
+    font-size: 0.65rem;
+    margin-bottom: 0.1rem;
   }
 
   .featureDesc {
-    font-size: 0.7rem;
-    line-height: 1.35;
+    font-size: 0.58rem;
+    line-height: 1.25;
   }
 
   .ctaSection {
