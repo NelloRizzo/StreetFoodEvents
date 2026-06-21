@@ -89,10 +89,6 @@ export const router = createBrowserRouter([
         element: <ReceiptPage />,
       },
       {
-        path: 'flyer',
-        element: <FlyerPage />,
-      },
-      {
         element: <RequireAuth />,
         children: [
           {
@@ -178,5 +174,9 @@ export const router = createBrowserRouter([
   {
     path: 'orders/station/:stationId',
     element: <StationQueuePage />,
+  },
+  {
+    path: 'flyer',
+    element: <FlyerPage />,
   },
 ])

@@ -162,6 +162,11 @@ p {
 }
 
 @media print {
+  html, body, #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   header, footer, .cookie-consent-banner {
     display: none !important;
   }

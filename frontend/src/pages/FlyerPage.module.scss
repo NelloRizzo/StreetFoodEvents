@@ -1,5 +1,7 @@
 .page {
+  min-height: 100vh;
   padding-bottom: var(--section-gap);
+  background: #fffaf2;
 }
 
 .hero {
@@ -194,16 +196,50 @@
 }
 
 @media print {
+  .page {
+    min-height: 0;
+    padding-bottom: 0.5rem;
+    color: #000 !important;
+  }
+
   .heroCta, .ctaSection {
     display: none;
   }
 
   .hero {
-    padding: 0.4rem 0;
+    padding: 0.5rem 0;
+  }
+
+  .heroTitle {
+    font-size: 1.5rem;
+  }
+
+  .heroCopy {
+    font-size: 0.7rem;
+  }
+
+  .stats {
+    gap: 0.3rem;
+  }
+
+  .stat {
+    padding: 0.25rem 0.4rem;
+  }
+
+  .statValue {
+    font-size: 1rem;
   }
 
   .featureGroup {
     padding: 0 0 0.3rem;
+  }
+
+  .groupHeader {
+    margin-bottom: 0.2rem;
+  }
+
+  .groupTitle {
+    font-size: 0.95rem;
   }
 
   .featureGrid {
@@ -212,33 +248,16 @@
   }
 
   .featureCard {
-    padding: 0.2rem 0.3rem;
-    border-radius: 4px;
+    padding: 0.2rem 0.25rem;
   }
 
   .featureName {
-    font-size: 0.7rem;
-    margin-bottom: 0.1rem;
+    font-size: 0.62rem;
+    margin-bottom: 0.05rem;
   }
 
   .featureDesc {
-    font-size: 0.6rem;
-    line-height: 1.3;
-  }
-
-  .groupHeader {
-    margin-bottom: 0.2rem;
-  }
-
-  .groupTitle {
-    font-size: 1rem;
-  }
-
-  .stats {
-    gap: 0.25rem;
-  }
-
-  .stat {
-    padding: 0.25rem;
+    font-size: 0.55rem;
+    line-height: 1.25;
   }
 }
