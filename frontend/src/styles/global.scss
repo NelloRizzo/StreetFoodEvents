@@ -162,14 +162,17 @@ p {
 }
 
 @media print {
-  #root > div {
+  html, body, #root, #top {
     height: auto !important;
+    min-height: 0 !important;
     overflow: visible !important;
   }
 
+  header, footer, .cookie-consent-banner {
+    display: none !important;
+  }
+
   body {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
     background: #fffaf2 !important;
   }
 }

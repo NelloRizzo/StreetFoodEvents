@@ -194,85 +194,51 @@
 }
 
 @media print {
-  @page {
-    margin: 0.8cm;
-  }
-
-  .page {
-    padding-bottom: 0;
-  }
-
-  .hero {
-    padding: 0.6rem 0 0.3rem;
-  }
-
-  .heroTitle {
-    font-size: 1.6rem;
-  }
-
-  .heroCopy {
-    font-size: 0.72rem;
-  }
-
-  .heroCta {
+  .heroCta, .ctaSection {
     display: none;
   }
 
-  .stats {
-    grid-template-columns: repeat(4, 1fr);
-    max-width: 100%;
-    gap: 0.35rem;
-  }
-
-  .stat {
-    padding: 0.3rem 0.4rem;
-  }
-
-  .statValue {
-    font-size: 1rem;
-  }
-
-  .statLabel {
-    font-size: 0.6rem;
+  .hero {
+    padding: 0.4rem 0;
   }
 
   .featureGroup {
-    padding: 0 0 0.4rem;
+    padding: 0 0 0.3rem;
+  }
+
+  .featureGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.2rem;
+  }
+
+  .featureCard {
+    padding: 0.2rem 0.3rem;
+    border-radius: 4px;
+  }
+
+  .featureName {
+    font-size: 0.7rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .featureDesc {
+    font-size: 0.6rem;
+    line-height: 1.3;
   }
 
   .groupHeader {
-    margin-bottom: 0.3rem;
-    gap: 0.4rem;
-  }
-
-  .groupIcon {
-    font-size: 1rem;
+    margin-bottom: 0.2rem;
   }
 
   .groupTitle {
     font-size: 1rem;
   }
 
-  .featureGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .stats {
     gap: 0.25rem;
   }
 
-  .featureCard {
-    padding: 0.3rem 0.4rem;
-  }
-
-  .featureName {
-    font-size: 0.65rem;
-    margin-bottom: 0.1rem;
-  }
-
-  .featureDesc {
-    font-size: 0.58rem;
-    line-height: 1.25;
-  }
-
-  .ctaSection {
-    display: none;
+  .stat {
+    padding: 0.25rem;
   }
 }
