@@ -33,6 +33,7 @@ import { EventOrdersPage } from './pages/EventOrdersPage'
 import { PoiDetailPage } from './pages/PoiDetailPage'
 import { ReceiptPage } from './pages/ReceiptPage'
 import { GuidePage } from './pages/GuidePage'
+import { VolantinoPage } from './pages/VolantinoPage'
 
 export const router = createBrowserRouter([
   {
@@ -173,5 +174,9 @@ export const router = createBrowserRouter([
   {
     path: 'orders/station/:stationId',
     element: <StationQueuePage />,
+  },
+  {
+    path: 'volantino',
+    element: <VolantinoPage />,
   },
 ])
