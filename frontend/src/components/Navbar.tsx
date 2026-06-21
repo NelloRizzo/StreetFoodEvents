@@ -31,7 +31,6 @@ const adminNavItems = [
   { label: 'Ruoli', to: '/user-roles' },
   { label: 'Staff', to: '/staff' },
   { label: 'Partecipanti', to: '/event-users' },
-  { label: 'Volantino', to: '/flyer' },
 ]
 
 type NavbarProps = {
@@ -210,6 +209,15 @@ export function Navbar({
                           {item.label}
                         </NavLink>
                       ))}
+                      <a
+                        className={styles.adminDropdownLink}
+                        href="/flyer"
+                        target="_blank"
+                        rel="noopener"
+                        onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false); setIsAdminOpen(false) }}
+                      >
+                        Volantino
+                      </a>
                     </div>
                   )}
                 </div>
