@@ -10,7 +10,6 @@ $line-strong: rgba(38, 65, 55, 0.22);
 
 .page {
   position: relative;
-  overflow: hidden;
   color: $ink;
   background: $surface;
   min-height: 100vh;
@@ -272,6 +271,12 @@ $line-strong: rgba(38, 65, 55, 0.22);
 
 @media print {
   @page { margin: 0.5cm; }
+
+  .page {
+    overflow: visible !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
 
   .page::before,
   .page::after,
