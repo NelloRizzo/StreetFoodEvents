@@ -194,6 +194,10 @@
 }
 
 @media print {
+  @page {
+    margin: 1.2cm;
+  }
+
   .page {
     padding-bottom: 1rem;
   }

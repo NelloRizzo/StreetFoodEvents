@@ -161,6 +161,19 @@ p {
   color: #fffaf2;
 }
 
+@media print {
+  #root > div {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: #fffaf2 !important;
+  }
+}
+
 @media (min-width: 48rem) {
   .cookie-consent-banner__content {
     flex-direction: row;
