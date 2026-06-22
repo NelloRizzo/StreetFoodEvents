@@ -392,13 +392,15 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
   2. **HTML puro in `public/`** — soluzione definitiva: Vite copia `public/` → `dist/`, `npx serve -s` serve il file esatto se il path matcha un file/directory index
 
 - **Cartella**: `frontend/public/flyer/` → servito a `/flyer/index.html`
-- **Link navbar** (`Navbar.tsx`): `<a href="/flyer/index.html" target="_blank">` link diretto al file statico, nessuna route React coinvolta
-- **Niente route React**: il vecchio `VolantinoPage.tsx` e `VolantinoPage.module.scss` eliminati. La route `path: 'volantino'` rimossa dal router.
-- **Fix stampa**: nell'HTML standalone, `@media print` aggiunto `body { overflow: visible !important; min-height: auto !important; }`
+- **Decisione finale**: **React page dentro SPA** (FlyerPage) con reset CSS aggressivo. L'HTML standalone restava in `public/flyer/` ma non veniva servito da `serve -s` in produzione (nemmeno `/flyer/index.html` come file esatto — `serve` non serve file statici da subdirectory in single-page mode). Soluzione: route React `/flyer` fuori da AppLayout, con `@media print` che sovrascrive `html, body, #root` con `height: auto !important; min-height: 0 !important; overflow: visible !important;`
+- **`FlyerPage.tsx`** + **`FlyerPage.module.scss`** in `src/pages/`
+- **Link navbar** (`Navbar.tsx`): `<a href="/flyer" target="_blank">` (route React)
+- **Niente server custom**: `render.yaml` usa `npx serve -s dist -l $PORT` normale
 
 #### Cosa NON fare
-- Non tentare di servire il volantino via React (`serve -s` serve il file statico di `public/` prima della SPA fallback, ma solo se il path matcha un FILE o DIRECTORY INDEX esatto — `/flyer/index.html` è sicuro, `/flyer/` potrebbe andare in SPA fallback in alcune versioni di `serve`)
-- Non aggiungere `min-height: 100vh` o `overflow: hidden` su wrapper che devono stampare — se inevitabile, aggiungere override esplicito `!important` nel `@media print` (e anche così potrebbe non bastare per wrapper annidati come `#root`)
+- Non usare server custom (`server.js`) — il problema è solo CSS, non va risolto a livello di routing/serving
+- Non usare HTML standalone in `public/` se servito da `serve -s` — `serve` single-page mode non serve file da subdirectory
+- Non dimenticare di override `min-height: 0 !important` su `#root` e `body` nel `@media print` di pagine che devono stampare
 
 ## Render deploy
 
