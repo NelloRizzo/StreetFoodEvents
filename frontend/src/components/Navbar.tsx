@@ -213,7 +213,7 @@ export function Navbar({
                         className={styles.adminDropdownLink}
                         href="/flyer/index.html"
                         target="_blank"
-                        rel="noopener noreferrer"
+                        rel="noopener"
                         onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false); setIsAdminOpen(false) }}
                       >
                         Volantino
