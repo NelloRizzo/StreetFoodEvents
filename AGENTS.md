@@ -385,6 +385,21 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - **Stampa A4**: `@media print` rimuove il selettore ruoli, layout pulito.
 - **Link "Guide"** nel dropdown utente della navbar.
 
+### Volantino / Flyer — pagina promozionale stampabile (Jun 2026)
+
+- **Decisione architetturale**: il volantino doveva stamparsi senza pagine bianche. Due strade tentate:
+  1. **React Page dentro SPA** (FlyerPage / VolantinoPage) — fallita: `min-height: 100vh` + `overflow: hidden` su `.page` e su `#root`/`body` clippano il contenuto in stampa, anche con override `!important` in `@media print`
+  2. **HTML puro in `public/`** — soluzione definitiva: Vite copia `public/` → `dist/`, `npx serve -s` serve il file esatto se il path matcha un file/directory index
+
+- **Cartella**: `frontend/public/flyer/` → servito a `/flyer/index.html`
+- **Link navbar** (`Navbar.tsx`): `<a href="/flyer/index.html" target="_blank">` link diretto al file statico, nessuna route React coinvolta
+- **Niente route React**: il vecchio `VolantinoPage.tsx` e `VolantinoPage.module.scss` eliminati. La route `path: 'volantino'` rimossa dal router.
+- **Fix stampa**: nell'HTML standalone, `@media print` aggiunto `body { overflow: visible !important; min-height: auto !important; }`
+
+#### Cosa NON fare
+- Non tentare di servire il volantino via React (`serve -s` serve il file statico di `public/` prima della SPA fallback, ma solo se il path matcha un FILE o DIRECTORY INDEX esatto — `/flyer/index.html` è sicuro, `/flyer/` potrebbe andare in SPA fallback in alcune versioni di `serve`)
+- Non aggiungere `min-height: 100vh` o `overflow: hidden` su wrapper che devono stampare — se inevitabile, aggiungere override esplicito `!important` nel `@media print` (e anche così potrebbe non bastare per wrapper annidati come `#root`)
+
 ## Render deploy
 
 `render.yaml` configura due servizi web (backend + frontend), piano free, regione Frankfurt.
