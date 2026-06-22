@@ -85,7 +85,7 @@ img{display:block;max-width:100%}
 /* print */
 @media print{@page{margin:.5cm}
 html{font-size:9pt}
-body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{background:#fff!important;overflow:visible!important;min-height:auto!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .page::before,.page::after,.heroVisual,.ctaBtn,.featureCard:hover{display:none!important;box-shadow:none!important;transform:none!important}
 .hero{padding:.15rem 0 .1rem!important}
 .heroTitle{font-size:1rem!important;max-width:100%!important}

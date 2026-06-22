@@ -211,7 +211,7 @@ export function Navbar({
                       ))}
                       <a
                         className={styles.adminDropdownLink}
-                        href="/volantino/"
+                        href="/flyer/index.html"
                         target="_blank"
                         rel="noopener"
                         onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false); setIsAdminOpen(false) }}
