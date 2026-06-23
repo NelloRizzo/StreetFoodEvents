@@ -44,6 +44,29 @@ $line-strong: rgba(38, 65, 55, 0.22);
   > * { position: relative; z-index: 1; }
 }
 
+.printBar {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 1.2rem 0;
+}
+
+.printBtn {
+  padding: 0.6rem 1.4rem;
+  border: 2px solid $brand;
+  border-radius: 999px;
+  background: transparent;
+  color: $brand;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: 0.2s ease;
+
+  &:hover {
+    background: $brand;
+    color: $surface;
+  }
+}
+
 .shell {
   width: min(100%, 1200px);
   margin: 0 auto;
@@ -291,6 +314,7 @@ $line-strong: rgba(38, 65, 55, 0.22);
 
   .page::before,
   .page::after,
+  .printBar,
   .ctaBtn,
   .featureCard:hover { display: none !important; box-shadow: none !important; transform: none !important; }
 
