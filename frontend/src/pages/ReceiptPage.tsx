@@ -78,7 +78,7 @@ ${qrHtml}
 <script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}</script>
 </body></html>`
 
-    const w = window.open('', '_blank', 'width=400,height=600')
+    const w = window.open('', '_blank', 'width=800,height=900')
     if (w) { w.document.write(html); w.document.close() }
   }
 
