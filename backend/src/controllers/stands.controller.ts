@@ -4,6 +4,9 @@ import * as qrcode from 'qrcode';
 
 import { StandModel } from '../models/stand.model';
 import { sanitizeHtmlContent } from '../utils/html-sanitizer';
+import { RoleModel } from '../models/role.model';
+import { UserRoleModel } from '../models/user-role.model';
+import { UsageContractModel } from '../models/usage-contract.model';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -137,7 +140,60 @@ export async function updateStand(req: Request, res: Response) {
     }
 
     if (eventIds !== undefined) {
-        stand.eventIds = eventIds;
+        /* Check usage contract limits for all users with stand-level roles on this stand */
+        const standRoleIds = await RoleModel.find({ scope: 'stand' }).select('_id').lean();
+        const standRoleObjectIds = standRoleIds.map((r) => r._id);
+
+        const usersOnStand = await UserRoleModel.find({
+            standId,
+            roleId: { $in: standRoleObjectIds },
+            isActive: true,
+        }).select('userId').lean();
+
+        const newEventIds = Array.isArray(eventIds) ? eventIds : [];
+
+        /* Find which events are being added (in new but not in old) */
+        const oldEventIdStrings = (stand.eventIds || []).map((id) => id.toString());
+        const addedEventIds = newEventIds.filter((id: string) => !oldEventIdStrings.includes(id));
+
+        if (addedEventIds.length > 0) {
+            for (const userOnStand of usersOnStand) {
+                for (const addedEventId of addedEventIds) {
+                    const contract = await UsageContractModel.findOne({
+                        userId: userOnStand.userId,
+                        eventId: addedEventId,
+                        status: 'active',
+                    });
+
+                    if (!contract) continue;
+
+                    /* Count stands this user already has at this event (excluding current stand) */
+                    const existingUserRoles = await UserRoleModel.find({
+                        userId: userOnStand.userId,
+                        roleId: { $in: standRoleObjectIds },
+                        isActive: true,
+                        standId: { $ne: standId },
+                    }).select('standId').lean();
+
+                    const otherStandIds = existingUserRoles
+                        .map((r) => r.standId?.toString())
+                        .filter((id): id is string => id !== undefined);
+
+                    const standsAtEvent = await StandModel.countDocuments({
+                        _id: { $in: otherStandIds.length > 0 ? otherStandIds : ['000000000000000000000000'] },
+                        eventIds: addedEventId,
+                    });
+
+                    if (standsAtEvent >= contract.maxStands) {
+                        return res.status(422).json({
+                            message: `Limite superato: l'utente ha già ${standsAtEvent} stand su ${contract.maxStands} consentiti per questo evento`,
+                        });
+                    }
+                }
+            }
+        }
+
+        stand.eventIds = newEventIds;
     }
 
     if (location !== undefined) {

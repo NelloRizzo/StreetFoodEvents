@@ -34,6 +34,7 @@ import { PoiDetailPage } from './pages/PoiDetailPage'
 import { ReceiptPage } from './pages/ReceiptPage'
 import { GuidePage } from './pages/GuidePage'
 import { FlyerPage } from './pages/FlyerPage'
+import { UsageContractsPage } from './pages/UsageContractsPage'
 
 export const router = createBrowserRouter([
   {
@@ -166,6 +167,10 @@ export const router = createBrowserRouter([
           {
             path: 'user-roles',
             element: <UserRolesPage />,
+          },
+          {
+            path: 'admin/usage-contracts',
+            element: <UsageContractsPage />,
           },
         ],
       },

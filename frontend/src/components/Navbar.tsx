@@ -31,6 +31,7 @@ const adminNavItems = [
   { label: 'Ruoli', to: '/user-roles' },
   { label: 'Staff', to: '/staff' },
   { label: 'Partecipanti', to: '/event-users' },
+  { label: 'Contratti d\'uso', to: '/admin/usage-contracts' },
 ]
 
 type NavbarProps = {

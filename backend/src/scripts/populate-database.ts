@@ -11,6 +11,7 @@ import { populateStands } from './stands-populate';
 import { populateStations } from './stations-populate';
 import { populateTransactions } from './transactions-populate';
 import { populateUserStations } from './user-stations-populate';
+import { populateUsageContracts } from './usage-contracts-populate';
 import { populateUsers } from './users-populate';
 
 async function run() {
@@ -29,6 +30,7 @@ async function run() {
   await populateUserStations(users, stations);
   await populatePois(events);
   await populateFavorites(users, events);
+  await populateUsageContracts();
 
   console.log('Database populated successfully');
   console.log('Login test user:', users.adminUser.email);
