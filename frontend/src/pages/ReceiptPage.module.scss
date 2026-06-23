@@ -118,6 +118,18 @@
   opacity: 0.5;
 }
 
+.printBtn {
+  padding: 0.6rem 1rem;
+  border: 2px solid var(--color-brand);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  width: 100%;
+}
+
 .detailLink {
   display: block;
   text-align: center;
