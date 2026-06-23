@@ -262,6 +262,49 @@ export function EventCashierPage() {
     setIsSubmitting(false)
   }
 
+  function printReceipt() {
+    if (!createdOrder) return
+    const o = createdOrder
+    const itemsHtml = o.items.map((item) =>
+      `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escHtml(item.productName)} x${item.quantity}</span><span>&euro;${item.subtotal.toFixed(2)}</span></div>`
+    ).join('')
+    const creditsHtml = o.creditAmountUsed > 0
+      ? `<div style="font-size:11px;color:#555;text-align:center;margin-top:0.25rem">Crediti: &euro;${o.creditAmountUsed.toFixed(2)}</div>`
+      : ''
+    const qrHtml = o.receiptQrCode
+      ? `<div style="display:flex;justify-content:center;margin:0.5rem 0"><img src="${o.receiptQrCode}" alt="QR" style="width:120px;height:120px;-webkit-print-color-adjust:exact;print-color-adjust:exact" /></div>`
+      : ''
+
+    const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Scontrino #${o.orderNumber}</title><style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-family:'Courier New',monospace;background:#fff;color:#000;font-size:14px}
+body{padding:2rem;max-width:320px;margin:0 auto}
+@media print{@page{margin:0}body{padding:1.5rem;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.header{display:grid;gap:0.2rem;text-align:center;margin-bottom:0.75rem}
+.header strong{font-size:17px}
+.order-number{font-size:44px;font-weight:900;text-align:center;margin:0.75rem 0}
+.items{padding:0.5rem 0;border-top:2px dashed #000;border-bottom:2px dashed #000}
+.total{display:flex;justify-content:space-between;font-size:17px;font-weight:700;margin-top:0.5rem}
+.footer{font-size:10px;text-align:center;color:#888;margin-top:0.75rem}
+</style></head><body>
+<div class="header"><strong>${escHtml(eventName)}</strong><span>${escHtml(standName)}</span></div>
+<div class="order-number">#${o.orderNumber}</div>
+<div class="items">${itemsHtml}</div>
+<div class="total"><span>Totale</span><strong>&euro;${o.total.toFixed(2)}</strong></div>
+${creditsHtml}
+${qrHtml}
+<div class="footer">${new Date().toLocaleString('it-IT')}</div>
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}</script>
+</body></html>`
+
+    const w = window.open('', '_blank', 'width=400,height=600')
+    if (w) { w.document.write(html); w.document.close() }
+  }
+
+  function escHtml(s: string) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+  }
+
   if (isLoading) return null
   if (forbidden) return <div className={styles.page}><div className="page-shell"><p className={styles.empty}>Accesso negato.</p></div></div>
   if (!eventId) return null
@@ -523,7 +566,7 @@ export function EventCashierPage() {
               </div>
             )}
             <div className={styles.confirmActions}>
-              <button className={styles.printBtn} onClick={() => window.print()}>
+                <button className={styles.printBtn} onClick={printReceipt}>
                 Stampa scontrino
               </button>
               <button className={styles.confirmCloseBtn} onClick={() => setCreatedOrder(null)}>
@@ -533,42 +576,6 @@ export function EventCashierPage() {
           </div>
         </div>
       )}
-
-      {/* Print-only receipt */}
-      <div className={styles.printReceipt}>
-        <div className={styles.printHeader}>
-          <strong>{eventName}</strong>
-          <span>{standName}</span>
-        </div>
-        <div className={styles.printOrderNumber}>
-          Ordine #{createdOrder?.orderNumber}
-        </div>
-        <div className={styles.printItems}>
-          {createdOrder?.items.map((item, idx) => (
-            <div key={idx} className={styles.printItem}>
-              <span>{item.productName} x{item.quantity}</span>
-              <span>&euro;{item.subtotal.toFixed(2)}</span>
-            </div>
-          ))}
-        </div>
-        <div className={styles.printTotal}>
-          <span>Totale</span>
-          <strong>&euro;{createdOrder?.total.toFixed(2)}</strong>
-        </div>
-        {createdOrder?.creditAmountUsed ? (
-          <div className={styles.printCredits}>
-            Crediti: &euro;{createdOrder.creditAmountUsed.toFixed(2)}
-          </div>
-        ) : null}
-        {createdOrder?.receiptQrCode && (
-          <div className={styles.printQr}>
-            <img src={createdOrder.receiptQrCode} alt="QR ricevuta" />
-          </div>
-        )}
-        <div className={styles.printFooter}>
-          {new Date().toLocaleString('it-IT')}
-        </div>
-      </div>
 
       {showScanner && (
         <QRScanner
