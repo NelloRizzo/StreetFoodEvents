@@ -15,6 +15,7 @@ type ReceiptData = {
   items: { productName: string; quantity: number; subtotal: number }[]
   total: number
   creditAmountUsed: number
+  receiptQrCode?: string | null
   createdAt: string
 }
 
@@ -103,6 +104,12 @@ export function ReceiptPage() {
           {receipt.creditAmountUsed > 0 && (
             <div className={styles.credits}>
               Pagato &euro;{receipt.creditAmountUsed.toFixed(2)} con crediti
+            </div>
+          )}
+
+          {receipt.receiptQrCode && (
+            <div className={styles.qrSection}>
+              <img src={receipt.receiptQrCode} alt="QR ricevuta" className={styles.qrImg} />
             </div>
           )}
 

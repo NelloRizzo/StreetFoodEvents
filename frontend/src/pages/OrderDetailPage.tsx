@@ -87,7 +87,7 @@ export function OrderDetailPage() {
         <div className={styles.header}>
           <div className={styles.headerInfo}>
             <span className="eyebrow">Ordine</span>
-            <h1 className={styles.title}>Ordine #{order.id.slice(-6)}</h1>
+            <h1 className={styles.title}>Ordine #{order.orderNumber}</h1>
           </div>
           <div className={styles.badges}>
             <span className={`${styles.statusBadge} ${styles[`status_${order.status}`]}`}>

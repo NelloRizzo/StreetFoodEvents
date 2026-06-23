@@ -200,6 +200,18 @@ export async function getOrderReceipt(req: Request, res: Response) {
         return res.status(404).json({ message: 'Event or stand not found' });
     }
 
+    const origin = req.headers.origin ?? `${req.protocol}://${req.headers.host}`;
+    const receiptUrl = `${origin}/receipt/${order._id.toString()}`;
+
+    const receiptQrCode = await qrcode.toDataURL(receiptUrl, {
+        width: 400,
+        margin: 2,
+        color: {
+            dark: '#264137',
+            light: '#ffffff',
+        },
+    });
+
     return res.status(200).json({
         item: {
             id: order._id.toString(),
@@ -215,6 +227,7 @@ export async function getOrderReceipt(req: Request, res: Response) {
             })),
             total: order.total,
             creditAmountUsed: order.creditAmountUsed,
+            receiptQrCode,
             createdAt: order.createdAt,
         },
     });
