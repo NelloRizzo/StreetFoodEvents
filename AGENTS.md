@@ -333,7 +333,7 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Miglioramenti cassa unica (Jun 2026)
 - **Ruolo `stand-pickup`**: aggiunto in `roles-populate.ts` (scope `stand`, permessi `orders:read`, `orders:update`). Assegnato agli operatori stand che possono solo confermare consegne.
 - **Auto-transition ordini**: ordini pagati su EventCashierPage partono come `confirmed` invece di `pending`.
-- **Conferma + scontrino**: dopo la creazione ordine, popup con numero ordine; pulsante "Stampa" usa `window.print()` con sezione `@media print` (evento, stand, nr ordine, prodotti, totale, data).
+- **Conferma + scontrino**: dopo la creazione ordine, popup con numero ordine; pulsante "Stampa scontrino" apre finestra HTML puro con `window.print()` + `window.close()` (evita conflitti CSS SPA).
 - **Notifica sonora**: 880Hz beep su StationQueuePage quando arrivano nuovi ordini.
 
 ### Fix città e googleMapsUrl (Jun 2026)
