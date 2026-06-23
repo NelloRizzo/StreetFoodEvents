@@ -402,6 +402,16 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - Non usare HTML standalone in `public/` se servito da `serve -s` — `serve` single-page mode non serve file da subdirectory
 - Non dimenticare di override `min-height: 0 !important` su `#root` e `body` nel `@media print` di pagine che devono stampare
 
+### Usage Contracts — Contratti d'Uso (Jun 2026)
+
+- [x] **Modello `UsageContract`** — `userId`, `eventId`, `maxStands`, `status` (active/suspended/expired), `startsAt`, `endsAt`, `notes`, `createdBy`
+- [x] **API CRUD** — `GET/POST/GET/:id/PATCH/:id/DELETE /api/usage-contracts` (auth required)
+- [x] **Frontend page** — `/admin/usage-contracts` con lista, filtro per evento, creazione/modifica/sospensione/eliminazione
+- [x] **Navbar** — voce "Contratti d'uso" nel menu Amministrazione
+- [x] **Enforcement** — `PATCH /stands/:standId` controlla i contratti attivi degli utenti con ruolo stand-level: se `maxStands` è già raggiunto per l'evento, rifiuta con 422
+- [x] **Seed** — Luca Rinaldi → Spring Event, max 2 stand
+- **Feature branch**: `feature/usage-contracts`
+
 ## Render deploy
 
 `render.yaml` configura due servizi web (backend + frontend), piano free, regione Frankfurt.
