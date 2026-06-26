@@ -64,6 +64,7 @@ export type StandReport = {
   }
   statusBreakdown: Array<{ status: string; count: number }>
   orders: Order[]
+  pendingOrders: Order[]
 }
 
 export function fetchOrders(params?: { eventId?: string; standId?: string; status?: string; userId?: string; customerId?: string; stationId?: string; startDate?: string; endDate?: string }) {
@@ -112,10 +113,10 @@ export function cancelOrderItems(orderId: string, itemIds: string[]) {
   })
 }
 
-export function payOrder(orderId: string, creditAmount?: number) {
+export function payOrder(orderId: string, creditAmount?: number, useEventCredits?: boolean) {
   return apiRequest<{ item: Order }>(`/orders/${orderId}/pay`, {
     method: 'POST',
-    bodyJson: creditAmount !== undefined ? { creditAmount } : {},
+    bodyJson: { creditAmount, useEventCredits },
   })
 }
 

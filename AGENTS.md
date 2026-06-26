@@ -412,6 +412,13 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - [x] **Seed** — Luca Rinaldi → Spring Event, max 2 stand
 - **Feature branch**: `feature/usage-contracts`
 
+### Cash Payments & Report Pending Orders (Jun 2026)
+
+- [x] **`cashPaymentsEnabled` su Event** — flag booleano default `true`. Se `false`, `createOrder` e `payOrder` richiedono `creditAmount === total` (solo crediti, niente contanti/esterno)
+- [x] **Toggle UI** — checkbox "Pagamenti in contanti abilitati" nel form EventsPage (`EventsPage.tsx`)
+- [x] **`pendingOrders` nel report stand** — `getStandReport` restituisce `pendingOrders[]` (ordini non pagati né completati). Renderizzato in `StandOrdersPage.tsx` come sezione separata
+- [x] **`pendingOrders` nel report evento** — sezione calcolata lato client in `EventOrdersPage.tsx` dagli ordini già fetchati
+
 ## Render deploy
 
 `render.yaml` configura due servizi web (backend + frontend), piano free, regione Frankfurt.

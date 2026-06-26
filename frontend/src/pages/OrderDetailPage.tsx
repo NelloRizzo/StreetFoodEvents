@@ -29,6 +29,8 @@ export function OrderDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [creditPayAmount, setCreditPayAmount] = useState(0)
   const [cancelTarget, setCancelTarget] = useState<string | null>(null)
+  const [payError, setPayError] = useState('')
+  const [useEventCredits, setUseEventCredits] = useState(false)
 
   const load = async () => {
     if (!orderId) return
@@ -53,8 +55,13 @@ export function OrderDetailPage() {
 
   const handlePay = async () => {
     if (!orderId) return
-    await payOrder(orderId, creditPayAmount)
-    await load()
+    setPayError('')
+    try {
+      await payOrder(orderId, creditPayAmount, useEventCredits || undefined)
+      await load()
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : 'Errore durante il pagamento')
+    }
   }
 
   const handleStationReady = async (stationId: string) => {
@@ -215,6 +222,14 @@ export function OrderDetailPage() {
                   Paga
                 </button>
               </div>
+              <label className={styles.eventCreditLabel}>
+                <input
+                  type="checkbox"
+                  checked={useEventCredits}
+                  onChange={(e) => setUseEventCredits(e.target.checked)}
+                />
+                Crediti amministratore (nessun check saldo)
+              </label>
               {creditPayAmount < order.total && (
                 <p className={styles.payHint}>
                   &euro;{creditPayAmount.toFixed(2)} con crediti + &euro;{(order.total - creditPayAmount).toFixed(2)} in altro modo
@@ -223,6 +238,7 @@ export function OrderDetailPage() {
               {creditPayAmount === 0 && (
                 <p className={styles.payHint}>Nessun credito usato — pagamento esterno</p>
               )}
+              {payError && <p className={styles.payError}>{payError}</p>}
             </div>
           )}
 

@@ -477,6 +477,39 @@
   color: #c0392b;
 }
 
+.pendingList {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.pendingRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: #fffbee;
+  font-size: 0.85rem;
+}
+
+.pendingNumber {
+  font-weight: 800;
+  color: var(--color-ink-strong);
+  min-width: 4rem;
+}
+
+.pendingCustomer {
+  color: var(--color-ink-strong);
+  flex: 1;
+}
+
+.pendingTotal {
+  font-weight: 700;
+  color: var(--color-brand);
+  white-space: nowrap;
+}
+
 .totalsBar {
   display: flex;
   gap: 1.5rem;

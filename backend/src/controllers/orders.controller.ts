@@ -280,6 +280,11 @@ export async function createOrder(req: Request, res: Response) {
         return res.status(400).json({ message: 'At least one item is required' });
     }
 
+    const event = await EventModel.findById(eventId);
+    if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+    }
+
     const session = await mongoose.startSession();
 
     try {
@@ -358,6 +363,10 @@ export async function createOrder(req: Request, res: Response) {
                 creditAmount = Math.max(0, Math.min(Number(paymentOnCreate.creditAmount) || 0, total));
             } else {
                 creditAmount = total;
+            }
+
+            if (!event.cashPaymentsEnabled && creditAmount < total) {
+                throw new Error('Cash payments are disabled for this event. Payment must be in full using event credits.');
             }
 
             if (creditAmount > 0) {
@@ -601,10 +610,42 @@ export async function payOrder(req: Request, res: Response) {
         });
     }
 
+    const payEvent = await EventModel.findById(order.eventId);
+    if (!payEvent) {
+        return res.status(404).json({ message: 'Event not found' });
+    }
+
     const creditAmount = Math.max(0, Math.min(
         req.body.creditAmount !== undefined ? Number(req.body.creditAmount) : order.total,
         order.total
     ));
+
+    const useEventCredits = req.body.useEventCredits === true;
+
+    if (useEventCredits) {
+        const userId = new Types.ObjectId(req.user.id);
+        // Verifica che l'utente abbia un ruolo che permette crediti amministrativi
+        const platformAdminRole = await RoleModel.findOne({ slug: 'platform-admin', scope: 'platform' });
+        const eventCashierRole = await RoleModel.findOne({ slug: 'event-cashier', scope: 'event' });
+
+        const hasPlatformAdmin = platformAdminRole
+            ? !!(await UserRoleModel.findOne({ userId, roleId: platformAdminRole._id, isActive: true }))
+            : false;
+
+        const hasEventCashier = eventCashierRole
+            ? !!(await UserRoleModel.findOne({ userId, roleId: eventCashierRole._id, eventId: order.eventId, isActive: true }))
+            : false;
+
+        const hasStandRole = !!(await UserRoleModel.findOne({ userId, standId: order.standId, isActive: true }));
+
+        if (!hasPlatformAdmin && !hasEventCashier && !hasStandRole) {
+            return res.status(403).json({ message: 'You do not have permission to use event credits for this order' });
+        }
+    }
+
+    if (!payEvent.cashPaymentsEnabled && creditAmount < order.total) {
+        return res.status(400).json({ message: 'Cash payments are disabled for this event. Payment must be in full using event credits.' });
+    }
 
     const session = await mongoose.startSession();
 
@@ -614,38 +655,43 @@ export async function payOrder(req: Request, res: Response) {
         let paymentTransactionId: Types.ObjectId | null = order.paymentTransactionId ?? null;
 
         if (creditAmount > 0) {
-            const customerId = order.customerId ?? order.userId;
+            if (useEventCredits) {
+                // Crediti evento/amministratore — nessun check saldo, nessuna transazione EventUser
+                // I crediti vengono comunque registrati in creditAmountUsed per i report
+            } else {
+                const customerId = order.customerId ?? order.userId;
 
-            const eventUser = await EventUserModel.findOne({
-                eventId: order.eventId,
-                userId: customerId
-            }).session(session);
+                const eventUser = await EventUserModel.findOne({
+                    eventId: order.eventId,
+                    userId: customerId
+                }).session(session);
 
-            if (!eventUser) {
-                throw new Error('User is not linked to this event');
+                if (!eventUser) {
+                    throw new Error('User is not linked to this event');
+                }
+
+                if (!eventUser.isActive) {
+                    throw new Error('User is not active for this event');
+                }
+
+                if (eventUser.balance < creditAmount) {
+                    throw new Error('Insufficient event currency balance');
+                }
+
+                const txnResult = await createEventUserTransaction({
+                    eventUserId: eventUser._id,
+                    type: 'purchase',
+                    direction: 'debit',
+                    amount: creditAmount,
+                    description: `Pagamento ordine`,
+                    performedByUserId: req.user.id,
+                    referenceType: 'order',
+                    referenceId: order._id,
+                    session
+                });
+
+                paymentTransactionId = txnResult.transaction._id as Types.ObjectId;
             }
-
-            if (!eventUser.isActive) {
-                throw new Error('User is not active for this event');
-            }
-
-            if (eventUser.balance < creditAmount) {
-                throw new Error('Insufficient event currency balance');
-            }
-
-            const txnResult = await createEventUserTransaction({
-                eventUserId: eventUser._id,
-                type: 'purchase',
-                direction: 'debit',
-                amount: creditAmount,
-                description: `Pagamento ordine`,
-                performedByUserId: req.user.id,
-                referenceType: 'order',
-                referenceId: order._id,
-                session
-            });
-
-            paymentTransactionId = txnResult.transaction._id as Types.ObjectId;
         }
 
         order.paymentStatus = 'paid';
@@ -1010,6 +1056,14 @@ export async function getStandReport(req: Request, res: Response) {
         .sort({ createdAt: -1 })
         .limit(200);
 
+    const pendingOrders = await OrderModel.find({
+        ...matchFilter,
+        paymentStatus: { $ne: 'paid' },
+        status: { $ne: 'completed' }
+    })
+        .sort({ createdAt: -1 })
+        .limit(50);
+
     return res.status(200).json({
         standId,
         eventId: eventId ?? null,
@@ -1024,6 +1078,7 @@ export async function getStandReport(req: Request, res: Response) {
             status: s._id,
             count: s.count
         })),
-        orders: orders.map((o) => toOrderResponse(o))
+        orders: orders.map((o) => toOrderResponse(o)),
+        pendingOrders: pendingOrders.map((o) => toOrderResponse(o))
     });
 }

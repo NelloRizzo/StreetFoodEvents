@@ -40,6 +40,7 @@ type EventItem = {
   themeText: string | null
   themeSurface: string | null
   themeHighlight: string | null
+  cashPaymentsEnabled: boolean
   createdAt: string
   updatedAt: string
 }
@@ -70,6 +71,7 @@ type EventFormData = {
   themeText: string
   themeSurface: string
   themeHighlight: string
+  cashPaymentsEnabled: boolean
 }
 
 const emptyForm: EventFormData = {
@@ -98,6 +100,7 @@ const emptyForm: EventFormData = {
   themeText: '',
   themeSurface: '',
   themeHighlight: '',
+  cashPaymentsEnabled: true,
 }
 
 type StandItem = {
@@ -306,6 +309,7 @@ export function EventsPage() {
       themeText: ev.themeText ?? '',
       themeSurface: ev.themeSurface ?? '',
       themeHighlight: ev.themeHighlight ?? '',
+      cashPaymentsEnabled: ev.cashPaymentsEnabled,
     })
     setEditingId(ev.id)
     setShowForm(true)
@@ -355,6 +359,7 @@ export function EventsPage() {
       themeText: form.themeText || null,
       themeSurface: form.themeSurface || null,
       themeHighlight: form.themeHighlight || null,
+      cashPaymentsEnabled: form.cashPaymentsEnabled,
     }
 
     if (editingId) {
@@ -475,6 +480,19 @@ export function EventsPage() {
               <div className={styles.field}>
                 <label htmlFor="ev-url">Sito ufficiale</label>
                 <input id="ev-url" type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." />
+              </div>
+              <div className={styles.checkField}>
+                <label className={styles.checkLabel}>
+                  <input
+                    type="checkbox"
+                    checked={form.cashPaymentsEnabled}
+                    onChange={(e) => setForm({ ...form, cashPaymentsEnabled: e.target.checked })}
+                  />
+                  <span>Pagamenti in contanti abilitati</span>
+                </label>
+                <p className={styles.fieldHint}>
+                  Se disabilitato, tutti i pagamenti dovranno avvenire tramite crediti evento.
+                </p>
               </div>
             </fieldset>
 

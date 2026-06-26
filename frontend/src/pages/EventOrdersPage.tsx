@@ -189,6 +189,39 @@ export function EventOrdersPage() {
           </div>
         </div>
 
+        {(() => {
+          const pendingOrders = orders.filter(
+            (o) => o.paymentStatus !== 'paid' && o.status !== 'completed'
+          )
+          if (pendingOrders.length === 0) return null
+          return (
+            <div className={styles.reportCard} style={{ marginBottom: '1.25rem' }}>
+              <div className={styles.reportHeader}>
+                <span className={styles.reportTitle}>Ordini in sospeso (non pagati/completati)</span>
+                <span className={styles.reportPeriod}>{pendingOrders.length} ordini</span>
+              </div>
+              <div className={styles.pendingList}>
+                {pendingOrders.map((o) => (
+                  <div key={o.id} className={styles.pendingRow}>
+                    <span className={styles.pendingNumber}>#{o.orderNumber}</span>
+                    <span className={styles.standLabel}>
+                      {standMap.get(o.standId) || 'Stand sconosciuto'}
+                    </span>
+                    <span className={styles.pendingCustomer}>{o.customerName ?? 'Anonimo'}</span>
+                    <span className={styles.pendingTotal}>&euro;{o.total.toFixed(2)}</span>
+                    <span className={`${styles.statusBadge} ${styles[`status_${o.status}`]}`}>
+                      {statusLabels[o.status] ?? o.status}
+                    </span>
+                    <span className={`${styles.paymentBadge} ${styles[`payment_${o.paymentStatus}`]}`}>
+                      {o.paymentStatus === 'paid' ? 'Pagato' : o.paymentStatus === 'refunded' ? 'Rimborsato' : 'Da pagare'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
         {orders.length === 0 && (
           <p className={styles.empty}>Nessun ordine trovato.</p>
         )}

@@ -131,6 +131,27 @@
   cursor: not-allowed;
 }
 
+.checkField {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.checkLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.checkLabel input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-brand);
+}
+
 .field textarea {
   min-height: 5rem;
   resize: vertical;

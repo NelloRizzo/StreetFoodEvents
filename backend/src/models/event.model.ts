@@ -97,6 +97,10 @@ const eventSchema = new Schema(
         gallery: {
             type: [imageSchema],
             default: []
+        },
+        cashPaymentsEnabled: {
+            type: Boolean,
+            default: true
         }
     },
     {

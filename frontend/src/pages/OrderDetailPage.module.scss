@@ -294,3 +294,27 @@
   font-size: 0.85rem;
   font-weight: 600;
 }
+
+.payError {
+  color: #c0392b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.eventCreditLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.eventCreditLabel input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-brand);
+  cursor: pointer;
+}

@@ -52,6 +52,7 @@ function toEventResponse(event: {
     coverImage?: unknown | null;
     logo?: unknown | null;
     gallery?: unknown[];
+    cashPaymentsEnabled?: boolean | null;
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -73,6 +74,7 @@ function toEventResponse(event: {
         coverImage: event.coverImage ?? null,
         logo: event.logo ?? null,
         gallery: event.gallery ?? [],
+        cashPaymentsEnabled: event.cashPaymentsEnabled ?? true,
         createdAt: event.createdAt,
         updatedAt: event.updatedAt
     };
@@ -166,7 +168,8 @@ export async function createEvent(req: Request, res: Response) {
         longDescription,
         coverImage,
         logo,
-        gallery
+        gallery,
+        cashPaymentsEnabled
     } = req.body;
 
     if (location && !location.googleMapsUrl) {
@@ -189,7 +192,8 @@ export async function createEvent(req: Request, res: Response) {
         longDescription: sanitizeHtmlContent(longDescription),
         coverImage: coverImage ?? null,
         logo: logo ?? null,
-        gallery: gallery ?? []
+        gallery: gallery ?? [],
+        cashPaymentsEnabled: cashPaymentsEnabled ?? true
     });
 
     return res.status(201).json({
@@ -230,7 +234,8 @@ export async function updateEvent(req: Request, res: Response) {
         longDescription,
         coverImage,
         logo,
-        gallery
+        gallery,
+        cashPaymentsEnabled
     } = req.body;
 
     if (name !== undefined) {
@@ -298,6 +303,10 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (gallery !== undefined) {
         event.gallery = gallery;
+    }
+
+    if (cashPaymentsEnabled !== undefined) {
+        event.cashPaymentsEnabled = cashPaymentsEnabled;
     }
 
     await event.save();
