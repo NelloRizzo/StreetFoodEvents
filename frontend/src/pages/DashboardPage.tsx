@@ -262,6 +262,11 @@ export function DashboardPage() {
                           <span className={styles.manageName}>Ordini evento</span>
                           <span className={styles.manageHint}>Gestisci ordini</span>
                         </Link>
+                        <Link to={`/events/${ev.id}/orders`} className={styles.manageCard}>
+                          <span className={styles.manageIcon}>&#128202;</span>
+                          <span className={styles.manageName}>Resoconti</span>
+                          <span className={styles.manageHint}>Report vendite</span>
+                        </Link>
                       </div>
                     </div>
                   ))}
