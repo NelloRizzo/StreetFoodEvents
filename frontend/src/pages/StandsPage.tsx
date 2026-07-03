@@ -14,22 +14,26 @@ type Stand = {
   slogan: string | null
   description: string | null
   eventIds: string[]
+  locations: Array<{ eventId: string; location: { type: 'Point'; coordinates: [number, number] } | null }>
   coverImage: unknown | null
   gallery: unknown[]
   createdAt: string
   updatedAt: string
 }
 
+type EventLocation = { eventId: string; latitude: string; longitude: string }
+
 type StandFormData = {
   name: string
   slogan: string
   description: string
   eventIds: string[]
+  locations: EventLocation[]
   coverImage: UploadedImage | null
   gallery: UploadedImage[]
 }
 
-const emptyForm: StandFormData = { name: '', slogan: '', description: '', eventIds: [], coverImage: null, gallery: [] }
+const emptyForm: StandFormData = { name: '', slogan: '', description: '', eventIds: [], locations: [], coverImage: null, gallery: [] }
 
 export function StandsPage() {
   const { user } = useAuth()
@@ -109,6 +113,14 @@ export function StandsPage() {
       slogan: stand.slogan ?? '',
       description: stand.description ?? '',
       eventIds: stand.eventIds,
+      locations: stand.eventIds.map((eid) => {
+        const entry = stand.locations.find((l) => l.eventId === eid)
+        return {
+          eventId: eid,
+          latitude: entry?.location?.coordinates?.[1] != null ? String(entry.location.coordinates[1]) : '',
+          longitude: entry?.location?.coordinates?.[0] != null ? String(entry.location.coordinates[0]) : '',
+        }
+      }),
       coverImage: stand.coverImage as UploadedImage | null,
       gallery: stand.gallery as UploadedImage[],
     })
@@ -117,15 +129,27 @@ export function StandsPage() {
   }
 
   const handleSubmit = async () => {
+    const body = {
+      ...form,
+      locations: form.locations.map((el) => {
+        const lat = Number(el.latitude.replace(',', '.'))
+        const lng = Number(el.longitude.replace(',', '.'))
+        const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0
+        return {
+          eventId: el.eventId,
+          location: hasCoords ? { type: 'Point' as const, coordinates: [lng, lat] } : null,
+        }
+      }),
+    }
     if (editingId) {
       await apiRequest(`/stands/${editingId}`, {
         method: 'PATCH',
-        bodyJson: form,
+        bodyJson: body,
       })
     } else {
       await apiRequest('/stands', {
         method: 'POST',
-        bodyJson: form,
+        bodyJson: body,
       })
     }
 
@@ -141,12 +165,18 @@ export function StandsPage() {
   }
 
   const toggleEvent = (eventId: string) => {
-    setForm((prev) => ({
-      ...prev,
-      eventIds: prev.eventIds.includes(eventId)
-        ? prev.eventIds.filter((id) => id !== eventId)
-        : [...prev.eventIds, eventId],
-    }))
+    setForm((prev) => {
+      const isLinked = prev.eventIds.includes(eventId)
+      return {
+        ...prev,
+        eventIds: isLinked
+          ? prev.eventIds.filter((id) => id !== eventId)
+          : [...prev.eventIds, eventId],
+        locations: isLinked
+          ? prev.locations.filter((l) => l.eventId !== eventId)
+          : [...prev.locations, { eventId, latitude: '', longitude: '' }],
+      }
+    })
   }
 
   if (isLoading) return null
@@ -196,6 +226,43 @@ export function StandsPage() {
                 ))}
               </div>
             </div>
+
+            {form.locations.map((el) => {
+              const evName = events.find((e) => e.id === el.eventId)?.name ?? el.eventId
+              return (
+                <div key={el.eventId} className={styles.coordRow}>
+                  <label className={styles.coordLabel}>{evName} — posizione</label>
+                  <div className={styles.coordInputs}>
+                    <input
+                      type="text" inputMode="decimal"
+                      placeholder="Latitudine"
+                      value={el.latitude}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          locations: prev.locations.map((l) =>
+                            l.eventId === el.eventId ? { ...l, latitude: e.target.value } : l
+                          ),
+                        }))
+                      }
+                    />
+                    <input
+                      type="text" inputMode="decimal"
+                      placeholder="Longitudine"
+                      value={el.longitude}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          locations: prev.locations.map((l) =>
+                            l.eventId === el.eventId ? { ...l, longitude: e.target.value } : l
+                          ),
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              )
+            })}
 
             <ImageUploader
                 mode="single"

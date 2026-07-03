@@ -18,7 +18,7 @@ function toStandResponse(stand: {
     slogan?: string | null;
     description?: string | null;
     eventIds: Types.ObjectId[];
-    location?: Record<string, unknown> | null;
+    locations?: Array<{ eventId: Types.ObjectId; location?: Record<string, unknown> | null }> | null;
     coverImage?: unknown | null;
     gallery?: unknown[];
     createdAt: Date;
@@ -30,7 +30,10 @@ function toStandResponse(stand: {
         slogan: stand.slogan ?? null,
         description: stand.description ?? null,
         eventIds: stand.eventIds.map((id) => id.toString()),
-        location: stand.location ?? null,
+        locations: (stand.locations ?? []).map((el) => ({
+            eventId: el.eventId.toString(),
+            location: el.location ?? null,
+        } as { eventId: string; location: Record<string, unknown> | null })),
         coverImage: stand.coverImage ?? null,
         gallery: stand.gallery ?? [],
         createdAt: stand.createdAt,
@@ -80,7 +83,7 @@ export async function createStand(req: Request, res: Response) {
         slogan,
         description,
         eventIds,
-        location,
+        locations,
         coverImage,
         gallery
     } = req.body;
@@ -90,7 +93,7 @@ export async function createStand(req: Request, res: Response) {
         slogan: slogan ?? null,
         description: sanitizeHtmlContent(description),
         eventIds: Array.isArray(eventIds) ? eventIds : [],
-        location: location ?? null,
+        locations: Array.isArray(locations) ? locations : [],
         coverImage: coverImage ?? null,
         gallery: gallery ?? []
     });
@@ -122,7 +125,7 @@ export async function updateStand(req: Request, res: Response) {
         slogan,
         description,
         eventIds,
-        location,
+        locations,
         coverImage,
         gallery
     } = req.body;
@@ -196,8 +199,8 @@ export async function updateStand(req: Request, res: Response) {
         stand.eventIds = newEventIds;
     }
 
-    if (location !== undefined) {
-        stand.location = location;
+    if (locations !== undefined) {
+        stand.locations = locations;
     }
 
     if (coverImage !== undefined) {

@@ -18,7 +18,7 @@ type EventData = {
 type StandData = {
   id: string
   name: string
-  location?: { type: 'Point'; coordinates: [number, number] } | null
+  locations: Array<{ eventId: string; location: { type: 'Point'; coordinates: [number, number] } | null }>
 }
 
 type PoiData = {
@@ -130,9 +130,15 @@ export function EventMapPage() {
       markers.push(marker)
     }
 
+    function getStandLocation(s: StandData): { type: 'Point'; coordinates: [number, number] } | null {
+      const entry = s.locations.find((l) => l.eventId === eventId)
+      return entry?.location ?? null
+    }
+
     stands.forEach((s) => {
-      if (!s.location?.coordinates) return
-      const [lng, lat] = s.location.coordinates
+      const loc = getStandLocation(s)
+      if (!loc?.coordinates) return
+      const [lng, lat] = loc.coordinates
       const marker = L.marker([lat, lng], { icon: standIcon })
         .bindPopup(`<strong>${s.name}</strong><br/><a href="/events/${eventId}/stands/${s.id}">Vai allo stand</a>`)
       markers.push(marker)
@@ -184,8 +190,10 @@ export function EventMapPage() {
               return
             }
             const stand = stands.find((s) => s.id === id)
-            if (!stand?.location?.coordinates) return
-            const [lng, lat] = stand.location.coordinates
+            if (!stand) return
+            const entry = stand.locations.find((l) => l.eventId === eventId)
+            if (!entry?.location?.coordinates) return
+            const [lng, lat] = entry.location.coordinates
             map.setView([lat, lng], 18)
             markersGroupRef.current?.eachLayer((layer) => {
               if (layer instanceof L.Marker) {
@@ -215,8 +223,10 @@ export function EventMapPage() {
 
         {selectedStandId && (() => {
           const stand = stands.find((s) => s.id === selectedStandId)
-          if (!stand?.location?.coordinates) return null
-          const [lng, lat] = stand.location.coordinates
+          if (!stand) return null
+          const entry = stand.locations.find((l) => l.eventId === eventId)
+          if (!entry?.location?.coordinates) return null
+          const [lng, lat] = entry.location.coordinates
           return (
             <a
               className={styles.toolbarLink}
