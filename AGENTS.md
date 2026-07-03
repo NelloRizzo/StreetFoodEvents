@@ -428,6 +428,8 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - [x] **EventsPage** — MapPicker per la posizione dell'evento (sostituisce input text lat/lng)
 - [x] **POI form** — MapPicker in EventDetailPage per la creazione/modifica POI (sostituisce input text lat/lng)
 - **Componente `MapPicker`** — `frontend/src/components/MapPicker.tsx`, riutilizzabile, mostra mappa Leaflet con marker draggabile, coordinate aggiornate in tempo reale
+- **Marker custom SVG** — sostituito il marker PNG di default Leaflet (invisibile con Vite) con `L.divIcon` e SVG inline rosso brand `#bf5a2a`
+- **Migrazione tiles da CARTO a Esri** — MapPicker e EventMapPage ora usano Esri World_Street_Map (mappa, maxZoom 20) e World_Imagery (satellite, maxZoom 23). Zoom massimo della mappa portato a 22. `fitBounds` e `setView` aggiornati a zoom 20.
 
 ### ESC/POS Printer Agent — progetto in sospeso (Jul 2026)
 

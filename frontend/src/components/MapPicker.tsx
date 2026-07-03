@@ -12,6 +12,13 @@ type MapPickerProps = {
 
 const defaultCenter: [number, number] = [41.9028, 12.4964] // Roma
 
+const markerIcon = L.divIcon({
+  html: `<svg xmlns="http://www.w3.org/2000/svg" width="25" height="41" viewBox="0 0 25 41"><path fill="#bf5a2a" d="M12.5 0C5.6 0 0 5.6 0 12.5 0 21.9 12.5 41 12.5 41S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z"/><circle fill="#fff" cx="12.5" cy="12.5" r="5"/></svg>`,
+  className: '',
+  iconSize: [25, 41],
+  iconAnchor: [12.5, 41],
+})
+
 export function MapPicker({ lat, lng, onChange, height = '240px' }: MapPickerProps) {
   const mapRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.Marker | null>(null)
@@ -29,16 +36,16 @@ export function MapPicker({ lat, lng, onChange, height = '240px' }: MapPickerPro
       center,
       zoom: 14,
       zoomControl: true,
-      maxZoom: 20,
+      maxZoom: 22,
     })
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      maxZoom: 19,
-      maxNativeZoom: 19,
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+      maxZoom: 20,
+      maxNativeZoom: 20,
     }).addTo(map)
 
-    const marker = L.marker(center, { draggable: true }).addTo(map)
+    const marker = L.marker(center, { draggable: true, icon: markerIcon }).addTo(map)
 
     marker.on('dragend', () => {
       const pos = marker.getLatLng()

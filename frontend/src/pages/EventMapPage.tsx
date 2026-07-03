@@ -88,20 +88,20 @@ export function EventMapPage() {
       center: [45.0700, 7.6860],
       zoom: 14,
       zoomControl: true,
-      maxZoom: 20,
+      maxZoom: 22,
     })
     mapRef.current = map
 
-    const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      maxZoom: 19,
-      maxNativeZoom: 19,
+    const streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+      maxZoom: 20,
+      maxNativeZoom: 20,
     })
 
     const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
-      maxZoom: 20,
-      maxNativeZoom: 20,
+      maxZoom: 23,
+      maxNativeZoom: 23,
     })
 
     satelliteLayer.addTo(map)
@@ -159,7 +159,7 @@ export function EventMapPage() {
     markersGroupRef.current = group
 
     if (markers.length > 0) {
-      map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 18 })
+      map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 20 })
     }
 
     return () => {
@@ -194,7 +194,7 @@ export function EventMapPage() {
             const entry = stand.locations.find((l) => l.eventId === eventId)
             if (!entry?.location?.coordinates) return
             const [lng, lat] = entry.location.coordinates
-            map.setView([lat, lng], 18)
+            map.setView([lat, lng], 20)
             markersGroupRef.current?.eachLayer((layer) => {
               if (layer instanceof L.Marker) {
                 const ll = layer.getLatLng()
