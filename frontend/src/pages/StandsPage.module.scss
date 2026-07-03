@@ -181,6 +181,32 @@
   color: #c0392b;
 }
 
+.coordRow {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.coordLabel {
+  color: var(--color-ink-soft);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.coordInputs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.coordInputs input {
+  flex: 1;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+  font-size: 0.9rem;
+}
+
 .empty {
   color: var(--color-ink-soft);
   padding: 2rem 0;

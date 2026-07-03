@@ -419,6 +419,60 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - [x] **`pendingOrders` nel report stand** — `getStandReport` restituisce `pendingOrders[]` (ordini non pagati né completati). Renderizzato in `StandOrdersPage.tsx` come sezione separata
 - [x] **`pendingOrders` nel report evento** — sezione calcolata lato client in `EventOrdersPage.tsx` dagli ordini già fetchati
 
+### ESC/POS Printer Agent — progetto in sospeso (Jul 2026)
+
+- **Branch**: `feature/escpos-bluetooth` (solo link "Resoconti" in DashboardPage al momento)
+
+#### Scenario
+La cassa sarà un tablet Android (Chrome). La stampante termica (non ancora scelta) sarà collegata via USB a un **Raspberry Pi Zero W** (~15€) sulla stessa WiFi del tablet. Il tablet invia i dati ricevuta all'agente via HTTP locale, l'agente genera i byte ESC/POS e li scrive sulla stampante.
+
+#### Architettura
+
+```
+┌──────────────────┐    WiFi           ┌────────────────────┐   USB   ┌──────────────────┐
+│  Tablet (cassa)  │ ──JSON──→         │  Raspberry Pi Z W  │ ───────→│  Stampante       │
+│  Chrome Android  │ ←── ok/err ──── │  Node.js :9300     │         │  Termica ESC/POS │
+└──────────────────┘                  └────────────────────┘         └──────────────────┘
+```
+
+#### Da implementare
+
+- **Nuovo pacchetto `printer-agent/`** (root repo, stile backend/frontend):
+  - `src/escpos.ts` — generatore byte ESC/POS puro TypeScript, zero dipendenze native
+    - Comandi: init, allineamento, grassetto, dimensioni carattere, QR code raster, taglio carta, apertura cassetto
+    - Configurabile: paperWidth (58/80mm), codepage, header/footer
+  - `src/printer.ts` — scrittura byte su `/dev/usb/lp*` (USB printer class Linux). Stessa logica per `/dev/rfcomm0` (BT) e `/dev/ttyUSB0` (seriale)
+  - `src/index.ts` — server Express su `:9300`
+    - `GET /status` — health check
+    - `POST /print/receipt` — accetta `ReceiptData` JSON, stampa ricevuta completa
+    - `POST /print/raw` — stampa byte grezzi (base64)
+  - `agent.json` — configurazione stampante
+  - `install.sh` + `agent.service` — setup automatico Pi + systemd
+
+- **Integrazione frontend**:
+  - `frontend/src/lib/printer-agent.ts` — funzione `printReceipt(data)` → chiama agente HTTP
+  - `frontend/src/lib/config.ts` — `VITE_PRINTER_AGENT_URL` (default `http://192.168.1.100:9300`)
+  - Sostituire `window.print()` in 4 pagine: EventCashierPage, ReceiptPage, CashierOrderPage, OrderDetailPage
+  - Fallback a `window.print()` se agente irraggiungibile
+
+#### Vantaggi di questa scelta
+
+| Scenario | Adattamento |
+|---|---|
+| **Stampante USB** | Plug & play su Linux, device file `/dev/usb/lp0` |
+| **Stampante Bluetooth** | `/dev/rfcomm0`, stessa logica di scrittura |
+| **Stampante seriale** | `/dev/ttyUSB0`, `node-serialport` o file device |
+| **Cambio larghezza carta** | `agent.json` → `paperWidth`, niente rebuild |
+| **Più casse** | Ogni tablet ha il suo Pi. Costo ~15€ a postazione |
+| **Pi irraggiungibile** | Fallback automatico a `window.print()` |
+
+#### Cosa NON fare
+
+- Non generare ESC/POS nel backend cloud — l'agente deve funzionare anche offline
+- Non usare librerie con dipendenze native (`node-usb`, `node-serialport`) — su ARM Linux i device file `/dev/usb/lp*` sono accessibili via `fs.writeFileSync`, zero native moduli
+- Non installare desktop environment sul Pi — Raspbian OS Lite basta e avanza
+- Non affidarsi a mDNS per il discovery — usare IP statico configurato via DHCP reservation
+
 ## Render deploy
 
 `render.yaml` configura due servizi web (backend + frontend), piano free, regione Frankfurt.

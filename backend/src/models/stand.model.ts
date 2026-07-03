@@ -2,7 +2,7 @@ import { Schema, model, type InferSchemaType } from 'mongoose';
 
 import { imageSchema } from './schemas/image.schema';
 
-const locationSchema = new Schema(
+const pointSchema = new Schema(
     {
         type: {
             type: String,
@@ -11,6 +11,21 @@ const locationSchema = new Schema(
         },
         coordinates: {
             type: [Number],
+            default: null
+        }
+    },
+    { _id: false }
+);
+
+const eventLocationSchema = new Schema(
+    {
+        eventId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Event',
+            required: true
+        },
+        location: {
+            type: pointSchema,
             default: null
         }
     },
@@ -40,9 +55,9 @@ const standSchema = new Schema(
             type: [{ type: Schema.Types.ObjectId, ref: 'Event' }],
             default: []
         },
-        location: {
-            type: locationSchema,
-            default: null
+        locations: {
+            type: [eventLocationSchema],
+            default: []
         },
         coverImage: {
             type: imageSchema,
