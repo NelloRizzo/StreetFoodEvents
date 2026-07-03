@@ -419,6 +419,16 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - [x] **`pendingOrders` nel report stand** — `getStandReport` restituisce `pendingOrders[]` (ordini non pagati né completati). Renderizzato in `StandOrdersPage.tsx` come sezione separata
 - [x] **`pendingOrders` nel report evento** — sezione calcolata lato client in `EventOrdersPage.tsx` dagli ordini già fetchati
 
+### Per-event Stand Location + MapPicker (Jul 2026)
+
+- [x] **`locations[]` su Stand model** — sostituito singolo campo `location` con array `locations[{ eventId, location }]` per supportare posizioni diverse per ogni evento
+- [x] **Controller e seed** — `stands.controller.ts` aggiornato per `locations`, seed con coordinate specifiche per evento
+- [x] **EventMapPage** — lookup della location per evento dall'array `locations`
+- [x] **StandsPage** — form con MapPicker Leaflet per ogni evento collegato (trascina marker o clicca sulla mappa)
+- [x] **EventsPage** — MapPicker per la posizione dell'evento (sostituisce input text lat/lng)
+- [x] **POI form** — MapPicker in EventDetailPage per la creazione/modifica POI (sostituisce input text lat/lng)
+- **Componente `MapPicker`** — `frontend/src/components/MapPicker.tsx`, riutilizzabile, mostra mappa Leaflet con marker draggabile, coordinate aggiornate in tempo reale
+
 ### ESC/POS Printer Agent — progetto in sospeso (Jul 2026)
 
 - **Branch**: `feature/escpos-bluetooth` (solo link "Resoconti" in DashboardPage al momento)
