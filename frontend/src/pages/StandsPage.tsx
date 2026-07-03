@@ -6,6 +6,7 @@ import { apiRequest } from '../lib/api'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
+import { MapPicker } from '../components/MapPicker'
 import styles from './StandsPage.module.scss'
 
 type Stand = {
@@ -231,35 +232,19 @@ export function StandsPage() {
               const evName = events.find((e) => e.id === el.eventId)?.name ?? el.eventId
               return (
                 <div key={el.eventId} className={styles.coordRow}>
-                  <label className={styles.coordLabel}>{evName} — posizione</label>
-                  <div className={styles.coordInputs}>
-                    <input
-                      type="text" inputMode="decimal"
-                      placeholder="Latitudine"
-                      value={el.latitude}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          locations: prev.locations.map((l) =>
-                            l.eventId === el.eventId ? { ...l, latitude: e.target.value } : l
-                          ),
-                        }))
-                      }
-                    />
-                    <input
-                      type="text" inputMode="decimal"
-                      placeholder="Longitudine"
-                      value={el.longitude}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          locations: prev.locations.map((l) =>
-                            l.eventId === el.eventId ? { ...l, longitude: e.target.value } : l
-                          ),
-                        }))
-                      }
-                    />
-                  </div>
+                  <label className={styles.coordLabel}>{evName} — posizione (clicca sulla mappa o sposta il marker)</label>
+                  <MapPicker
+                    lat={el.latitude}
+                    lng={el.longitude}
+                    onChange={(lat, lng) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        locations: prev.locations.map((l) =>
+                          l.eventId === el.eventId ? { ...l, latitude: lat, longitude: lng } : l
+                        ),
+                      }))
+                    }
+                  />
                 </div>
               )
             })}

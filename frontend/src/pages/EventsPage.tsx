@@ -9,6 +9,7 @@ import { ImageUploader } from '../components/ImageUploader'
 import { RichEditor } from '../components/RichEditor'
 import { useItalianComuni, searchComuni, getProvinces, getProvinceName, getProvinceSigla } from '../lib/italian-comuni'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { MapPicker } from '../components/MapPicker'
 import type { ComuneEntry } from '../lib/italian-comuni'
 import styles from './EventsPage.module.scss'
 
@@ -613,20 +614,17 @@ export function EventsPage() {
                 <label htmlFor="ev-postal">CAP</label>
                 <input id="ev-postal" value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} />
               </div>
-              <div className={styles.fieldRow}>
-                <div className={styles.field}>
-                  <label htmlFor="ev-lat">Latitudine</label>
-                  <input id="ev-lat" type="text" inputMode="decimal" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value.replace(',', '.') })} />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="ev-lng">Longitudine</label>
-                  <input id="ev-lng" type="text" inputMode="decimal" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value.replace(',', '.') })} />
-                </div>
-                <div className={styles.field} style={{ alignSelf: 'flex-end' }}>
-                  <button type="button" className={styles.secondaryBtn} onClick={handleGeolocate} style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}>
-                    📍 Rileva posizione
-                  </button>
-                </div>
+              <div className={styles.field}>
+                <label>Posizione</label>
+                <MapPicker
+                  lat={form.latitude}
+                  lng={form.longitude}
+                  onChange={(lat, lng) => setForm((prev) => ({ ...prev, latitude: lat, longitude: lng }))}
+                  height="200px"
+                />
+                <button type="button" className={styles.secondaryBtn} onClick={handleGeolocate} style={{ fontSize: '0.85rem', padding: '0.4rem 0.75rem', marginTop: '0.35rem' }}>
+                  📍 Rileva posizione
+                </button>
               </div>
               <div className={styles.field}>
                 <label htmlFor="ev-maps">URL Google Maps</label>

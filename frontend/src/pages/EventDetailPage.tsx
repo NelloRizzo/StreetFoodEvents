@@ -8,6 +8,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
+import { MapPicker } from '../components/MapPicker'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import styles from './EventDetailPage.module.scss'
 
@@ -395,23 +396,14 @@ export function EventDetailPage() {
                     onChange={(e) => setPoiForm((p) => ({ ...p, description: e.target.value }))}
                   />
                 </label>
-                <div className={styles.poiCoordRow}>
-                  <label className={styles.poiField}>
-                    Latitudine
-                    <input
-                      type="text" inputMode="decimal"
-                      value={poiForm.latitude}
-                      onChange={(e) => setPoiForm((p) => ({ ...p, latitude: e.target.value.replace(',', '.') }))}
-                    />
-                  </label>
-                  <label className={styles.poiField}>
-                    Longitudine
-                    <input
-                      type="text" inputMode="decimal"
-                      value={poiForm.longitude}
-                      onChange={(e) => setPoiForm((p) => ({ ...p, longitude: e.target.value.replace(',', '.') }))}
-                    />
-                  </label>
+                <div className={styles.poiField}>
+                  <label>Posizione (clicca sulla mappa o sposta il marker)</label>
+                  <MapPicker
+                    lat={poiForm.latitude}
+                    lng={poiForm.longitude}
+                    onChange={(lat, lng) => setPoiForm((p) => ({ ...p, latitude: lat, longitude: lng }))}
+                    height="200px"
+                  />
                 </div>
                 <label className={styles.poiField}>
                   Icona
