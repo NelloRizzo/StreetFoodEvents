@@ -164,6 +164,7 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - **Build runs typecheck first** (`tsc -b`), so type errors block the build.
 - **Auth**: `AuthContext` wraps the app in `main.tsx`. Calls `GET /api/auth/me` on mount to restore session. `apiRequest` helper uses `credentials: 'include'` for cookie forwarding.
 - **Routing**: `createBrowserRouter` in `src/router.tsx` with `AppLayout` wrapping all routes.
+- **Image dimensions consigliate**: Cover event → 1200×675px (ratio 16:9). Logo → 200×200px (o 512×512 per retina), PNG con trasparenza. Le immagini sono ridimensionate da Cloudinary.
 - **Favorites**: `src/lib/favorites.ts` provides `fetchFavorites`, `createFavorite`, `deleteFavorite`. Backend `toFavoriteResponse` returns `event`/`stand` objects with `{ id, name, slogan }`.
 - **FavoritesPage** at `/favorites` (protected) lists user's favorited stands/events with remove action.
 - **Favorite toggle**: A heart button (♡/♥) rendered on each stand card (StandsPage) and stand detail header (StandDetailPage). Uses local `favoriteIds` Set for instant UI toggle.

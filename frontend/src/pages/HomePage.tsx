@@ -21,6 +21,7 @@ type EventItem = {
   endDate: string
   shortDescription: string | null
   coverImage: UploadedImage | null
+  logo: UploadedImage | null
 }
 
 export function HomePage() {
@@ -63,9 +64,19 @@ export function HomePage() {
                 {event.coverImage?.url && (
                   <div className={homeStyles.cardCover}>
                     <img src={event.coverImage.url} alt="" />
+                    {event.logo?.url && (
+                      <div className={homeStyles.cardLogoBadge}>
+                        <img src={event.logo.url} alt={`${event.name} logo`} />
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className={homeStyles.cardBody}>
+                  {!event.coverImage?.url && event.logo?.url && (
+                    <div className={homeStyles.cardLogoInline}>
+                      <img src={event.logo.url} alt={`${event.name} logo`} />
+                    </div>
+                  )}
                   <strong className={homeStyles.eventName}>{event.name}</strong>
                   {event.shortDescription && (
                     <span className={homeStyles.eventDesc} dangerouslySetInnerHTML={{ __html: event.shortDescription }} />
