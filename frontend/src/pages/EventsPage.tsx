@@ -844,10 +844,11 @@ export function EventsPage() {
 
       <ConfirmModal
         open={deleteConfirmId !== null}
-        variant="danger"
+        variant="confirm"
         title="Elimina evento"
         message={`Sei sicuro di voler eliminare questo evento? L'operazione non può essere annullata.`}
         confirmLabel="Elimina"
+        danger
         onConfirm={handleDelete}
         onCancel={() => setDeleteConfirmId(null)}
       />
