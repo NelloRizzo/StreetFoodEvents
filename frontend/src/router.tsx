@@ -35,6 +35,7 @@ import { ReceiptPage } from './pages/ReceiptPage'
 import { GuidePage } from './pages/GuidePage'
 import { FlyerPage } from './pages/FlyerPage'
 import { UsageContractsPage } from './pages/UsageContractsPage'
+import { MenuPrintPage } from './pages/MenuPrintPage'
 
 export const router = createBrowserRouter([
   {
@@ -171,6 +172,10 @@ export const router = createBrowserRouter([
           {
             path: 'admin/usage-contracts',
             element: <UsageContractsPage />,
+          },
+          {
+            path: 'admin/menu-print',
+            element: <MenuPrintPage />,
           },
         ],
       },

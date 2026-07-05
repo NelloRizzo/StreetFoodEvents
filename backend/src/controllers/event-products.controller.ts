@@ -7,11 +7,22 @@ function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
 }
 
+type ImageData = {
+    url: string;
+    publicId: string;
+    width: number;
+    height: number;
+    format: string;
+    bytes: number;
+};
+
 type PopulatedProduct = {
     _id: Types.ObjectId;
     name: string;
     ingredients: string[];
     price: number;
+    coverImage: ImageData | null;
+    gallery: ImageData[];
 };
 
 function toEventProductResponse(ep: {
@@ -39,6 +50,8 @@ function toEventProductResponse(ep: {
                   name: product!.name,
                   price: product!.price,
                   ingredients: product!.ingredients,
+                  coverImage: product!.coverImage,
+                  gallery: product!.gallery,
               }
             : null,
         stationIds: ep.stationIds.map((id) => id.toString()),

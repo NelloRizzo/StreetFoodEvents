@@ -505,6 +505,16 @@ La cassa sarà un tablet Android (Chrome). La stampante termica (non ancora scel
 - Non installare desktop environment sul Pi — Raspbian OS Lite basta e avanza
 - Non affidarsi a mDNS per il discovery — usare IP statico configurato via DHCP reservation
 
+### Menu Print — Stampa professionale menu stand (Jul 2026)
+
+- [x] **`toEventProductResponse`** — estendere in `backend/src/controllers/event-products.controller.ts` per includere `coverImage` e `gallery` dal Product popolato (ora mancano)
+- [x] **`MenuPrintPage`** — nuova pagina `/admin/menu-print` (protetta, dentro AppLayout):
+    - Selettore evento → lista stand con checkbox (fetch da `/api/stands?eventIds=EVENT_ID`)
+    - Pulsante "Stampa" che apre finestra con HTML puro per stampa browser
+    - Per ogni stand selezionato: nome, slogan, coverImage, e griglia prodotti (nome, ingredienti, prezzo, coverImage)
+    - `page-break-before: always` tra stand, `@page { size: A3 landscape; margin: 1cm }`
+- [x] **Navbar** — link "Menu stampa" nel menu Amministrazione
+
 ## Render deploy
 
 `render.yaml` configura due servizi web (backend + frontend), piano free, regione Frankfurt.
