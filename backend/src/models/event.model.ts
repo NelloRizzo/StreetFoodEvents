@@ -101,6 +101,10 @@ const eventSchema = new Schema(
         cashPaymentsEnabled: {
             type: Boolean,
             default: true
+        },
+        unifiedCashierEnabled: {
+            type: Boolean,
+            default: false
         }
     },
     {

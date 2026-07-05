@@ -70,6 +70,7 @@ export function StandDetailPage() {
   const [showNewProductForm, setShowNewProductForm] = useState(false)
   const [newProductForm, setNewProductForm] = useState({ name: '', ingredients: '', price: '', coverImage: null as UploadedImage | null, gallery: [] as UploadedImage[] })
   const [selectedActionEventId, setSelectedActionEventId] = useState('')
+  const [selectedEventUnifiedCashier, setSelectedEventUnifiedCashier] = useState(false)
 
   const fetchStand = async () => {
     const data = await apiRequest<{ item: Stand }>(`/stands/${standId}`)
@@ -201,6 +202,16 @@ export function StandDetailPage() {
     }
   }, [stand, events, selectedActionEventId])
 
+  useEffect(() => {
+    if (!selectedActionEventId) {
+      setSelectedEventUnifiedCashier(false)
+      return
+    }
+    apiRequest<{ item: { unifiedCashierEnabled: boolean } }>(`/events/${selectedActionEventId}`)
+      .then((data) => setSelectedEventUnifiedCashier(data.item.unifiedCashierEnabled ?? false))
+      .catch(() => setSelectedEventUnifiedCashier(false))
+  }, [selectedActionEventId])
+
   const toggleProductStation = (stationId: string) => {
     setProductForm((prev) => ({
       ...prev,
@@ -305,12 +316,14 @@ export function StandDetailPage() {
               >
                 Gestisci ordini
               </Link>
-              <Link
-                className={styles.cashierBtn}
-                to={`/events/${selectedActionEventId}/stands/${standId}/order`}
-              >
-                Nuovo ordine
-              </Link>
+              {!selectedEventUnifiedCashier && (
+                <Link
+                  className={styles.cashierBtn}
+                  to={`/events/${selectedActionEventId}/stands/${standId}/order`}
+                >
+                  Nuovo ordine
+                </Link>
+              )}
             </div>
           )}
         </div>

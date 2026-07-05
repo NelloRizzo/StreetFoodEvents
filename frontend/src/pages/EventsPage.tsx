@@ -42,6 +42,7 @@ type EventItem = {
   themeSurface: string | null
   themeHighlight: string | null
   cashPaymentsEnabled: boolean
+  unifiedCashierEnabled: boolean
   createdAt: string
   updatedAt: string
 }
@@ -73,6 +74,7 @@ type EventFormData = {
   themeSurface: string
   themeHighlight: string
   cashPaymentsEnabled: boolean
+  unifiedCashierEnabled: boolean
 }
 
 const emptyForm: EventFormData = {
@@ -102,6 +104,7 @@ const emptyForm: EventFormData = {
   themeSurface: '',
   themeHighlight: '',
   cashPaymentsEnabled: true,
+  unifiedCashierEnabled: false,
 }
 
 type StandItem = {
@@ -333,6 +336,7 @@ export function EventsPage() {
       themeSurface: ev.themeSurface ?? '',
       themeHighlight: ev.themeHighlight ?? '',
       cashPaymentsEnabled: ev.cashPaymentsEnabled,
+      unifiedCashierEnabled: ev.unifiedCashierEnabled,
     })
     setEditingId(ev.id)
     setShowForm(true)
@@ -383,6 +387,7 @@ export function EventsPage() {
       themeSurface: form.themeSurface || null,
       themeHighlight: form.themeHighlight || null,
       cashPaymentsEnabled: form.cashPaymentsEnabled,
+      unifiedCashierEnabled: form.unifiedCashierEnabled,
     }
 
     if (editingId) {
@@ -520,6 +525,19 @@ export function EventsPage() {
                 </label>
                 <p className={styles.fieldHint}>
                   Se disabilitato, tutti i pagamenti dovranno avvenire tramite crediti evento.
+                </p>
+              </div>
+              <div className={styles.checkField}>
+                <label className={styles.checkLabel}>
+                  <input
+                    type="checkbox"
+                    checked={form.unifiedCashierEnabled}
+                    onChange={(e) => setForm({ ...form, unifiedCashierEnabled: e.target.checked })}
+                  />
+                  <span>Evento con cassa unica</span>
+                </label>
+                <p className={styles.fieldHint}>
+                  Se abilitato, gli stand non avranno cassa propria: tutti gli ordini passano dalla cassa unica dell'evento.
                 </p>
               </div>
             </fieldset>

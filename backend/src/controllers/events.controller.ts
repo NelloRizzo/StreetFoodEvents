@@ -53,6 +53,7 @@ function toEventResponse(event: {
     logo?: unknown | null;
     gallery?: unknown[];
     cashPaymentsEnabled?: boolean | null;
+    unifiedCashierEnabled?: boolean | null;
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -75,6 +76,7 @@ function toEventResponse(event: {
         logo: event.logo ?? null,
         gallery: event.gallery ?? [],
         cashPaymentsEnabled: event.cashPaymentsEnabled ?? true,
+        unifiedCashierEnabled: event.unifiedCashierEnabled ?? false,
         createdAt: event.createdAt,
         updatedAt: event.updatedAt
     };
@@ -169,7 +171,8 @@ export async function createEvent(req: Request, res: Response) {
         coverImage,
         logo,
         gallery,
-        cashPaymentsEnabled
+        cashPaymentsEnabled,
+        unifiedCashierEnabled
     } = req.body;
 
     if (location && !location.googleMapsUrl) {
@@ -193,7 +196,8 @@ export async function createEvent(req: Request, res: Response) {
         coverImage: coverImage ?? null,
         logo: logo ?? null,
         gallery: gallery ?? [],
-        cashPaymentsEnabled: cashPaymentsEnabled ?? true
+        cashPaymentsEnabled: cashPaymentsEnabled ?? true,
+        unifiedCashierEnabled: unifiedCashierEnabled ?? false
     });
 
     return res.status(201).json({
@@ -235,7 +239,8 @@ export async function updateEvent(req: Request, res: Response) {
         coverImage,
         logo,
         gallery,
-        cashPaymentsEnabled
+        cashPaymentsEnabled,
+        unifiedCashierEnabled
     } = req.body;
 
     if (name !== undefined) {
@@ -307,6 +312,10 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (cashPaymentsEnabled !== undefined) {
         event.cashPaymentsEnabled = cashPaymentsEnabled;
+    }
+
+    if (unifiedCashierEnabled !== undefined) {
+        event.unifiedCashierEnabled = unifiedCashierEnabled;
     }
 
     await event.save();
