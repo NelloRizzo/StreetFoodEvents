@@ -70,18 +70,20 @@ export function HomePage() {
                   {event.shortDescription && (
                     <span className={homeStyles.eventDesc} dangerouslySetInnerHTML={{ __html: event.shortDescription }} />
                   )}
-                  <span className={homeStyles.eventDate}>
-                    {new Date(event.startDate).toLocaleDateString('it-IT', {
-                      day: 'numeric', month: 'long', year: 'numeric'
-                    })}
-                    {' — '}
-                    {new Date(event.endDate).toLocaleDateString('it-IT', {
-                      day: 'numeric', month: 'long', year: 'numeric'
-                    })}
-                  </span>
-                  <span className={homeStyles.eventLocation}>
-                    {event.location.label}{event.location.city ? `, ${event.location.city}` : ''}
-                  </span>
+                  <div className={homeStyles.eventMeta}>
+                    <span className={homeStyles.eventDate}>
+                      {new Date(event.startDate).toLocaleDateString('it-IT', {
+                        day: 'numeric', month: 'long', year: 'numeric'
+                      })}
+                      {' — '}
+                      {new Date(event.endDate).toLocaleDateString('it-IT', {
+                        day: 'numeric', month: 'long', year: 'numeric'
+                      })}
+                    </span>
+                    <span className={homeStyles.eventLocation}>
+                      {event.location.label}{event.location.city ? `, ${event.location.city}` : ''}
+                    </span>
+                  </div>
                 </div>
               </Link>
             ))}

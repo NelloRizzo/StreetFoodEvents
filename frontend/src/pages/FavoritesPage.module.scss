@@ -25,8 +25,19 @@
   padding: 1rem 1.2rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  background: rgba(255, 250, 242, 0.84);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-card);
   flex-wrap: wrap;
+  transition:
+    border-color var(--ease-standard),
+    box-shadow var(--ease-standard),
+    transform var(--ease-standard);
+}
+
+.card:hover {
+  border-color: var(--color-brand);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
 }
 
 .cardBody {
@@ -37,6 +48,7 @@
 .cardName {
   color: var(--color-ink-strong);
   font-size: 1.05rem;
+  font-weight: 700;
 }
 
 .cardSlogan {
@@ -47,7 +59,6 @@
 .cardDesc {
   color: var(--color-ink-soft);
   font-size: 0.82rem;
-  font-style: italic;
 
   ul, ol {
     padding-left: 1.2rem;
@@ -75,27 +86,42 @@
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .textBtn {
   background: none;
-  border: none;
-  color: var(--color-brand);
-  font-weight: 700;
-  font-size: 0.85rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.82rem;
   cursor: pointer;
-  padding: 0.25rem 0;
+  padding: 0.4rem 0.85rem;
   text-decoration: none;
+  transition: border-color var(--ease-standard), background var(--ease-standard);
+}
+
+.textBtn:hover {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
 }
 
 .dangerBtn {
   background: none;
-  border: none;
-  color: #c0392b;
-  font-weight: 700;
-  font-size: 0.85rem;
+  border: 1px solid rgba(192, 57, 43, 0.3);
+  border-radius: var(--radius-pill);
+  color: var(--color-danger);
+  font-weight: 600;
+  font-size: 0.82rem;
   cursor: pointer;
-  padding: 0.25rem 0;
+  padding: 0.4rem 0.85rem;
+  transition: border-color var(--ease-standard), background var(--ease-standard);
+}
+
+.dangerBtn:hover {
+  border-color: var(--color-danger);
+  background: rgba(192, 57, 43, 0.06);
 }
 
 .empty {

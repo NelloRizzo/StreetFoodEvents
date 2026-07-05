@@ -34,7 +34,7 @@ export function AppLayout() {
 
       <footer className={styles.footer}>
         <div className={`page-shell ${styles.footerInner}`}>
-          <span>Frontend mobile-first per la suite Street Food Events.</span>
+          <span>&copy; {new Date().getFullYear()} Street Food Events</span>
           <Link to="/privacy">Privacy Policy</Link>
         </div>
       </footer>

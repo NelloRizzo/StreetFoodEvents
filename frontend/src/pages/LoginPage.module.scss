@@ -13,7 +13,8 @@
   padding: 1.2rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  background: rgba(255, 250, 242, 0.84);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .panel {
@@ -45,7 +46,7 @@
   padding: 0.85rem 0.95rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  background: rgba(255, 250, 242, 0.66);
+  background: var(--color-brand-glow);
 }
 
 .bulletList strong {
@@ -60,6 +61,7 @@
 .formCard {
   display: grid;
   gap: 1rem;
+  box-shadow: var(--shadow-md);
 }
 
 .formHeader {
@@ -100,16 +102,18 @@
   border-radius: var(--radius-card);
   background: #fffdf8;
   color: var(--color-ink-strong);
+  transition: border-color var(--ease-standard), box-shadow var(--ease-standard);
 }
 
 .field input:focus {
-  outline: 2px solid rgba(191, 90, 42, 0.2);
+  outline: none;
   border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px rgba(191, 90, 42, 0.12);
 }
 
 .error {
   min-height: 1.4rem;
-  color: #9f2f1d;
+  color: var(--color-danger);
   font-size: 0.92rem;
 }
 
@@ -124,11 +128,19 @@
   color: #fffaf2;
   font-weight: 700;
   cursor: pointer;
+  transition: box-shadow var(--ease-standard), transform var(--ease-standard);
+}
+
+.submit:hover {
+  box-shadow: 0 4px 16px rgba(191, 90, 42, 0.3);
+  transform: translateY(-1px);
 }
 
 .submit:disabled {
   opacity: 0.7;
   cursor: wait;
+  transform: none;
+  box-shadow: none;
 }
 
 .backLink,
@@ -140,6 +152,18 @@
 .switchLink {
   text-align: center;
   margin-top: 0.5rem;
+}
+
+.switchLink a,
+.backLink {
+  color: var(--color-brand);
+  transition: color var(--ease-standard);
+}
+
+.switchLink a:hover,
+.backLink:hover {
+  color: var(--color-brand-deep);
+  text-decoration: underline;
 }
 
 .fieldRow {

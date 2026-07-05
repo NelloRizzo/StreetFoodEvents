@@ -85,7 +85,18 @@
   padding: 1.2rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  background: rgba(255, 250, 242, 0.84);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-card);
+  transition:
+    border-color var(--ease-standard),
+    box-shadow var(--ease-standard),
+    transform var(--ease-standard);
+}
+
+.eventCard:hover {
+  border-color: var(--color-brand);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
 }
 
 .eventBody {
@@ -95,6 +106,7 @@
 
 .eventName {
   font-size: 1.15rem;
+  font-weight: 700;
   color: var(--color-ink-strong);
 }
 
@@ -208,7 +220,8 @@
   padding: 1.5rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  background: rgba(255, 250, 242, 0.84);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-card);
   text-align: center;
 }
 
@@ -247,7 +260,8 @@
   padding: 0.75rem 1rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  background: rgba(255, 250, 242, 0.84);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .manageCardGroupName {
@@ -263,13 +277,17 @@
   padding: 0.6rem 1rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-pill);
-  background: rgba(255, 250, 242, 0.84);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-sm);
   text-decoration: none;
-  transition: border-color var(--ease-standard);
+  transition:
+    border-color var(--ease-standard),
+    box-shadow var(--ease-standard);
 }
 
 .manageCard:hover {
   border-color: var(--color-brand);
+  box-shadow: var(--shadow-card);
 }
 
 .manageIcon {
@@ -293,7 +311,8 @@
   border-radius: var(--radius-card);
   padding: 0.75rem 1rem;
   margin-bottom: 0.5rem;
-  background: rgba(255, 250, 242, 0.84);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .standBlockHeader {

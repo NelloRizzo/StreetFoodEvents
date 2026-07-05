@@ -18,7 +18,7 @@ body {
   font-family: var(--font-sans);
   color: var(--color-ink);
   background:
-    radial-gradient(circle at top, var(--bg-glow-color), transparent 32rem),
+    radial-gradient(circle at top, var(--bg-glow-color, rgba(191, 90, 42, 0.08)), transparent 36rem),
     linear-gradient(180deg, #fbf7ef 0%, var(--color-surface) 46%, #f0eadf 100%);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -176,5 +176,16 @@ p {
   .cookie-consent-banner__content {
     flex-direction: row;
     text-align: left;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
