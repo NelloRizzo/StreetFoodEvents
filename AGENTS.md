@@ -431,6 +431,25 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - **Marker custom SVG** — sostituito il marker PNG di default Leaflet (invisibile con Vite) con `L.divIcon` e SVG inline rosso brand `#bf5a2a`
 - **Migrazione tiles da CARTO a Esri** — MapPicker e EventMapPage ora usano Esri World_Street_Map (mappa, maxZoom 20) e World_Imagery (satellite, maxZoom 23). Zoom massimo della mappa portato a 22. `fitBounds` e `setView` aggiornati a zoom 20.
 
+### Bug fix mappa & EventDetailPage revamp (Jul 2026)
+
+- [x] **Bug 1** — EventMapPage: `maxZoom` 20 → 18 in `fitBounds`/`setView`
+- [x] **Bug 2** — MapPicker: satellite tile layer (`World_Imagery`) + `L.control.layers` (Satellite / Mappa)
+- [x] **Bug 3** — MapPicker: props `resetCenter`/`resetLabel` per pulsante "Centra"; StandsPage filtra location orfane
+- [x] **Bug 4** — EventsPage: `ConfirmModal` per delete, `try/catch`, `mountedRef`, sync `locations` in `handleToggleStand`
+- [x] **EventDetailPage** — hero full-width con cover + gradiente + logo, barra azioni con backdrop blur, galleria, card stand ridisegnate con cover thumbnail
+- [x] **TypeScript fix** — `variant="danger"` → `variant="confirm"` + `danger` prop in `ConfirmModal`
+
+### Design revamp — warmer & professional (Jul 2026)
+
+- [x] **Token** — aggiunti `--color-success/danger/warning`, `--shadow-*`, `--color-brand-glow`, `--ease-spring`
+- [x] **Global** — body background più caldo, `@keyframes fadeInUp` animazione card
+- [x] **HomePage** — gradiente caldo di sfondo, card con `shadow-card` + hover elevation + translateY(-2px), cover zoom hover, fade-in progressivo card, meta data/luogo raggruppata
+- [x] **FavoritesPage** — card con ombra/hover, pulsanti outline pill invece di ghost, danger btn con bordo rosso
+- [x] **DashboardPage** — card utente con shadow/hover, QR card con `--shadow-card`
+- [x] **LoginPage/RegisterPage** — form card con `shadow-md`, input focus glow brand, submit con ombra hover, link brandizzati
+- [x] **Footer** — testo cambiato in `© {year} Street Food Events`, link privacy più visibile
+
 ### ESC/POS Printer Agent — progetto in sospeso (Jul 2026)
 
 - **Branch**: `feature/escpos-bluetooth` (solo link "Resoconti" in DashboardPage al momento)
