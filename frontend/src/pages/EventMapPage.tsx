@@ -159,7 +159,7 @@ export function EventMapPage() {
     markersGroupRef.current = group
 
     if (markers.length > 0) {
-      map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 20 })
+      map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 18 })
     }
 
     return () => {
@@ -186,7 +186,7 @@ export function EventMapPage() {
             if (!map) return
             if (!id) {
               const g = markersGroupRef.current
-              if (g) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 20 })
+              if (g) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 18 })
               return
             }
             const stand = stands.find((s) => s.id === id)
@@ -195,11 +195,11 @@ export function EventMapPage() {
             if (!entry?.location?.coordinates) {
               // fallback: centra sulla location dell'evento
               const ec = event?.location?.coordinates?.coordinates
-              if (ec) map.setView([ec[1], ec[0]], 20)
+              if (ec) map.setView([ec[1], ec[0]], 18)
               return
             }
             const [lng, lat] = entry.location.coordinates
-            map.setView([lat, lng], 20)
+            map.setView([lat, lng], 18)
             markersGroupRef.current?.eachLayer((layer) => {
               if (layer instanceof L.Marker) {
                 const ll = layer.getLatLng()
@@ -220,7 +220,7 @@ export function EventMapPage() {
             setSelectedStandId('')
             const map = mapRef.current
             const g = markersGroupRef.current
-            if (map && g) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 20 })
+            if (map && g) map.fitBounds(g.getBounds().pad(0.15), { maxZoom: 18 })
           }}
         >
           🔄 Reset zoom

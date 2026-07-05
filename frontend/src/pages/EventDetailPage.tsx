@@ -12,6 +12,15 @@ import { MapPicker } from '../components/MapPicker'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import styles from './EventDetailPage.module.scss'
 
+type UploadedImg = {
+  url: string
+  publicId: string
+  width: number
+  height: number
+  format: string
+  bytes: number
+}
+
 type Event = {
   id: string
   name: string
@@ -22,7 +31,9 @@ type Event = {
   currencySymbol: string | null
   shortDescription: string | null
   longDescription: string | null
-  coverImage: unknown | null
+  coverImage: UploadedImg | null
+  logo: UploadedImg | null
+  gallery: UploadedImg[]
   themeBrand: string | null
   themeText: string | null
   themeSurface: string | null
@@ -35,7 +46,7 @@ type Stand = {
   slogan: string | null
   description: string | null
   eventIds: string[]
-  coverImage: unknown | null
+  coverImage: UploadedImg | null
 }
 
 type PoiItem = {
@@ -252,84 +263,112 @@ export function EventDetailPage() {
 
   return (
     <div className={styles.page}>
-      <div className="page-shell">
-        <Link to="/" className={styles.backLink}>&larr; Torna alla home</Link>
-
-        <div className={styles.header}>
-          <div>
-            <span className="eyebrow">Evento</span>
-            <h1 className={styles.title}>{event.name}</h1>
+      {/* Hero */}
+      <section className={styles.hero}>
+        {event.coverImage?.url ? (
+          <img src={event.coverImage.url} alt="" className={styles.heroCover} />
+        ) : (
+          <div className={styles.heroPlaceholder} />
+        )}
+        <div className={styles.heroOverlay}>
+          <div className={`page-shell ${styles.heroContent}`}>
+            <Link to="/" className={styles.heroBack}>&larr; Tutti gli eventi</Link>
+            <div className={styles.heroText}>
+              {event.logo?.url && (
+                <img src={event.logo.url} alt={`${event.name} logo`} className={styles.heroLogo} />
+              )}
+              <div className={styles.heroMeta}>
+                <span className={styles.heroEyebrow}>Evento gastronomico</span>
+                <h1 className={styles.heroTitle}>{event.name}</h1>
+                <div className={styles.heroInfo}>
+                  <span>
+                    {new Date(event.startDate).toLocaleDateString('it-IT', {
+                      day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                    {' — '}
+                    {new Date(event.endDate).toLocaleDateString('it-IT', {
+                      day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                  </span>
+                  <span>{event.location.label}{event.location.city ? `, ${event.location.city}` : ''}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className={styles.headerActions}>
-            {event.currencySymbol && (
-              <span className={styles.currencyBadge}>
-                {event.currencySymbol} {event.currencyName}
-              </span>
-            )}
+        </div>
+        <div className={styles.heroActionsWrapper}>
+          <div className={`page-shell ${styles.heroActions}`}>
             <button
               className={`${styles.favBtn} ${isFavorite ? styles.favBtnActive : ''}`}
               onClick={toggleFavorite}
               aria-label={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
             >
               {isFavorite ? '\u2764' : '\u2661'}
+              <span>{isFavorite ? 'Preferito' : 'Aggiungi'}</span>
             </button>
-            <Link to={`/events/${eventId}/mappa`} className={styles.cashierLink}>
+            <Link to={`/events/${eventId}/mappa`} className={styles.actionBtn}>
               Mappa
             </Link>
+            {event.location.googleMapsUrl && (
+              <a href={event.location.googleMapsUrl} target="_blank" rel="noopener noreferrer" className={styles.actionBtnOutline}>
+                Google Maps
+              </a>
+            )}
             {hasEventRole && (
               <>
-                <Link to={`/events/${eventId}/cashier`} className={styles.cashierLink}>
+                <Link to={`/events/${eventId}/cashier`} className={styles.actionBtn}>
                   Cassa unica
                 </Link>
-                <Link to={`/events/${eventId}/orders`} className={styles.manageLink}>
-                  Gestisci ordini evento
+                <Link to={`/events/${eventId}/orders`} className={styles.actionBtnOutline}>
+                  Gestisci ordini
                 </Link>
               </>
             )}
             {isPlatformAdmin && (
               <button className={styles.dangerBtn} onClick={() => setDeleteOrdersTarget(true)}>
-                Cancella tutti gli ordini
+                Cancella ordini
               </button>
             )}
             <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} />
           </div>
         </div>
+      </section>
 
+      <div className="page-shell">
+        {/* Info row */}
+        <div className={styles.infoRow}>
+          {event.currencySymbol && (
+            <span className={styles.currencyBadge}>
+              {event.currencySymbol} {event.currencyName}
+            </span>
+          )}
+        </div>
+
+        {/* Description */}
         {event.shortDescription && (
           <div className={styles.shortDesc} dangerouslySetInnerHTML={{ __html: event.shortDescription }} />
         )}
 
-        <div className={styles.meta}>
-          <span className={styles.metaItem}>
-            {new Date(event.startDate).toLocaleDateString('it-IT', {
-              day: 'numeric', month: 'long', year: 'numeric',
-            })}
-            {' — '}
-            {new Date(event.endDate).toLocaleDateString('it-IT', {
-              day: 'numeric', month: 'long', year: 'numeric',
-            })}
-          </span>
-          <span className={styles.metaItem}>
-            {event.location.label}
-            {event.location.city ? `, ${event.location.city}` : ''}
-          </span>
-          {event.location.googleMapsUrl && (
-            <a href={event.location.googleMapsUrl} target="_blank" rel="noopener noreferrer" className={styles.metaItem}>
-              📍 Apri in Google Maps
-            </a>
-          )}
-        </div>
-
         {event.longDescription && (
-          <div
-            className={styles.longDesc}
-            dangerouslySetInnerHTML={{ __html: event.longDescription }}
-          />
+          <div className={styles.longDesc} dangerouslySetInnerHTML={{ __html: event.longDescription }} />
         )}
 
+        {/* Gallery */}
+        {event.gallery && event.gallery.length > 0 && (
+          <section className={styles.gallerySection}>
+            <h2 className={styles.sectionTitle}>Galleria</h2>
+            <div className={styles.galleryGrid}>
+              {event.gallery.map((img, i) => (
+                <img key={i} src={img.url} alt={`${event.name} ${i + 1}`} className={styles.galleryImage} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Stands */}
         <section className={styles.standsSection}>
           <h2 className={styles.sectionTitle}>
-            Stand ({stands.length})
+            Stand <span className={styles.count}>{stands.length}</span>
           </h2>
 
           {stands.length === 0 && (
@@ -338,41 +377,34 @@ export function EventDetailPage() {
 
           <div className={styles.standGrid}>
             {stands.map((stand) => (
-              <div key={stand.id} className={styles.standCard}>
-                <Link
-                  to={`/events/${eventId}/stands/${stand.id}`}
-                  className={styles.standCardLink}
-                >
-                  <strong className={styles.standName}>{stand.name}</strong>
-                  {stand.slogan && (
-                    <span className={styles.standSlogan}>{stand.slogan}</span>
-                  )}
-                </Link>
-                {isAuthenticated && (
-                  <div className={styles.standActions}>
-                    <Link
-                      to={`/events/${eventId}/stands/${stand.id}/orders`}
-                      className={styles.manageLink}
-                    >
-                      Gestisci ordini
-                    </Link>
-                    <Link
-                      to={`/events/${eventId}/stands/${stand.id}/order`}
-                      className={styles.cashierLink}
-                    >
-                      Nuovo ordine
-                    </Link>
+              <Link
+                key={stand.id}
+                to={`/events/${eventId}/stands/${stand.id}`}
+                className={styles.standCard}
+              >
+                {stand.coverImage?.url ? (
+                  <div className={styles.standCover}>
+                    <img src={stand.coverImage.url} alt="" />
+                  </div>
+                ) : (
+                  <div className={styles.standCoverPlaceholder}>
+                    <span>🏪</span>
                   </div>
                 )}
-              </div>
+                <div className={styles.standBody}>
+                  <strong className={styles.standName}>{stand.name}</strong>
+                  {stand.slogan && <span className={styles.standSlogan}>{stand.slogan}</span>}
+                </div>
+              </Link>
             ))}
           </div>
         </section>
 
+        {/* POI management (admin) */}
         {hasEventRole && (
           <section className={styles.poiSection}>
             <h2 className={styles.sectionTitle}>
-              Punti di Interesse ({pois.length})
+              Punti di Interesse <span className={styles.count}>{pois.length}</span>
               <button className={styles.poiToggleBtn} onClick={() => setShowPoiForm((p) => !p)}>
                 {showPoiForm ? 'Chiudi' : editingPoiId ? 'Modifica POI' : 'Nuovo POI'}
               </button>
@@ -382,35 +414,19 @@ export function EventDetailPage() {
               <div className={styles.poiForm}>
                 <label className={styles.poiField}>
                   Nome
-                  <input
-                    type="text"
-                    value={poiForm.name}
-                    onChange={(e) => setPoiForm((p) => ({ ...p, name: e.target.value }))}
-                  />
+                  <input type="text" value={poiForm.name} onChange={(e) => setPoiForm((p) => ({ ...p, name: e.target.value }))} />
                 </label>
                 <label className={styles.poiField}>
                   Descrizione
-                  <textarea
-                    rows={3}
-                    value={poiForm.description}
-                    onChange={(e) => setPoiForm((p) => ({ ...p, description: e.target.value }))}
-                  />
+                  <textarea rows={3} value={poiForm.description} onChange={(e) => setPoiForm((p) => ({ ...p, description: e.target.value }))} />
                 </label>
                 <div className={styles.poiField}>
                   <label>Posizione (clicca sulla mappa o sposta il marker)</label>
-                  <MapPicker
-                    lat={poiForm.latitude}
-                    lng={poiForm.longitude}
-                    onChange={(lat, lng) => setPoiForm((p) => ({ ...p, latitude: lat, longitude: lng }))}
-                    height="200px"
-                  />
+                  <MapPicker lat={poiForm.latitude} lng={poiForm.longitude} onChange={(lat, lng) => setPoiForm((p) => ({ ...p, latitude: lat, longitude: lng }))} height="200px" />
                 </div>
                 <label className={styles.poiField}>
                   Icona
-                  <select
-                    value={poiForm.iconType}
-                    onChange={(e) => setPoiForm((p) => ({ ...p, iconType: e.target.value }))}
-                  >
+                  <select value={poiForm.iconType} onChange={(e) => setPoiForm((p) => ({ ...p, iconType: e.target.value }))}>
                     {POI_ICONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
@@ -418,21 +434,11 @@ export function EventDetailPage() {
                 </label>
                 <div className={styles.poiField}>
                   <span>Immagine di copertina</span>
-                  <ImageUploader
-                    mode="single"
-                    type="poi"
-                    value={poiForm.coverImage}
-                    onChange={(data) => setPoiForm((p) => ({ ...p, coverImage: data as UploadedImage | null }))}
-                  />
+                  <ImageUploader mode="single" type="poi" value={poiForm.coverImage} onChange={(data) => setPoiForm((p) => ({ ...p, coverImage: data as UploadedImage | null }))} />
                 </div>
                 <div className={styles.poiField}>
                   <span>Galleria</span>
-                  <ImageUploader
-                    mode="multiple"
-                    type="poi"
-                    value={poiForm.gallery}
-                    onChange={(data) => setPoiForm((p) => ({ ...p, gallery: data as UploadedImage[] }))}
-                  />
+                  <ImageUploader mode="multiple" type="poi" value={poiForm.gallery} onChange={(data) => setPoiForm((p) => ({ ...p, gallery: data as UploadedImage[] }))} />
                 </div>
                 <div className={styles.poiFormActions}>
                   <button className={styles.saveBtn} onClick={savePoi} disabled={savingPoi}>
@@ -453,9 +459,7 @@ export function EventDetailPage() {
                   <div className={styles.poiCardBody}>
                     <strong className={styles.poiCardName}>{poi.iconType ? POI_ICONS.find((i) => i.value === poi.iconType)?.label.split(' ')[0] : '\u{1F4CD}'} {poi.name}</strong>
                     {poi.description && <span className={styles.poiCardDesc}>{poi.description}</span>}
-                    <span className={styles.poiCoords}>
-                      {poi.location.coordinates[1]}, {poi.location.coordinates[0]}
-                    </span>
+                    <span className={styles.poiCoords}>{poi.location.coordinates[1]}, {poi.location.coordinates[0]}</span>
                   </div>
                   <div className={styles.poiCardActions}>
                     <button className={styles.textBtn} onClick={() => openEditPoi(poi)}>Modifica</button>

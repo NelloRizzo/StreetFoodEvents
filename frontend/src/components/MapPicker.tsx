@@ -8,6 +8,8 @@ type MapPickerProps = {
   lng: string
   onChange: (lat: string, lng: string) => void
   height?: string
+  resetCenter?: { lat: number; lng: number } | null
+  resetLabel?: string
 }
 
 const defaultCenter: [number, number] = [41.9028, 12.4964] // Roma
@@ -19,7 +21,7 @@ const markerIcon = L.divIcon({
   iconAnchor: [12.5, 41],
 })
 
-export function MapPicker({ lat, lng, onChange, height = '240px' }: MapPickerProps) {
+export function MapPicker({ lat, lng, onChange, height = '240px', resetCenter, resetLabel = 'Centra' }: MapPickerProps) {
   const mapRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.Marker | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -28,6 +30,14 @@ export function MapPicker({ lat, lng, onChange, height = '240px' }: MapPickerPro
   const currentLng = Number(lng.replace(',', '.'))
   const hasValidCoords = !isNaN(currentLat) && !isNaN(currentLng) && currentLat !== 0 && currentLng !== 0
   const center: [number, number] = hasValidCoords ? [currentLat, currentLng] : defaultCenter
+
+  const handleReset = () => {
+    if (!mapRef.current || !markerRef.current || !resetCenter) return
+    const { lat: rLat, lng: rLng } = resetCenter
+    markerRef.current.setLatLng([rLat, rLng])
+    mapRef.current.setView([rLat, rLng], 16)
+    onChange(rLat.toFixed(6), rLng.toFixed(6))
+  }
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -39,11 +49,24 @@ export function MapPicker({ lat, lng, onChange, height = '240px' }: MapPickerPro
       maxZoom: 22,
     })
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    const streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
       maxZoom: 20,
       maxNativeZoom: 20,
-    }).addTo(map)
+    })
+
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+      maxZoom: 23,
+      maxNativeZoom: 23,
+    })
+
+    satelliteLayer.addTo(map)
+
+    L.control.layers({
+      'Satellite': satelliteLayer,
+      'Mappa': streetLayer,
+    }, undefined, { position: 'bottomleft' }).addTo(map)
 
     const marker = L.marker(center, { draggable: true, icon: markerIcon }).addTo(map)
 
@@ -83,8 +106,13 @@ export function MapPicker({ lat, lng, onChange, height = '240px' }: MapPickerPro
   return (
     <div className={styles.wrapper}>
       <div ref={containerRef} className={styles.map} style={{ height }} />
-      <div className={styles.coords}>
+      <div className={styles.actions}>
         <input type="text" readOnly value={hasValidCoords ? `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}` : 'Clicca sulla mappa per selezionare la posizione'} className={styles.coordInput} />
+        {resetCenter && (
+          <button type="button" className={styles.resetBtn} onClick={handleReset}>
+            {resetLabel}
+          </button>
+        )}
       </div>
     </div>
   )

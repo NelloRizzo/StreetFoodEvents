@@ -43,7 +43,7 @@ export function StandsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<StandFormData>(emptyForm)
-  const [events, setEvents] = useState<{ id: string; name: string }[]>([])
+  const [events, setEvents] = useState<{ id: string; name: string; location: { coordinates?: { coordinates: [number, number] } | null } }[]>([])
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
   const [favMap, setFavMap] = useState<Map<string, string>>(new Map())
 
@@ -60,7 +60,7 @@ export function StandsPage() {
 
   const fetchEvents = async () => {
     try {
-      const data = await apiRequest<{ items: { id: string; name: string }[] }>('/events')
+      const data = await apiRequest<{ items: { id: string; name: string; location: { coordinates?: { coordinates: [number, number] } | null } }[] }>('/events')
       setEvents(data.items)
     } catch { /* not required */ }
   }
@@ -228,8 +228,15 @@ export function StandsPage() {
               </div>
             </div>
 
-            {form.locations.map((el) => {
-              const evName = events.find((e) => e.id === el.eventId)?.name ?? el.eventId
+            {form.locations
+              .filter((el) => events.some((e) => e.id === el.eventId))
+              .map((el) => {
+              const ev = events.find((e) => e.id === el.eventId)
+              const evName = ev?.name ?? el.eventId
+              const evCoords = ev?.location?.coordinates?.coordinates
+              const resetCenter = evCoords
+                ? { lat: evCoords[1], lng: evCoords[0] }
+                : undefined
               return (
                 <div key={el.eventId} className={styles.coordRow}>
                   <label className={styles.coordLabel}>{evName} — posizione (clicca sulla mappa o sposta il marker)</label>
@@ -244,6 +251,8 @@ export function StandsPage() {
                         ),
                       }))
                     }
+                    resetCenter={resetCenter}
+                    resetLabel={`Centra su ${evName}`}
                   />
                 </div>
               )

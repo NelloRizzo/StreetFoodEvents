@@ -11,8 +11,9 @@
   z-index: 0;
 }
 
-.coords {
+.actions {
   display: flex;
+  gap: 0.5rem;
 }
 
 .coordInput {
@@ -24,4 +25,20 @@
   color: var(--color-ink-soft);
   font-size: 0.85rem;
   text-align: center;
+}
+
+.resetBtn {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.resetBtn:hover {
+  opacity: 0.85;
 }
