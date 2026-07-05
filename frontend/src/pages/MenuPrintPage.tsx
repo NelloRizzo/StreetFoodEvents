@@ -121,7 +121,6 @@ export function MenuPrintPage() {
   const [selectedEventId, setSelectedEventId] = useState('')
   const [stands, setStands] = useState<Stand[]>([])
   const [selectedStandIds, setSelectedStandIds] = useState<Set<string>>(new Set())
-  const [productsByStand, setProductsByStand] = useState<Map<string, EventProductItem[]>>(new Map())
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
 
@@ -135,7 +134,6 @@ export function MenuPrintPage() {
     if (!selectedEventId) {
       setStands([])
       setSelectedStandIds(new Set())
-      setProductsByStand(new Map())
       return
     }
     setLoading(true)
@@ -143,7 +141,6 @@ export function MenuPrintPage() {
       .then((data) => {
         setStands(data.items)
         setSelectedStandIds(new Set())
-        setProductsByStand(new Map())
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -198,8 +195,6 @@ export function MenuPrintPage() {
       setGenerating(false)
     }
   }
-
-  const selectedEvent = events.find((e) => e.id === selectedEventId)
 
   return (
     <div className={styles.page}>
