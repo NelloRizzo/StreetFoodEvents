@@ -3,13 +3,16 @@
 ## ISTRUZIONI
 Sistema di gestione di stand enogastronomici per eventi di street food. Utenti con ruoli diversi (applicativi, per evento e per stand). Autenticazione già implementata.
 
-## File di riferimento
+## File di riferimento — destinazione delle attività
 
-| File | Contenuto |
-|---|---|
-| `CHANGELOG.md` | Tutte le feature implementate, in ordine cronologico |
-| `ARCHITECTURE.md` | Decisioni progettuali, pattern architetturali, gotchas |
-| `TODO.md` | Task in sospeso |
+Qualsiasi agente AI che opera su questo progetto DEVE documentare le proprie attività nei file appropriati tra quelli elencati qui sotto. I commit che modificano SOLO questi file NON attivano un deploy su Render.
+
+| File | Destinazione | Cosa scriverci |
+|---|---|---|
+| `CHANGELOG.md` | **Cronologia feature** | Ogni volta che una feature viene completata, aggiungere una entry in ordine cronologico (mese anno). Include sia la checklist feature che la session history dettagliata. |
+| `ARCHITECTURE.md` | **Decisioni progettuali** | Pattern architetturali, motivazioni delle scelte, "cose da non fare", gotchas che un agente AI deve conoscere per non ripetere errori. Aggiornare quando si introduce un nuovo pattern o si impara una lezione. |
+| `TODO.md` | **Task in sospeso** | Feature non ancora implementate, bug aperti, attività pianificate per il futuro. Spostare qui le entry da `CHANGELOG.md` solo quando diventano obsolete, non quando sono completate. |
+| `AGENTS.md` (questo file) | **Setup operativo** | Istruzioni di base, comandi, struttura repo, API routes, deploy. NON contiene storia feature né progetti futuri — solo ciò che serve per operare OGGI. |
 
 ## Repo structure
 
