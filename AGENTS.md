@@ -505,6 +505,10 @@ La cassa sarà un tablet Android (Chrome). La stampante termica (non ancora scel
 - Non installare desktop environment sul Pi — Raspbian OS Lite basta e avanza
 - Non affidarsi a mDNS per il discovery — usare IP statico configurato via DHCP reservation
 
+### unifiedCashierEnabled & Menu Print (Jul 2026)
+
+- **Campo `unifiedCashierEnabled`** su Event model (boolean, default `false`), toggle nel form EventsPage. Se attivo, il pulsante "Nuovo ordine" (cassa per-stand) viene nascosto in StandDetailPage. La cassa unica evento rimane accessibile via ruolo `event-cashier`.
+
 ### Menu Print — Stampa professionale menu stand (Jul 2026)
 
 - [x] **`toEventProductResponse`** — estendere in `backend/src/controllers/event-products.controller.ts` per includere `coverImage` e `gallery` dal Product popolato (ora mancano)
