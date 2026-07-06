@@ -5,21 +5,21 @@ import { fetchEventReport, type EventReport, type EventReportStand } from '../li
 import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './EventReportPage.module.scss'
 
-const CASH_REGISTER_KEY = 'cashRegister_'
+const CASH_BASIS_KEY = 'cashBasis_'
 
-function loadRegister(eventId: string): number {
+function loadCashBasis(eventId: string): number {
   try {
-    const raw = localStorage.getItem(CASH_REGISTER_KEY + eventId)
+    const raw = localStorage.getItem(CASH_BASIS_KEY + eventId)
     if (raw) {
-      const { amount } = JSON.parse(raw)
-      return typeof amount === 'number' ? amount : 0
+      const { basis } = JSON.parse(raw)
+      return typeof basis === 'number' ? basis : 0
     }
   } catch { /* ignore */ }
   return 0
 }
 
-function saveRegister(eventId: string, amount: number) {
-  localStorage.setItem(CASH_REGISTER_KEY + eventId, JSON.stringify({ amount, updatedAt: new Date().toISOString() }))
+function saveCashBasis(eventId: string, basis: number) {
+  localStorage.setItem(CASH_BASIS_KEY + eventId, JSON.stringify({ basis, updatedAt: new Date().toISOString() }))
 }
 
 function StandRow({ stand, isTotal, showCash, showCredits }: { stand: EventReportStand; isTotal?: boolean; showCash: boolean; showCredits: boolean }) {
@@ -52,8 +52,9 @@ export function EventReportPage() {
   const [selectedStandId, setSelectedStandId] = useState('')
 
   const [registerVisible, setRegisterVisible] = useState(false)
-  const [registerAmount, setRegisterAmount] = useState(loadRegister(eventId ?? ''))
+  const [cashBasis, setCashBasis] = useState(loadCashBasis(eventId ?? ''))
   const [showResetPrompt, setShowResetPrompt] = useState(false)
+  const [showSetBasisPrompt, setShowSetBasisPrompt] = useState(false)
 
   const load = useCallback(async () => {
     if (!eventId) return
@@ -69,13 +70,21 @@ export function EventReportPage() {
 
   useEffect(() => { void load() }, [load])
 
-  const handleResetRegister = (value?: string) => {
-    if (!eventId) return
+  const handleResetRegister = () => {
+    if (!eventId || !report) return
+    const newBasis = report.totals.totalRevenue
+    setCashBasis(newBasis)
+    saveCashBasis(eventId, newBasis)
+    setShowResetPrompt(false)
+  }
+
+  const handleSetBasis = (value?: string) => {
+    if (!eventId || !report) return
     const num = Number(value)
     if (!Number.isFinite(num) || num < 0) return
-    setRegisterAmount(num)
-    saveRegister(eventId, num)
-    setShowResetPrompt(false)
+    setCashBasis(num)
+    saveCashBasis(eventId, num)
+    setShowSetBasisPrompt(false)
   }
 
   if (isLoading) return null
@@ -131,13 +140,11 @@ export function EventReportPage() {
 
         <div className={styles.reportGrid}>
           <div className={styles.card}>
-            <div className={styles.cardTitle}>Cassa</div>
+            <div className={styles.cardTitle}>Cassa (dall'ultimo azzeramento)</div>
             <div className={styles.cashRegister}>
-              {registerVisible ? (
-                <span className={styles.cashRegisterAmount}>{fmt(registerAmount)}</span>
-              ) : (
-                <span className={styles.cashRegisterHidden}>&bull;&bull;&bull;&bull;&bull;</span>
-              )}
+              <span className={styles.cashRegisterAmount}>
+                {registerVisible ? fmt((report.totals.totalRevenue - cashBasis)) : '\u2022\u2022\u2022\u2022\u2022'}
+              </span>
               <button
                 type="button"
                 className={styles.eyeBtn}
@@ -153,6 +160,14 @@ export function EventReportPage() {
                 onClick={() => setShowResetPrompt(true)}
               >
                 Azzera cassa
+              </button>
+              <button
+                type="button"
+                className={styles.resetBtn}
+                onClick={() => setShowSetBasisPrompt(true)}
+                style={{ marginLeft: '0.3rem' }}
+              >
+                Imposta
               </button>
             </div>
           </div>
@@ -252,12 +267,21 @@ export function EventReportPage() {
 
       <ConfirmModal
         open={showResetPrompt}
-        variant="prompt"
-        title="Imposta cassa"
-        message="Inserisci il nuovo importo in cassa:"
-        confirmLabel="Salva"
+        variant="confirm"
+        title="Azzera cassa"
+        message="Portare la cassa a zero? Il totale incassato finora verrà usato come base di partenza."
+        confirmLabel="Azzera"
         onConfirm={handleResetRegister}
         onCancel={() => setShowResetPrompt(false)}
+      />
+      <ConfirmModal
+        open={showSetBasisPrompt}
+        variant="prompt"
+        title="Imposta cassa"
+        message="Inserisci l'importo attuale in cassa (la differenza verrà calcolata automaticamente):"
+        confirmLabel="Salva"
+        onConfirm={handleSetBasis}
+        onCancel={() => setShowSetBasisPrompt(false)}
       />
     </div>
   )
