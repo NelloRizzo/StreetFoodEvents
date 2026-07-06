@@ -77,6 +77,70 @@ function beepCmd(): Uint8Array {
   return writeBytes(ESC, 0x28, 0x41, 0x04, 0x00, 0x31, 0x50, 0x02, 0x05)
 }
 
+export function renderAsText(content: PrintContent): string {
+  const lines: string[] = []
+  const width = 42
+
+  if (content.title) {
+    lines.push('')
+    lines.push('╔' + '═'.repeat(width - 2) + '╗')
+    const titlePad = Math.max(0, width - 2 - content.title.length)
+    const leftPad = Math.floor(titlePad / 2)
+    lines.push('║' + ' '.repeat(leftPad) + content.title + ' '.repeat(titlePad - leftPad) + '║')
+    lines.push('╚' + '═'.repeat(width - 2) + '╝')
+  }
+
+  for (const line of content.lines) {
+    if ('kind' in line) {
+      switch (line.kind) {
+        case 'separator':
+          lines.push('─'.repeat(width))
+          break
+        case 'blank':
+          for (let i = 0; i < (line.lines ?? 1); i++) lines.push('')
+          break
+        case 'barcode':
+          lines.push(`[BARCODE ${line.type ?? 'code128'}] ${line.data}`)
+          break
+        case 'qrcode':
+          lines.push(`[QRCODE] ${line.data}`)
+          break
+        case 'cut':
+          lines.push('─'.repeat(width))
+          lines.push('✂  TAGLIO CARTA')
+          break
+        case 'beep':
+          lines.push('[BEEP]')
+          break
+      }
+    } else {
+      const text = line.text
+      const bold = line.bold ? '**' : ''
+      const formatted = text.length > width - 4 ? text.slice(0, width - 7) + '…' : text
+
+      switch (line.align ?? 'left') {
+        case 'center': {
+          const pad = Math.max(0, width - formatted.length)
+          const l = Math.floor(pad / 2)
+          lines.push(' '.repeat(l) + bold + formatted + bold + ' '.repeat(pad - l))
+          break
+        }
+        case 'right': {
+          const pad = Math.max(0, width - formatted.length - 4)
+          lines.push(' '.repeat(pad) + bold + formatted + bold)
+          break
+        }
+        default: {
+          lines.push(bold + formatted + bold)
+          break
+        }
+      }
+    }
+  }
+
+  return lines.join('\n')
+}
+
 export function generateEscpos(content: PrintContent): Uint8Array {
   const chunks: Uint8Array[] = []
 

@@ -216,6 +216,59 @@ Il frontend tenta di inviare il job all'agente; se non risponde entro 3 secondi,
 | Stampa tagliata                   | Buffer troppo piccolo                     | Il Pi 2 ha 1GB RAM — ample per job tipici       |
 | Beep non funziona                 | Stampante senza buzzer                   | Ignorare, è opzionale                           |
 
+## Testing senza stampante termica
+
+Puoi testare l'agente in tre modalità senza avere una stampante collegata.
+
+### Modalità 1: File mode (consigliata)
+
+I job di stampa vengono salvati come file `.bin` nella cartella `prints/`.
+
+```bash
+# Avvia in modalità file
+PRINTER_MODE=file npm run dev
+
+# Oppure via env var
+export PRINTER_MODE=file
+npm run dev
+```
+
+Ogni stampa genera un file `prints/print-<timestamp>.bin` con i byte ESC/POS grezzi.
+Usa `POST /preview/text` per vedere l'anteprima in testo leggibile.
+
+### Modalità 2: No-op mode
+
+Nessun dato viene scritto — utile per testare il flusso HTTP.
+
+```bash
+PRINTER_MODE=none npm run dev
+```
+
+### Modalità 3: Interfaccia web di test
+
+Avvia il server in qualsiasi modalità e apri:
+
+```
+http://localhost:9300/test
+```
+
+L'interfaccia permette di:
+- Inviare una stampa di test
+- Vedere l'anteprima testo (cosa verrebbe stampato)
+- Vedere il raw ESC/POS in base64
+- Modificare il JSON del job e inviarlo
+- Caricare uno scontrino d'esempio precompilato
+
+### Esempio rapido via curl
+
+```bash
+# Anteprima testo (leggibile)
+curl -s -X POST http://localhost:9300/preview/text \
+  -H "Content-Type: application/json" \
+  -d '{"content":{"title":"Test","lines":[{"align":"center","text":"CIAO!","bold":true,"size":"double"},{"kind":"cut"}]}}' \
+  | jq -r '.text'
+```
+
 ## Riferimenti
 
 - [ESC/POS Command Reference (Epson)](https://download.epson-biz.com/modules/pos/index.php)
