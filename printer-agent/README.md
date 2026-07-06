@@ -18,7 +18,7 @@ Tablet (cassa, Chrome Android)  ──WiFi──▶  Raspberry Pi 2 Model B (:93
 | Componente              | Specifica                                              |
 |-------------------------|--------------------------------------------------------|
 | Raspberry Pi            | **2 Model B** (o superiore: 3B, 3B+, 4B, Zero 2 W)    |
-| Architettura           | ARMv7 (Pi 2) o ARMv8 (Pi 3+)                          |
+| Architettura           | ARMv7 (Pi 2 v1.1, 32-bit) o ARMv8 (Pi 2 v1.2 / Pi 3+) |
 | Scheda SD               | ≥8 GB, Classe 10 consigliata                           |
 | Stampante termica       | Compatibile ESC/POS, USB (es. Epson TM-T20, TM-T88)   |
 | Cavo USB                | Tipo A–B (per stampante)                               |
@@ -29,7 +29,10 @@ Tablet (cassa, Chrome Android)  ──WiFi──▶  Raspberry Pi 2 Model B (:93
 
 ## Prerequisiti software
 
-- **Raspberry Pi OS** (Debian Bookworm, 64-bit consigliato)
+- **Raspberry Pi OS** (Debian Bookworm)
+  - **Pi 2 Model B v1.1** → scegli **Pi OS (32-bit)** — CPU ARMv7 non supporta 64-bit
+  - **Pi 2 Model B v1.2** (BCM2837) → puoi usare Pi OS (32-bit) o (64-bit)
+  - **Pi 3/4/5** → usa **Pi OS (64-bit)** consigliato
   - Download: https://www.raspberrypi.com/software/
   - User: `pi` (default)
 - **Node.js ≥ 20** (installato automaticamente dallo script)
