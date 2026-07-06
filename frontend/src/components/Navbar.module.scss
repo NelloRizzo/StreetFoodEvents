@@ -257,6 +257,12 @@
   margin-left: 0.25rem;
 }
 
+.dropdownDivider {
+  border: none;
+  border-top: 1px solid var(--color-line);
+  margin: 0.25rem 0;
+}
+
 .dropdownLink {
   display: block;
   padding: 0.5rem 0.4rem;

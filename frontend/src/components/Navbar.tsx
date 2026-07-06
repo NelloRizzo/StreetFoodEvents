@@ -47,6 +47,9 @@ export function Navbar({
   const [isReportsOpen, setIsReportsOpen] = useState(false)
   const [events, setEvents] = useState<EventItem[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
+  const [reportEvents, setReportEvents] = useState<{ id: string; name: string }[]>([])
+  const [reportStands, setReportStands] = useState<{ id: string; name: string }[]>([])
+  const [reportsLoading, setReportsLoading] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const eventsMenuRef = useRef<HTMLDivElement>(null)
   const platformMenuRef = useRef<HTMLDivElement>(null)
@@ -82,6 +85,30 @@ export function Navbar({
         .catch(() => setEventsLoading(false))
     }
   }, [isEventsOpen, events.length, eventsLoading])
+
+  useEffect(() => {
+    if (isReportsOpen && !reportsLoading && reportEvents.length === 0 && reportStands.length === 0) {
+      setReportsLoading(true)
+      Promise.all([
+        apiRequest<{ roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles'),
+        apiRequest<{ stands: { id: string; name: string }[] }>('/auth/me/stands'),
+      ]).then(async ([rolesData, standsData]) => {
+        const eventIds = [...new Set(rolesData.roles
+          .filter((r) => r.scope === 'event' && r.eventId && (r.slug === 'event-admin' || r.slug === 'event-cashier'))
+          .map((r) => r.eventId!))]
+        const events = await Promise.all(
+          eventIds.map((eid) =>
+            apiRequest<{ item: { name: string } }>(`/events/${eid}`)
+              .then((ev) => ({ id: eid, name: ev.item.name }))
+              .catch(() => ({ id: eid, name: 'Evento' }))
+          )
+        )
+        setReportEvents(events)
+        setReportStands(standsData.stands)
+        setReportsLoading(false)
+      }).catch(() => setReportsLoading(false))
+    }
+  }, [isReportsOpen, reportsLoading, reportEvents.length, reportStands.length])
 
   function closeAll() {
     setIsMenuOpen(false)
@@ -213,6 +240,33 @@ export function Navbar({
 
                 {isReportsOpen && (
                   <div className={styles.dropdownMenu}>
+                    {reportsLoading && (
+                      <span className={styles.eventsLoading}>Caricamento...</span>
+                    )}
+                    {!reportsLoading && reportEvents.length === 0 && reportStands.length === 0 && (
+                      <span className={styles.eventsEmpty}>Nessun report disponibile.</span>
+                    )}
+                    {reportEvents.map((ev) => (
+                      <Link
+                        key={ev.id}
+                        className={styles.dropdownLink}
+                        to={`/events/${ev.id}/report`}
+                        onClick={closeAll}
+                      >
+                        Report {ev.name}
+                      </Link>
+                    ))}
+                    {reportStands.map((s) => (
+                      <Link
+                        key={s.id}
+                        className={styles.dropdownLink}
+                        to={`/orders/stand/${s.id}`}
+                        onClick={closeAll}
+                      >
+                        Report {s.name}
+                      </Link>
+                    ))}
+                    {reportEvents.length > 0 && <hr className={styles.dropdownDivider} />}
                     <Link className={styles.dropdownLink} to="/admin/menu-print" onClick={closeAll}>
                       Menu stampa
                     </Link>
