@@ -70,11 +70,23 @@ npm install --omit=dev --no-audit --no-fund
 chown -R "$USER:$USER" "$INSTALL_DIR"
 
 # ── 5. systemd service ──
-echo "[5/5] Installing systemd service..."
+echo "[5/6] Installing systemd service..."
 cp "$SCRIPT_DIR/$SERVICE_NAME.service" "$SERVICE_FILE"
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
 systemctl restart "$SERVICE_NAME"
+
+# ── 6. Cron job (keep Render awake) ──
+echo "[6/6] Installing cron job (keep Render awake)..."
+CRON_CMD="*/10 * * * * curl -s https://streetfoodevents-api.onrender.com/health > /dev/null 2>&1 && curl -s https://streetfoodevents-frontend.onrender.com/health > /dev/null 2>&1"
+
+if command -v crontab &>/dev/null; then
+  ( crontab -l 2>/dev/null | grep -v 'streetfoodevents' ; echo "$CRON_CMD" ) | crontab -
+  echo "  Cron job installed (pings Render every 10 minutes)"
+else
+  echo "  WARNING: crontab not found. Install it manually:"
+  echo "    $CRON_CMD"
+fi
 
 echo ""
 echo "=== Installation complete ==="
@@ -84,6 +96,8 @@ echo ""
 echo "Commands:"
 echo "  sudo $INSTALL_DIR/start.sh {start|stop|restart|status|logs|health}"
 echo "  curl http://localhost:9300/health"
+echo "  crontab -l          # verify keep-awake cron job"
+echo "  crontab -e          # edit cron jobs if needed"
 echo ""
 echo "IMPORTANT: Configure a static IP via DHCP reservation"
 echo "on your router so the tablet can find this printer."
