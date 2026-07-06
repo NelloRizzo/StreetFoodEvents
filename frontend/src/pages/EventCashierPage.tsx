@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
-import { createOrder, type Order } from '../lib/orders'
+import { createOrder, cancelOrder, type Order } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './CashierOrderPage.module.scss'
@@ -79,6 +79,7 @@ export function EventCashierPage() {
   const [creditAmount, setCreditAmount] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null)
+  const [showVoidPrompt, setShowVoidPrompt] = useState(false)
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
 
   const [notesModal, setNotesModal] = useState<NotesModalState>({
@@ -252,7 +253,7 @@ export function EventCashierPage() {
           quantity: i.quantity,
           notes: i.notes || undefined,
         })),
-        paymentOnCreate: effectiveCredit > 0 ? { creditAmount: effectiveCredit } : undefined,
+        paymentOnCreate: { creditAmount: effectiveCredit },
       })
       setCreatedOrder(response.item)
       resetOrder()
@@ -260,6 +261,17 @@ export function EventCashierPage() {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
     }
     setIsSubmitting(false)
+  }
+
+  const handleVoid = async (reason?: string) => {
+    if (!createdOrder) return
+    try {
+      await cancelOrder(createdOrder.id, reason)
+      setCreatedOrder({ ...createdOrder, status: 'cancelled', paymentStatus: 'refunded' })
+      setShowVoidPrompt(false)
+    } catch (e) {
+      setAlertMsg(e instanceof Error ? e.message : 'Errore durante lo storno')
+    }
   }
 
   function printReceipt() {
@@ -467,8 +479,8 @@ ${qrHtml}
                   {isSubmitting
                     ? 'Creazione...'
                     : payWithCredits
-                      ? `Crea ordine (${creditAmount > 0 ? `€${creditAmount.toFixed(2)} crediti` : 'da pagare'})`
-                      : 'Crea ordine (da pagare)'}
+                      ? `Crea ordine (€${creditAmount > 0 ? `${creditAmount.toFixed(2)} crediti` : '0'})`
+                      : `Crea ordine (€${total.toFixed(2)} contanti)`}
                 </button>
               </>
             )}
@@ -566,9 +578,14 @@ ${qrHtml}
               </div>
             )}
             <div className={styles.confirmActions}>
-                <button className={styles.printBtn} onClick={printReceipt}>
+              <button className={styles.printBtn} onClick={printReceipt}>
                 Stampa scontrino
               </button>
+              {createdOrder.status !== 'cancelled' && (
+                <button className={styles.voidBtn} onClick={() => setShowVoidPrompt(true)}>
+                  Storna ordine
+                </button>
+              )}
               <button className={styles.confirmCloseBtn} onClick={() => setCreatedOrder(null)}>
                 Chiudi
               </button>
@@ -592,6 +609,16 @@ ${qrHtml}
         confirmLabel="OK"
         onConfirm={() => setAlertMsg(null)}
         onCancel={() => setAlertMsg(null)}
+      />
+
+      <ConfirmModal
+        open={showVoidPrompt}
+        variant="prompt"
+        title="Storna ordine"
+        message="Inserisci il motivo dello storno:"
+        confirmLabel="Storna"
+        onConfirm={handleVoid}
+        onCancel={() => setShowVoidPrompt(false)}
       />
     </div>
   )

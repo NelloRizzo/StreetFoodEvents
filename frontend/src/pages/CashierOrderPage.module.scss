@@ -630,6 +630,18 @@
   cursor: pointer;
 }
 
+.voidBtn {
+  flex: 1;
+  padding: 0.7rem;
+  border: 1px solid #d32f2f;
+  border-radius: 8px;
+  background: transparent;
+  color: #d32f2f;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
 .confirmCloseBtn {
   padding: 0.7rem 1rem;
   border: 1px solid #0f3460;
