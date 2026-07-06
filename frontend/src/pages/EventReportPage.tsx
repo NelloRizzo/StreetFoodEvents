@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
-import { apiRequest } from '../lib/api'
 import { fetchEventReport, type EventReport, type EventReportStand } from '../lib/orders'
 import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './EventReportPage.module.scss'
@@ -58,12 +57,6 @@ export function EventReportPage() {
   const load = useCallback(async () => {
     if (!eventId) return
     try {
-      const { roles } = await apiRequest<{ roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles')
-      const hasAccess = roles.some(
-        (r) => r.scope === 'platform' || (r.scope === 'event' && r.eventId === eventId)
-      )
-      if (!hasAccess) { setForbidden(true); setIsLoading(false); return }
-
       const data = await fetchEventReport(eventId, startDate || undefined, endDate || undefined)
       setReport(data)
       setIsLoading(false)
