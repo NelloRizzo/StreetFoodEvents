@@ -40,7 +40,7 @@ sudo bash install.sh
 ```
 
 Lo script:
-1. Installa dipendenze di sistema (python3, fswebcam, cups, gruppi lp/video)
+1. Installa dipendenze di sistema (python3, numpy, opencv via apt — pre-compilati per ARM, nessun build da sorgente)
 2. Copia l'app in `/opt/photo-point`
 3. Crea virtualenv Python e installa le dipendenze
 4. Genera cornici di esempio
@@ -49,9 +49,9 @@ Lo script:
 ## Installazione manuale
 
 ```bash
-# Dipendenze di sistema
+# Dipendenze di sistema (numpy/opencv via apt = pre-compilati ARM)
 sudo apt-get update
-sudo apt-get install -y python3 python3-pip python3-venv fswebcam cups printer-driver-gutenprint
+sudo apt-get install -y python3 python3-pip python3-venv python3-numpy python3-opencv fswebcam cups printer-driver-gutenprint
 
 # Gruppi
 sudo usermod -a -G lp pi
@@ -59,7 +59,7 @@ sudo usermod -a -G video pi
 
 # Progetto
 cd photo-point
-python3 -m venv venv
+python3 -m venv --system-site-packages venv
 source venv/bin/activate
 pip install -r requirements.txt
 

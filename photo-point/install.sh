@@ -20,11 +20,13 @@ sudo apt-get install -y -qq \
   python3 \
   python3-pip \
   python3-venv \
+  python3-numpy \
+  python3-opencv \
   fswebcam \
   cups \
   printer-driver-gutenprint \
   python3-cups 2>/dev/null || true
-# python3-cups may not exist on all distros, that's fine
+# python3-cups / python3-opencv may not exist on all distros
 
 # Add pi to lp group for printer access
 sudo usermod -a -G lp pi
@@ -53,7 +55,8 @@ sudo cp -r "$PHOTO_POINT_DIR/templates/"* "$INSTALL_DIR/templates/"
 # ── 4. Python virtualenv + dependencies ──
 echo "[3/6] Installing Python dependencies..."
 cd "$INSTALL_DIR"
-sudo python3 -m venv venv
+# --system-site-packages: usa numpy/opencv già installati via apt (ARM pre-compilati)
+sudo python3 -m venv --system-site-packages venv
 sudo "$INSTALL_DIR/venv/bin/pip" install --upgrade pip -q
 sudo "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt" -q
 
