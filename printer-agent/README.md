@@ -49,10 +49,11 @@ sudo bash install.sh
 ```
 
 Lo script esegue automaticamente:
-1. Installa Node.js 22 via NodeSource
+1. Installa Node.js 22 (download ARMv7l da nodejs.org)
 2. Aggiunge l'utente `pi` al gruppo `lp` (accesso stampante USB)
 3. Compila il progetto TypeScript
 4. Installa il servizio systemd e lo avvia
+5. Installa un **cron job** che pinga i servizi Render ogni 10 minuti (evita lo spin-down del free tier)
 
 ## Installazione manuale
 
@@ -195,6 +196,12 @@ curl http://localhost:9300/health
 curl -X POST http://localhost:9300/print \
   -H "Content-Type: application/json" \
   -d '{"content":{"lines":[{"text":"TEST STAMPA","bold":true,"align":"center"},{"kind":"cut"}]}}'
+
+# Cron job — verifica
+crontab -l | grep render
+
+# Rimuovere il cron job (se non serve più)
+crontab -l | grep -v render | crontab -
 ```
 
 ## Integrazione frontend

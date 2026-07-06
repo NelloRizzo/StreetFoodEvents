@@ -1,0 +1,256 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+header h1 {
+  font-size: 2rem;
+  letter-spacing: 0.1em;
+}
+
+.status-bar {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  background: #333;
+}
+
+.badge.ok { background: #2e7d32; }
+.badge.err { background: #c62828; }
+.badge.na { background: #555; }
+
+.main-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.preview-panel {
+  flex: 1;
+  text-align: center;
+}
+
+.preview-frame {
+  aspect-ratio: 4 / 3;
+  background: #16213e;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.preview-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.placeholder {
+  color: #555;
+  font-size: 1.2rem;
+}
+
+.placeholder span {
+  display: block;
+  padding: 2rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-capture {
+  background: #e94560;
+  color: #fff;
+  font-size: 1.25rem;
+  padding: 1rem 2.5rem;
+}
+
+.btn-capture:hover:not(:disabled) { background: #d63c55; }
+.btn-capture:active:not(:disabled) { background: #c02e47; }
+
+.btn-print { background: #0f3460; color: #fff; }
+.btn-print:hover:not(:disabled) { background: #1a4b82; }
+
+.btn-email { background: #2d6a4f; color: #fff; }
+.btn-email:hover:not(:disabled) { background: #3a8b68; }
+
+.btn-secondary { background: #555; color: #fff; }
+.btn-secondary:hover { background: #666; }
+
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.9rem; }
+
+.controls-panel {
+  width: 320px;
+  flex-shrink: 0;
+}
+
+.panel-section {
+  background: #16213e;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.panel-section h2 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.frame-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.frame-option {
+  width: 80px;
+  height: 60px;
+  background: #1a1a2e;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  text-align: center;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  position: relative;
+}
+
+.frame-option img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.frame-option.selected {
+  border-color: #e94560;
+}
+
+.frame-option:hover {
+  border-color: #e94560aa;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dialog {
+  margin-top: 0.5rem;
+}
+
+.dialog input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #1a1a2e;
+  color: #eee;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.upload-area {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.upload-area input[type="file"] {
+  flex: 1;
+  color: #eee;
+  font-size: 0.8rem;
+}
+
+.message {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  text-align: center;
+  min-height: 1.5em;
+}
+
+.message.success { color: #4caf50; }
+.message.error { color: #e94560; }
+
+.delete-frame {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  background: #c62828;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  display: none;
+}
+
+.frame-option:hover .delete-frame {
+  display: block;
+}
+
+@media (max-width: 800px) {
+  .main-layout {
+    flex-direction: column;
+  }
+  .controls-panel {
+    width: 100%;
+  }
+}
