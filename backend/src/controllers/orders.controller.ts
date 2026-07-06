@@ -365,7 +365,7 @@ export async function createOrder(req: Request, res: Response) {
                 creditAmount = total;
             }
 
-            if (!event.cashPaymentsEnabled && creditAmount < total) {
+            if (!event.cashPaymentsEnabled && !event.unifiedCashierEnabled && creditAmount < total) {
                 throw new Error('Cash payments are disabled for this event. Payment must be in full using event credits.');
             }
 
@@ -645,7 +645,7 @@ export async function payOrder(req: Request, res: Response) {
         }
     }
 
-    if (!payEvent.cashPaymentsEnabled && creditAmount < order.total) {
+    if (!payEvent.cashPaymentsEnabled && !payEvent.unifiedCashierEnabled && creditAmount < order.total) {
         return res.status(400).json({ message: 'Cash payments are disabled for this event. Payment must be in full using event credits.' });
     }
 

@@ -564,11 +564,11 @@ ${qrHtml}
               <span>Totale</span>
               <strong>&euro;{createdOrder.total.toFixed(2)}</strong>
             </div>
-            {createdOrder.creditAmountUsed > 0 && (
-              <div className={styles.confirmCredits}>
-                Pagato &euro;{createdOrder.creditAmountUsed.toFixed(2)} con crediti
-              </div>
-            )}
+            <div className={styles.confirmPayment}>
+              {createdOrder.creditAmountUsed > 0
+                ? <>Pagato &euro;{createdOrder.creditAmountUsed.toFixed(2)} con crediti</>
+                : 'Pagato in contanti'}
+            </div>
             {createdOrder.receiptQrCode && (
               <div className={styles.qrSection}>
                 <img src={createdOrder.receiptQrCode} alt="QR ricevuta" className={styles.qrImg} />
