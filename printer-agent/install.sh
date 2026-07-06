@@ -12,6 +12,7 @@ INSTALL_DIR="/opt/$SERVICE_NAME"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 USER="${SUDO_USER:-pi}"
 NODE_VERSION="22"
+NODE_DIST_VERSION="22.14.0"
 
 echo "=== Street Food Events — Printer Agent Installer ==="
 echo "Target: $INSTALL_DIR"
@@ -27,11 +28,13 @@ echo "[1/5] Installing system dependencies..."
 apt-get update -qq
 apt-get install -y -qq curl gnupg ca-certificates
 
-# ── 2. Node.js (via NodeSource) ──
+# ── 2. Node.js (binary download, ARMv7-compatible) ──
 echo "[2/5] Installing Node.js $NODE_VERSION..."
 if ! command -v node &>/dev/null; then
-  curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
-  apt-get install -y -qq nodejs
+  ARCH="linux-armv7l"
+  NODE_DIST="node-v${NODE_DIST_VERSION}-${ARCH}"
+  curl -fsSL "https://nodejs.org/dist/v${NODE_DIST_VERSION}/${NODE_DIST}.tar.xz" \
+    | tar -xJ -C /usr/local --strip-components=1
 fi
 echo "  Node: $(node --version)"
 echo "  npm:  $(npm --version)"
