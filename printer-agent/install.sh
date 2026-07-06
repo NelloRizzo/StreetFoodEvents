@@ -26,7 +26,7 @@ fi
 # ── 1. System packages ──
 echo "[1/5] Installing system dependencies..."
 apt-get update -qq
-apt-get install -y -qq curl gnupg ca-certificates
+apt-get install -y -qq curl gnupg ca-certificates cron
 
 # ── 2. Node.js (binary download, ARMv7-compatible) ──
 echo "[2/5] Installing Node.js $NODE_VERSION..."
@@ -80,9 +80,12 @@ systemctl restart "$SERVICE_NAME"
 echo "[6/6] Installing cron job (keep Render awake)..."
 CRON_CMD="*/10 * * * * curl -s https://streetfoodevents-api.onrender.com/health > /dev/null 2>&1 && curl -s https://streetfoodevents-frontend.onrender.com/health > /dev/null 2>&1"
 
+systemctl enable cron --now 2>/dev/null || service cron start 2>/dev/null || true
+
 if command -v crontab &>/dev/null; then
   ( crontab -l 2>/dev/null | grep -v 'streetfoodevents' ; echo "$CRON_CMD" ) | crontab -
   echo "  Cron job installed (pings Render every 10 minutes)"
+  echo "  Verify: crontab -l | grep render"
 else
   echo "  WARNING: crontab not found. Install it manually:"
   echo "    $CRON_CMD"
