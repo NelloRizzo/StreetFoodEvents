@@ -2,12 +2,10 @@
 
 ## In sospeso
 
-### ESC/POS Printer Agent
-- **Branch**: `feature/escpos-bluetooth` (solo link "Resoconti" in DashboardPage al momento)
-- Creare pacchetto `printer-agent/` con generatore ESC/POS puro TypeScript
-- Integrazione frontend con fallback a `window.print()`
-- Setup script per Raspberry Pi Zero W + systemd service
-- Vedi `ARCHITECTURE.md` per i dettagli architetturali
+### Integrazione frontend Printer Agent
+- Collegare il frontend al printer-agent: tentare POST /print, fallback a window.print() dopo 3s
+- Aggiungere pulsante "Stampa scontrino" nelle pagine ordine che usano il printer-agent
+- Vedi `printer-agent/README.md` per le API disponibili
 
 ## Completato
 

@@ -192,6 +192,12 @@ Tutte le feature implementate, in ordine cronologico.
 - MenuPrintPage a /admin/menu-print
 - A3 landscape, page-break tra stand
 
+### Printer Agent — ESC/POS (Jul 2026)
+- Progetto printer-agent/ con generatore ESC/POS puro TS
+- Server HTTP (:9300), tipi PrintJob/PrintLine
+- Script install.sh per Raspberry Pi 2 Model B
+- systemd service, gruppo lp, IP statico via DHCP reservation
+
 ### Resoconti evento & Menu riorganizzato (Jul 2026)
 - GET /orders/report/event/:eventId con aggregazione per-stand
 - cashRevenue/cashRevenue espliciti nei report
@@ -213,3 +219,10 @@ Tutte le feature implementate, in ordine cronologico.
 ### Riorganizzazione Menu (Jul 2026)
 - [x] Navbar raggruppata per ambito: Piattaforma, Ordini, Resoconti, Personale
 - [x] Sezione Resoconti in DashboardPage operatore
+
+### Printer Agent (Jul 2026)
+- [x] Progetto `printer-agent/` con generatore ESC/POS puro TypeScript
+- [x] Server HTTP su porta 9300 per job di stampa
+- [x] Supporto testo, separatori, barcode, QR code, taglio carta, beep
+- [x] Script installazione per Raspberry Pi 2 Model B (o superiori)
+- [x] Servizio systemd con auto-restart

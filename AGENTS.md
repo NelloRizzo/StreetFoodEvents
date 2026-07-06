@@ -16,7 +16,11 @@ Qualsiasi agente AI che opera su questo progetto DEVE documentare le proprie att
 
 ## Repo structure
 
-Two independent npm packages in `backend/` and `frontend/`. No monorepo tool.
+Three independent npm packages in `backend/`, `frontend/`, and `printer-agent/`. No monorepo tool.
+
+### printer-agent (`printer-agent/`)
+Express server on port 9300. Pure TypeScript ESC/POS generator for thermal printers (Raspberry Pi).
+Not deployed on Render. See `printer-agent/README.md`.
 
 ## Backend (`backend/`)
 
