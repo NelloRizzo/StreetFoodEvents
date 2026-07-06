@@ -1,6 +1,6 @@
 let currentPhotoId = null;
 let currentFilename = null;
-let selectedFrameId = '';
+let selectedFrameId = 'oldstylediapo';
 
 document.addEventListener('DOMContentLoaded', () => {
   checkStatus();

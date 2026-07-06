@@ -232,3 +232,8 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] `cashBasis` salvato in localStorage al momento dell'azzeramento
 - [x] "Azzera cassa" imposta il basis al totale corrente, cassa parte da 0
 - [x] "Imposta" permette override manuale del basis
+
+### Printer-agent rimosso (Jul 2026)
+- [x] Eliminata la directory `printer-agent/`
+- [x] Stampante termica collegata direttamente al PC cassa Windows
+- [x] Stampa via `window.print()` con HTML puro — nessun Raspberry Pi

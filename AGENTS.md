@@ -16,11 +16,7 @@ Qualsiasi agente AI che opera su questo progetto DEVE documentare le proprie att
 
 ## Repo structure
 
-Three independent npm packages (`backend/`, `frontend/`, `printer-agent/`) plus one Python app (`photo-point/`). No monorepo tool.
-
-### printer-agent (`printer-agent/`)
-Express server on port 9300. Pure TypeScript ESC/POS generator for thermal printers (Raspberry Pi).
-Not deployed on Render. See `printer-agent/README.md`.
+Two independent npm packages (`backend/`, `frontend/`) plus one Python app (`photo-point/`). No monorepo tool. The `printer-agent/` package was removed (Jul 2026) — thermal printer connects directly to Windows cash register machine via `window.print()`.
 
 ### photo-point (`photo-point/`)
 Python (Flask) server on port 9400. Photo booth app for Raspberry Pi + USB camera.

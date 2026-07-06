@@ -26,25 +26,10 @@ Considerazioni progettuali e decisioni architetturali.
 - **MapPicker**: componente Leaflet riutilizzabile con marker draggabile SVG custom brand `#bf5a2a`.
 - **Tile layer**: Esri World_Street_Map (mappa) e World_Imagery (satellite), maxZoom 20-22.
 
-## ESC/POS Printer Agent
-- **Repo**: `printer-agent/` nella root del progetto
-- **Branch**: `feature/escpos-bluetooth`
-- **Architettura**:
-  ```
-  Tablet (cassa Chrome Android) → WiFi → Raspberry Pi 2 Model B (:9300) → USB → Stampante termica
-  ```
-- **Target**: Raspberry Pi 2 Model B (ARMv7, 1GB RAM, Ethernet) o superiore
-- **Principi**:
-  - Generazione ESC/POS sul Pi, non nel backend cloud (funziona offline)
-  - Zero dipendenze native: `fs.writeFileSync` su `/dev/usb/lp*`
-  - Fallback a `window.print()` se agente irraggiungibile
-  - IP statico via DHCP reservation, niente mDNS
-- **Installazione**: `sudo bash printer-agent/install.sh` — configura Node.js 22, gruppo `lp`, systemd service
-- **API**:
-  - `GET /health` — stato stampante
-  - `POST /print` — invia job di stampa (ESCPOS raw)
-  - `POST /preview` — restituisce ESC/POS in base64 per debug
-- **Tipi supportati**: testo (bold/size/align), separatori, blank, barcode (code128/39/ean13), QR code, taglio carta, beep
+## Printer-agent (rimosso Jul 2026)
+- Il progetto `printer-agent/` è stato eliminato.
+- La stampante termica si collega direttamente alla macchina Windows della cassa.
+- La stampa avviene via `window.print()` con HTML puro — nessun ESC/POS, nessun Raspberry Pi.
 
 ## Auth
 - Session token in httpOnly cookie named `sid` (configurable). `argon2` for password hashing.
