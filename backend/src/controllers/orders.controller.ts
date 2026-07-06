@@ -550,24 +550,26 @@ export async function cancelOrder(req: Request, res: Response) {
         order.cancelledAt = new Date();
         order.cancelReason = reason ?? null;
 
-        if (order.paymentStatus === 'paid' && order.creditAmountUsed > 0) {
-            const eventUser = await EventUserModel.findOne({
-                eventId: order.eventId,
-                userId: order.customerId ?? order.userId
-            }).session(session);
+        if (order.paymentStatus === 'paid') {
+            if (order.creditAmountUsed > 0) {
+                const eventUser = await EventUserModel.findOne({
+                    eventId: order.eventId,
+                    userId: order.customerId ?? order.userId
+                }).session(session);
 
-            if (eventUser) {
-                await createEventUserTransaction({
-                    eventUserId: eventUser._id,
-                    type: 'refund',
-                    direction: 'credit',
-                    amount: order.creditAmountUsed,
-                    description: `Rimborso ordine annullato`,
-                    performedByUserId: req.user?.id ?? null,
-                    referenceType: 'order',
-                    referenceId: order._id,
-                    session
-                });
+                if (eventUser) {
+                    await createEventUserTransaction({
+                        eventUserId: eventUser._id,
+                        type: 'refund',
+                        direction: 'credit',
+                        amount: order.creditAmountUsed,
+                        description: `Rimborso ordine annullato`,
+                        performedByUserId: req.user?.id ?? null,
+                        referenceType: 'order',
+                        referenceId: order._id,
+                        session
+                    });
+                }
             }
 
             order.paymentStatus = 'refunded';
