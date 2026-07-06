@@ -61,7 +61,7 @@ cp -r "$SCRIPT_DIR/src" "$INSTALL_DIR/"
 cp "$SCRIPT_DIR/package.json" "$SCRIPT_DIR/tsconfig.json" "$INSTALL_DIR/"
 
 cd "$INSTALL_DIR"
-npm install --omit=dev --no-audit --no-fund
+npm install --no-audit --no-fund
 npx tsup src/server.ts --format esm --platform node --target node20 --out-dir dist --clean
 rm -rf src node_modules
 npm install --omit=dev --no-audit --no-fund
