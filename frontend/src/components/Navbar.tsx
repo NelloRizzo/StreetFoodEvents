@@ -48,7 +48,6 @@ export function Navbar({
   const [events, setEvents] = useState<EventItem[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
   const [reportEvents, setReportEvents] = useState<{ id: string; name: string }[]>([])
-  const [reportStands, setReportStands] = useState<{ id: string; name: string }[]>([])
   const [reportsLoading, setReportsLoading] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const eventsMenuRef = useRef<HTMLDivElement>(null)
@@ -87,16 +86,15 @@ export function Navbar({
   }, [isEventsOpen, events.length, eventsLoading])
 
   useEffect(() => {
-    if (isReportsOpen && !reportsLoading && reportEvents.length === 0 && reportStands.length === 0) {
+    if (isReportsOpen && !reportsLoading && reportEvents.length === 0) {
       setReportsLoading(true)
       const eventsLoaded = events.length > 0
         ? Promise.resolve(events)
         : apiRequest<{ items: EventItem[] }>('/events').then((d) => { setEvents(d.items); return d.items })
       Promise.all([
         apiRequest<{ roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles'),
-        apiRequest<{ stands: { id: string; name: string }[] }>('/auth/me/stands'),
         eventsLoaded,
-      ]).then(([rolesData, standsData, allEvents]) => {
+      ]).then(([rolesData, allEvents]) => {
         const eventIds = [...new Set(rolesData.roles
           .filter((r) => r.scope === 'event' && r.eventId && (r.slug === 'event-admin' || r.slug === 'event-cashier'))
           .map((r) => r.eventId!))]
@@ -108,11 +106,10 @@ export function Navbar({
             })
             .filter((e): e is { id: string; name: string } => e !== null)
         )
-        setReportStands(standsData.stands)
         setReportsLoading(false)
       }).catch(() => setReportsLoading(false))
     }
-  }, [isReportsOpen, reportsLoading, reportEvents.length, reportStands.length, events])
+  }, [isReportsOpen, reportsLoading, reportEvents.length, events])
 
   function closeAll() {
     setIsMenuOpen(false)
@@ -247,7 +244,7 @@ export function Navbar({
                     {reportsLoading && (
                       <span className={styles.eventsLoading}>Caricamento...</span>
                     )}
-                    {!reportsLoading && reportEvents.length === 0 && reportStands.length === 0 && (
+                    {!reportsLoading && reportEvents.length === 0 && (
                       <span className={styles.eventsEmpty}>Nessun report disponibile.</span>
                     )}
                     {reportEvents.map((ev) => (
@@ -258,16 +255,6 @@ export function Navbar({
                         onClick={closeAll}
                       >
                         Report {ev.name}
-                      </Link>
-                    ))}
-                    {reportStands.map((s) => (
-                      <Link
-                        key={s.id}
-                        className={styles.dropdownLink}
-                        to={`/orders/stand/${s.id}`}
-                        onClick={closeAll}
-                      >
-                        Report {s.name}
                       </Link>
                     ))}
                     {reportEvents.length > 0 && <hr className={styles.dropdownDivider} />}

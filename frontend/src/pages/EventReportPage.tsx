@@ -49,6 +49,7 @@ export function EventReportPage() {
 
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [selectedStandId, setSelectedStandId] = useState('')
 
   const [registerVisible, setRegisterVisible] = useState(false)
   const [registerAmount, setRegisterAmount] = useState(loadRegister(eventId ?? ''))
@@ -83,6 +84,9 @@ export function EventReportPage() {
 
   const hasCredits = report.stands.some((s) => s.creditRevenue > 0)
   const hasCash = report.cashPaymentsEnabled
+  const stands = selectedStandId
+    ? report.stands.filter((s) => s.standId === selectedStandId)
+    : report.stands
 
   return (
     <div className={styles.page}>
@@ -109,6 +113,16 @@ export function EventReportPage() {
                 className={styles.dateInput}
               />
             </div>
+            <select
+              className={styles.standSelect}
+              value={selectedStandId}
+              onChange={(e) => setSelectedStandId(e.target.value)}
+            >
+              <option value="">Tutti gli stand</option>
+              {report.stands.map((s) => (
+                <option key={s.standId} value={s.standId}>{s.standName}</option>
+              ))}
+            </select>
             <button className={styles.secondaryBtn} onClick={() => window.print()}>
               Stampa
             </button>
@@ -181,7 +195,7 @@ export function EventReportPage() {
 
           <div className={styles.card}>
             <div className={styles.cardTitle}>Dettaglio per stand</div>
-            {report.stands.length === 0 ? (
+            {stands.length === 0 ? (
               <p className={styles.empty}>Nessun dato disponibile.</p>
             ) : (
               <div className={styles.tableWrap}>
@@ -199,14 +213,29 @@ export function EventReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.stands.map((stand) => (
+                    {stands.map((stand) => (
                       <StandRow key={stand.standId} stand={stand} showCash={hasCash} showCredits={hasCredits} />
                     ))}
                     <StandRow
                       stand={{
                         standId: '',
                         standName: 'TOTALE',
-                        ...report.totals,
+                        ...(selectedStandId
+                          ? stands.reduce((acc, s) => ({
+                              totalOrders: acc.totalOrders + s.totalOrders,
+                              paidOrders: acc.paidOrders + s.paidOrders,
+                              totalRevenue: acc.totalRevenue + s.totalRevenue,
+                              cashRevenue: acc.cashRevenue + s.cashRevenue,
+                              creditRevenue: acc.creditRevenue + s.creditRevenue,
+                              pendingOrders: acc.pendingOrders + s.pendingOrders,
+                              pendingAmount: acc.pendingAmount + s.pendingAmount,
+                              refundedAmount: acc.refundedAmount + s.refundedAmount,
+                            }), {
+                              totalOrders: 0, paidOrders: 0, totalRevenue: 0,
+                              cashRevenue: 0, creditRevenue: 0, pendingOrders: 0,
+                              pendingAmount: 0, refundedAmount: 0,
+                            })
+                          : report.totals),
                         paymentMethods: { cash: 0, credits: 0, mixed: 0 }
                       }}
                       isTotal
