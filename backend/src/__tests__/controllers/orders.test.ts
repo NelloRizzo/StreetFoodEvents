@@ -338,6 +338,257 @@ describe('Orders API', () => {
         }
     });
 
+    it('creates an order with cash payment (unified cashier)', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Cash Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC',
+            cashPaymentsEnabled: true
+        });
+
+        const stand = await StandModel.create({ name: 'Cash Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Cash Station' });
+        const product = await ProductModel.create({ name: 'Cash Item', price: 10 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+
+        const res = await request(app)
+            .post('/api/orders')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                standId: stand._id.toString(),
+                items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity: 2 }],
+                paymentOnCreate: { creditAmount: 0 }
+            });
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.status).toBe('confirmed');
+        expect(res.body.item.paymentStatus).toBe('paid');
+        expect(res.body.item.creditAmountUsed).toBe(0);
+        expect(res.body.item.paidAt).toBeDefined();
+    });
+
+    it('rejects paymentOnCreate when cash disabled and creditAmount < total', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Credits Only Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC',
+            cashPaymentsEnabled: false
+        });
+
+        const stand = await StandModel.create({ name: 'Credits Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Credits Station' });
+        const product = await ProductModel.create({ name: 'Credits Item', price: 10 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+        await EventUserModel.create({ eventId: event._id, userId: user._id, balance: 5, isActive: true });
+
+        const res = await request(app)
+            .post('/api/orders')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                standId: stand._id.toString(),
+                items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity: 1 }],
+                paymentOnCreate: { creditAmount: 3 }
+            });
+
+        expect(res.status).toBe(400);
+    });
+
+    it('rejects paymentOnCreate with insufficient balance', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Insuff Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC',
+            cashPaymentsEnabled: true
+        });
+
+        const stand = await StandModel.create({ name: 'Insuff Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Insuff Station' });
+        const product = await ProductModel.create({ name: 'Expensive', price: 100 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+        await EventUserModel.create({ eventId: event._id, userId: user._id, balance: 10, isActive: true });
+
+        const res = await request(app)
+            .post('/api/orders')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                standId: stand._id.toString(),
+                items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity: 1 }],
+                paymentOnCreate: { creditAmount: 50 }
+            });
+
+        expect(res.status).toBe(400);
+    });
+
+    it('cancels a paid order and refunds credits', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Refund Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Refund Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Refund Station' });
+        const product = await ProductModel.create({ name: 'Refundable', price: 20 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+        await EventUserModel.create({ eventId: event._id, userId: user._id, balance: 50, isActive: true });
+
+        const createRes = await request(app)
+            .post('/api/orders')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                standId: stand._id.toString(),
+                items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity: 1 }],
+                paymentOnCreate: { creditAmount: 20 }
+            });
+
+        expect(createRes.body.item.paymentStatus).toBe('paid');
+        let eu = await EventUserModel.findOne({ eventId: event._id, userId: user._id });
+        expect(eu!.balance).toBe(30);
+
+        const orderId = createRes.body.item.id;
+        const cancelRes = await request(app)
+            .post(`/api/orders/${orderId}/cancel`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ reason: 'Customer request' });
+
+        expect(cancelRes.status).toBe(200);
+        expect(cancelRes.body.item.status).toBe('cancelled');
+        expect(cancelRes.body.item.paymentStatus).toBe('refunded');
+        expect(cancelRes.body.item.cancelReason).toBe('Customer request');
+
+        eu = await EventUserModel.findOne({ eventId: event._id, userId: user._id });
+        expect(eu!.balance).toBe(50);
+    });
+
+    it('cancels a paid cash order and sets refunded status', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Cash Cancel Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC',
+            cashPaymentsEnabled: true
+        });
+
+        const stand = await StandModel.create({ name: 'Cash Cancel Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Cash Cancel Station' });
+        const product = await ProductModel.create({ name: 'CashItem', price: 15 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+
+        const createRes = await request(app)
+            .post('/api/orders')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                standId: stand._id.toString(),
+                items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity: 1 }],
+                paymentOnCreate: { creditAmount: 0 }
+            });
+
+        expect(createRes.body.item.paymentStatus).toBe('paid');
+        expect(createRes.body.item.creditAmountUsed).toBe(0);
+
+        const orderId = createRes.body.item.id;
+        const cancelRes = await request(app)
+            .post(`/api/orders/${orderId}/cancel`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ reason: 'Wrong order' });
+
+        expect(cancelRes.status).toBe(200);
+        expect(cancelRes.body.item.status).toBe('cancelled');
+        expect(cancelRes.body.item.paymentStatus).toBe('refunded');
+    });
+
+    it('rejects cancelling an already completed order', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Compl Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Compl Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Compl Station' });
+        const product = await ProductModel.create({ name: 'C', price: 1 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+
+        const createRes = await request(app)
+            .post('/api/orders')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                standId: stand._id.toString(),
+                items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity: 1 }]
+            });
+
+        const orderId = createRes.body.item.id;
+
+        const transitions = ['confirmed', 'preparing', 'ready', 'completed'];
+        for (const status of transitions) {
+            const r = await request(app)
+                .patch(`/api/orders/${orderId}/status`)
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({ status });
+            expect(r.status).toBe(200);
+        }
+
+        const cancelRes = await request(app)
+            .post(`/api/orders/${orderId}/cancel`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ reason: 'Too late' });
+
+        expect(cancelRes.status).toBe(400);
+    });
+
     it('rejects invalid status transition', async () => {
         app = createTestApp();
         const { user, sessionToken } = await createAuthSession();
