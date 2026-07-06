@@ -226,3 +226,9 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] Supporto testo, separatori, barcode, QR code, taglio carta, beep
 - [x] Script installazione per Raspberry Pi 2 Model B (o superiori)
 - [x] Servizio systemd con auto-restart
+
+### Cassa automatica nel report evento (Jul 2026)
+- [x] Cassa calcolata automaticamente come `totalRevenue - cashBasis`
+- [x] `cashBasis` salvato in localStorage al momento dell'azzeramento
+- [x] "Azzera cassa" imposta il basis al totale corrente, cassa parte da 0
+- [x] "Imposta" permette override manuale del basis
