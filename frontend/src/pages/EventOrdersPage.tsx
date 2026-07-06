@@ -128,6 +128,9 @@ export function EventOrdersPage() {
             <Link className={styles.primaryBtn} to={`/events/${eventId}/cashier`}>
               Cassa unica
             </Link>
+            <Link className={styles.secondaryBtn} to={`/events/${eventId}/report`}>
+              Report
+            </Link>
             <div className={styles.dateGroup}>
               <label className={styles.dateLabel}>Da</label>
               <input

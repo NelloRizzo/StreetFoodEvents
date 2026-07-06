@@ -50,6 +50,18 @@ Considerazioni progettuali e decisioni architetturali.
 - Env vars validated at startup via Zod. Missing vars cause immediate `process.exit(1)`.
 - Cloudinary for all image uploads.
 
+## Reports & aggregations
+- **Stand report** (`GET /orders/report/stand/:standId`): aggregazione per singolo stand, usata in StandOrdersPage.
+- **Event report** (`GET /orders/report/event/:eventId`): aggregazione per tutti gli stand di un evento, con split contanti (`total - creditAmountUsed`) e crediti (`creditAmountUsed`).
+- **Permessi**: event report accessibile solo a ruoli `event-admin` e `event-cashier` (oltre a `platform-admin`).
+- **Cassa unica**: il flag `unifiedCashierEnabled` nell'evento determina se mostrare la colonna contanti nel report.
+- **Cash disabled**: se `cashPaymentsEnabled = false`, il report mostra solo colonna crediti.
+
+## Navbar grouping
+- La Navbar raggruppa le voci in dropdown per ambito: **Piattaforma** (admin), **Ordini**, **Resoconti**, **Personale**.
+- Ogni dropdown ha `useRef` + `handleClickOutside` per chiusura.
+- Gli event items dinamici sono un dropdown separato "Eventi" a sé stante.
+
 ## Frontend
 - React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - Vite proxy: `/api` → `http://127.0.0.1:4000`.

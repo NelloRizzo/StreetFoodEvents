@@ -975,6 +975,178 @@ export async function resetOrderCounter(req: Request, res: Response) {
     return res.status(200).json({ message: 'Counter reset to 0' });
 }
 
+export async function getEventReport(req: Request, res: Response) {
+    const eventId = req.params.eventId;
+
+    if (!isValidObjectId(eventId)) {
+        return res.status(400).json({ message: 'Invalid event id' });
+    }
+
+    const userId = new Types.ObjectId(req.user!.id);
+
+    const platformAdminRole = await RoleModel.findOne({ slug: 'platform-admin', scope: 'platform' });
+    const eventAdminRole = await RoleModel.findOne({ slug: 'event-admin', scope: 'event' });
+    const eventCashierRole = await RoleModel.findOne({ slug: 'event-cashier', scope: 'event' });
+
+    const isPlatformAdmin = platformAdminRole
+        ? !!(await UserRoleModel.findOne({ userId, roleId: platformAdminRole._id, isActive: true }))
+        : false;
+
+    const hasEventRole = (eventAdminRole || eventCashierRole)
+        ? !!(await UserRoleModel.findOne({
+            userId,
+            roleId: { $in: [eventAdminRole?._id, eventCashierRole?._id].filter(Boolean) },
+            eventId: new Types.ObjectId(eventId),
+            isActive: true
+        }))
+        : false;
+
+    if (!isPlatformAdmin && !hasEventRole) {
+        return res.status(403).json({ message: 'Access denied. Requires event-admin or event-cashier role.' });
+    }
+
+    const event = await EventModel.findById(eventId).select('name unifiedCashierEnabled cashPaymentsEnabled currencyName currencySymbol');
+    if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+    }
+
+    const standIds = (await StandModel.find({ eventIds: new Types.ObjectId(eventId) }).select('_id name').lean());
+    const standMap = new Map(standIds.map((s) => [s._id.toString(), s.name]));
+
+    const matchFilter: Record<string, unknown> = { eventId: new Types.ObjectId(eventId) };
+
+    if (req.query.startDate) {
+        matchFilter.createdAt = { $gte: new Date(req.query.startDate as string) };
+    }
+
+    if (req.query.endDate) {
+        const end = new Date(req.query.endDate as string);
+        end.setHours(23, 59, 59, 999);
+        matchFilter.createdAt = { ...((matchFilter.createdAt as object) || {}), $lte: end };
+    }
+
+    const aggregation = await OrderModel.aggregate([
+        { $match: matchFilter },
+        {
+            $group: {
+                _id: '$standId',
+                totalOrders: { $sum: 1 },
+                paidOrders: {
+                    $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, 1, 0] }
+                },
+                totalRevenue: {
+                    $sum: {
+                        $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$total', 0]
+                    }
+                },
+                creditRevenue: {
+                    $sum: {
+                        $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$creditAmountUsed', 0]
+                    }
+                },
+                pendingOrders: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $ne: ['$paymentStatus', 'paid'] }, { $ne: ['$status', 'completed'] }, { $ne: ['$status', 'cancelled'] }] },
+                            1,
+                            0
+                        ]
+                    }
+                },
+                pendingAmount: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $ne: ['$paymentStatus', 'paid'] }, { $ne: ['$status', 'completed'] }, { $ne: ['$status', 'cancelled'] }] },
+                            '$total',
+                            0
+                        ]
+                    }
+                },
+                refundedAmount: {
+                    $sum: {
+                        $cond: [{ $eq: ['$paymentStatus', 'refunded'] }, '$total', 0]
+                    }
+                },
+                cashPaymentOrders: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $lt: ['$creditAmountUsed', '$total'] }] },
+                            1,
+                            0
+                        ]
+                    }
+                },
+                creditPaymentOrders: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $eq: ['$creditAmountUsed', '$total'] }] },
+                            1,
+                            0
+                        ]
+                    }
+                },
+                mixedPaymentOrders: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $gt: ['$creditAmountUsed', 0] }, { $lt: ['$creditAmountUsed', '$total'] }] },
+                            1,
+                            0
+                        ]
+                    }
+                }
+            }
+        }
+    ]);
+
+    const stands = aggregation.map((row) => ({
+        standId: row._id.toString(),
+        standName: standMap.get(row._id.toString()) ?? 'Stand sconosciuto',
+        totalOrders: row.totalOrders,
+        paidOrders: row.paidOrders,
+        totalRevenue: row.totalRevenue,
+        cashRevenue: row.totalRevenue - row.creditRevenue,
+        creditRevenue: row.creditRevenue,
+        pendingOrders: row.pendingOrders,
+        pendingAmount: row.pendingAmount,
+        refundedAmount: row.refundedAmount,
+        paymentMethods: {
+            cash: row.cashPaymentOrders,
+            credits: row.creditPaymentOrders,
+            mixed: row.mixedPaymentOrders
+        }
+    }));
+
+    const totals = stands.reduce((acc, s) => ({
+        totalOrders: acc.totalOrders + s.totalOrders,
+        paidOrders: acc.paidOrders + s.paidOrders,
+        totalRevenue: acc.totalRevenue + s.totalRevenue,
+        cashRevenue: acc.cashRevenue + s.cashRevenue,
+        creditRevenue: acc.creditRevenue + s.creditRevenue,
+        pendingOrders: acc.pendingOrders + s.pendingOrders,
+        pendingAmount: acc.pendingAmount + s.pendingAmount,
+        refundedAmount: acc.refundedAmount + s.refundedAmount
+    }), {
+        totalOrders: 0,
+        paidOrders: 0,
+        totalRevenue: 0,
+        cashRevenue: 0,
+        creditRevenue: 0,
+        pendingOrders: 0,
+        pendingAmount: 0,
+        refundedAmount: 0
+    });
+
+    return res.status(200).json({
+        eventId,
+        eventName: event.name,
+        unifiedCashierEnabled: event.unifiedCashierEnabled,
+        cashPaymentsEnabled: event.cashPaymentsEnabled,
+        currencyName: event.currencyName,
+        stands,
+        totals
+    });
+}
+
 export async function getStandReport(req: Request, res: Response) {
     const standId = req.params.standId;
 
@@ -1071,6 +1243,7 @@ export async function getStandReport(req: Request, res: Response) {
             totalOrders: summary?.totalOrders ?? 0,
             totalRevenue: summary?.totalRevenue ?? 0,
             totalCreditRevenue: summary?.totalCreditRevenue ?? 0,
+            cashRevenue: (summary?.totalRevenue ?? 0) - (summary?.totalCreditRevenue ?? 0),
             totalExternalRevenue: (summary?.totalRevenue ?? 0) - (summary?.totalCreditRevenue ?? 0),
             totalRefunded: summary?.totalRefunded ?? 0
         },

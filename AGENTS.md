@@ -47,6 +47,12 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 ### API routes
 `GET /health` (no auth). All `/api/*` routes: GET are public except users/event-users/event-products/favorites/orders/upload. POST/PATCH/DELETE are protected.
 
+### API routes — Reports
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/orders/report/stand/:standId` | auth | Report per singolo stand (stand owner) |
+| GET | `/orders/report/event/:eventId` | auth | Report evento aggregato per-stand (event-admin/event-cashier) |
+
 ## Frontend (`frontend/`)
 
 React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.

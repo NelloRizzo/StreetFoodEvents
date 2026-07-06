@@ -335,6 +335,33 @@ export function DashboardPage() {
                 </div>
               </section>
             )}
+
+            {(eventRoles.length > 0 || stands.length > 0) && (
+              <section className={styles.manageSection}>
+                <h2 className={styles.sectionTitle}>Resoconti</h2>
+                <div className={styles.manageGrid}>
+                  {eventRoleEvents.map((ev) => (
+                    <Link key={ev.id} to={`/events/${ev.id}/report`} className={styles.manageCard}>
+                      <span className={styles.manageIcon}>&#128202;</span>
+                      <span className={styles.manageName}>Report {ev.name}</span>
+                      <span className={styles.manageHint}>Resoconto finanziario</span>
+                    </Link>
+                  ))}
+                  {stands.map((s) => (
+                    <Link key={s.id} to={`/orders/stand/${s.id}`} className={styles.manageCard}>
+                      <span className={styles.manageIcon}>&#128202;</span>
+                      <span className={styles.manageName}>Report {s.name}</span>
+                      <span className={styles.manageHint}>Resoconto stand</span>
+                    </Link>
+                  ))}
+                  <Link to="/admin/menu-print" className={styles.manageCard}>
+                    <span className={styles.manageIcon}>&#128424;</span>
+                    <span className={styles.manageName}>Menu stampa</span>
+                    <span className={styles.manageHint}>Stampa menu stand</span>
+                  </Link>
+                </div>
+              </section>
+            )}
           </>
         )}
       </div>

@@ -1,0 +1,283 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.backLink {
+  display: inline-flex;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.title {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  color: var(--color-ink-strong);
+  margin-top: 0.75rem;
+}
+
+.dateGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.dateLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+
+.dateInput {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+  font-size: 0.82rem;
+}
+
+.reportGrid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.card {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.cardTitle {
+  font-weight: 800;
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.totalsBar {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.totalItem {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.totalLabel {
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.totalValue {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-ink-strong);
+}
+
+.totalCash {
+  color: var(--color-brand);
+}
+
+.totalCredits {
+  color: var(--color-olive);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.table th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-soft);
+  border-bottom: 2px solid var(--color-line);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-strong);
+  white-space: nowrap;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover td {
+  background: var(--color-brand-glow);
+}
+
+.tableTotals td {
+  font-weight: 800;
+  border-top: 2px solid var(--color-ink-strong);
+  background: var(--color-brand-soft);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.standName {
+  font-weight: 700;
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  padding: 2rem 0;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.secondaryBtn {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.secondaryBtn:hover {
+  background: var(--color-surface-soft);
+}
+
+.cashRegister {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cashRegisterAmount {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-brand-deep);
+  font-variant-numeric: tabular-nums;
+  min-width: 6rem;
+}
+
+.cashRegisterHidden {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--color-ink-soft);
+  min-width: 6rem;
+}
+
+.eyeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.eyeBtn:hover {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+}
+
+.resetBtn {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-warning);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.resetBtn:hover {
+  opacity: 0.9;
+}
+
+@media print {
+  .headerActions,
+  .dateGroup,
+  .cashRegister,
+  .backLink,
+  .primaryBtn,
+  .secondaryBtn,
+  .resetBtn,
+  .eyeBtn {
+    display: none !important;
+  }
+
+  .page {
+    padding: 0;
+  }
+
+  .card {
+    border: none;
+    padding: 0;
+    background: transparent;
+  }
+
+  .tableWrap {
+    overflow: visible;
+  }
+}

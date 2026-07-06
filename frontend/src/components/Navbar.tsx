@@ -16,13 +16,7 @@ type EventItem = {
   coverImage: { url: string } | null
 }
 
-const userNavItems = [
-  { label: 'Dashboard', to: '/dashboard' },
-  { label: 'Ordini', to: '/orders' },
-  { label: 'Preferiti', to: '/favorites' },
-]
-
-const adminNavItems = [
+const platformItems = [
   { label: 'Eventi', to: '/events' },
   { label: 'Stand', to: '/stands' },
   { label: 'Prodotti', to: '/products' },
@@ -32,7 +26,6 @@ const adminNavItems = [
   { label: 'Staff', to: '/staff' },
   { label: 'Partecipanti', to: '/event-users' },
   { label: 'Contratti d\'uso', to: '/admin/usage-contracts' },
-  { label: 'Menu stampa', to: '/admin/menu-print' },
 ]
 
 type NavbarProps = {
@@ -49,24 +42,29 @@ export function Navbar({
   const { isAuthenticated, user } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-  const [isAdminOpen, setIsAdminOpen] = useState(false)
   const [isEventsOpen, setIsEventsOpen] = useState(false)
+  const [isPlatformOpen, setIsPlatformOpen] = useState(false)
+  const [isReportsOpen, setIsReportsOpen] = useState(false)
   const [events, setEvents] = useState<EventItem[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
-  const adminMenuRef = useRef<HTMLDivElement>(null)
   const eventsMenuRef = useRef<HTMLDivElement>(null)
+  const platformMenuRef = useRef<HTMLDivElement>(null)
+  const reportsMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false)
       }
-      if (adminMenuRef.current && !adminMenuRef.current.contains(event.target as Node)) {
-        setIsAdminOpen(false)
-      }
       if (eventsMenuRef.current && !eventsMenuRef.current.contains(event.target as Node)) {
         setIsEventsOpen(false)
+      }
+      if (platformMenuRef.current && !platformMenuRef.current.contains(event.target as Node)) {
+        setIsPlatformOpen(false)
+      }
+      if (reportsMenuRef.current && !reportsMenuRef.current.contains(event.target as Node)) {
+        setIsReportsOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -84,6 +82,14 @@ export function Navbar({
         .catch(() => setEventsLoading(false))
     }
   }, [isEventsOpen, events.length, eventsLoading])
+
+  function closeAll() {
+    setIsMenuOpen(false)
+    setIsUserMenuOpen(false)
+    setIsEventsOpen(false)
+    setIsPlatformOpen(false)
+    setIsReportsOpen(false)
+  }
 
   return (
     <header className={styles.header}>
@@ -117,28 +123,25 @@ export function Navbar({
         >
           {isAuthenticated ? (
             <div className={styles.authGroup}>
-              <div className={styles.userNavList}>
-                {userNavItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    className={styles.navLink}
-                    to={item.to}
-                    onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false) }}
-                  >
-                    {item.label}
-                  </NavLink>
-                ))}
+              <div className={styles.topNav}>
+                <NavLink
+                  className={styles.navLink}
+                  to="/dashboard"
+                  onClick={closeAll}
+                >
+                  Dashboard
+                </NavLink>
               </div>
 
               <div className={styles.eventsSection} ref={eventsMenuRef}>
                 <button
                   type="button"
-                  className={`${styles.eventsToggle} ${isEventsOpen ? styles.eventsToggleOpen : ''}`}
+                  className={`${styles.dropdownToggle} ${isEventsOpen ? styles.dropdownToggleOpen : ''}`}
                   onClick={() => setIsEventsOpen((open) => !open)}
                   aria-expanded={isEventsOpen}
                 >
                   Eventi
-                  <span className={styles.eventsArrow} aria-hidden="true" />
+                  <span className={styles.dropdownArrow} aria-hidden="true" />
                 </button>
 
                 {isEventsOpen && (
@@ -154,7 +157,7 @@ export function Navbar({
                         key={event.id}
                         to={`/events/${event.id}`}
                         className={styles.eventCard}
-                        onClick={() => { setIsMenuOpen(false); setIsEventsOpen(false); setIsUserMenuOpen(false) }}
+                        onClick={closeAll}
                       >
                         {event.coverImage ? (
                           <img
@@ -187,43 +190,74 @@ export function Navbar({
                 )}
               </div>
 
-              {(user?.isAdmin) && (
-                <div className={styles.adminSection} ref={adminMenuRef}>
-                  <button
-                    type="button"
-                    className={`${styles.adminToggle} ${isAdminOpen ? styles.adminToggleOpen : ''}`}
-                    onClick={() => setIsAdminOpen((open) => !open)}
-                    aria-expanded={isAdminOpen}
-                  >
-                    Amministrazione
-                    <span className={styles.adminArrow} aria-hidden="true" />
-                  </button>
+              <div className={styles.dropdownSection}>
+                <NavLink
+                  className={styles.navLink}
+                  to="/orders"
+                  onClick={closeAll}
+                >
+                  Ordini
+                </NavLink>
+              </div>
 
-                  {isAdminOpen && (
-                    <div className={styles.adminDropdown}>
-                      {adminNavItems.map((item) => (
-                        <NavLink
-                          key={item.to}
-                          className={styles.adminDropdownLink}
-                          to={item.to}
-                          onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false); setIsAdminOpen(false) }}
-                        >
-                          {item.label}
-                        </NavLink>
-                      ))}
-                      <a
-                        className={styles.adminDropdownLink}
-                        href="/flyer"
-                        target="_blank"
-                        rel="noopener"
-                        onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false); setIsAdminOpen(false) }}
+              <div className={styles.dropdownSection} ref={reportsMenuRef}>
+                <button
+                  type="button"
+                  className={`${styles.dropdownToggle} ${isReportsOpen ? styles.dropdownToggleOpen : ''}`}
+                  onClick={() => setIsReportsOpen((open) => !open)}
+                  aria-expanded={isReportsOpen}
+                >
+                  Resoconti
+                  <span className={styles.dropdownArrow} aria-hidden="true" />
+                </button>
+
+                {isReportsOpen && (
+                  <div className={styles.dropdownMenu}>
+                    <Link className={styles.dropdownLink} to="/admin/menu-print" onClick={closeAll}>
+                      Menu stampa
+                    </Link>
+                    <Link className={styles.dropdownLink} to="/guide/event-cashier" onClick={closeAll}>
+                      Guide
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.dropdownSection} ref={platformMenuRef}>
+                <button
+                  type="button"
+                  className={`${styles.dropdownToggle} ${isPlatformOpen ? styles.dropdownToggleOpen : ''}`}
+                  onClick={() => setIsPlatformOpen((open) => !open)}
+                  aria-expanded={isPlatformOpen}
+                >
+                  Piattaforma
+                  <span className={styles.dropdownArrow} aria-hidden="true" />
+                </button>
+
+                {isPlatformOpen && (
+                  <div className={styles.dropdownMenu}>
+                    {platformItems.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        className={styles.dropdownLink}
+                        to={item.to}
+                        onClick={closeAll}
                       >
-                        Volantino
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
+                        {item.label}
+                      </NavLink>
+                    ))}
+                    <a
+                      className={styles.dropdownLink}
+                      href="/flyer"
+                      target="_blank"
+                      rel="noopener"
+                      onClick={closeAll}
+                    >
+                      Volantino
+                    </a>
+                  </div>
+                )}
+              </div>
 
               <div className={styles.userSection} ref={userMenuRef}>
                 <button
@@ -251,23 +285,22 @@ export function Navbar({
                       <Link
                         className={styles.dropdownAction}
                         to="/dashboard"
-                        onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false) }}
+                        onClick={closeAll}
                       >
                         Il mio profilo
                       </Link>
                       <Link
                         className={styles.dropdownAction}
-                        to="/guide/event-cashier"
-                        onClick={() => { setIsMenuOpen(false); setIsUserMenuOpen(false) }}
+                        to="/favorites"
+                        onClick={closeAll}
                       >
-                        Guide
+                        Preferiti
                       </Link>
                       <button
                         type="button"
                         className={styles.dropdownAction}
                         onClick={async () => {
-                          setIsMenuOpen(false)
-                          setIsUserMenuOpen(false)
+                          closeAll()
                           await onLogout?.()
                         }}
                       >

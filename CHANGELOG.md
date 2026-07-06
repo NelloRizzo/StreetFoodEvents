@@ -191,3 +191,25 @@ Tutte le feature implementate, in ordine cronologico.
 - toEventProductResponse esteso con coverImage/gallery
 - MenuPrintPage a /admin/menu-print
 - A3 landscape, page-break tra stand
+
+### Resoconti evento & Menu riorganizzato (Jul 2026)
+- GET /orders/report/event/:eventId con aggregazione per-stand
+- cashRevenue/cashRevenue espliciti nei report
+- EventReportPage con split contanti/crediti
+- Navbar riorganizzata in dropdown per gruppo
+- Sezione Resoconti in DashboardPage
+
+### Resoconti per stand per evento (Jul 2026)
+- toEventProductResponse esteso con coverImage/gallery
+- MenuPrintPage a /admin/menu-print
+- A3 landscape, page-break tra stand
+
+### Resoconti per stand per evento (Jul 2026)
+- [x] GET /orders/report/event/:eventId — aggregazione per-stand con split contanti/crediti
+- [x] cashRevenue esplicito in getStandReport
+- [x] EventReportPage con tabella per-stand, totali, colonne contanti/crediti
+- [x] Accesso riservato a event-admin / event-cashier
+
+### Riorganizzazione Menu (Jul 2026)
+- [x] Navbar raggruppata per ambito: Piattaforma, Ordini, Resoconti, Personale
+- [x] Sezione Resoconti in DashboardPage operatore

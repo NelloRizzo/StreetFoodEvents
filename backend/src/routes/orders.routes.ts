@@ -5,6 +5,7 @@ import {
     cancelOrderItems,
     createOrder,
     deleteEventOrders,
+    getEventReport,
     getOrderById,
     getOrderReceipt,
     getOrderReceiptQrCode,
@@ -32,6 +33,7 @@ ordersRouter.delete('/event/:eventId', asyncHandler(deleteEventOrders));
 ordersRouter.get('/', asyncHandler(listOrders));
 ordersRouter.get('/my-station', asyncHandler(listMyStationOrders));
 ordersRouter.get('/report/stand/:standId', asyncHandler(getStandReport));
+ordersRouter.get('/report/event/:eventId', asyncHandler(getEventReport));
 ordersRouter.post('/', asyncHandler(createOrder));
 ordersRouter.get('/:orderId', asyncHandler(getOrderById));
 ordersRouter.patch('/:orderId/status', asyncHandler(updateOrderStatus));

@@ -59,12 +59,50 @@ export type StandReport = {
     totalOrders: number
     totalRevenue: number
     totalCreditRevenue: number
+    cashRevenue: number
     totalExternalRevenue: number
     totalRefunded: number
   }
   statusBreakdown: Array<{ status: string; count: number }>
   orders: Order[]
   pendingOrders: Order[]
+}
+
+export type EventReportStand = {
+  standId: string
+  standName: string
+  totalOrders: number
+  paidOrders: number
+  totalRevenue: number
+  cashRevenue: number
+  creditRevenue: number
+  pendingOrders: number
+  pendingAmount: number
+  refundedAmount: number
+  paymentMethods: {
+    cash: number
+    credits: number
+    mixed: number
+  }
+}
+
+export type EventReport = {
+  eventId: string
+  eventName: string
+  unifiedCashierEnabled: boolean
+  cashPaymentsEnabled: boolean
+  currencyName: string
+  stands: EventReportStand[]
+  totals: {
+    totalOrders: number
+    paidOrders: number
+    totalRevenue: number
+    cashRevenue: number
+    creditRevenue: number
+    pendingOrders: number
+    pendingAmount: number
+    refundedAmount: number
+  }
 }
 
 export function fetchOrders(params?: { eventId?: string; standId?: string; status?: string; userId?: string; customerId?: string; stationId?: string; startDate?: string; endDate?: string }) {
@@ -148,4 +186,12 @@ export function fetchStandReport(standId: string, eventId?: string, startDate?: 
   if (endDate) params.set('endDate', endDate)
   const qs = params.toString()
   return apiRequest<StandReport>(`/orders/report/stand/${standId}${qs ? `?${qs}` : ''}`)
+}
+
+export function fetchEventReport(eventId: string, startDate?: string, endDate?: string) {
+  const params = new URLSearchParams()
+  if (startDate) params.set('startDate', startDate)
+  if (endDate) params.set('endDate', endDate)
+  const qs = params.toString()
+  return apiRequest<EventReport>(`/orders/report/event/${eventId}${qs ? `?${qs}` : ''}`)
 }
