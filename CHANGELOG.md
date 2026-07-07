@@ -269,3 +269,9 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] Ruoli: `photo-admin` (gestione cornici/foto), `photo-print` (stampa galleria)
 - [x] EventGalleryPage con griglia foto, selezione, stampa HTML, eliminazione
 - [x] Sezione Cornici in EventDetailPage con upload PNG trasparente
+
+### Photo Booth (Jul 2026)
+- [x] PhotoBoothPage con webcam live (getUserMedia), scatto, anteprima con cornice
+- [x] Upload foto su server con frameId opzionale
+- [x] Selettore cornici con preview prima dello scatto
+- [x] Navigazione post-upload verso la galleria
