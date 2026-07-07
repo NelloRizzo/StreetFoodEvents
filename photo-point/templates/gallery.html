@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Point — Galleria</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <nav class="nav-bar">
+      <a href="/" class="nav-link">Scatta foto</a>
+      <a href="/gallery" class="nav-link active">Galleria</a>
+    </nav>
+    <h1>Galleria foto</h1>
+  </header>
+
+  <div id="gallery-message" class="message"></div>
+
+  <div class="gallery-actions">
+    <button class="btn btn-print" id="btn-gallery-print" onclick="printSelected()" disabled>Stampa selezionate</button>
+    <button class="btn btn-secondary btn-sm" onclick="selectAllPhotos()">Seleziona tutto</button>
+    <button class="btn btn-secondary btn-sm" onclick="deselectAll()">Deseleziona tutto</button>
+    <button class="btn btn-secondary btn-sm" onclick="deleteSelected()" id="btn-gallery-delete" disabled>Elimina selezionate</button>
+  </div>
+
+  <div class="gallery-grid" id="gallery-grid">
+    <p class="placeholder">Caricamento...</p>
+  </div>
+</div>
+
+<script>
+let allPhotos = []
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadGallery()
+})
+
+async function loadGallery() {
+  const grid = document.getElementById('gallery-grid')
+  try {
+    const res = await fetch('/api/photos')
+    allPhotos = await res.json()
+
+    if (allPhotos.length === 0) {
+      grid.innerHTML = '<p class="placeholder">Nessuna foto scattata.</p>'
+      return
+    }
+
+    grid.innerHTML = ''
+    for (const p of allPhotos) {
+      const card = document.createElement('div')
+      card.className = 'gallery-card'
+      card.dataset.filename = p.filename
+
+      const img = document.createElement('img')
+      img.src = p.url
+      img.alt = p.filename
+      img.loading = 'lazy'
+
+      const overlay = document.createElement('div')
+      overlay.className = 'gallery-card-check'
+      overlay.innerHTML = '&#10003;'
+
+      card.appendChild(img)
+      card.appendChild(overlay)
+      card.onclick = () => toggleSelect(card)
+      grid.appendChild(card)
+    }
+  } catch (err) {
+    grid.innerHTML = '<p class="placeholder">Errore caricamento galleria.</p>'
+  }
+}
+
+function toggleSelect(card) {
+  card.classList.toggle('selected')
+  updateActionButtons()
+}
+
+function selectAllPhotos() {
+  document.querySelectorAll('.gallery-card').forEach(c => c.classList.add('selected'))
+  updateActionButtons()
+}
+
+function deselectAll() {
+  document.querySelectorAll('.gallery-card').forEach(c => c.classList.remove('selected'))
+  updateActionButtons()
+}
+
+function getSelected() {
+  return document.querySelectorAll('.gallery-card.selected')
+}
+
+function updateActionButtons() {
+  const count = getSelected().length
+  document.getElementById('btn-gallery-print').disabled = count === 0
+  document.getElementById('btn-gallery-delete').disabled = count === 0
+}
+
+async function deleteSelected() {
+  const selected = getSelected()
+  if (selected.length === 0) return
+  if (!confirm(`Eliminare ${selected.length} foto?`)) return
+
+  for (const card of selected) {
+    const filename = card.dataset.filename
+    try {
+      await fetch(`/api/photo/${filename}`, { method: 'DELETE' })
+    } catch {}
+    card.remove()
+  }
+  updateActionButtons()
+  allPhotos = allPhotos.filter(p => document.querySelector(`[data-filename="${p.filename}"]`))
+  if (allPhotos.length === 0) {
+    document.getElementById('gallery-grid').innerHTML = '<p class="placeholder">Nessuna foto scattata.</p>'
+  }
+}
+
+function printSelected() {
+  const selected = getSelected()
+  if (selected.length === 0) return
+
+  const items = []
+  for (const card of selected) {
+    const img = card.querySelector('img')
+    items.push(`<div style="page-break-after:always;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${img.src}" style="max-width:100%;max-height:100vh;object-fit:contain" /></div>`)
+  }
+
+  const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Photo Point — Stampa</title><style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff}
+@media print{@page{margin:0}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>${items.join('')}</body></html>`
+
+  const w = window.open('', '_blank', 'width=800,height=900')
+  if (w) { w.document.write(html); w.document.close() }
+}
+</script>
+</body>
+</html>

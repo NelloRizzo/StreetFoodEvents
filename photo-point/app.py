@@ -22,6 +22,25 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/gallery')
+def gallery():
+    return render_template('gallery.html')
+
+
+@app.route('/api/photos')
+def list_photos():
+    photos_dir = Path(Config.CAPTURES_DIR)
+    photos = []
+    for f in sorted(photos_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+        if f.suffix.lower() in ('.jpg', '.jpeg', '.png'):
+            photos.append({
+                'filename': f.name,
+                'url': f'/api/photo/{f.name}',
+                'taken_at': f.stat().st_mtime,
+            })
+    return jsonify(photos)
+
+
 @app.route('/api/status')
 def status():
     frames_list = list_frames()
@@ -87,6 +106,15 @@ def do_capture():
 @app.route('/api/photo/<filename>')
 def get_photo(filename: str):
     return send_from_directory(Config.CAPTURES_DIR, filename)
+
+
+@app.route('/api/photo/<filename>', methods=['DELETE'])
+def delete_photo(filename: str):
+    filepath = os.path.join(Config.CAPTURES_DIR, filename)
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'Photo not found'}), 404
+    os.remove(filepath)
+    return jsonify({'success': True})
 
 
 @app.route('/api/print', methods=['POST'])
