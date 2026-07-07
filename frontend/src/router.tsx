@@ -32,6 +32,7 @@ import { EventMapPage } from './pages/EventMapPage'
 import { EventOrdersPage } from './pages/EventOrdersPage'
 import { EventReportPage } from './pages/EventReportPage'
 import { EventGalleryPage } from './pages/EventGalleryPage'
+import { PhotoBoothPage } from './pages/PhotoBoothPage'
 import { PoiDetailPage } from './pages/PoiDetailPage'
 import { ReceiptPage } from './pages/ReceiptPage'
 import { GuidePage } from './pages/GuidePage'
@@ -160,14 +161,18 @@ export const router = createBrowserRouter([
             path: 'events/:eventId/orders',
             element: <EventOrdersPage />,
           },
-      {
-        path: 'events/:eventId/report',
-        element: <EventReportPage />,
-      },
-      {
-        path: 'events/:eventId/galleria',
-        element: <EventGalleryPage />,
-      },
+          {
+            path: 'events/:eventId/report',
+            element: <EventReportPage />,
+          },
+          {
+            path: 'events/:eventId/galleria',
+            element: <EventGalleryPage />,
+          },
+          {
+            path: 'events/:eventId/photo-booth',
+            element: <PhotoBoothPage />,
+          },
           {
             path: 'staff',
             element: <StaffPage />,

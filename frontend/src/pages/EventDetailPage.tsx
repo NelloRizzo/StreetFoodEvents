@@ -373,6 +373,11 @@ export function EventDetailPage() {
                 Galleria
               </Link>
             )}
+            {isAuthenticated && (
+              <Link to={`/events/${eventId}/photo-booth`} className={styles.actionBtnOutline}>
+                Photo Booth
+              </Link>
+            )}
             {isPlatformAdmin && (
               <button className={styles.dangerBtn} onClick={() => setDeleteOrdersTarget(true)}>
                 Cancella ordini
