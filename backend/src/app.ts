@@ -21,6 +21,8 @@ import { userRolesRouter } from './routes/user-roles.routes';
 import { userStationsRouter } from './routes/user-stations.routes';
 import { usersRouter } from './routes/users.routes';
 import { aliasesRouter, resolveRouter } from './routes/aliases.routes';
+import { eventFramesRouter } from './routes/event-frames.routes';
+import { eventPhotosRouter } from './routes/event-photos.routes';
 import { poisRouter } from './routes/pois.routes';
 import { usageContractsRouter } from './routes/usage-contracts.routes';
 
@@ -66,6 +68,8 @@ app.use('/api/usage-contracts', usageContractsRouter);
 app.use('/api/pois', poisRouter);
 app.use('/api/aliases', aliasesRouter);
 app.use('/api/resolve', resolveRouter);
+app.use('/api/events/:eventId/photos', eventPhotosRouter);
+app.use('/api/events/:eventId/frames', eventFramesRouter);
 
 app.use((req, res) => {
     return res.status(404).json({

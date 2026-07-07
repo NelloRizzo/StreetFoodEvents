@@ -61,10 +61,30 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | DELETE | `/api/aliases/:aliasId` | auth | Elimina alias |
 | GET | `/api/resolve/:entityType/:alias` | no | Risolve alias → entityId |
 
+### API routes — Photos
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/events/:eventId/photos` | no | Lista foto evento |
+| POST | `/api/events/:eventId/photos` | auth | Carica foto (multipart image) |
+| DELETE | `/api/events/:eventId/photos` | photo-admin | Cancella tutte le foto |
+| DELETE | `/api/events/:eventId/photos/:photoId` | auth | Cancella singola foto |
+
+### API routes — Frames
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/events/:eventId/frames` | no | Lista cornici evento |
+| POST | `/api/events/:eventId/frames` | photo-admin | Carica cornice (multipart image + name) |
+| DELETE | `/api/events/:eventId/frames/:frameId` | photo-admin | Elimina cornice |
+
 ### Frontend — Alias routes
 | Route | Element | Description |
 |---|---|---|
 | `/show/:entityType/:alias` | AliasRedirectPage | Redirect verso pagina reale |
+
+### Frontend — Gallery route
+| Route | Element | Description |
+|---|---|---|
+| `/events/:eventId/galleria` | EventGalleryPage | Galleria foto con stampa e selezione |
 
 ### API routes — Reports
 | Method | Route | Auth | Description |

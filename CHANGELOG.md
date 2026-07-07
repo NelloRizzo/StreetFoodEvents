@@ -72,6 +72,14 @@ Tutte le feature implementate, in ordine cronologico.
 - Integrato in EventDetailPage e StandDetailPage
 - Rotta `/show/:entityType/:alias` → resolve API → redirect lato client
 
+### Photo Gallery (Jul 2026)
+- Modelli EventPhoto (seq incrementale, Cloudinary) e EventFrame (overlay PNG)
+- API nidificate sotto `/api/events/:eventId/photos` e `/api/events/:eventId/frames`
+- Upload diretto su Cloudinary con cartella `events/{eventId}/photos/`
+- Ruoli `photo-admin` (CRUD cornici, delete foto) e `photo-print` (stampa galleria)
+- EventGalleryPage con griglia, selezione multipla, stampa via window.print()
+- Sezione amministrazione cornici in EventDetailPage
+
 ## Session History
 
 ### Theming system (May 2026)
@@ -252,3 +260,12 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] Rotta pubblica `/show/:entityType/:alias` con redirect SPA
 - [x] Componente AliasManager integrato in EventDetailPage e StandDetailPage
 - [x] Validazione: solo `[a-z0-9_-]`, lowercase, univoco
+
+### Photo Gallery Evento (Jul 2026)
+- [x] Modello EventPhoto (image Cloudinary, sequenceNumber, frameId, takenAt)
+- [x] Modello EventFrame (image overlay PNG per cornici)
+- [x] API `/api/events/:eventId/photos` — list, create, delete singola/massiva
+- [x] API `/api/events/:eventId/frames` — list, create, delete
+- [x] Ruoli: `photo-admin` (gestione cornici/foto), `photo-print` (stampa galleria)
+- [x] EventGalleryPage con griglia foto, selezione, stampa HTML, eliminazione
+- [x] Sezione Cornici in EventDetailPage con upload PNG trasparente

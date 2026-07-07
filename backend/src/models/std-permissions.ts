@@ -32,5 +32,13 @@ export const permissions = [
 
     'payments:read',
     'payments:create',
-    'payments:refund'
+    'payments:refund',
+
+    'photos:read',
+    'photos:create',
+    'photos:delete',
+
+    'frames:read',
+    'frames:create',
+    'frames:delete'
 ] as const;

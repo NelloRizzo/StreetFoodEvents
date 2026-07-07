@@ -79,6 +79,8 @@ export function EventDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [hasEventRole, setHasEventRole] = useState(false)
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
+  const [hasPhotoAdmin, setHasPhotoAdmin] = useState(false)
+  const [hasPhotoPrint, setHasPhotoPrint] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [favId, setFavId] = useState<string | null>(null)
   const [favLoading, setFavLoading] = useState(false)
@@ -98,6 +100,10 @@ export function EventDetailPage() {
   })
   const [savingPoi, setSavingPoi] = useState(false)
   const [modal, setModal] = useState<{ open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }>({ open: false, variant: 'alert', title: '', message: '' })
+  const [frames, setFrames] = useState<{ id: string; name: string; image: UploadedImage }[]>([])
+  const [frameName, setFrameName] = useState('')
+  const [frameImage, setFrameImage] = useState<UploadedImage | null>(null)
+  const [savingFrame, setSavingFrame] = useState(false)
 
   const themeData = useMemo(
     () =>
@@ -152,14 +158,23 @@ export function EventDetailPage() {
   }, [eventId])
 
   useEffect(() => {
+    if (!eventId) return
+    apiRequest<{ items: { id: string; name: string; image: UploadedImage }[] }>(`/events/${eventId}/frames`).then((d) => setFrames(d.items)).catch(() => {})
+  }, [eventId])
+
+  useEffect(() => {
     if (!eventId || !isAuthenticated) return
     apiRequest<{ isPlatformAdmin: boolean; roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles')
       .then((data) => {
-        const hasAccess = data.roles.some(
+        const eventRoles = data.roles.filter(
           (r) => r.scope === 'platform' || (r.scope === 'event' && r.eventId === eventId)
         )
-        setHasEventRole(hasAccess)
+        setHasEventRole(
+          eventRoles.some((r) => ['event-admin', 'event-cashier'].includes(r.slug)) || data.isPlatformAdmin
+        )
         setIsPlatformAdmin(data.isPlatformAdmin)
+        setHasPhotoAdmin(data.isPlatformAdmin || eventRoles.some((r) => r.slug === 'photo-admin'))
+        setHasPhotoPrint(data.isPlatformAdmin || eventRoles.some((r) => ['photo-admin', 'photo-print'].includes(r.slug)))
       })
       .catch(() => {})
   }, [eventId, isAuthenticated])
@@ -260,6 +275,34 @@ export function EventDetailPage() {
     })
   }
 
+  const saveFrame = async () => {
+    if (!eventId || savingFrame || !frameName.trim() || !frameImage) return
+    setSavingFrame(true)
+    try {
+      await apiRequest(`/events/${eventId}/frames`, {
+        method: 'POST',
+        bodyJson: { name: frameName.trim(), image: frameImage },
+      })
+      setFrameName('')
+      setFrameImage(null)
+      const data = await apiRequest<{ items: { id: string; name: string; image: UploadedImage }[] }>(`/events/${eventId}/frames`)
+      setFrames(data.items)
+    } catch {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Salvataggio cornice fallito.' })
+    } finally {
+      setSavingFrame(false)
+    }
+  }
+
+  const deleteFrame = async (frameId: string) => {
+    try {
+      await apiRequest(`/events/${eventId}/frames/${frameId}`, { method: 'DELETE' })
+      setFrames((prev) => prev.filter((f) => f.id !== frameId))
+    } catch {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Eliminazione cornice fallita.' })
+    }
+  }
+
   if (isLoading || !event) return null
 
   return (
@@ -324,6 +367,11 @@ export function EventDetailPage() {
                   Gestisci ordini
                 </Link>
               </>
+            )}
+            {hasPhotoPrint && (
+              <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
+                Galleria
+              </Link>
             )}
             {isPlatformAdmin && (
               <button className={styles.dangerBtn} onClick={() => setDeleteOrdersTarget(true)}>
@@ -470,6 +518,50 @@ export function EventDetailPage() {
             </div>
 
           <AliasManager entityType="event" entityRef={eventId!} />
+
+          {hasPhotoAdmin && (
+            <section className={styles.poiSection}>
+              <h2 className={styles.sectionTitle}>
+                Cornici <span className={styles.count}>{frames.length}</span>
+              </h2>
+
+              <div className={styles.poiForm}>
+                <label className={styles.poiField}>
+                  Nome
+                  <input type="text" value={frameName} onChange={(e) => setFrameName(e.target.value)} placeholder="Nome cornice" />
+                </label>
+                <div className={styles.poiField}>
+                  <span>Immagine overlay (PNG trasparente)</span>
+                  <ImageUploader mode="single" type="event" value={frameImage} onChange={(data) => setFrameImage(data as UploadedImage | null)} />
+                </div>
+                <div className={styles.poiFormActions}>
+                  <button className={styles.saveBtn} onClick={saveFrame} disabled={savingFrame || !frameName.trim() || !frameImage}>
+                    {savingFrame ? 'Salvataggio...' : 'Aggiungi cornice'}
+                  </button>
+                </div>
+              </div>
+
+              {frames.length === 0 && (
+                <p className={styles.empty}>Nessuna cornice. Carica un'immagine PNG con trasparenza.</p>
+              )}
+
+              <div className={styles.poiList}>
+                {frames.map((frame) => (
+                  <div key={frame.id} className={styles.poiCard}>
+                    <div className={styles.poiCardBody}>
+                      <strong className={styles.poiCardName}>{frame.name}</strong>
+                      {frame.image.url && (
+                        <img src={frame.image.url} alt={frame.name} style={{ maxWidth: 120, borderRadius: 8, marginTop: 4 }} />
+                      )}
+                    </div>
+                    <div className={styles.poiCardActions}>
+                      <button className={styles.dangerBtn} onClick={() => deleteFrame(frame.id)}>Elimina</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
           </>)}
       </div>
 

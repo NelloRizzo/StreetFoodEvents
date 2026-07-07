@@ -63,6 +63,16 @@ Considerazioni progettuali e decisioni architetturali.
 - **AliasManager**: componente riutilizzabile che mostra la lista alias e permette aggiunta/eliminazione. Usato in EventDetailPage e StandDetailPage.
 - **Cosa NON fare**: non permettere caratteri speciali come `#`, `?`, spazi nell'alias — causerebbero problemi di parsing URL. La regex `^[a-z0-9_-]+$` è restrittiva di proposito.
 
+## Photo Gallery
+- **Modelli separati**: `EventPhoto` (image, sequenceNumber, frameId, takenAt) e `EventFrame` (name, image overlay PNG).
+- **SequenceNumber auto-incrementale**: calcolato come `max(seq) + 1` per evento all'upload. Pattern nel controller, non usa CounterModel (dedicato agli ordini).
+- **Cloudinary folder**: `events/{eventId}/photos/` e `events/{eventId}/frames/`. Upload diretto nei controller con `uploadImageBuffer`.
+- **API nidificate**: montate in `app.ts` come `app.use('/api/events/:eventId/photos', eventPhotosRouter)` con `mergeParams: true` per ereditare `eventId`.
+- **Permessi**: `POST /photos` richiede solo auth (chiunque può caricare). `DELETE /photos` (massiva) richiede `photo-admin` o `platform-admin`. `DELETE /photos/:photoId` richiede solo auth. `POST /frames` e `DELETE /frames/:frameId` richiedono `photo-admin`.
+- **Ruoli in seed**: `photo-admin` (scope event, permessi photos:read/create/delete, frames:read/create/delete). `photo-print` (scope event, solo photos:read).
+- **Stampa galleria**: finestra HTML pura via `window.open()` + `document.write()` + `window.print()`, stesso pattern del Menu Print e della ricevuta. Evita conflitti CSS SPA.
+- **Cosa NON fare**: non eliminare foto da Cloudinary senza prima cancellare il record DB — il controller fa prima `findOneAndDelete` poi `deleteImage`. Non usare `fs` per le foto — tutto su Cloudinary.
+
 ## Frontend
 - React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - Vite proxy: `/api` → `http://127.0.0.1:4000`.

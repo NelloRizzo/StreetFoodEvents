@@ -79,7 +79,23 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     permissions: ['orders:read', 'orders:update'],
   });
 
-  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole) {
+  const photoAdminRole = await upsertRole({
+    name: 'Photo Admin',
+    slug: 'photo-admin',
+    scope: 'event',
+    description: 'Gestisce cornici e foto per l\'evento.',
+    permissions: ['photos:read', 'photos:create', 'photos:delete', 'frames:read', 'frames:create', 'frames:delete'],
+  });
+
+  const photoPrintRole = await upsertRole({
+    name: 'Photo Print',
+    slug: 'photo-print',
+    scope: 'event',
+    description: 'Può visualizzare e stampare le foto della galleria evento.',
+    permissions: ['photos:read'],
+  });
+
+  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole || !photoAdminRole || !photoPrintRole) {
     throw new Error('Failed to seed roles');
   }
 
@@ -110,6 +126,8 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     kitchenRole,
     eventCashierRole,
     standPickupRole,
+    photoAdminRole,
+    photoPrintRole,
   };
 }
 
