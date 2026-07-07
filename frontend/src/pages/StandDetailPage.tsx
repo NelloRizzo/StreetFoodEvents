@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
+import { AliasManager } from '../components/AliasManager'
 import { apiRequest } from '../lib/api'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
@@ -527,6 +528,8 @@ export function StandDetailPage() {
             )}
           </div>
         </section>
+
+        <AliasManager entityType="stand" entityRef={standId!} />
       </div>
     </div>
   )

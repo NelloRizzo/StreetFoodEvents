@@ -1,0 +1,144 @@
+.aliasSection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-ink-strong);
+  margin: 0 0 1rem;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--color-surface-strong);
+  color: var(--color-ink-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.addRow {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.input {
+  flex: 1;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-strong);
+  color: var(--color-ink-strong);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand) 25%, transparent);
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  border: none;
+  white-space: nowrap;
+}
+
+.addBtn:hover {
+  background: var(--color-brand-deep);
+}
+
+.addBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.error {
+  color: #d32f2f;
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  font-size: 0.88rem;
+  margin: 0 0 1rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-line-soft);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.cardText {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-ink-strong);
+}
+
+.cardUrl {
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  font-family: ui-monospace, monospace;
+}
+
+.dangerBtn {
+  flex-shrink: 0;
+  min-height: 2rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: #d32f2f;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border: 1px solid #d32f2f;
+  white-space: nowrap;
+}
+
+.dangerBtn:hover {
+  background: #d32f2f;
+  color: #fff;
+}

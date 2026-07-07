@@ -65,6 +65,13 @@ Tutte le feature implementate, in ordine cronologico.
 ### Home page ordinata (Jun 2026)
 - [x] listEvents sort: startDate: 1 (prima i più prossimi)
 
+### Alias Management (Jul 2026)
+- Modello Alias con text univoco, entityType ('event'|'stand'), entityRef
+- CRUD protetta su `/api/aliases`, resolve pubblico su `/api/resolve/:type/:alias`
+- `AliasManager` componente riutilizzabile con input + lista + delete
+- Integrato in EventDetailPage e StandDetailPage
+- Rotta `/show/:entityType/:alias` → resolve API → redirect lato client
+
 ## Session History
 
 ### Theming system (May 2026)
@@ -237,3 +244,11 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] Eliminata la directory `printer-agent/`
 - [x] Stampante termica collegata direttamente al PC cassa Windows
 - [x] Stampa via `window.print()` con HTML puro — nessun Raspberry Pi
+
+### Alias / Link brevi (Jul 2026)
+- [x] Modello Alias (text univoco, entityType, entityRef)
+- [x] CRUD API `/api/aliases` (protette, solo auth)
+- [x] Resolve API pubblica `/api/resolve/:entityType/:alias`
+- [x] Rotta pubblica `/show/:entityType/:alias` con redirect SPA
+- [x] Componente AliasManager integrato in EventDetailPage e StandDetailPage
+- [x] Validazione: solo `[a-z0-9_-]`, lowercase, univoco

@@ -126,7 +126,7 @@ export function Navbar({
           <span className={styles.brandMark}>SF</span>
           <span className={styles.brandText}>
             <strong>Street Food Events</strong>
-            <span>Gestione stand e moneta evento</span>
+            <span>Piattaforma per gestione eventi di street food</span>
           </span>
         </Link>
 

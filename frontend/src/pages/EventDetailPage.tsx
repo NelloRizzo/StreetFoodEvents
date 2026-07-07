@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { type UploadedImage } from '../lib/upload'
+import { AliasManager } from '../components/AliasManager'
 import { ImageUploader } from '../components/ImageUploader'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useAuth } from '../features/auth/auth-context'
@@ -401,8 +402,7 @@ export function EventDetailPage() {
         </section>
 
         {/* POI management (admin) */}
-        {hasEventRole && (
-          <section className={styles.poiSection}>
+        {hasEventRole && (<>
             <h2 className={styles.sectionTitle}>
               Punti di Interesse <span className={styles.count}>{pois.length}</span>
               <button className={styles.poiToggleBtn} onClick={() => setShowPoiForm((p) => !p)}>
@@ -468,8 +468,9 @@ export function EventDetailPage() {
                 </div>
               ))}
             </div>
-          </section>
-        )}
+
+          <AliasManager entityType="event" entityRef={eventId!} />
+          </>)}
       </div>
 
       <ConfirmModal

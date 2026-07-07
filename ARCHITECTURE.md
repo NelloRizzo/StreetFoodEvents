@@ -55,6 +55,14 @@ Considerazioni progettuali e decisioni architetturali.
 - Ogni dropdown ha `useRef` + `handleClickOutside` per chiusura.
 - Gli event items dinamici sono un dropdown separato "Eventi" a sé stante.
 
+## Alias / Link brevi
+- **Modello Alias**: `{ text (unique, lowercase, regex ^[a-z0-9_-]+$), entityType ('event'|'stand'), entityRef (ObjectId) }`
+- **CRUD**: `/api/aliases` — tutte le route sono protette (authMiddleware). Filtrabili per `?entityType=&entityRef=`.
+- **Resolve pubblico**: `/api/resolve/:entityType/:alias` → JSON con `{ entityType, entityId, entityName }`. Nessuna auth.
+- **Frontend redirect**: la rotta `/show/:entityType/:alias` è gestita dalla SPA. `AliasRedirectPage` chiama la resolve API e fa `window.location.href` verso la pagina reale. Scelta architetturale: con frontend e backend come servizi separati su Render, un 303 lato server richiederebbe di escludere `/show/*` dal catch-all della SPA.
+- **AliasManager**: componente riutilizzabile che mostra la lista alias e permette aggiunta/eliminazione. Usato in EventDetailPage e StandDetailPage.
+- **Cosa NON fare**: non permettere caratteri speciali come `#`, `?`, spazi nell'alias — causerebbero problemi di parsing URL. La regex `^[a-z0-9_-]+$` è restrittiva di proposito.
+
 ## Frontend
 - React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - Vite proxy: `/api` → `http://127.0.0.1:4000`.

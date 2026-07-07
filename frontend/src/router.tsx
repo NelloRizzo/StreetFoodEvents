@@ -37,6 +37,7 @@ import { GuidePage } from './pages/GuidePage'
 import { FlyerPage } from './pages/FlyerPage'
 import { UsageContractsPage } from './pages/UsageContractsPage'
 import { MenuPrintPage } from './pages/MenuPrintPage'
+import { AliasRedirectPage } from './pages/AliasRedirectPage'
 
 export const router = createBrowserRouter([
   {
@@ -193,5 +194,9 @@ export const router = createBrowserRouter([
   {
     path: 'flyer',
     element: <FlyerPage />,
+  },
+  {
+    path: 'show/:entityType/:alias',
+    element: <AliasRedirectPage />,
   },
 ])

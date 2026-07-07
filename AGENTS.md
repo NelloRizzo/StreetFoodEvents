@@ -52,6 +52,20 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 ### API routes
 `GET /health` (no auth). All `/api/*` routes: GET are public except users/event-users/event-products/favorites/orders/upload. POST/PATCH/DELETE are protected.
 
+### API routes — Alias
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/aliases?entityType=&entityRef=` | auth | Lista alias filtrata per entità |
+| POST | `/api/aliases` | auth | Crea alias (text, entityType, entityRef) |
+| PATCH | `/api/aliases/:aliasId` | auth | Modifica alias |
+| DELETE | `/api/aliases/:aliasId` | auth | Elimina alias |
+| GET | `/api/resolve/:entityType/:alias` | no | Risolve alias → entityId |
+
+### Frontend — Alias routes
+| Route | Element | Description |
+|---|---|---|
+| `/show/:entityType/:alias` | AliasRedirectPage | Redirect verso pagina reale |
+
 ### API routes — Reports
 | Method | Route | Auth | Description |
 |---|---|---|---|
