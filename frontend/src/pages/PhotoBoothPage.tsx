@@ -2,22 +2,63 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
-import type { UploadedImage } from '../lib/upload'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import styles from './PhotoBoothPage.module.scss'
 
 type EventFrame = {
   id: string
   name: string
-  image: UploadedImage
+  image: { url: string; publicId: string; width: number; height: number }
 }
+
+type EventDetail = {
+  name: string
+  startDate: string
+  endDate: string
+  location: { label: string; city?: string | null }
+}
+
+const OUTPUT_SIZE = 1380
+
+function generateDefaultFrameDataUrl(size: number): string {
+  const c = document.createElement('canvas')
+  c.width = size
+  c.height = size
+  const ctx = c.getContext('2d')!
+
+  const margin = Math.round(size * 0.065)
+  const radius = Math.round(size * 0.025)
+
+  ctx.fillStyle = '#2c2b28'
+  ctx.beginPath()
+  ctx.roundRect(0, 0, size, size, radius)
+  ctx.fill()
+
+  ctx.globalCompositeOperation = 'destination-out'
+  ctx.beginPath()
+  ctx.roundRect(margin, margin, size - margin * 2, size - margin * 2, radius)
+  ctx.fill()
+
+  ctx.globalCompositeOperation = 'source-over'
+  ctx.fillStyle = '#13294b'
+  ctx.font = `600 ${Math.round(size * 0.028)}px sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('Street Food Events', size / 2, Math.round(size * 0.06))
+
+  return c.toDataURL('image/png')
+}
+
+const DEFAULT_FRAME_DATA_URL = generateDefaultFrameDataUrl(OUTPUT_SIZE)
 
 export function PhotoBoothPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
+
   const [eventName, setEventName] = useState('')
+  const [eventDetail, setEventDetail] = useState<EventDetail | null>(null)
   const [frames, setFrames] = useState<EventFrame[]>([])
-  const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null)
+  const [selectedFrameId, setSelectedFrameId] = useState<string | null>('__default__')
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [captured, setCaptured] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -35,11 +76,12 @@ export function PhotoBoothPage() {
     if (!eventId) return
 
     Promise.all([
-      apiRequest<{ item: { name: string } }>(`/events/${eventId}`),
+      apiRequest<{ item: EventDetail }>(`/events/${eventId}`),
       apiRequest<{ items: EventFrame[] }>(`/events/${eventId}/frames`),
     ])
       .then(([ev, fr]) => {
         setEventName(ev.item.name)
+        setEventDetail(ev.item)
         setFrames(fr.items)
       })
       .catch(() => setError('Errore nel caricamento'))
@@ -56,6 +98,7 @@ export function PhotoBoothPage() {
         videoRef.current.srcObject = s
       }
       setCameraReady(true)
+      setError(null)
     } catch {
       setError('Fotocamera non disponibile')
     }
@@ -80,6 +123,9 @@ export function PhotoBoothPage() {
   }
 
   const selectedFrame = frames.find((f) => f.id === selectedFrameId)
+  const isDefaultFrame = selectedFrameId === '__default__'
+
+  const frameUrlForPreview = isDefaultFrame ? DEFAULT_FRAME_DATA_URL : selectedFrame?.image.url
 
   const uploadPhoto = async () => {
     if (!eventId || !captured || uploading) return
@@ -87,23 +133,104 @@ export function PhotoBoothPage() {
     setError(null)
 
     try {
-      const blob = await (await fetch(captured)).blob()
+      const srcImg = new Image()
+      srcImg.crossOrigin = 'anonymous'
+      srcImg.src = captured
+      await new Promise<void>((resolve, reject) => {
+        srcImg.onload = () => resolve()
+        srcImg.onerror = () => reject(new Error('Source image load failed'))
+      })
+
+      const isDef = selectedFrameId === '__default__'
+      const selF = frames.find((f) => f.id === selectedFrameId)
+      const frameUrl = isDef ? DEFAULT_FRAME_DATA_URL : selF?.image.url
+
+      let frameImg: HTMLImageElement | null = null
+      if (frameUrl) {
+        frameImg = new Image()
+        frameImg.crossOrigin = 'anonymous'
+        frameImg.src = frameUrl
+        await new Promise<void>((resolve, reject) => {
+          frameImg!.onload = () => resolve()
+          frameImg!.onerror = () => reject(new Error('Frame image load failed'))
+        })
+      }
+
+      const outCanvas = document.createElement('canvas')
+      outCanvas.width = OUTPUT_SIZE
+      outCanvas.height = OUTPUT_SIZE
+      const ctx = outCanvas.getContext('2d')!
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE)
+
+      ctx.drawImage(srcImg, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE)
+
+      if (frameImg) {
+        ctx.drawImage(frameImg, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE)
+      }
+
+      if (eventDetail) {
+        const nameStr = `#${eventDetail.name}`
+        const start = new Date(eventDetail.startDate)
+        const end = new Date(eventDetail.endDate)
+
+        const fmtDate = (d: Date) =>
+          d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+        const endFmt = end.toLocaleDateString('it-IT', {
+          day: 'numeric', month: 'short', year: 'numeric',
+        })
+
+        let dateStr = ''
+        if (start.toDateString() === end.toDateString()) {
+          dateStr = fmtDate(start)
+        } else {
+          dateStr = `${fmtDate(start)} — ${endFmt}`
+        }
+
+        const locLabel = eventDetail.location.city
+          ? eventDetail.location.city
+          : eventDetail.location.label
+        if (locLabel) {
+          dateStr += `  ${locLabel}`
+        }
+
+        const nameFontSize = Math.round(OUTPUT_SIZE * 0.038)
+        const dateFontSize = Math.round(OUTPUT_SIZE * 0.024)
+        const textY = Math.round(OUTPUT_SIZE * 0.045)
+
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'top'
+
+        ctx.font = `700 ${nameFontSize}px sans-serif`
+        ctx.fillStyle = '#333'
+        ctx.fillText(nameStr, OUTPUT_SIZE / 2, textY)
+
+        ctx.font = `${dateFontSize}px sans-serif`
+        ctx.fillStyle = '#666'
+        ctx.fillText(dateStr, OUTPUT_SIZE / 2, textY + nameFontSize + Math.round(OUTPUT_SIZE * 0.012))
+      }
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        outCanvas.toBlob((b) => resolve(b), 'image/jpeg', 0.9)
+      })
+      if (!blob) throw new Error('Canvas to blob failed')
+
       const formData = new FormData()
       formData.append('image', blob, `photo_${Date.now()}.jpg`)
-      if (selectedFrameId) {
-        formData.append('frameId', selectedFrameId)
-      }
 
       const res = await fetch(`/api/events/${eventId}/photos`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
       })
-      if (!res.ok) throw new Error('Upload fallito')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null)
+        throw new Error(errData?.message ?? 'Upload fallito')
+      }
 
       navigate(`/events/${eventId}/galleria`)
-    } catch {
-      setError('Upload fallito. Riprova.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload fallito. Riprova.')
     } finally {
       setUploading(false)
     }
@@ -126,19 +253,18 @@ export function PhotoBoothPage() {
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {/* Frame selector */}
         {frames.length > 0 && !captured && (
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Scegli una cornice</h2>
             <div className={styles.frameGrid}>
               <button
-                className={`${styles.frameCard} ${selectedFrameId === null ? styles.frameActive : ''}`}
-                onClick={() => setSelectedFrameId(null)}
+                className={`${styles.frameCard} ${isDefaultFrame ? styles.frameActive : ''}`}
+                onClick={() => setSelectedFrameId('__default__')}
               >
                 <div className={styles.framePreview}>
-                  <span style={{ fontSize: '2rem' }}>&#x1F4F7;</span>
+                  <img src={DEFAULT_FRAME_DATA_URL} alt="Default" />
                 </div>
-                <span className={styles.frameName}>Nessuna cornice</span>
+                <span className={styles.frameName}>Diapositiva</span>
               </button>
               {frames.map((frame) => (
                 <button
@@ -156,7 +282,15 @@ export function PhotoBoothPage() {
           </section>
         )}
 
-        {/* Camera */}
+        {frames.length === 0 && !captured && (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Cornice predefinita</h2>
+            <p className={styles.frameName}>
+              Verr&agrave; utilizzata la cornice Diapositiva standard.
+            </p>
+          </section>
+        )}
+
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Scatta una foto</h2>
 
@@ -174,8 +308,8 @@ export function PhotoBoothPage() {
             {captured && (
               <div className={styles.previewWrap}>
                 <img src={captured} alt="Preview" className={styles.preview} />
-                {selectedFrame && (
-                  <img src={selectedFrame.image.url} alt="" className={styles.frameOverlay} />
+                {frameUrlForPreview && (
+                  <img src={frameUrlForPreview} alt="" className={styles.frameOverlay} />
                 )}
               </div>
             )}
