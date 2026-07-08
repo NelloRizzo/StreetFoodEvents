@@ -149,7 +149,12 @@ export async function sendEventPhotoEmail(req: Request, res: Response) {
     const eventName = event?.name;
     const eventLocation = (event?.location as { label?: string } | undefined)?.label;
 
-    await sendPhotoEmail(email, photo.image.url, eventName ?? undefined, eventLocation ?? undefined);
+    try {
+        await sendPhotoEmail(email, photo.image.url, eventName ?? undefined, eventLocation ?? undefined);
+    } catch (err) {
+        const message = err instanceof Error ? err.message : 'Errore sconosciuto';
+        return res.status(500).json({ message });
+    }
 
     return res.status(200).json({ message: 'Email sent' });
 }
