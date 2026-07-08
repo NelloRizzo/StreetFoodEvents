@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
@@ -15,7 +15,8 @@ type EventData = {
   logo?: { url: string; publicId: string } | null
 }
 
-const SHOW_INTERVAL_MS = 15_000
+const ROTATE_MS = 15_000
+const POLL_MS = 2 * 60_000
 const PHOTOS_PER_PAGE = 4
 
 function shuffle<T>(arr: T[]): T[] {
@@ -31,23 +32,32 @@ export function SlideshowPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const [batch, setBatch] = useState<Photo[]>([])
   const [eventData, setEventData] = useState<EventData | null>(null)
+  const allRef = useRef<Photo[]>([])
 
   useEffect(() => {
     if (!eventId) return
     let cancelled = false
-    let intervalId: ReturnType<typeof setInterval> | null = null
 
-    apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`)
-      .then((res) => {
-        if (cancelled || res.items.length === 0) return
-        const all = res.items
-        setBatch(shuffle(all).slice(0, PHOTOS_PER_PAGE))
+    const fetchPhotos = () => {
+      apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`)
+        .then((res) => {
+          if (cancelled || res.items.length === 0) return
+          allRef.current = res.items
+          setBatch(shuffle(res.items).slice(0, PHOTOS_PER_PAGE))
+        })
+        .catch(() => {})
+    }
 
-        intervalId = setInterval(() => {
-          setBatch(shuffle(all).slice(0, PHOTOS_PER_PAGE))
-        }, SHOW_INTERVAL_MS)
-      })
-      .catch(() => {})
+    fetchPhotos()
+
+    const pollId = setInterval(fetchPhotos, POLL_MS)
+
+    const rotateId = setInterval(() => {
+      const items = allRef.current
+      if (items.length > 0) {
+        setBatch(shuffle(items).slice(0, PHOTOS_PER_PAGE))
+      }
+    }, ROTATE_MS)
 
     apiRequest<{ item: EventData }>(`/events/${eventId}`)
       .then((res) => { if (!cancelled) setEventData(res.item) })
@@ -55,7 +65,8 @@ export function SlideshowPage() {
 
     return () => {
       cancelled = true
-      if (intervalId) clearInterval(intervalId)
+      clearInterval(pollId)
+      clearInterval(rotateId)
     }
   }, [eventId])
 
