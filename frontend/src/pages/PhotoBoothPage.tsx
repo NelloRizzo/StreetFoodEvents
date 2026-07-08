@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import styles from './PhotoBoothPage.module.scss'
 
@@ -252,7 +254,7 @@ export function PhotoBoothPage() {
       }
 
       console.log('[PhotoBooth] sending POST...')
-      const res = await fetch(`/api/events/${eventId}/photos`, {
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/photos`, {
         method: 'POST',
         credentials: 'include',
         body: formData,

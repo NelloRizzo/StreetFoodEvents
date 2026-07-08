@@ -45,22 +45,31 @@ export async function listEventPhotos(req: Request, res: Response) {
 export async function createEventPhoto(req: Request, res: Response) {
     const { eventId } = req.params;
 
+    console.log('[createEventPhoto] called', { eventId, hasFile: !!req.file, bodyKeys: Object.keys(req.body) });
+
     if (!isValidObjectId(eventId)) {
         return res.status(400).json({ message: 'Invalid event id' });
     }
 
     if (!req.file) {
+        console.log('[createEventPhoto] no file');
         return res.status(400).json({ message: 'Image file is required' });
     }
 
+    console.log('[createEventPhoto] file', { size: req.file.size, mimetype: req.file.mimetype, fieldname: req.file.fieldname });
+
     const folder = `events/${eventId}/photos`;
+    console.log('[createEventPhoto] uploading to Cloudinary...');
     const image = await uploadImageBuffer(req.file, folder);
+    console.log('[createEventPhoto] Cloudinary upload done', { url: image.url?.slice(0, 60), publicId: image.publicId });
 
     const lastPhoto = await EventPhotoModel.findOne({ eventId }).sort({ sequenceNumber: -1 }).select('sequenceNumber');
     const sequenceNumber = (lastPhoto?.sequenceNumber ?? 0) + 1;
+    console.log('[createEventPhoto] sequenceNumber', sequenceNumber);
 
     const now = new Date();
 
+    console.log('[createEventPhoto] saving to MongoDB...');
     const photo = await EventPhotoModel.create({
         eventId,
         image,
@@ -69,6 +78,7 @@ export async function createEventPhoto(req: Request, res: Response) {
         frameId: req.body.frameId ?? null,
         createdBy: req.user?.id ?? null
     });
+    console.log('[createEventPhoto] saved', { photoId: photo._id, seq: photo.sequenceNumber });
 
     return res.status(201).json({ item: toPhotoResponse(photo) });
 }
