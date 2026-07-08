@@ -71,6 +71,17 @@ export function PhotoBoothPage() {
   const [error, setError] = useState<string | null>(null)
   const [cameraReady, setCameraReady] = useState(false)
   const [recentPhotos, setRecentPhotos] = useState<RecentPhoto[]>([])
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment')
+  const [torchOn, setTorchOn] = useState(false)
+  const [torchSupported, setTorchSupported] = useState(false)
+  const [zoomLevel, setZoomLevel] = useState(1)
+  const [zoomSupported, setZoomSupported] = useState(false)
+  const [zoomMin, setZoomMin] = useState(1)
+  const [zoomMax, setZoomMax] = useState(10)
+  const [zoomStep, setZoomStep] = useState(0.5)
+  const [timerOption, setTimerOption] = useState(0) // 0 | 3 | 5 | 10
+  const [countingDown, setCountingDown] = useState(0)
+  const [showGrid, setShowGrid] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -96,16 +107,41 @@ export function PhotoBoothPage() {
       .catch(() => setError('Errore nel caricamento'))
   }, [eventId])
 
+  const checkCapabilities = (track: MediaStreamTrack) => {
+    try {
+      const caps = track.getCapabilities?.() as Record<string, unknown> | undefined
+      const torchCap = caps?.torch as boolean | undefined
+      const zoomCap = caps?.zoom as { min?: number; max?: number; step?: number } | undefined
+      setTorchSupported(!!torchCap)
+      if (zoomCap) {
+        setZoomSupported(true)
+        setZoomMin(zoomCap.min ?? 1)
+        setZoomMax(zoomCap.max ?? 10)
+        setZoomStep(zoomCap.step ?? 0.5)
+        setZoomLevel(zoomCap.min ?? 1)
+      } else {
+        setZoomSupported(false)
+      }
+      if (!torchCap) setTorchOn(false)
+    } catch {
+      setTorchSupported(false)
+      setZoomSupported(false)
+    }
+  }
+
   const startCamera = async () => {
     try {
       const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: false,
       })
       setStream(s)
+      setTorchOn(false)
       if (videoRef.current) {
         videoRef.current.srcObject = s
       }
+      const track = s.getVideoTracks()[0]
+      if (track) checkCapabilities(track)
       setCameraReady(true)
       setError(null)
     } catch {
@@ -187,13 +223,19 @@ export function PhotoBoothPage() {
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
 
+      ctx.shadowColor = 'rgba(0,0,0,0.7)'
+      ctx.shadowBlur = 4
+
       ctx.font = `700 ${nameFontSize}px sans-serif`
-      ctx.fillStyle = '#333'
+      ctx.fillStyle = '#fff'
       ctx.fillText(nameStr, size / 2, textY)
 
       ctx.font = `${dateFontSize}px sans-serif`
-      ctx.fillStyle = '#666'
+      ctx.fillStyle = '#fff'
       ctx.fillText(dateStr, size / 2, textY + nameFontSize + Math.round(size * 0.012))
+
+      ctx.shadowColor = 'transparent'
+      ctx.shadowBlur = 0
     }
 
     setCaptured(canvas.toDataURL('image/jpeg', 0.92))
@@ -236,6 +278,69 @@ export function PhotoBoothPage() {
     } finally {
       setUploading(false)
     }
+  }
+
+  const toggleFacingMode = async () => {
+    const next = facingMode === 'environment' ? 'user' : 'environment'
+    stream?.getTracks().forEach((t) => t.stop())
+    setStream(null)
+    setCameraReady(false)
+    setFacingMode(next)
+    setTorchOn(false)
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: next, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      })
+      setStream(s)
+      if (videoRef.current) videoRef.current.srcObject = s
+      const track = s.getVideoTracks()[0]
+      if (track) checkCapabilities(track)
+      setCameraReady(true)
+      setError(null)
+    } catch {
+      setError('Impossibile cambiare fotocamera')
+    }
+  }
+
+  const toggleTorch = async () => {
+    const track = stream?.getVideoTracks()[0]
+    if (!track || !torchSupported) return
+    try {
+      await track.applyConstraints({ advanced: [{ torch: !torchOn }] } as never)
+      setTorchOn(!torchOn)
+    } catch {
+      // not supported — ignore
+    }
+  }
+
+  const adjustZoom = async (delta: number) => {
+    const track = stream?.getVideoTracks()[0]
+    if (!track || !zoomSupported) return
+    const next = Math.min(zoomMax, Math.max(zoomMin, +(zoomLevel + delta).toFixed(1)))
+    try {
+      await track.applyConstraints({ advanced: [{ zoom: next }] } as never)
+      setZoomLevel(next)
+    } catch {
+      // not supported — ignore
+    }
+  }
+
+  const TIMER_OPTIONS = [0, 3, 5, 10] as const
+
+  const cycleTimer = () => {
+    setTimerOption(TIMER_OPTIONS[(TIMER_OPTIONS.indexOf(timerOption as never) + 1) % TIMER_OPTIONS.length])
+  }
+
+  const handleShutter = async () => {
+    if (timerOption > 0) {
+      setCountingDown(timerOption)
+      for (let i = timerOption; i > 0; i--) {
+        await new Promise((r) => setTimeout(r, 1000))
+        setCountingDown(i - 1)
+      }
+    }
+    await capturePhoto()
   }
 
   useEffect(() => {
@@ -303,13 +408,27 @@ export function PhotoBoothPage() {
           )}
 
           <div className={styles.cameraBox}>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className={styles.video}
-              style={{ display: captured ? 'none' : undefined }}
-            />
+            {!captured && cameraReady && (
+              <div className={styles.videoWrap}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className={styles.video}
+                />
+                {showGrid && (
+                  <div className={styles.gridOverlay}>
+                    <div className={styles.gridLine} style={{ left: '33.33%', top: 0, width: 1, height: '100%' }} />
+                    <div className={styles.gridLine} style={{ left: '66.67%', top: 0, width: 1, height: '100%' }} />
+                    <div className={styles.gridLine} style={{ top: '33.33%', left: 0, height: 1, width: '100%' }} />
+                    <div className={styles.gridLine} style={{ top: '66.67%', left: 0, height: 1, width: '100%' }} />
+                  </div>
+                )}
+                {countingDown > 0 && (
+                  <div className={styles.countdown}>{countingDown}</div>
+                )}
+              </div>
+            )}
 
             {captured && (
               <div className={styles.previewWrap}>
@@ -318,8 +437,34 @@ export function PhotoBoothPage() {
             )}
 
             {cameraReady && !captured && (
-              <button className={styles.shutterBtn} onClick={capturePhoto}>
-                Scatta
+              <div className={styles.toolbar}>
+                <button className={styles.toolBtn} onClick={toggleFacingMode} title={facingMode === 'environment' ? 'Anteriore' : 'Posteriore'}>
+                  <span className={styles.toolIcon}>⟳</span>
+                  <span className={styles.toolLabel}>{facingMode === 'environment' ? 'Posteriore' : 'Anteriore'}</span>
+                </button>
+                <button className={`${styles.toolBtn} ${torchOn ? styles.toolActive : ''}`} onClick={toggleTorch} disabled={!torchSupported} title="Torcia">
+                  <span className={styles.toolIcon}>💡</span>
+                  <span className={styles.toolLabel}>Torcia</span>
+                </button>
+                <div className={styles.zoomControl}>
+                  <button className={styles.zoomBtn} onClick={() => adjustZoom(-zoomStep)} disabled={!zoomSupported || zoomLevel <= zoomMin}>−</button>
+                  <span className={styles.zoomValue}>{zoomSupported ? `${zoomLevel}x` : '–'}</span>
+                  <button className={styles.zoomBtn} onClick={() => adjustZoom(zoomStep)} disabled={!zoomSupported || zoomLevel >= zoomMax}>+</button>
+                </div>
+                <button className={`${styles.toolBtn} ${timerOption > 0 ? styles.toolActive : ''}`} onClick={cycleTimer} title="Timer">
+                  <span className={styles.toolIcon}>⏱</span>
+                  <span className={styles.toolLabel}>{timerOption > 0 ? `${timerOption}s` : 'Diretto'}</span>
+                </button>
+                <button className={`${styles.toolBtn} ${showGrid ? styles.toolActive : ''}`} onClick={() => setShowGrid(!showGrid)} title="Griglia">
+                  <span className={styles.toolIcon}>⊞</span>
+                  <span className={styles.toolLabel}>Griglia</span>
+                </button>
+              </div>
+            )}
+
+            {cameraReady && !captured && (
+              <button className={styles.shutterBtn} onClick={handleShutter}>
+                {timerOption > 0 ? `Scatta (${timerOption}s)` : 'Scatta'}
               </button>
             )}
 

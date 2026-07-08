@@ -369,9 +369,14 @@ export function EventDetailPage() {
               </>
             )}
             {hasPhotoPrint && (
-              <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
-                Galleria
-              </Link>
+              <>
+                <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
+                  Galleria
+                </Link>
+                <Link to={`/events/${eventId}/slideshow`} className={styles.actionBtnOutline}>
+                  Slideshow
+                </Link>
+              </>
             )}
             {isAuthenticated && (
               <Link to={`/events/${eventId}/photo-booth`} className={styles.actionBtnOutline}>

@@ -40,6 +40,7 @@ import { FlyerPage } from './pages/FlyerPage'
 import { UsageContractsPage } from './pages/UsageContractsPage'
 import { MenuPrintPage } from './pages/MenuPrintPage'
 import { AliasRedirectPage } from './pages/AliasRedirectPage'
+import { SlideshowPage } from './pages/SlideshowPage'
 
 export const router = createBrowserRouter([
   {
@@ -208,5 +209,9 @@ export const router = createBrowserRouter([
   {
     path: 'show/:entityType/:alias',
     element: <AliasRedirectPage />,
+  },
+  {
+    path: 'events/:eventId/slideshow',
+    element: <SlideshowPage />,
   },
 ])
