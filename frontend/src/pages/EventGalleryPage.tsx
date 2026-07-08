@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
@@ -24,6 +24,10 @@ export function EventGalleryPage() {
   const [hasPhotoRole, setHasPhotoRole] = useState(false)
   const [hasPrintRole, setHasPrintRole] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [filterSeq, setFilterSeq] = useState('')
+  const [filterDate, setFilterDate] = useState('')
+  const [filterTimeFrom, setFilterTimeFrom] = useState('')
+  const [filterTimeTo, setFilterTimeTo] = useState('')
   const printRef = useRef<HTMLDivElement>(null)
 
   const themeData = eventId
@@ -127,7 +131,55 @@ export function EventGalleryPage() {
     }
   }
 
-  const displayPhotos = photos
+  const displayPhotos = useMemo(() => {
+    return photos.filter((p) => {
+      if (filterSeq) {
+        const seq = Number(filterSeq)
+        if (!isNaN(seq) && p.sequenceNumber !== seq) return false
+      }
+      if (filterDate) {
+        const photoDate = new Date(p.takenAt).toISOString().slice(0, 10)
+        if (photoDate !== filterDate) return false
+      }
+      if (filterTimeFrom) {
+        const photoTime = new Date(p.takenAt).toTimeString().slice(0, 5)
+        if (photoTime < filterTimeFrom) return false
+      }
+      if (filterTimeTo) {
+        const photoTime = new Date(p.takenAt).toTimeString().slice(0, 5)
+        if (photoTime > filterTimeTo) return false
+      }
+      return true
+    })
+  }, [photos, filterSeq, filterDate, filterTimeFrom, filterTimeTo])
+
+  const handlePrintPhoto = (photo: EventPhoto) => {
+    const html = `
+      <html>
+        <head>
+          <style>
+            body { margin: 0; padding: 1cm; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+            .wrap { text-align: center; max-width: 100%; }
+            .wrap img { max-width: 100%; height: auto; border-radius: 4px; }
+            .label { margin-top: 0.5cm; font-size: 14px; color: #333; }
+          </style>
+        </head>
+        <body>
+          <div class="wrap">
+            <img src="${photo.image.url}" />
+            <p class="label">#${photo.sequenceNumber}</p>
+          </div>
+        </body>
+      </html>
+    `
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.write(html)
+    w.document.close()
+    w.focus()
+    w.print()
+    w.close()
+  }
 
   if (isLoading) return null
 
@@ -160,6 +212,46 @@ export function EventGalleryPage() {
           </div>
         </div>
 
+        <div className={styles.filters}>
+          <input
+            type="number"
+            placeholder="Filtra n° foto"
+            value={filterSeq}
+            onChange={(e) => setFilterSeq(e.target.value)}
+            className={styles.filterInput}
+            min="1"
+          />
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className={styles.filterInput}
+          />
+          <input
+            type="time"
+            value={filterTimeFrom}
+            onChange={(e) => setFilterTimeFrom(e.target.value)}
+            className={styles.filterInput}
+            title="Da ora"
+          />
+          <span className={styles.filterSep}>—</span>
+          <input
+            type="time"
+            value={filterTimeTo}
+            onChange={(e) => setFilterTimeTo(e.target.value)}
+            className={styles.filterInput}
+            title="A ora"
+          />
+          {(filterSeq || filterDate || filterTimeFrom || filterTimeTo) && (
+            <button
+              className={styles.clearFiltersBtn}
+              onClick={() => { setFilterSeq(''); setFilterDate(''); setFilterTimeFrom(''); setFilterTimeTo('') }}
+            >
+              Cancella filtri
+            </button>
+          )}
+        </div>
+
         <div ref={printRef} className={styles.grid}>
           {displayPhotos.length === 0 && (
             <p className={styles.empty}>Nessuna foto nella galleria.</p>
@@ -170,13 +262,45 @@ export function EventGalleryPage() {
               className={`${styles.card} ${selectedIds.has(photo.id) ? styles.selected : ''}`}
               onClick={() => hasPhotoRole && toggleSelect(photo.id)}
             >
-              <img src={photo.image.url} alt={`Foto ${photo.sequenceNumber}`} className={styles.image} />
+              <img src={photo.image.url} alt={`Foto ${photo.sequenceNumber}`} className={styles.image} loading="eager" />
               <span className={styles.seq}>#{photo.sequenceNumber}</span>
+              {hasPrintRole && (
+                <>
+                  <button
+                    className={styles.printPhotoBtn}
+                    onClick={(e) => { e.stopPropagation(); handlePrintPhoto(photo) }}
+                    title={`Stampa #${photo.sequenceNumber}`}
+                  >
+                    Stampa
+                  </button>
+                  <button
+                    className={styles.emailPhotoBtn}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const email = prompt('Invia foto via email — inserisci il tuo indirizzo:')
+                      if (email) {
+                        const subject = encodeURIComponent(`Foto #${photo.sequenceNumber} — ${eventName}`)
+                        const body = encodeURIComponent(`Foto #${photo.sequenceNumber}\n\n${photo.image.url}`)
+                        window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank')
+                      }
+                    }}
+                    title={`Invia #${photo.sequenceNumber} via email`}
+                  >
+                    Email
+                  </button>
+                </>
+              )}
               {hasPhotoRole && (
                 <span className={styles.check}>{selectedIds.has(photo.id) ? '\u2713' : ''}</span>
               )}
             </div>
           ))}
+        </div>
+
+        <div className={styles.boothLink}>
+          <Link to={`/events/${eventId}/photo-booth`} className={styles.boothLinkBtn}>
+            Scatta una foto
+          </Link>
         </div>
       </div>
     </div>

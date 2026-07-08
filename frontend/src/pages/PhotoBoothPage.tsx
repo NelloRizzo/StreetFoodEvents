@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { useEventTheme } from '../features/theme/useEventTheme'
@@ -51,10 +51,14 @@ function generateDefaultFrameDataUrl(size: number): string {
 
 const DEFAULT_FRAME_DATA_URL = generateDefaultFrameDataUrl(OUTPUT_SIZE)
 
+type RecentPhoto = {
+  id: string
+  image: { url: string }
+  sequenceNumber: number
+}
+
 export function PhotoBoothPage() {
   const { eventId } = useParams<{ eventId: string }>()
-  const navigate = useNavigate()
-
   const [eventName, setEventName] = useState('')
   const [eventDetail, setEventDetail] = useState<EventDetail | null>(null)
   const [frames, setFrames] = useState<EventFrame[]>([])
@@ -64,6 +68,7 @@ export function PhotoBoothPage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cameraReady, setCameraReady] = useState(false)
+  const [recentPhotos, setRecentPhotos] = useState<RecentPhoto[]>([])
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -78,11 +83,13 @@ export function PhotoBoothPage() {
     Promise.all([
       apiRequest<{ item: EventDetail }>(`/events/${eventId}`),
       apiRequest<{ items: EventFrame[] }>(`/events/${eventId}/frames`),
+      apiRequest<{ items: RecentPhoto[] }>(`/events/${eventId}/photos`),
     ])
-      .then(([ev, fr]) => {
+      .then(([ev, fr, ph]) => {
         setEventName(ev.item.name)
         setEventDetail(ev.item)
         setFrames(fr.items)
+        setRecentPhotos(ph.items)
       })
       .catch(() => setError('Errore nel caricamento'))
   }, [eventId])
@@ -217,6 +224,9 @@ export function PhotoBoothPage() {
 
       const formData = new FormData()
       formData.append('image', blob, `photo_${Date.now()}.jpg`)
+      if (selectedFrameId && selectedFrameId !== '__default__') {
+        formData.append('frameId', selectedFrameId)
+      }
 
       const res = await fetch(`/api/events/${eventId}/photos`, {
         method: 'POST',
@@ -228,7 +238,11 @@ export function PhotoBoothPage() {
         throw new Error(errData?.message ?? 'Upload fallito')
       }
 
-      navigate(`/events/${eventId}/galleria`)
+      apiRequest<{ items: RecentPhoto[] }>(`/events/${eventId}/photos`)
+        .then((ph) => setRecentPhotos(ph.items))
+        .catch(() => {})
+
+      setCaptured(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload fallito. Riprova.')
     } finally {
@@ -332,6 +346,20 @@ export function PhotoBoothPage() {
             )}
           </div>
         </section>
+
+        {recentPhotos.length > 0 && (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Foto recenti</h2>
+            <div className={styles.recentStrip}>
+              {recentPhotos.map((p) => (
+                <div key={p.id} className={styles.recentCard}>
+                  <img src={p.image.url} alt={`Foto #${p.sequenceNumber}`} className={styles.recentImg} />
+                  <span className={styles.recentSeq}>#{p.sequenceNumber}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <canvas ref={canvasRef} style={{ display: 'none' }} />
       </div>

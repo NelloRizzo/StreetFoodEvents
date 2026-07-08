@@ -162,6 +162,114 @@
   padding: 3rem 0;
 }
 
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-md);
+}
+
+.filterInput {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-line-soft);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: #fff;
+  color: var(--color-ink-strong);
+  min-width: 100px;
+}
+
+.filterInput:focus {
+  outline: none;
+  border-color: var(--color-brand);
+}
+
+.filterSep {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+}
+
+.clearFiltersBtn {
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-brand);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--color-brand);
+}
+
+.clearFiltersBtn:hover {
+  background: var(--color-brand);
+  color: #fff;
+}
+
+.printPhotoBtn {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  z-index: 1;
+}
+
+.printPhotoBtn:hover {
+  background: var(--color-brand);
+}
+
+.emailPhotoBtn {
+  position: absolute;
+  top: 6px;
+  left: 58px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  z-index: 1;
+}
+
+.emailPhotoBtn:hover {
+  background: #2563eb;
+}
+
+.boothLink {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.boothLinkBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 2rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+
+.boothLinkBtn:hover {
+  background: var(--color-brand-deep);
+}
+
 @media (max-width: 600px) {
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

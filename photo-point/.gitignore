@@ -1,6 +1,0 @@
-venv/
-*.pyc
-__pycache__/
-captures/
-frames/*.png
-.env
