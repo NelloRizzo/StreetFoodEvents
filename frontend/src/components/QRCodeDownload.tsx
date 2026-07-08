@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { apiRequest } from '../lib/api'
 import styles from './QRCodeDownload.module.scss'
@@ -12,7 +13,6 @@ export function QRCodeDownload({ apiPath, fileName }: Props) {
   const [open, setOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-
   const handleOpen = async () => {
     if (qrDataUrl) {
       setOpen(true)
@@ -39,13 +39,22 @@ export function QRCodeDownload({ apiPath, fileName }: Props) {
     document.body.removeChild(link)
   }
 
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
+
   return (
     <>
       <button className={styles.qrBtn} onClick={handleOpen} disabled={loading}>
         {loading ? '...' : '\u2318'} QR
       </button>
 
-      {open && qrDataUrl && (
+      {open && qrDataUrl && createPortal(
         <div className={styles.overlay} onClick={() => setOpen(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <button className={styles.closeBtn} onClick={() => setOpen(false)} aria-label="Chiudi">
@@ -61,7 +70,8 @@ export function QRCodeDownload({ apiPath, fileName }: Props) {
               Scarica PNG
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )
