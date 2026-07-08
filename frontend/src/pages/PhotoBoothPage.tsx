@@ -137,15 +137,17 @@ export function PhotoBoothPage() {
 
   const uploadPhoto = async () => {
     if (!eventId || !captured || uploading) return
+    console.log('[PhotoBooth] uploadPhoto start', { capturedLen: captured.length, selectedFrameId })
     setUploading(true)
     setError(null)
 
     const compositeWithFrame = async (useFrame: boolean) => {
+      console.log('[PhotoBooth] compositeWithFrame', { useFrame })
       const srcImg = new Image()
       srcImg.src = captured
       await new Promise<void>((resolve, reject) => {
-        srcImg.onload = () => resolve()
-        srcImg.onerror = () => reject(new Error('Source image load failed'))
+        srcImg.onload = () => { console.log('[PhotoBooth] source image loaded'); resolve() }
+        srcImg.onerror = () => { console.error('[PhotoBooth] source image load failed'); reject(new Error('Source image load failed')) }
       })
 
       let frameImg: HTMLImageElement | null = null
@@ -153,18 +155,21 @@ export function PhotoBoothPage() {
         const isDef = selectedFrameId === '__default__'
         const selF = frames.find((f) => f.id === selectedFrameId)
         const frameUrl = isDef ? DEFAULT_FRAME_DATA_URL : selF?.image.url
+        console.log('[PhotoBooth] frame URL', frameUrl?.slice(0, 80))
         if (frameUrl) {
           try {
             const resp = await fetch(frameUrl)
             const frameBlob = await resp.blob()
+            console.log('[PhotoBooth] frame fetched', { blobSize: frameBlob.size, blobType: frameBlob.type })
             const url = URL.createObjectURL(frameBlob)
             frameImg = new Image()
             await new Promise<void>((resolve, reject) => {
-              frameImg!.onload = () => resolve()
-              frameImg!.onerror = () => reject(new Error('Frame load failed'))
+              frameImg!.onload = () => { console.log('[PhotoBooth] frame image loaded'); resolve() }
+              frameImg!.onerror = () => { console.error('[PhotoBooth] frame image load failed'); reject(new Error('Frame load failed')) }
               frameImg!.src = url
             })
-          } catch {
+          } catch (e) {
+            console.warn('[PhotoBooth] frame fetch/load failed, skipping', e)
             frameImg = null
           }
         }
@@ -225,17 +230,20 @@ export function PhotoBoothPage() {
       }
 
       const blob = await new Promise<Blob | null>((resolve) => {
-        outCanvas.toBlob((b) => resolve(b), 'image/jpeg', 0.9)
+        outCanvas.toBlob((b) => { console.log('[PhotoBooth] toBlob result', !!b); resolve(b) }, 'image/jpeg', 0.9)
       })
       return blob
     }
 
     try {
+      console.log('[PhotoBooth] compositing with frame...')
       let blob = await compositeWithFrame(true)
       if (!blob) {
+        console.warn('[PhotoBooth] first composite failed, retrying without frame')
         blob = await compositeWithFrame(false)
       }
       if (!blob) throw new Error('Canvas to blob failed')
+      console.log('[PhotoBooth] blob created', { size: blob.size, type: blob.type })
 
       const formData = new FormData()
       formData.append('image', blob, `photo_${Date.now()}.jpg`)
@@ -243,22 +251,27 @@ export function PhotoBoothPage() {
         formData.append('frameId', selectedFrameId)
       }
 
+      console.log('[PhotoBooth] sending POST...')
       const res = await fetch(`/api/events/${eventId}/photos`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
       })
+      console.log('[PhotoBooth] POST response', { status: res.status, ok: res.ok })
       if (!res.ok) {
         const errData = await res.json().catch(() => null)
+        console.error('[PhotoBooth] upload error response', errData)
         throw new Error(errData?.message ?? 'Upload fallito')
       }
 
+      console.log('[PhotoBooth] upload success, refreshing recent photos')
       apiRequest<{ items: RecentPhoto[] }>(`/events/${eventId}/photos`)
-        .then((ph) => setRecentPhotos(ph.items))
+        .then((ph) => { console.log('[PhotoBooth] recent photos refreshed', ph.items.length); setRecentPhotos(ph.items) })
         .catch(() => {})
 
       setCaptured(null)
     } catch (err) {
+      console.error('[PhotoBooth] upload error', err)
       setError(err instanceof Error ? err.message : 'Upload fallito. Riprova.')
     } finally {
       setUploading(false)
