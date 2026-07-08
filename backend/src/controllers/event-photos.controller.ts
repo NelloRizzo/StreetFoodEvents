@@ -60,7 +60,8 @@ export async function createEventPhoto(req: Request, res: Response) {
 
     console.log('[createEventPhoto] file', { size: req.file.size, mimetype: req.file.mimetype, fieldname: req.file.fieldname });
 
-    const folder = `events/${eventId}/photos`;
+    const nowStr = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
+    const folder = `events/${eventId}/photos/${nowStr}`;
     console.log('[createEventPhoto] uploading to Cloudinary...');
     const image = await uploadImageBuffer(req.file, folder);
     console.log('[createEventPhoto] Cloudinary upload done', { url: image.url?.slice(0, 60), publicId: image.publicId });

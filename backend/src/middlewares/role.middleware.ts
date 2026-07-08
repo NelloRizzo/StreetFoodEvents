@@ -36,7 +36,7 @@ export function hasRole(
         const userRole = await UserRoleModel.findOne({
             userId: req.user.id,
             isActive: true,
-            ...(eventId ? { eventId } : {}),
+            ...(eventId ? { $or: [{ eventId }, { eventId: { $exists: false } }, { eventId: null }] } : {}),
             ...(standId ? { standId } : {})
         }).populate({
             path: 'roleId',
