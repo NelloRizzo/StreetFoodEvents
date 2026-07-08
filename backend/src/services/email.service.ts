@@ -1,5 +1,8 @@
+import { setDefaultResultOrder } from 'node:dns';
 import nodemailer from 'nodemailer';
 import { env } from '../config/env';
+
+setDefaultResultOrder('ipv4first');
 
 export function isSmtpConfigured(): boolean {
     return !!(env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASS);
