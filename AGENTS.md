@@ -5,14 +5,14 @@ Sistema di gestione di stand enogastronomici per eventi di street food. Utenti c
 
 ## File di riferimento — destinazione delle attività
 
-Qualsiasi agente AI che opera su questo progetto DEVE documentare le proprie attività nei file appropriati tra quelli elencati qui sotto. I commit che modificano SOLO questi file NON attivano un deploy su Render.
+I file di documentazione sono in `docs/`. Modifiche a questi file NON attivano un deploy su Render (grazie a Ignored Paths configurato sul dashboard).
 
 | File | Destinazione | Cosa scriverci |
 |---|---|---|
-| `CHANGELOG.md` | **Cronologia feature** | Ogni volta che una feature viene completata, aggiungere una entry in ordine cronologico (mese anno). Include sia la checklist feature che la session history dettagliata. |
-| `ARCHITECTURE.md` | **Decisioni progettuali** | Pattern architetturali, motivazioni delle scelte, "cose da non fare", gotchas che un agente AI deve conoscere per non ripetere errori. Aggiornare quando si introduce un nuovo pattern o si impara una lezione. |
-| `TODO.md` | **Task in sospeso** | Feature non ancora implementate, bug aperti, attività pianificate per il futuro. Spostare qui le entry da `CHANGELOG.md` solo quando diventano obsolete, non quando sono completate. |
-| `AGENTS.md` (questo file) | **Setup operativo** | Istruzioni di base, comandi, struttura repo, API routes, deploy. NON contiene storia feature né progetti futuri — solo ciò che serve per operare OGGI. |
+| `docs/CHANGELOG.md` | **Cronologia feature** | Ogni volta che una feature viene completata, aggiungere una entry in ordine cronologico (mese anno). Include sia la checklist feature che la session history dettagliata. |
+| `docs/ARCHITECTURE.md` | **Decisioni progettuali** | Pattern architetturali, motivazioni delle scelte, "cose da non fare", gotchas che un agente AI deve conoscere per non ripetere errori. Aggiornare quando si introduce un nuovo pattern o si impara una lezione. |
+| `docs/TODO.md` | **Task in sospeso** | Feature non ancora implementate, bug aperti, attività pianificate per il futuro. Spostare qui le entry da `docs/CHANGELOG.md` solo quando diventano obsolete, non quando sono completate. |
+| `AGENTS.md` (questo file, radice) | **Setup operativo** | Istruzioni di base, comandi, struttura repo, API routes, deploy. NON contiene storia feature né progetti futuri — solo ciò che serve per operare OGGI. |
 
 ## Repo structure
 
@@ -118,8 +118,5 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 `render.yaml` configura due servizi web (backend + frontend), piano free, regione Frankfurt.
 
 ### Files esclusi dal deploy
-Modifiche a `AGENTS.md`, `CHANGELOG.md`, `ARCHITECTURE.md`, `TODO.md` non attivano un deploy:
-```yaml
-ignoreCommand: >
-  git diff --name-only HEAD~1 HEAD | grep -vE '^(AGENTS\.md|CHANGELOG\.md|ARCHITECTURE\.md|TODO\.md)$' | grep -q .
-```
+Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
+**Settings → Build Filters → Ignored Paths**: `docs/**`
