@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
+import { ConfirmModal } from '../components/ConfirmModal'
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
@@ -29,6 +30,31 @@ export function EventGalleryPage() {
   const [filterTimeFrom, setFilterTimeFrom] = useState('')
   const [filterTimeTo, setFilterTimeTo] = useState('')
   const printRef = useRef<HTMLDivElement>(null)
+
+  const [emailModalPhoto, setEmailModalPhoto] = useState<EventPhoto | null>(null)
+  const [emailSending, setEmailSending] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const [emailError, setEmailError] = useState('')
+
+  const handleSendEmail = useCallback(async (to: string) => {
+    if (!eventId || !emailModalPhoto || emailSending) return
+    setEmailSending(true)
+    setEmailError('')
+    try {
+      await apiRequest(`/events/${eventId}/photos/${emailModalPhoto.id}/send-email`, {
+        method: 'POST',
+        body: JSON.stringify({ email: to }),
+        headers: { 'Content-Type': 'application/json' },
+      })
+      setEmailSent(true)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Invio fallito'
+      setEmailError(msg)
+      setEmailSent(false)
+    } finally {
+      setEmailSending(false)
+    }
+  }, [eventId, emailModalPhoto, emailSending])
 
   const themeData = eventId
     ? { themeBrand: null, themeText: null, themeSurface: null, themeHighlight: null }
@@ -277,12 +303,9 @@ export function EventGalleryPage() {
                     className={styles.emailPhotoBtn}
                     onClick={(e) => {
                       e.stopPropagation()
-                      const email = prompt('Invia foto via email — inserisci il tuo indirizzo:')
-                      if (email) {
-                        const subject = encodeURIComponent(`Foto #${photo.sequenceNumber} — ${eventName}`)
-                        const body = encodeURIComponent(`Foto #${photo.sequenceNumber}\n\n${photo.image.url}`)
-                        window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank')
-                      }
+                      setEmailSent(false)
+                      setEmailError('')
+                      setEmailModalPhoto(photo)
                     }}
                     title={`Invia #${photo.sequenceNumber} via email`}
                   >
@@ -303,6 +326,29 @@ export function EventGalleryPage() {
           </Link>
         </div>
       </div>
+
+      <ConfirmModal
+        open={emailModalPhoto !== null}
+        title={emailSent ? 'Email inviata' : 'Invia foto via email'}
+        message={emailSent
+          ? `La foto #${emailModalPhoto?.sequenceNumber} è stata inviata.`
+          : emailError
+            ? emailError
+            : 'Inserisci il tuo indirizzo email per ricevere la foto:'}
+        variant={emailSent ? 'alert' : 'prompt'}
+        confirmLabel={emailSent ? 'OK' : emailSending ? 'Invio...' : 'Invia'}
+        cancelLabel="Annulla"
+        onConfirm={(to) => {
+          if (emailSent) {
+            setEmailModalPhoto(null)
+          } else if (to) {
+            handleSendEmail(to)
+          }
+        }}
+        onCancel={() => {
+          if (!emailSending) setEmailModalPhoto(null)
+        }}
+      />
     </div>
   )
 }

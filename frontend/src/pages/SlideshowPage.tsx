@@ -10,6 +10,11 @@ type Photo = {
   sequenceNumber: number
 }
 
+type EventData = {
+  name: string
+  logo?: { url: string; publicId: string } | null
+}
+
 const SHOW_INTERVAL_MS = 15_000
 const PHOTOS_PER_PAGE = 4
 
@@ -28,15 +33,20 @@ export function SlideshowPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const [photos, setPhotos] = useState<Photo[]>([])
   const [batch, setBatch] = useState<Photo[]>([])
+  const [eventData, setEventData] = useState<EventData | null>(null)
   const photosRef = useRef(photos)
   photosRef.current = photos
 
   useEffect(() => {
     if (!eventId) return
-    apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`)
-      .then((res) => {
-        setPhotos(res.items)
-        setBatch(pickRandom(res.items, PHOTOS_PER_PAGE))
+    Promise.all([
+      apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`),
+      apiRequest<{ item: EventData }>(`/events/${eventId}`)
+    ])
+      .then(([photosRes, eventRes]) => {
+        setPhotos(photosRes.items)
+        setBatch(pickRandom(photosRes.items, PHOTOS_PER_PAGE))
+        setEventData(eventRes.item)
       })
       .catch(() => {})
   }, [eventId])
@@ -54,7 +64,6 @@ export function SlideshowPage() {
 
   return (
     <div className={styles.fullscreen}>
-      <div className={styles.eventName}>Street Food Events</div>
       <div className={styles.grid}>
         {grid.map((p) => (
           <img key={p.id} src={p.image.url} alt="" className={styles.photo} />
@@ -62,6 +71,19 @@ export function SlideshowPage() {
         {Array.from({ length: emptyCells }).map((_, i) => (
           <div key={`empty-${i}`} className={styles.photo} style={{ background: '#222' }} />
         ))}
+      </div>
+
+      <div className={styles.header}>
+        {eventData?.logo?.url && (
+          <img src={eventData.logo.url} alt="" className={styles.logo} />
+        )}
+        <span className={styles.eventName}>
+          {eventData?.name ?? 'Street Food Events'}
+        </span>
+      </div>
+
+      <div className={styles.footer}>
+        Se vedi una tua foto puoi recuperarla al Welcome Point
       </div>
     </div>
   )

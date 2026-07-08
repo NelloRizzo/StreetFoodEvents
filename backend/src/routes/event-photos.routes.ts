@@ -4,7 +4,8 @@ import {
     createEventPhoto,
     deleteAllEventPhotos,
     deleteEventPhoto,
-    listEventPhotos
+    listEventPhotos,
+    sendEventPhotoEmail
 } from '../controllers/event-photos.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { hasRole } from '../middlewares/role.middleware';
@@ -27,6 +28,13 @@ eventPhotosRouter.delete(
     asyncHandler(authMiddleware),
     asyncHandler(hasRole(['photo-admin', 'platform-admin'], { eventParam: 'eventId' })),
     asyncHandler(deleteAllEventPhotos)
+);
+
+eventPhotosRouter.post(
+    '/:photoId/send-email',
+    asyncHandler(authMiddleware),
+    asyncHandler(hasRole(['photo-print', 'photo-admin', 'platform-admin'], { eventParam: 'eventId' })),
+    asyncHandler(sendEventPhotoEmail)
 );
 
 eventPhotosRouter.delete(

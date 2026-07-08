@@ -1,8 +1,10 @@
 import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
+import { EventModel } from '../models/event.model';
 import { EventPhotoModel } from '../models/event-photo.model';
 import { deleteImage } from '../services/cloudinary-upload.service';
 import { uploadImageBuffer } from '../services/cloudinary-upload.service';
+import { isSmtpConfigured, sendPhotoEmail } from '../services/email.service';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -119,4 +121,34 @@ export async function deleteAllEventPhotos(req: Request, res: Response) {
     }
 
     return res.status(204).send();
+}
+
+export async function sendEventPhotoEmail(req: Request, res: Response) {
+    const { eventId, photoId } = req.params;
+
+    if (!isValidObjectId(eventId) || !isValidObjectId(photoId)) {
+        return res.status(400).json({ message: 'Invalid id' });
+    }
+
+    const { email } = req.body;
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return res.status(400).json({ message: 'Invalid email address' });
+    }
+
+    if (!isSmtpConfigured()) {
+        return res.status(400).json({ message: 'Invio email non configurato. Contatta l\'amministratore.' });
+    }
+
+    const photo = await EventPhotoModel.findById(photoId);
+    if (!photo || photo.eventId.toString() !== eventId) {
+        return res.status(404).json({ message: 'Photo not found' });
+    }
+
+    const event = await EventModel.findById(eventId);
+    const eventName = event?.name;
+    const eventLocation = (event?.location as { label?: string } | undefined)?.label;
+
+    await sendPhotoEmail(email, photo.image.url, eventName ?? undefined, eventLocation ?? undefined);
+
+    return res.status(200).json({ message: 'Email sent' });
 }
