@@ -14,6 +14,9 @@ function getTransporter() {
         port: env.SMTP_PORT,
         secure: env.SMTP_PORT === 465,
         auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 15_000,
     });
 }
 
@@ -69,10 +72,15 @@ export async function sendPhotoEmail(to: string, photoUrl: string, eventName?: s
         </div>
     `;
 
-    await transporter.sendMail({
-        from: `"Street Food Events" <${from}>`,
-        to,
-        subject,
-        html,
-    });
+    await Promise.race([
+        transporter.sendMail({
+            from: `"Street Food Events" <${from}>`,
+            to,
+            subject,
+            html,
+        }),
+        new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Invio email timeout dopo 15 secondi')), 15_000)
+        ),
+    ]);
 }
