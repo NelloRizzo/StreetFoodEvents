@@ -127,6 +127,7 @@ export function PhotoBoothPage() {
 
   const retake = () => {
     setCaptured(null)
+    setError(null)
   }
 
   const selectedFrame = frames.find((f) => f.id === selectedFrameId)
@@ -139,7 +140,7 @@ export function PhotoBoothPage() {
     setUploading(true)
     setError(null)
 
-    try {
+    const compositeWithFrame = async (useFrame: boolean) => {
       const srcImg = new Image()
       srcImg.crossOrigin = 'anonymous'
       srcImg.src = captured
@@ -148,19 +149,26 @@ export function PhotoBoothPage() {
         srcImg.onerror = () => reject(new Error('Source image load failed'))
       })
 
-      const isDef = selectedFrameId === '__default__'
-      const selF = frames.find((f) => f.id === selectedFrameId)
-      const frameUrl = isDef ? DEFAULT_FRAME_DATA_URL : selF?.image.url
-
       let frameImg: HTMLImageElement | null = null
-      if (frameUrl) {
-        frameImg = new Image()
-        frameImg.crossOrigin = 'anonymous'
-        frameImg.src = frameUrl
-        await new Promise<void>((resolve, reject) => {
-          frameImg!.onload = () => resolve()
-          frameImg!.onerror = () => reject(new Error('Frame image load failed'))
-        })
+      if (useFrame) {
+        const isDef = selectedFrameId === '__default__'
+        const selF = frames.find((f) => f.id === selectedFrameId)
+        const frameUrl = isDef ? DEFAULT_FRAME_DATA_URL : selF?.image.url
+        if (frameUrl) {
+          try {
+            const resp = await fetch(frameUrl)
+            const frameBlob = await resp.blob()
+            const url = URL.createObjectURL(frameBlob)
+            frameImg = new Image()
+            await new Promise<void>((resolve, reject) => {
+              frameImg!.onload = () => resolve()
+              frameImg!.onerror = () => reject(new Error('Frame load failed'))
+              frameImg!.src = url
+            })
+          } catch {
+            frameImg = null
+          }
+        }
       }
 
       const outCanvas = document.createElement('canvas')
@@ -220,6 +228,14 @@ export function PhotoBoothPage() {
       const blob = await new Promise<Blob | null>((resolve) => {
         outCanvas.toBlob((b) => resolve(b), 'image/jpeg', 0.9)
       })
+      return blob
+    }
+
+    try {
+      let blob = await compositeWithFrame(true)
+      if (!blob) {
+        blob = await compositeWithFrame(false)
+      }
       if (!blob) throw new Error('Canvas to blob failed')
 
       const formData = new FormData()
@@ -315,9 +331,13 @@ export function PhotoBoothPage() {
           )}
 
           <div className={styles.cameraBox}>
-            {!captured && (
-              <video ref={videoRef} autoPlay playsInline className={styles.video} />
-            )}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className={styles.video}
+              style={{ display: captured ? 'none' : undefined }}
+            />
 
             {captured && (
               <div className={styles.previewWrap}>
