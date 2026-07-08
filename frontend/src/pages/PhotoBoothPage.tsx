@@ -113,17 +113,89 @@ export function PhotoBoothPage() {
     }
   }
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     const video = videoRef.current
     const canvas = canvasRef.current
     if (!video || !canvas) return
 
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
+    const vw = video.videoWidth
+    const vh = video.videoHeight
+    const size = OUTPUT_SIZE
+    canvas.width = size
+    canvas.height = size
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    ctx.drawImage(video, 0, 0)
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, size, size)
+
+    const scale = Math.max(size / vw, size / vh)
+    const sw = vw * scale
+    const sh = vh * scale
+    ctx.drawImage(video, (size - sw) / 2, (size - sh) / 2, sw, sh)
+
+    try {
+      const isDef = selectedFrameId === '__default__'
+      const selF = isDef ? null : frames.find((f) => f.id === selectedFrameId)
+      const frameUrl = isDef ? DEFAULT_FRAME_DATA_URL
+        : selF ? `${API_BASE_URL}/events/${eventId}/frames/${selF.id}/image`
+          : null
+
+      if (frameUrl) {
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.src = frameUrl
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve()
+          img.onerror = () => reject(new Error('Frame load failed'))
+        })
+        ctx.drawImage(img, 0, 0, size, size)
+      }
+    } catch {
+      // frame not available — continue without
+    }
+
+    if (eventDetail) {
+      const nameStr = `#${eventDetail.name}`
+      const start = new Date(eventDetail.startDate)
+      const end = new Date(eventDetail.endDate)
+
+      const fmtDate = (d: Date) =>
+        d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+      const endFmt = end.toLocaleDateString('it-IT', {
+        day: 'numeric', month: 'short', year: 'numeric',
+      })
+
+      let dateStr = ''
+      if (start.toDateString() === end.toDateString()) {
+        dateStr = fmtDate(start)
+      } else {
+        dateStr = `${fmtDate(start)} — ${endFmt}`
+      }
+
+      const locLabel = eventDetail.location.city
+        ? eventDetail.location.city
+        : eventDetail.location.label
+      if (locLabel) {
+        dateStr += `  ${locLabel}`
+      }
+
+      const nameFontSize = Math.round(size * 0.038)
+      const dateFontSize = Math.round(size * 0.024)
+      const textY = Math.round(size * 0.045)
+
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+
+      ctx.font = `700 ${nameFontSize}px sans-serif`
+      ctx.fillStyle = '#333'
+      ctx.fillText(nameStr, size / 2, textY)
+
+      ctx.font = `${dateFontSize}px sans-serif`
+      ctx.fillStyle = '#666'
+      ctx.fillText(dateStr, size / 2, textY + nameFontSize + Math.round(size * 0.012))
+    }
+
     setCaptured(canvas.toDataURL('image/jpeg', 0.92))
   }
 
@@ -132,148 +204,34 @@ export function PhotoBoothPage() {
     setError(null)
   }
 
-  const selectedFrame = frames.find((f) => f.id === selectedFrameId)
-  const isDefaultFrame = selectedFrameId === '__default__'
-
-  const frameUrlForPreview = isDefaultFrame ? DEFAULT_FRAME_DATA_URL : selectedFrame?.image.url
-
   const uploadPhoto = async () => {
     if (!eventId || !captured || uploading) return
-    console.log('[PhotoBooth] uploadPhoto start', { capturedLen: captured.length, selectedFrameId })
     setUploading(true)
     setError(null)
 
-    const compositeWithFrame = async (useFrame: boolean) => {
-      console.log('[PhotoBooth] compositeWithFrame', { useFrame })
-      const srcImg = new Image()
-      srcImg.src = captured
-      await new Promise<void>((resolve, reject) => {
-        srcImg.onload = () => { console.log('[PhotoBooth] source image loaded'); resolve() }
-        srcImg.onerror = () => { console.error('[PhotoBooth] source image load failed'); reject(new Error('Source image load failed')) }
-      })
-
-      let frameImg: HTMLImageElement | null = null
-      if (useFrame) {
-        const isDef = selectedFrameId === '__default__'
-        const selF = frames.find((f) => f.id === selectedFrameId)
-        const frameUrl = isDef ? DEFAULT_FRAME_DATA_URL : selF?.image.url
-        console.log('[PhotoBooth] frame URL', frameUrl?.slice(0, 80))
-        if (frameUrl) {
-          try {
-            const resp = await fetch(frameUrl)
-            const frameBlob = await resp.blob()
-            console.log('[PhotoBooth] frame fetched', { blobSize: frameBlob.size, blobType: frameBlob.type })
-            const url = URL.createObjectURL(frameBlob)
-            frameImg = new Image()
-            await new Promise<void>((resolve, reject) => {
-              frameImg!.onload = () => { console.log('[PhotoBooth] frame image loaded'); resolve() }
-              frameImg!.onerror = () => { console.error('[PhotoBooth] frame image load failed'); reject(new Error('Frame load failed')) }
-              frameImg!.src = url
-            })
-          } catch (e) {
-            console.warn('[PhotoBooth] frame fetch/load failed, skipping', e)
-            frameImg = null
-          }
-        }
-      }
-
-      const outCanvas = document.createElement('canvas')
-      outCanvas.width = OUTPUT_SIZE
-      outCanvas.height = OUTPUT_SIZE
-      const ctx = outCanvas.getContext('2d')!
-      ctx.fillStyle = '#fff'
-      ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE)
-
-      ctx.drawImage(srcImg, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE)
-
-      if (frameImg) {
-        ctx.drawImage(frameImg, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE)
-      }
-
-      if (eventDetail) {
-        const nameStr = `#${eventDetail.name}`
-        const start = new Date(eventDetail.startDate)
-        const end = new Date(eventDetail.endDate)
-
-        const fmtDate = (d: Date) =>
-          d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
-        const endFmt = end.toLocaleDateString('it-IT', {
-          day: 'numeric', month: 'short', year: 'numeric',
-        })
-
-        let dateStr = ''
-        if (start.toDateString() === end.toDateString()) {
-          dateStr = fmtDate(start)
-        } else {
-          dateStr = `${fmtDate(start)} — ${endFmt}`
-        }
-
-        const locLabel = eventDetail.location.city
-          ? eventDetail.location.city
-          : eventDetail.location.label
-        if (locLabel) {
-          dateStr += `  ${locLabel}`
-        }
-
-        const nameFontSize = Math.round(OUTPUT_SIZE * 0.038)
-        const dateFontSize = Math.round(OUTPUT_SIZE * 0.024)
-        const textY = Math.round(OUTPUT_SIZE * 0.045)
-
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'top'
-
-        ctx.font = `700 ${nameFontSize}px sans-serif`
-        ctx.fillStyle = '#333'
-        ctx.fillText(nameStr, OUTPUT_SIZE / 2, textY)
-
-        ctx.font = `${dateFontSize}px sans-serif`
-        ctx.fillStyle = '#666'
-        ctx.fillText(dateStr, OUTPUT_SIZE / 2, textY + nameFontSize + Math.round(OUTPUT_SIZE * 0.012))
-      }
-
-      const blob = await new Promise<Blob | null>((resolve) => {
-        outCanvas.toBlob((b) => { console.log('[PhotoBooth] toBlob result', !!b); resolve(b) }, 'image/jpeg', 0.9)
-      })
-      return blob
-    }
-
     try {
-      console.log('[PhotoBooth] compositing with frame...')
-      let blob = await compositeWithFrame(true)
-      if (!blob) {
-        console.warn('[PhotoBooth] first composite failed, retrying without frame')
-        blob = await compositeWithFrame(false)
-      }
-      if (!blob) throw new Error('Canvas to blob failed')
-      console.log('[PhotoBooth] blob created', { size: blob.size, type: blob.type })
+      const resp = await fetch(captured)
+      const blob = await resp.blob()
 
       const formData = new FormData()
       formData.append('image', blob, `photo_${Date.now()}.jpg`)
-      if (selectedFrameId && selectedFrameId !== '__default__') {
-        formData.append('frameId', selectedFrameId)
-      }
 
-      console.log('[PhotoBooth] sending POST...')
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/photos`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
       })
-      console.log('[PhotoBooth] POST response', { status: res.status, ok: res.ok })
       if (!res.ok) {
         const errData = await res.json().catch(() => null)
-        console.error('[PhotoBooth] upload error response', errData)
         throw new Error(errData?.message ?? 'Upload fallito')
       }
 
-      console.log('[PhotoBooth] upload success, refreshing recent photos')
       apiRequest<{ items: RecentPhoto[] }>(`/events/${eventId}/photos`)
-        .then((ph) => { console.log('[PhotoBooth] recent photos refreshed', ph.items.length); setRecentPhotos(ph.items) })
+        .then((ph) => setRecentPhotos(ph.items))
         .catch(() => {})
 
       setCaptured(null)
     } catch (err) {
-      console.error('[PhotoBooth] upload error', err)
       setError(err instanceof Error ? err.message : 'Upload fallito. Riprova.')
     } finally {
       setUploading(false)
@@ -302,7 +260,7 @@ export function PhotoBoothPage() {
             <h2 className={styles.sectionTitle}>Scegli una cornice</h2>
             <div className={styles.frameGrid}>
               <button
-                className={`${styles.frameCard} ${isDefaultFrame ? styles.frameActive : ''}`}
+                className={`${styles.frameCard} ${selectedFrameId === '__default__' ? styles.frameActive : ''}`}
                 onClick={() => setSelectedFrameId('__default__')}
               >
                 <div className={styles.framePreview}>
@@ -356,9 +314,6 @@ export function PhotoBoothPage() {
             {captured && (
               <div className={styles.previewWrap}>
                 <img src={captured} alt="Preview" className={styles.preview} />
-                {frameUrlForPreview && (
-                  <img src={frameUrlForPreview} alt="" className={styles.frameOverlay} />
-                )}
               </div>
             )}
 

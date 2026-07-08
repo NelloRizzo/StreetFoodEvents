@@ -3,6 +3,7 @@ import { Router } from 'express';
 import {
     createEventFrame,
     deleteEventFrame,
+    getFrameImage,
     listEventFrames
 } from '../controllers/event-frames.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
@@ -13,6 +14,8 @@ import { asyncHandler } from '../utils/async-handler';
 export const eventFramesRouter = Router({ mergeParams: true });
 
 eventFramesRouter.get('/', asyncHandler(listEventFrames));
+
+eventFramesRouter.get('/:frameId/image', asyncHandler(getFrameImage));
 
 eventFramesRouter.post(
     '/',

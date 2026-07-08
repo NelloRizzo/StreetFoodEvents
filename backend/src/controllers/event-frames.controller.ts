@@ -1,3 +1,5 @@
+import { pipeline } from 'node:stream/promises';
+import { Readable } from 'node:stream';
 import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { EventFrameModel } from '../models/event-frame.model';
@@ -62,6 +64,35 @@ export async function createEventFrame(req: Request, res: Response) {
     });
 
     return res.status(201).json({ item: toFrameResponse(frame) });
+}
+
+export async function getFrameImage(req: Request, res: Response) {
+    const { frameId } = req.params;
+
+    if (!isValidObjectId(frameId)) {
+        return res.status(400).json({ message: 'Invalid frame id' });
+    }
+
+    const frame = await EventFrameModel.findById(frameId).select('image.url image.format');
+
+    if (!frame) {
+        return res.status(404).json({ message: 'Frame not found' });
+    }
+
+    const cloudinaryResp = await fetch(frame.image.url);
+    if (!cloudinaryResp.ok) {
+        return res.status(502).json({ message: 'Failed to fetch frame image' });
+    }
+
+    res.set('Content-Type', cloudinaryResp.headers.get('content-type') ?? 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400');
+
+    const webStream = cloudinaryResp.body;
+    if (!webStream) {
+        return res.status(502).json({ message: 'No response body' });
+    }
+
+    return void await pipeline(Readable.fromWeb(webStream), res);
 }
 
 export async function deleteEventFrame(req: Request, res: Response) {
