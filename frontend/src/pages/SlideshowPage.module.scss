@@ -43,23 +43,22 @@
   left: 0;
   right: 0;
   text-align: center;
-  padding: 1rem 1.5rem;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.95rem;
-  font-weight: 500;
+  padding: 1.2rem 1.5rem;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  color: #111;
+  font-size: 1.2rem;
+  font-weight: 700;
   letter-spacing: 0.02em;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   z-index: 2;
   pointer-events: none;
 }
 
 .grid {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   padding: 4px;
 }
@@ -74,16 +73,16 @@
 }
 
 .photo {
-  width: 100%;
-  height: 100%;
+  width: calc(50% - 2px);
+  height: calc(50% - 2px);
   object-fit: cover;
   display: block;
   border-radius: 2px;
 }
 
 @media (orientation: portrait) {
-  .grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, 1fr);
+  .photo {
+    width: 100%;
+    height: calc(25% - 3px);
   }
 }
