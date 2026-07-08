@@ -408,27 +408,28 @@ export function PhotoBoothPage() {
           )}
 
           <div className={styles.cameraBox}>
-            {!captured && cameraReady && (
-              <div className={styles.videoWrap}>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  className={styles.video}
-                />
-                {showGrid && (
-                  <div className={styles.gridOverlay}>
-                    <div className={styles.gridLine} style={{ left: '33.33%', top: 0, width: 1, height: '100%' }} />
-                    <div className={styles.gridLine} style={{ left: '66.67%', top: 0, width: 1, height: '100%' }} />
-                    <div className={styles.gridLine} style={{ top: '33.33%', left: 0, height: 1, width: '100%' }} />
-                    <div className={styles.gridLine} style={{ top: '66.67%', left: 0, height: 1, width: '100%' }} />
-                  </div>
-                )}
-                {countingDown > 0 && (
-                  <div className={styles.countdown}>{countingDown}</div>
-                )}
-              </div>
-            )}
+            <div
+              className={styles.videoWrap}
+              style={{ display: captured || !cameraReady ? 'none' : undefined }}
+            >
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className={styles.video}
+              />
+              {showGrid && (
+                <div className={styles.gridOverlay}>
+                  <div className={styles.gridLine} style={{ left: '33.33%', top: 0, width: 1, height: '100%' }} />
+                  <div className={styles.gridLine} style={{ left: '66.67%', top: 0, width: 1, height: '100%' }} />
+                  <div className={styles.gridLine} style={{ top: '33.33%', left: 0, height: 1, width: '100%' }} />
+                  <div className={styles.gridLine} style={{ top: '66.67%', left: 0, height: 1, width: '100%' }} />
+                </div>
+              )}
+              {countingDown > 0 && (
+                <div className={styles.countdown}>{countingDown}</div>
+              )}
+            </div>
 
             {captured && (
               <div className={styles.previewWrap}>
