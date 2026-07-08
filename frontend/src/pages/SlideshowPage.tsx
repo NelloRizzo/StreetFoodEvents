@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
@@ -18,54 +18,53 @@ type EventData = {
 const SHOW_INTERVAL_MS = 15_000
 const PHOTOS_PER_PAGE = 4
 
-function pickRandom<T>(arr: T[], count: number): T[] {
+function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr]
-  const result: T[] = []
-  const n = Math.min(count, copy.length)
-  for (let i = 0; i < n; i++) {
-    const idx = Math.floor(Math.random() * copy.length)
-    result.push(copy.splice(idx, 1)[0]!)
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j]!, copy[i]!]
   }
-  return result
+  return copy
 }
 
 export function SlideshowPage() {
   const { eventId } = useParams<{ eventId: string }>()
-  const [photos, setPhotos] = useState<Photo[]>([])
   const [batch, setBatch] = useState<Photo[]>([])
   const [eventData, setEventData] = useState<EventData | null>(null)
-  const photosRef = useRef(photos)
-  photosRef.current = photos
 
   useEffect(() => {
     if (!eventId) return
-    Promise.all([
-      apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`),
-      apiRequest<{ item: EventData }>(`/events/${eventId}`)
-    ])
-      .then(([photosRes, eventRes]) => {
-        setPhotos(photosRes.items)
-        setBatch(pickRandom(photosRes.items, PHOTOS_PER_PAGE))
-        setEventData(eventRes.item)
+    let cancelled = false
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`)
+      .then((res) => {
+        if (cancelled || res.items.length === 0) return
+        const all = res.items
+        setBatch(shuffle(all).slice(0, PHOTOS_PER_PAGE))
+
+        intervalId = setInterval(() => {
+          setBatch(shuffle(all).slice(0, PHOTOS_PER_PAGE))
+        }, SHOW_INTERVAL_MS)
       })
       .catch(() => {})
+
+    apiRequest<{ item: EventData }>(`/events/${eventId}`)
+      .then((res) => { if (!cancelled) setEventData(res.item) })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+      if (intervalId) clearInterval(intervalId)
+    }
   }, [eventId])
 
-  useEffect(() => {
-    if (photos.length === 0) return
-    const id = setInterval(() => {
-      setBatch(pickRandom(photosRef.current, PHOTOS_PER_PAGE))
-    }, SHOW_INTERVAL_MS)
-    return () => clearInterval(id)
-  }, [photos.length])
-
-  const grid = batch.slice(0, PHOTOS_PER_PAGE)
-  const emptyCells = PHOTOS_PER_PAGE - grid.length
+  const emptyCells = PHOTOS_PER_PAGE - batch.length
 
   return (
     <div className={styles.fullscreen}>
       <div className={styles.grid}>
-        {grid.map((p) => (
+        {batch.map((p) => (
           <img key={p.id} src={p.image.url} alt="" className={styles.photo} />
         ))}
         {Array.from({ length: emptyCells }).map((_, i) => (
