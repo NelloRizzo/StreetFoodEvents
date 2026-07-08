@@ -101,22 +101,42 @@ export function EventGalleryPage() {
 
   const handlePrint = () => {
     if (!printRef.current) return
+    const selected = photos.filter((p) => selectedIds.size === 0 || selectedIds.has(p.id))
+    const pages = selected.map((p) => `
+      <div class="page">
+        <img src="${p.image.url}" />
+      </div>
+    `).join('')
     const html = `
       <html>
         <head>
           <style>
-            body { margin: 0; padding: 1cm; font-family: sans-serif; }
-            h1 { font-size: 18px; margin-bottom: 0.5cm; }
-            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5cm; }
-            .grid img { width: 100%; height: auto; border-radius: 4px; page-break-inside: avoid; }
-            @media print { body { -webkit-print-color-adjust: exact; } }
+            @page { margin: 0; size: auto; }
+            body { margin: 0; padding: 0; }
+            .page {
+              width: 100vw;
+              height: 100vh;
+              overflow: hidden;
+              page-break-after: always;
+              break-after: page;
+            }
+            .page img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              display: block;
+            }
+            .page:last-child {
+              page-break-after: avoid;
+              break-after: avoid;
+            }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
           </style>
         </head>
         <body>
-          <h1>${eventName} — Galleria foto</h1>
-          <div class="grid">
-            ${photos.filter((p) => selectedIds.size === 0 || selectedIds.has(p.id)).map((p) => `<img src="${p.image.url}" />`).join('')}
-          </div>
+          ${pages}
         </body>
       </html>
     `
