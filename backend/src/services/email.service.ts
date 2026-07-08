@@ -1,19 +1,18 @@
-import { setDefaultResultOrder } from 'node:dns';
+import { resolve4 } from 'node:dns/promises';
 import nodemailer from 'nodemailer';
 import { env } from '../config/env';
-
-setDefaultResultOrder('ipv4first');
 
 export function isSmtpConfigured(): boolean {
     return !!(env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASS);
 }
 
-function getTransporter() {
+async function getTransporter() {
     if (!isSmtpConfigured()) {
         return null;
     }
+    const addresses = await resolve4(env.SMTP_HOST!);
     return nodemailer.createTransport({
-        host: env.SMTP_HOST,
+        host: addresses[0],
         port: env.SMTP_PORT,
         secure: env.SMTP_PORT === 465,
         auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
@@ -42,7 +41,7 @@ function buildMessage(eventName?: string, eventLocation?: string): string {
 }
 
 export async function sendPhotoEmail(to: string, photoUrl: string, eventName?: string, eventLocation?: string): Promise<void> {
-    const transporter = getTransporter();
+    const transporter = await getTransporter();
     if (!transporter) {
         throw new Error('SMTP not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS env vars.');
     }
