@@ -61,6 +61,15 @@
   padding: 4px;
 }
 
+.cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .photo {
   width: 100%;
   height: 100%;

@@ -13,6 +13,7 @@ type Photo = {
 type EventData = {
   name: string
   logo?: { url: string; publicId: string } | null
+  coverImage?: { url: string; publicId: string } | null
 }
 
 const ROTATE_MS = 15_000
@@ -41,9 +42,13 @@ export function SlideshowPage() {
     const fetchPhotos = () => {
       apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`)
         .then((res) => {
-          if (cancelled || res.items.length === 0) return
+          if (cancelled) return
           allRef.current = res.items
-          setBatch(shuffle(res.items).slice(0, PHOTOS_PER_PAGE))
+          setBatch(
+            res.items.length > 0
+              ? shuffle(res.items).slice(0, PHOTOS_PER_PAGE)
+              : []
+          )
         })
         .catch(() => {})
     }
@@ -70,18 +75,24 @@ export function SlideshowPage() {
     }
   }, [eventId])
 
-  const emptyCells = PHOTOS_PER_PAGE - batch.length
+  const hasPhotos = batch.length > 0
 
   return (
     <div className={styles.fullscreen}>
-      <div className={styles.grid}>
-        {batch.map((p) => (
-          <img key={p.id} src={p.image.url} alt="" className={styles.photo} />
-        ))}
-        {Array.from({ length: emptyCells }).map((_, i) => (
-          <div key={`empty-${i}`} className={styles.photo} style={{ background: '#222' }} />
-        ))}
-      </div>
+      {hasPhotos ? (
+        <div className={styles.grid}>
+          {batch.map((p) => (
+            <img key={p.id} src={p.image.url} alt="" className={styles.photo} />
+          ))}
+          {Array.from({ length: PHOTOS_PER_PAGE - batch.length }).map((_, i) => (
+            <div key={`empty-${i}`} className={styles.photo} style={{ background: '#222' }} />
+          ))}
+        </div>
+      ) : (
+        eventData?.coverImage?.url && (
+          <img src={eventData.coverImage.url} alt="" className={styles.cover} />
+        )
+      )}
 
       <div className={styles.header}>
         {eventData?.logo?.url && (
