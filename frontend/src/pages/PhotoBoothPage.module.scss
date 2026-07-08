@@ -259,3 +259,21 @@
   font-size: 0.75rem;
   font-weight: 700;
 }
+
+.emptyGallery {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  margin: 0 0 0.75rem;
+}
+
+.galleryLink {
+  display: inline-block;
+  color: var(--color-brand);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.galleryLink:hover {
+  text-decoration: underline;
+}

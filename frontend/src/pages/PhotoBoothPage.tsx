@@ -142,7 +142,6 @@ export function PhotoBoothPage() {
 
     const compositeWithFrame = async (useFrame: boolean) => {
       const srcImg = new Image()
-      srcImg.crossOrigin = 'anonymous'
       srcImg.src = captured
       await new Promise<void>((resolve, reject) => {
         srcImg.onload = () => resolve()
@@ -367,9 +366,9 @@ export function PhotoBoothPage() {
           </div>
         </section>
 
-        {recentPhotos.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Foto recenti</h2>
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Galleria</h2>
+          {recentPhotos.length > 0 ? (
             <div className={styles.recentStrip}>
               {recentPhotos.map((p) => (
                 <div key={p.id} className={styles.recentCard}>
@@ -378,8 +377,13 @@ export function PhotoBoothPage() {
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          ) : (
+            <p className={styles.emptyGallery}>Nessuna foto ancora. Scatta la prima!</p>
+          )}
+          <Link to={`/events/${eventId}/galleria`} className={styles.galleryLink}>
+            Vai alla galleria completa &rarr;
+          </Link>
+        </section>
 
         <canvas ref={canvasRef} style={{ display: 'none' }} />
       </div>
