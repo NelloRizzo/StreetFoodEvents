@@ -2,6 +2,9 @@
 
 Tutte le feature implementate, in ordine cronologico.
 
+## Luglio 2026
+- Slideshow, galleria, invio email foto, stampa full-page.
+
 ## Feature Checklist
 
 ### Utenti
