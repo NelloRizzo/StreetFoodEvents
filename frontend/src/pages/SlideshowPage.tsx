@@ -79,6 +79,10 @@ export function SlideshowPage() {
 
   return (
     <div className={styles.fullscreen}>
+      <div style={{ position: 'fixed', top: 60, left: 10, zIndex: 999, color: '#0f0', background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: 14, fontFamily: 'monospace' }}>
+        batch: {batch.length} | allRef: {allRef.current.length}
+      </div>
+
       {hasPhotos ? (
         <div className={styles.grid}>
           {batch.map((p) => (
