@@ -4,7 +4,7 @@ import { EventModel } from '../models/event.model';
 import { EventPhotoModel } from '../models/event-photo.model';
 import { deleteImage } from '../services/cloudinary-upload.service';
 import { uploadImageBuffer } from '../services/cloudinary-upload.service';
-import { isSmtpConfigured, sendPhotoEmail } from '../services/email.service';
+import { isEmailConfigured, sendPhotoEmail } from '../services/email.service';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -136,7 +136,7 @@ export async function sendEventPhotoEmail(req: Request, res: Response) {
         return res.status(400).json({ message: 'Invalid email address' });
     }
 
-    if (!isSmtpConfigured()) {
+    if (!isEmailConfigured()) {
         return res.status(400).json({ message: 'Invio email non configurato. Contatta l\'amministratore.' });
     }
 

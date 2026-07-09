@@ -26,15 +26,9 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      - key: SMTP_HOST
+      - key: BREVO_API_KEY
         sync: false
-      - key: SMTP_PORT
-        sync: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
-        sync: false
-      - key: SMTP_FROM
+      - key: EMAIL_FROM
         sync: false
       - key: EMAIL_MESSAGE_TEMPLATE
         sync: false

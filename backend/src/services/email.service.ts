@@ -1,25 +1,11 @@
 import { resolve4 } from 'node:dns/promises';
-import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 
-export function isSmtpConfigured(): boolean {
-    return !!(env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASS);
-}
+const BREVO_HOST = 'api.brevo.com';
+const BREVO_API_PATH = '/v3/smtp/email';
 
-async function getTransporter() {
-    if (!isSmtpConfigured()) {
-        return null;
-    }
-    const addresses = await resolve4(env.SMTP_HOST!);
-    return nodemailer.createTransport({
-        host: addresses[0],
-        port: env.SMTP_PORT,
-        secure: env.SMTP_PORT === 465,
-        auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
-        connectionTimeout: 10_000,
-        greetingTimeout: 10_000,
-        socketTimeout: 15_000,
-    });
+export function isEmailConfigured(): boolean {
+    return !!env.BREVO_API_KEY;
 }
 
 function formatDate(date: Date): string {
@@ -41,12 +27,11 @@ function buildMessage(eventName?: string, eventLocation?: string): string {
 }
 
 export async function sendPhotoEmail(to: string, photoUrl: string, eventName?: string, eventLocation?: string): Promise<void> {
-    const transporter = await getTransporter();
-    if (!transporter) {
-        throw new Error('SMTP not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS env vars.');
+    if (!isEmailConfigured()) {
+        throw new Error('Brevo non configurato. Imposta BREVO_API_KEY.');
     }
 
-    const from = env.SMTP_FROM ?? env.SMTP_USER;
+    const from = env.EMAIL_FROM ?? 'noreply@streetfoodevents.com';
     const subject = eventName
         ? `La tua foto — ${eventName}`
         : 'La tua foto dall\'evento';
@@ -74,15 +59,25 @@ export async function sendPhotoEmail(to: string, photoUrl: string, eventName?: s
         </div>
     `;
 
-    await Promise.race([
-        transporter.sendMail({
-            from: `"Street Food Events" <${from}>`,
-            to,
+    const [ip] = await resolve4(BREVO_HOST);
+    const res = await fetch(`https://${ip}${BREVO_API_PATH}`, {
+        method: 'POST',
+        headers: {
+            'api-key': env.BREVO_API_KEY!,
+            'Content-Type': 'application/json',
+            Host: BREVO_HOST,
+        },
+        signal: AbortSignal.timeout(15_000),
+        body: JSON.stringify({
+            sender: { email: from, name: 'Street Food Events' },
+            to: [{ email: to }],
             subject,
-            html,
+            htmlContent: html,
         }),
-        new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Invio email timeout dopo 15 secondi')), 15_000)
-        ),
-    ]);
+    });
+
+    if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Brevo error ${res.status}: ${body}`);
+    }
 }
