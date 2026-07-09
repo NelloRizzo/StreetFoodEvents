@@ -1,8 +1,9 @@
-import { resolve4 } from 'node:dns/promises';
+import { setDefaultResultOrder } from 'node:dns';
 import { env } from '../config/env';
 
-const BREVO_HOST = 'api.brevo.com';
-const BREVO_API_PATH = '/v3/smtp/email';
+setDefaultResultOrder('ipv4first');
+
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 export function isEmailConfigured(): boolean {
     return !!env.BREVO_API_KEY;
@@ -59,13 +60,11 @@ export async function sendPhotoEmail(to: string, photoUrl: string, eventName?: s
         </div>
     `;
 
-    const [ip] = await resolve4(BREVO_HOST);
-    const res = await fetch(`https://${ip}${BREVO_API_PATH}`, {
+    const res = await fetch(BREVO_API_URL, {
         method: 'POST',
         headers: {
             'api-key': env.BREVO_API_KEY!,
             'Content-Type': 'application/json',
-            Host: BREVO_HOST,
         },
         signal: AbortSignal.timeout(15_000),
         body: JSON.stringify({
