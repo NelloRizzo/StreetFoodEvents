@@ -385,6 +385,11 @@ export function EventDetailPage() {
                 Photo Booth
               </Link>
             )}
+            {hasPhotoAdmin && (
+              <Link to={`/events/${eventId}`} className={styles.actionBtnOutline} onClick={(e) => { e.preventDefault(); document.getElementById('frames-section')?.scrollIntoView({ behavior: 'smooth' }) }}>
+                Cornici
+              </Link>
+            )}
             {isPlatformAdmin && (
               <button className={styles.dangerBtn} onClick={() => setDeleteOrdersTarget(true)}>
                 Cancella ordini
@@ -532,7 +537,7 @@ export function EventDetailPage() {
           <AliasManager entityType="event" entityRef={eventId!} />
 
           {hasPhotoAdmin && (
-            <section className={styles.poiSection}>
+            <section id="frames-section" className={styles.poiSection}>
               <h2 className={styles.sectionTitle}>
                 Cornici <span className={styles.count}>{frames.length}</span>
               </h2>

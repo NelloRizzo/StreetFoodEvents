@@ -19,7 +19,7 @@ framesRouter.get('/:frameId/image', asyncHandler(getFrameImage));
 framesRouter.post(
     '/',
     asyncHandler(authMiddleware),
-    asyncHandler(hasRole(['platform-admin'])),
+    asyncHandler(hasRole(['platform-admin', 'photo-admin'])),
     multerImageUpload.single('image'),
     asyncHandler(createFrame)
 );
@@ -27,6 +27,6 @@ framesRouter.post(
 framesRouter.delete(
     '/:frameId',
     asyncHandler(authMiddleware),
-    asyncHandler(hasRole(['platform-admin'])),
+    asyncHandler(hasRole(['platform-admin', 'photo-admin'])),
     asyncHandler(deleteFrame)
 );
