@@ -100,9 +100,10 @@ export function EventDetailPage() {
   })
   const [savingPoi, setSavingPoi] = useState(false)
   const [modal, setModal] = useState<{ open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }>({ open: false, variant: 'alert', title: '', message: '' })
-  const [frames, setFrames] = useState<{ id: string; name: string; image: UploadedImage }[]>([])
+  const [frames, setFrames] = useState<{ id: string; name: string; image: UploadedImage; textPosition: { vertical: string; horizontal: string } }[]>([])
   const [frameName, setFrameName] = useState('')
   const [frameImage, setFrameImage] = useState<UploadedImage | null>(null)
+  const [frameTextPosition, setFrameTextPosition] = useState({ vertical: 'bottom', horizontal: 'center' })
   const [savingFrame, setSavingFrame] = useState(false)
 
   const themeData = useMemo(
@@ -159,7 +160,7 @@ export function EventDetailPage() {
 
   useEffect(() => {
     if (!eventId) return
-    apiRequest<{ items: { id: string; name: string; image: UploadedImage }[] }>(`/events/${eventId}/frames`).then((d) => setFrames(d.items)).catch(() => {})
+    apiRequest<{ items: { id: string; name: string; image: UploadedImage }[] }>(`/frames`).then((d) => setFrames(d.items)).catch(() => {})
   }, [eventId])
 
   useEffect(() => {
@@ -279,13 +280,14 @@ export function EventDetailPage() {
     if (!eventId || savingFrame || !frameName.trim() || !frameImage) return
     setSavingFrame(true)
     try {
-      await apiRequest(`/events/${eventId}/frames`, {
+      await apiRequest(`/frames`, {
         method: 'POST',
-        bodyJson: { name: frameName.trim(), image: frameImage },
+        bodyJson: { name: frameName.trim(), image: frameImage, textPosition: frameTextPosition },
       })
       setFrameName('')
       setFrameImage(null)
-      const data = await apiRequest<{ items: { id: string; name: string; image: UploadedImage }[] }>(`/events/${eventId}/frames`)
+      setFrameTextPosition({ vertical: 'bottom', horizontal: 'center' })
+      const data = await apiRequest<{ items: { id: string; name: string; image: UploadedImage }[] }>(`/frames`)
       setFrames(data.items)
     } catch {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Salvataggio cornice fallito.' })
@@ -296,7 +298,7 @@ export function EventDetailPage() {
 
   const deleteFrame = async (frameId: string) => {
     try {
-      await apiRequest(`/events/${eventId}/frames/${frameId}`, { method: 'DELETE' })
+      await apiRequest(`/frames/${frameId}`, { method: 'DELETE' })
       setFrames((prev) => prev.filter((f) => f.id !== frameId))
     } catch {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Eliminazione cornice fallita.' })
@@ -544,6 +546,21 @@ export function EventDetailPage() {
                   <span>Immagine overlay (PNG trasparente)</span>
                   <ImageUploader mode="single" type="event" value={frameImage} onChange={(data) => setFrameImage(data as UploadedImage | null)} />
                 </div>
+                <div className={styles.poiField}>
+                  <span>Posizione testo (nome evento + data)</span>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                    <select value={frameTextPosition.vertical} onChange={(e) => setFrameTextPosition((p) => ({ ...p, vertical: e.target.value }))} style={{ flex: 1, padding: 6, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }}>
+                      <option value="top">Alto</option>
+                      <option value="center">Centro</option>
+                      <option value="bottom">Basso</option>
+                    </select>
+                    <select value={frameTextPosition.horizontal} onChange={(e) => setFrameTextPosition((p) => ({ ...p, horizontal: e.target.value }))} style={{ flex: 1, padding: 6, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }}>
+                      <option value="left">Sinistra</option>
+                      <option value="center">Centro</option>
+                      <option value="right">Destra</option>
+                    </select>
+                  </div>
+                </div>
                 <div className={styles.poiFormActions}>
                   <button className={styles.saveBtn} onClick={saveFrame} disabled={savingFrame || !frameName.trim() || !frameImage}>
                     {savingFrame ? 'Salvataggio...' : 'Aggiungi cornice'}
@@ -560,6 +577,11 @@ export function EventDetailPage() {
                   <div key={frame.id} className={styles.poiCard}>
                     <div className={styles.poiCardBody}>
                       <strong className={styles.poiCardName}>{frame.name}</strong>
+                      {frame.textPosition && (
+                        <span style={{ display: 'block', fontSize: 12, color: '#888', marginTop: 2 }}>
+                          Testo: {frame.textPosition.vertical} / {frame.textPosition.horizontal}
+                        </span>
+                      )}
                       {frame.image.url && (
                         <img src={frame.image.url} alt={frame.name} style={{ maxWidth: 120, borderRadius: 8, marginTop: 4 }} />
                       )}

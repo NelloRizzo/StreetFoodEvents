@@ -11,6 +11,7 @@ type EventFrame = {
   id: string
   name: string
   image: { url: string; publicId: string; width: number; height: number }
+  textPosition: { vertical: 'top' | 'center' | 'bottom'; horizontal: 'left' | 'center' | 'right' }
 }
 
 type EventDetail = {
@@ -95,7 +96,7 @@ export function PhotoBoothPage() {
 
     Promise.all([
       apiRequest<{ item: EventDetail }>(`/events/${eventId}`),
-      apiRequest<{ items: EventFrame[] }>(`/events/${eventId}/frames`),
+      apiRequest<{ items: EventFrame[] }>(`/frames`),
       apiRequest<{ items: RecentPhoto[] }>(`/events/${eventId}/photos`),
     ])
       .then(([ev, fr, ph]) => {
@@ -174,7 +175,7 @@ export function PhotoBoothPage() {
       const isDef = selectedFrameId === '__default__'
       const selF = isDef ? null : frames.find((f) => f.id === selectedFrameId)
       const frameUrl = isDef ? DEFAULT_FRAME_DATA_URL
-        : selF ? `${API_BASE_URL}/events/${eventId}/frames/${selF.id}/image`
+        : selF ? `${API_BASE_URL}/frames/${selF.id}/image`
           : null
 
       if (frameUrl) {
@@ -192,7 +193,12 @@ export function PhotoBoothPage() {
     }
 
     if (eventDetail) {
-      const nameStr = `#${eventDetail.name}`
+      const nameStr = '#' + eventDetail.name
+        .split(/\s+/)
+        .map((w) => w.replace(/[^a-zA-Z0-9\u00C0-\u00FF]/g, ''))
+        .filter(Boolean)
+        .map((w) => w.toLowerCase())
+        .join('')
       const start = new Date(eventDetail.startDate)
       const end = new Date(eventDetail.endDate)
 
@@ -216,23 +222,52 @@ export function PhotoBoothPage() {
         dateStr += `  ${locLabel}`
       }
 
+      const padding = Math.round(size * 0.045)
       const nameFontSize = Math.round(size * 0.038)
       const dateFontSize = Math.round(size * 0.024)
-      const textY = Math.round(size * 0.045)
 
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'top'
+      const isDef = selectedFrameId === '__default__'
+      const selF = isDef ? null : frames.find((f) => f.id === selectedFrameId)
+      const tPos = (isDef || !selF)
+        ? { vertical: 'bottom' as const, horizontal: 'center' as const }
+        : selF.textPosition
+
+      let textX: number
+      let textY: number
+      let textAlign: CanvasTextAlign
+      let textBaseline: CanvasTextBaseline
+
+      switch (tPos.horizontal) {
+        case 'left': textAlign = 'left'; textX = padding; break
+        case 'right': textAlign = 'right'; textX = size - padding; break
+        default: textAlign = 'center'; textX = size / 2
+      }
+
+      switch (tPos.vertical) {
+        case 'top': textBaseline = 'top'; textY = padding; break
+        case 'bottom': textBaseline = 'bottom'; textY = size - padding; break
+        default: textBaseline = 'middle'; textY = size / 2
+      }
+
+      ctx.textAlign = textAlign
+      ctx.textBaseline = textBaseline
 
       ctx.shadowColor = 'rgba(0,0,0,0.7)'
       ctx.shadowBlur = 4
 
       ctx.font = `700 ${nameFontSize}px sans-serif`
       ctx.fillStyle = '#fff'
-      ctx.fillText(nameStr, size / 2, textY)
+      ctx.fillText(nameStr, textX, textY)
+
+      const offsetY = textBaseline === 'top'
+        ? nameFontSize + Math.round(size * 0.012)
+        : textBaseline === 'bottom'
+          ? -(nameFontSize + Math.round(size * 0.012))
+          : nameFontSize + Math.round(size * 0.012)
 
       ctx.font = `${dateFontSize}px sans-serif`
       ctx.fillStyle = '#fff'
-      ctx.fillText(dateStr, size / 2, textY + nameFontSize + Math.round(size * 0.012))
+      ctx.fillText(dateStr, textX, textY + offsetY)
 
       ctx.shadowColor = 'transparent'
       ctx.shadowBlur = 0
@@ -257,6 +292,9 @@ export function PhotoBoothPage() {
 
       const formData = new FormData()
       formData.append('image', blob, `photo_${Date.now()}.jpg`)
+      if (selectedFrameId && selectedFrameId !== '__default__') {
+        formData.append('frameId', selectedFrameId)
+      }
 
       const res = await fetch(`${API_BASE_URL}/events/${eventId}/photos`, {
         method: 'POST',

@@ -25,7 +25,7 @@ const eventPhotoSchema = new Schema(
         },
         frameId: {
             type: Schema.Types.ObjectId,
-            ref: 'EventFrame',
+            ref: 'Frame',
             default: null
         },
         createdBy: {
