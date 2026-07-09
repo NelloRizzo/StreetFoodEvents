@@ -75,6 +75,19 @@
 
 .frameActive {
   border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  box-shadow: 0 0 0 1px var(--color-brand);
+}
+
+.frameActive .frameName {
+  color: var(--color-brand-deep);
+  font-weight: 700;
+}
+
+.selectedFrameLabel {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
 }
 
 .framePreview {

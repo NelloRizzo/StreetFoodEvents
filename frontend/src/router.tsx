@@ -41,6 +41,7 @@ import { UsageContractsPage } from './pages/UsageContractsPage'
 import { MenuPrintPage } from './pages/MenuPrintPage'
 import { AliasRedirectPage } from './pages/AliasRedirectPage'
 import { SlideshowPage } from './pages/SlideshowPage'
+import { FramesPage } from './pages/FramesPage'
 
 export const router = createBrowserRouter([
   {
@@ -185,6 +186,10 @@ export const router = createBrowserRouter([
           {
             path: 'user-roles',
             element: <UserRolesPage />,
+          },
+          {
+            path: 'frames',
+            element: <FramesPage />,
           },
           {
             path: 'admin/usage-contracts',

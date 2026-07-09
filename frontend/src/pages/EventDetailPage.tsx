@@ -79,7 +79,6 @@ export function EventDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [hasEventRole, setHasEventRole] = useState(false)
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
-  const [hasPhotoAdmin, setHasPhotoAdmin] = useState(false)
   const [hasPhotoPrint, setHasPhotoPrint] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [favId, setFavId] = useState<string | null>(null)
@@ -100,12 +99,6 @@ export function EventDetailPage() {
   })
   const [savingPoi, setSavingPoi] = useState(false)
   const [modal, setModal] = useState<{ open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }>({ open: false, variant: 'alert', title: '', message: '' })
-  const [frames, setFrames] = useState<{ id: string; name: string; image: UploadedImage; textPosition?: { vertical: string; horizontal: string } }[]>([])
-  const [frameName, setFrameName] = useState('')
-  const [frameImage, setFrameImage] = useState<UploadedImage | null>(null)
-  const [frameTextPosition, setFrameTextPosition] = useState({ vertical: 'bottom', horizontal: 'center' })
-  const [savingFrame, setSavingFrame] = useState(false)
-
   const themeData = useMemo(
     () =>
       event
@@ -159,11 +152,6 @@ export function EventDetailPage() {
   }, [eventId])
 
   useEffect(() => {
-    if (!eventId) return
-    apiRequest<{ items: { id: string; name: string; image: UploadedImage }[] }>(`/frames`).then((d) => setFrames(d.items)).catch(() => {})
-  }, [eventId])
-
-  useEffect(() => {
     if (!eventId || !isAuthenticated) return
     apiRequest<{ isPlatformAdmin: boolean; roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles')
       .then((data) => {
@@ -174,7 +162,6 @@ export function EventDetailPage() {
           eventRoles.some((r) => ['event-admin', 'event-cashier'].includes(r.slug)) || data.isPlatformAdmin
         )
         setIsPlatformAdmin(data.isPlatformAdmin)
-        setHasPhotoAdmin(data.isPlatformAdmin || eventRoles.some((r) => r.slug === 'photo-admin'))
         setHasPhotoPrint(data.isPlatformAdmin || eventRoles.some((r) => ['photo-admin', 'photo-print'].includes(r.slug)))
       })
       .catch(() => {})
@@ -276,34 +263,6 @@ export function EventDetailPage() {
     })
   }
 
-  const saveFrame = async () => {
-    if (!eventId || savingFrame || !frameName.trim() || !frameImage) return
-    setSavingFrame(true)
-    try {
-      await apiRequest(`/frames`, {
-        method: 'POST',
-        bodyJson: { name: frameName.trim(), image: frameImage, textPosition: frameTextPosition },
-      })
-      setFrameName('')
-      setFrameImage(null)
-      setFrameTextPosition({ vertical: 'bottom', horizontal: 'center' })
-      const data = await apiRequest<{ items: { id: string; name: string; image: UploadedImage }[] }>(`/frames`)
-      setFrames(data.items)
-    } catch {
-      setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Salvataggio cornice fallito.' })
-    } finally {
-      setSavingFrame(false)
-    }
-  }
-
-  const deleteFrame = async (frameId: string) => {
-    try {
-      await apiRequest(`/frames/${frameId}`, { method: 'DELETE' })
-      setFrames((prev) => prev.filter((f) => f.id !== frameId))
-    } catch {
-      setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Eliminazione cornice fallita.' })
-    }
-  }
 
   if (isLoading || !event) return null
 
@@ -383,11 +342,6 @@ export function EventDetailPage() {
             {isAuthenticated && (
               <Link to={`/events/${eventId}/photo-booth`} className={styles.actionBtnOutline}>
                 Photo Booth
-              </Link>
-            )}
-            {hasPhotoAdmin && (
-              <Link to={`/events/${eventId}`} className={styles.actionBtnOutline} onClick={(e) => { e.preventDefault(); document.getElementById('frames-section')?.scrollIntoView({ behavior: 'smooth' }) }}>
-                Cornici
               </Link>
             )}
             {isPlatformAdmin && (
@@ -536,68 +490,10 @@ export function EventDetailPage() {
 
           <AliasManager entityType="event" entityRef={eventId!} />
 
-          {hasPhotoAdmin && (
-            <section id="frames-section" className={styles.poiSection}>
-              <h2 className={styles.sectionTitle}>
-                Cornici <span className={styles.count}>{frames.length}</span>
-              </h2>
-
-              <div className={styles.poiForm}>
-                <label className={styles.poiField}>
-                  Nome
-                  <input type="text" value={frameName} onChange={(e) => setFrameName(e.target.value)} placeholder="Nome cornice" />
-                </label>
-                <div className={styles.poiField}>
-                  <span>Immagine overlay (PNG trasparente)</span>
-                  <ImageUploader mode="single" type="event" value={frameImage} onChange={(data) => setFrameImage(data as UploadedImage | null)} />
-                </div>
-                <div className={styles.poiField}>
-                  <span>Posizione testo (nome evento + data)</span>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                    <select value={frameTextPosition.vertical} onChange={(e) => setFrameTextPosition((p) => ({ ...p, vertical: e.target.value }))} style={{ flex: 1, padding: 6, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }}>
-                      <option value="top">Alto</option>
-                      <option value="center">Centro</option>
-                      <option value="bottom">Basso</option>
-                    </select>
-                    <select value={frameTextPosition.horizontal} onChange={(e) => setFrameTextPosition((p) => ({ ...p, horizontal: e.target.value }))} style={{ flex: 1, padding: 6, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }}>
-                      <option value="left">Sinistra</option>
-                      <option value="center">Centro</option>
-                      <option value="right">Destra</option>
-                    </select>
-                  </div>
-                </div>
-                <div className={styles.poiFormActions}>
-                  <button className={styles.saveBtn} onClick={saveFrame} disabled={savingFrame || !frameName.trim() || !frameImage}>
-                    {savingFrame ? 'Salvataggio...' : 'Aggiungi cornice'}
-                  </button>
-                </div>
-              </div>
-
-              {frames.length === 0 && (
-                <p className={styles.empty}>Nessuna cornice. Carica un'immagine PNG con trasparenza.</p>
-              )}
-
-              <div className={styles.poiList}>
-                {frames.map((frame) => (
-                  <div key={frame.id} className={styles.poiCard}>
-                    <div className={styles.poiCardBody}>
-                      <strong className={styles.poiCardName}>{frame.name}</strong>
-                      {frame.textPosition && (
-                        <span style={{ display: 'block', fontSize: 12, color: '#888', marginTop: 2 }}>
-                          Testo: {frame.textPosition.vertical} / {frame.textPosition.horizontal}
-                        </span>
-                      )}
-                      {frame.image.url && (
-                        <img src={frame.image.url} alt={frame.name} style={{ maxWidth: 120, borderRadius: 8, marginTop: 4 }} />
-                      )}
-                    </div>
-                    <div className={styles.poiCardActions}>
-                      <button className={styles.dangerBtn} onClick={() => deleteFrame(frame.id)}>Elimina</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+          {isPlatformAdmin && (
+            <Link to="/frames" className={styles.actionBtnOutline}>
+              Gestisci cornici
+            </Link>
           )}
           </>)}
       </div>

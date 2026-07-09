@@ -424,6 +424,9 @@ export function PhotoBoothPage() {
                 </button>
               ))}
             </div>
+            <p className={styles.selectedFrameLabel}>
+              Cornice selezionata: <strong>{selectedFrameId === '__default__' ? 'Diapositiva' : frames.find((f) => f.id === selectedFrameId)?.name ?? 'Nessuna'}</strong>
+            </p>
           </section>
         )}
 
