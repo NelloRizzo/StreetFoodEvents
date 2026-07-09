@@ -156,10 +156,6 @@ export const router = createBrowserRouter([
             element: <CashierOrderPage />,
           },
           {
-            path: 'events/:eventId/cashier',
-            element: <EventCashierPage />,
-          },
-          {
             path: 'events/:eventId/orders',
             element: <EventOrdersPage />,
           },
@@ -218,5 +214,14 @@ export const router = createBrowserRouter([
   {
     path: 'events/:eventId/slideshow',
     element: <SlideshowPage />,
+  },
+  {
+    element: <RequireAuth />,
+    children: [
+      {
+        path: 'events/:eventId/cashier',
+        element: <EventCashierPage />,
+      },
+    ],
   },
 ])
