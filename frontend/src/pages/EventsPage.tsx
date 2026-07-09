@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../features/auth/auth-context'
@@ -112,6 +112,61 @@ type StandItem = {
   name: string
   eventIds: string[]
   locations?: Array<{ eventId: string; location: unknown }>
+}
+
+function ThemeColorFields({
+  form,
+  setForm,
+}: {
+  form: EventFormData
+  setForm: Dispatch<SetStateAction<EventFormData>>
+}) {
+  // Local state per non far ri-renderizzare il genitore durante il drag del color picker
+  const [themeBrand, setThemeBrand] = useState(form.themeBrand)
+  const [themeText, setThemeText] = useState(form.themeText)
+  const [themeSurface, setThemeSurface] = useState(form.themeSurface)
+  const [themeHighlight, setThemeHighlight] = useState(form.themeHighlight)
+
+  const commit = (field: keyof EventFormData, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  return (
+    <fieldset className={styles.fieldset}>
+      <legend className={styles.legend}>Tema personalizzato</legend>
+      <p className={styles.fieldHint}>Lascia vuoto per usare il tema stagionale di default.</p>
+      <div className={styles.themeGrid}>
+        <div className={styles.field}>
+          <label htmlFor="ev-theme-brand">Colore principale</label>
+          <div className={styles.colorRow}>
+            <input id="ev-theme-brand" type="color" value={themeBrand || '#bf5a2a'} onChange={(e) => setThemeBrand(e.target.value)} onBlur={(e) => commit('themeBrand', e.target.value === '#bf5a2a' ? '' : e.target.value)} />
+            <input value={themeBrand} onChange={(e) => setThemeBrand(e.target.value)} onBlur={(e) => commit('themeBrand', e.target.value)} placeholder="#bf5a2a" />
+          </div>
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="ev-theme-text">Colore testo</label>
+          <div className={styles.colorRow}>
+            <input id="ev-theme-text" type="color" value={themeText || '#14261f'} onChange={(e) => setThemeText(e.target.value)} onBlur={(e) => commit('themeText', e.target.value === '#14261f' ? '' : e.target.value)} />
+            <input value={themeText} onChange={(e) => setThemeText(e.target.value)} onBlur={(e) => commit('themeText', e.target.value)} placeholder="#14261f" />
+          </div>
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="ev-theme-surface">Colore sfondo</label>
+          <div className={styles.colorRow}>
+            <input id="ev-theme-surface" type="color" value={themeSurface || '#f7f2e8'} onChange={(e) => setThemeSurface(e.target.value)} onBlur={(e) => commit('themeSurface', e.target.value === '#f7f2e8' ? '' : e.target.value)} />
+            <input value={themeSurface} onChange={(e) => setThemeSurface(e.target.value)} onBlur={(e) => commit('themeSurface', e.target.value)} placeholder="#f7f2e8" />
+          </div>
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="ev-theme-highlight">Colore accento</label>
+          <div className={styles.colorRow}>
+            <input id="ev-theme-highlight" type="color" value={themeHighlight || '#f4c978'} onChange={(e) => setThemeHighlight(e.target.value)} onBlur={(e) => commit('themeHighlight', e.target.value === '#f4c978' ? '' : e.target.value)} />
+            <input value={themeHighlight} onChange={(e) => setThemeHighlight(e.target.value)} onBlur={(e) => commit('themeHighlight', e.target.value)} placeholder="#f4c978" />
+          </div>
+        </div>
+      </div>
+    </fieldset>
+  )
 }
 
 export function EventsPage() {
@@ -730,40 +785,7 @@ export function EventsPage() {
               </div>
             </fieldset>
 
-            <fieldset className={styles.fieldset}>
-              <legend className={styles.legend}>Tema personalizzato</legend>
-              <p className={styles.fieldHint}>Lascia vuoto per usare il tema stagionale di default.</p>
-              <div className={styles.themeGrid}>
-                <div className={styles.field}>
-                  <label htmlFor="ev-theme-brand">Colore principale</label>
-                  <div className={styles.colorRow}>
-                    <input id="ev-theme-brand" type="color" value={form.themeBrand || '#bf5a2a'} onChange={(e) => setForm({ ...form, themeBrand: e.target.value === '#bf5a2a' ? '' : e.target.value })} />
-                    <input value={form.themeBrand} onChange={(e) => setForm({ ...form, themeBrand: e.target.value })} placeholder="#bf5a2a" />
-                  </div>
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="ev-theme-text">Colore testo</label>
-                  <div className={styles.colorRow}>
-                    <input id="ev-theme-text" type="color" value={form.themeText || '#14261f'} onChange={(e) => setForm({ ...form, themeText: e.target.value === '#14261f' ? '' : e.target.value })} />
-                    <input value={form.themeText} onChange={(e) => setForm({ ...form, themeText: e.target.value })} placeholder="#14261f" />
-                  </div>
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="ev-theme-surface">Colore sfondo</label>
-                  <div className={styles.colorRow}>
-                    <input id="ev-theme-surface" type="color" value={form.themeSurface || '#f7f2e8'} onChange={(e) => setForm({ ...form, themeSurface: e.target.value === '#f7f2e8' ? '' : e.target.value })} />
-                    <input value={form.themeSurface} onChange={(e) => setForm({ ...form, themeSurface: e.target.value })} placeholder="#f7f2e8" />
-                  </div>
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="ev-theme-highlight">Colore accento</label>
-                  <div className={styles.colorRow}>
-                    <input id="ev-theme-highlight" type="color" value={form.themeHighlight || '#f4c978'} onChange={(e) => setForm({ ...form, themeHighlight: e.target.value === '#f4c978' ? '' : e.target.value })} />
-                    <input value={form.themeHighlight} onChange={(e) => setForm({ ...form, themeHighlight: e.target.value })} placeholder="#f4c978" />
-                  </div>
-                </div>
-              </div>
-            </fieldset>
+            <ThemeColorFields key={editingId ?? 'create'} form={form} setForm={setForm} />
 
             <fieldset className={styles.fieldset}>
               <legend className={styles.legend}>Immagini</legend>
