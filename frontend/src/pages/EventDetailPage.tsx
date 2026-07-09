@@ -100,7 +100,7 @@ export function EventDetailPage() {
   })
   const [savingPoi, setSavingPoi] = useState(false)
   const [modal, setModal] = useState<{ open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }>({ open: false, variant: 'alert', title: '', message: '' })
-  const [frames, setFrames] = useState<{ id: string; name: string; image: UploadedImage; textPosition: { vertical: string; horizontal: string } }[]>([])
+  const [frames, setFrames] = useState<{ id: string; name: string; image: UploadedImage; textPosition?: { vertical: string; horizontal: string } }[]>([])
   const [frameName, setFrameName] = useState('')
   const [frameImage, setFrameImage] = useState<UploadedImage | null>(null)
   const [frameTextPosition, setFrameTextPosition] = useState({ vertical: 'bottom', horizontal: 'center' })
