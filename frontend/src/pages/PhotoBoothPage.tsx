@@ -11,6 +11,7 @@ type EventFrame = {
   id: string
   name: string
   image: { url: string; publicId: string; width: number; height: number }
+  textColor?: string
   textPosition: { vertical: 'top' | 'center' | 'bottom'; horizontal: 'left' | 'center' | 'right' }
 }
 
@@ -254,8 +255,9 @@ export function PhotoBoothPage() {
       ctx.shadowColor = 'rgba(0,0,0,0.7)'
       ctx.shadowBlur = 4
 
+      const textColor = selF?.textColor || '#ffffff'
       ctx.font = `700 ${nameFontSize}px sans-serif`
-      ctx.fillStyle = '#fff'
+      ctx.fillStyle = textColor
       ctx.fillText(nameStr, textX, textY)
 
       const offsetY = textBaseline === 'top'
@@ -265,7 +267,7 @@ export function PhotoBoothPage() {
           : nameFontSize + Math.round(size * 0.012)
 
       ctx.font = `${dateFontSize}px sans-serif`
-      ctx.fillStyle = '#fff'
+      ctx.fillStyle = textColor
       ctx.fillText(dateStr, textX, textY + offsetY)
 
       ctx.shadowColor = 'transparent'

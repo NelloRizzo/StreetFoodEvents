@@ -12,6 +12,7 @@ type Frame = {
   id: string
   name: string
   image: UploadedImage
+  textColor?: string
   textPosition?: { vertical: string; horizontal: string }
 }
 
@@ -19,6 +20,7 @@ export function FramesPage() {
   const [frames, setFrames] = useState<Frame[]>([])
   const [frameName, setFrameName] = useState('')
   const [frameImage, setFrameImage] = useState<UploadedImage | null>(null)
+  const [frameTextColor, setFrameTextColor] = useState('#ffffff')
   const [frameTextPosition, setFrameTextPosition] = useState({ vertical: 'bottom', horizontal: 'center' })
   const [savingFrame, setSavingFrame] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -40,10 +42,11 @@ export function FramesPage() {
     try {
       await apiRequest(`/frames`, {
         method: 'POST',
-        bodyJson: { name: frameName.trim(), image: frameImage, textPosition: frameTextPosition },
+        bodyJson: { name: frameName.trim(), image: frameImage, textColor: frameTextColor, textPosition: frameTextPosition },
       })
       setFrameName('')
       setFrameImage(null)
+      setFrameTextColor('#ffffff')
       setFrameTextPosition({ vertical: 'bottom', horizontal: 'center' })
       loadFrames()
     } catch {
@@ -88,6 +91,10 @@ export function FramesPage() {
               <option value="center">Centro</option>
               <option value="right">Destra</option>
             </select>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: 14, color: 'var(--color-ink-soft)' }}>
+              Colore testo
+              <input type="color" value={frameTextColor} onChange={(e) => setFrameTextColor(e.target.value)} style={{ width: 40, height: 36, padding: 0, border: '1px solid #ccc', borderRadius: 4, cursor: 'pointer' }} />
+            </label>
             <ImageUploader mode="single" type="event" value={frameImage} onChange={(data) => setFrameImage(data as UploadedImage | null)} />
             <button className={styles.primaryBtn} onClick={saveFrame} disabled={savingFrame || !frameName.trim() || !frameImage}>
               {savingFrame ? 'Salvataggio...' : 'Aggiungi'}
@@ -105,6 +112,9 @@ export function FramesPage() {
                   {frame.textPosition && (
                     <span style={{ display: 'block', fontSize: 12, color: '#888', marginTop: 2 }}>
                       Testo: {frame.textPosition.vertical} / {frame.textPosition.horizontal}
+                      {frame.textColor && (
+                        <span style={{ marginLeft: 8 }}>Colore: <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 3, background: frame.textColor, verticalAlign: 'middle', border: '1px solid #ccc' }} /></span>
+                      )}
                     </span>
                   )}
                   {frame.image.url && (

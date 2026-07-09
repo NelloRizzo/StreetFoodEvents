@@ -13,6 +13,14 @@ const frameSchema = new Schema(
             type: imageSchema,
             required: true
         },
+        textColor: {
+            type: String,
+            default: '#ffffff',
+            validate: {
+                validator: (v: string) => /^#[0-9a-fA-F]{6}$/.test(v),
+                message: 'textColor must be a valid hex color (e.g. #ffffff)'
+            }
+        },
         textPosition: {
             vertical: {
                 type: String,

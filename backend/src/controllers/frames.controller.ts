@@ -14,6 +14,7 @@ function toResponse(frame: InstanceType<typeof FrameModel>) {
         id: frame._id.toString(),
         name: frame.name,
         image: frame.image,
+        textColor: frame.textColor,
         textPosition: frame.textPosition,
         createdAt: frame.createdAt
     };
@@ -41,6 +42,7 @@ export async function createFrame(req: Request, res: Response) {
     const frame = await FrameModel.create({
         name: name.trim(),
         image,
+        textColor: req.body.textColor || '#ffffff',
         textPosition: {
             vertical: textPosition?.vertical ?? 'bottom',
             horizontal: textPosition?.horizontal ?? 'center'
