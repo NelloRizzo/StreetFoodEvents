@@ -24,36 +24,7 @@ type EventDetail = {
 
 const OUTPUT_SIZE = 1380
 
-function generateDefaultFrameDataUrl(size: number): string {
-  const c = document.createElement('canvas')
-  c.width = size
-  c.height = size
-  const ctx = c.getContext('2d')!
 
-  const margin = Math.round(size * 0.065)
-  const radius = Math.round(size * 0.025)
-
-  ctx.fillStyle = '#2c2b28'
-  ctx.beginPath()
-  ctx.roundRect(0, 0, size, size, radius)
-  ctx.fill()
-
-  ctx.globalCompositeOperation = 'destination-out'
-  ctx.beginPath()
-  ctx.roundRect(margin, margin, size - margin * 2, size - margin * 2, radius)
-  ctx.fill()
-
-  ctx.globalCompositeOperation = 'source-over'
-  ctx.fillStyle = '#13294b'
-  ctx.font = `600 ${Math.round(size * 0.028)}px sans-serif`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('Street Food Events', size / 2, Math.round(size * 0.06))
-
-  return c.toDataURL('image/png')
-}
-
-const DEFAULT_FRAME_DATA_URL = generateDefaultFrameDataUrl(OUTPUT_SIZE)
 
 type RecentPhoto = {
   id: string
@@ -66,7 +37,7 @@ export function PhotoBoothPage() {
   const [eventName, setEventName] = useState('')
   const [eventDetail, setEventDetail] = useState<EventDetail | null>(null)
   const [frames, setFrames] = useState<EventFrame[]>([])
-  const [selectedFrameId, setSelectedFrameId] = useState<string | null>('__default__')
+  const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [captured, setCaptured] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -172,24 +143,23 @@ export function PhotoBoothPage() {
     const sh = vh * scale
     ctx.drawImage(video, (size - sw) / 2, (size - sh) / 2, sw, sh)
 
-    try {
-      const isDef = selectedFrameId === '__default__'
-      const selF = isDef ? null : frames.find((f) => f.id === selectedFrameId)
-      const frameUrl = isDef ? DEFAULT_FRAME_DATA_URL
-        : selF?.image?.url ?? null
-
-      if (frameUrl) {
-        const img = new Image()
-        if (!isDef) img.crossOrigin = 'anonymous'
-        img.src = frameUrl
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve()
-          img.onerror = () => reject(new Error('Frame load failed'))
-        })
-        ctx.drawImage(img, 0, 0, size, size)
+    if (selectedFrameId) {
+      try {
+        const selF = frames.find((f) => f.id === selectedFrameId)
+        const frameUrl = selF?.image?.url
+        if (frameUrl) {
+          const img = new Image()
+          img.crossOrigin = 'anonymous'
+          img.src = frameUrl
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve()
+            img.onerror = () => reject(new Error('Frame load failed'))
+          })
+          ctx.drawImage(img, 0, 0, size, size)
+        }
+      } catch {
+        // frame not available — continue without
       }
-    } catch {
-      // frame not available — continue without
     }
 
     if (eventDetail) {
@@ -226,11 +196,8 @@ export function PhotoBoothPage() {
       const nameFontSize = Math.round(size * 0.038)
       const dateFontSize = Math.round(size * 0.024)
 
-      const isDef = selectedFrameId === '__default__'
-      const selF = isDef ? null : frames.find((f) => f.id === selectedFrameId)
-      const tPos = (isDef || !selF)
-        ? { vertical: 'bottom' as const, horizontal: 'center' as const }
-        : selF.textPosition
+      const selF = frames.find((f) => f.id === selectedFrameId)
+      const tPos = selF?.textPosition ?? { vertical: 'bottom' as const, horizontal: 'center' as const }
 
       let textX: number
       let textY: number
@@ -293,7 +260,7 @@ export function PhotoBoothPage() {
 
       const formData = new FormData()
       formData.append('image', blob, `photo_${Date.now()}.jpg`)
-      if (selectedFrameId && selectedFrameId !== '__default__') {
+      if (selectedFrameId) {
         formData.append('frameId', selectedFrameId)
       }
 
@@ -415,15 +382,6 @@ export function PhotoBoothPage() {
                 </div>
                 <span className={styles.frameName}>Nessuna cornice</span>
               </button>
-              <button
-                className={`${styles.frameCard} ${selectedFrameId === '__default__' ? styles.frameActive : ''}`}
-                onClick={() => setSelectedFrameId('__default__')}
-              >
-                <div className={styles.framePreview}>
-                  <img src={DEFAULT_FRAME_DATA_URL} alt="Default" />
-                </div>
-                <span className={styles.frameName}>Diapositiva</span>
-              </button>
               {frames.map((frame) => (
                 <button
                   key={frame.id}
@@ -438,16 +396,7 @@ export function PhotoBoothPage() {
               ))}
             </div>
             <p className={styles.selectedFrameLabel}>
-              Cornice selezionata: <strong>{selectedFrameId === null ? 'Nessuna' : selectedFrameId === '__default__' ? 'Diapositiva' : frames.find((f) => f.id === selectedFrameId)?.name ?? '—'}</strong>
-            </p>
-          </section>
-        )}
-
-        {frames.length === 0 && !captured && (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Cornice predefinita</h2>
-            <p className={styles.frameName}>
-              Verr&agrave; utilizzata la cornice Diapositiva standard.
+              Cornice selezionata: <strong>{selectedFrameId === null ? 'Nessuna' : frames.find((f) => f.id === selectedFrameId)?.name ?? '—'}</strong>
             </p>
           </section>
         )}
