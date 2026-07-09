@@ -175,12 +175,11 @@ export function PhotoBoothPage() {
       const isDef = selectedFrameId === '__default__'
       const selF = isDef ? null : frames.find((f) => f.id === selectedFrameId)
       const frameUrl = isDef ? DEFAULT_FRAME_DATA_URL
-        : selF ? `${API_BASE_URL}/frames/${selF.id}/image`
-          : null
+        : selF?.image?.url ?? null
 
       if (frameUrl) {
         const img = new Image()
-        img.crossOrigin = 'anonymous'
+        if (!isDef) img.crossOrigin = 'anonymous'
         img.src = frameUrl
         await new Promise<void>((resolve, reject) => {
           img.onload = () => resolve()
