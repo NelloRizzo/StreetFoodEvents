@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
@@ -33,7 +33,17 @@ export function SlideshowPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const [batch, setBatch] = useState<Photo[]>([])
   const [eventData, setEventData] = useState<EventData | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const allRef = useRef<Photo[]>([])
+
+  const closeModal = useCallback(() => setSelectedPhoto(null), [])
+
+  useEffect(() => {
+    if (!selectedPhoto) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
+    globalThis.addEventListener('keydown', onKey)
+    return () => globalThis.removeEventListener('keydown', onKey)
+  }, [selectedPhoto, closeModal])
 
   useEffect(() => {
     if (!eventId) return
@@ -82,7 +92,10 @@ export function SlideshowPage() {
       {hasPhotos ? (
         <div className={styles.grid}>
           {batch.map((p) => (
-            <img key={p.id} src={p.image.url} alt="" className={styles.photo} />
+            <div key={p.id} className={styles.photoWrapper} onClick={() => setSelectedPhoto(p)}>
+              <img src={p.image.url} alt="" className={styles.photo} />
+              <span className={styles.badge}>{p.sequenceNumber}</span>
+            </div>
           ))}
           {Array.from({ length: PHOTOS_PER_PAGE - batch.length }).map((_, i) => (
             <div key={`empty-${i}`} className={styles.photo} style={{ background: '#222' }} />
@@ -104,8 +117,14 @@ export function SlideshowPage() {
       </div>
 
       <div className={styles.footer}>
-        Se vedi una tua foto puoi recuperarla al Welcome Point
+        Se vedi una tua foto segna il suo numero e recati al Welcome Point per ottenerla
       </div>
+
+      {selectedPhoto && (
+        <div className={styles.overlay} onClick={closeModal}>
+          <img src={selectedPhoto.image.url} alt="" className={styles.modalPhoto} />
+        </div>
+      )}
     </div>
   )
 }

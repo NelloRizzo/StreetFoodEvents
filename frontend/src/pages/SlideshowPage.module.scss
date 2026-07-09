@@ -73,10 +73,46 @@
   display: block;
 }
 
+.photoWrapper {
+  position: relative;
+  cursor: pointer;
+}
+
 .photo {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
   border-radius: 2px;
+}
+
+.badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.modalPhoto {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 4px;
 }
