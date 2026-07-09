@@ -75,7 +75,7 @@
 .photo {
   width: calc(50% - 2px);
   height: calc(50% - 2px);
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   border-radius: 2px;
 }
