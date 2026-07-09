@@ -57,8 +57,9 @@
 .grid {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
   gap: 4px;
   padding: 4px;
 }
@@ -73,16 +74,9 @@
 }
 
 .photo {
-  width: calc(50% - 2px);
-  height: calc(50% - 2px);
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   display: block;
   border-radius: 2px;
-}
-
-@media (orientation: portrait) {
-  .photo {
-    width: 100%;
-    height: calc(25% - 3px);
-  }
 }

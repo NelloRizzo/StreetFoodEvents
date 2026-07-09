@@ -18,7 +18,7 @@ type EventData = {
 
 const ROTATE_MS = 15_000
 const POLL_MS = 2 * 60_000
-const PHOTOS_PER_PAGE = 4
+const PHOTOS_PER_PAGE = 16
 
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr]
