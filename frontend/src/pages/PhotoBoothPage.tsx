@@ -402,6 +402,18 @@ export function PhotoBoothPage() {
             <h2 className={styles.sectionTitle}>Scegli una cornice</h2>
             <div className={styles.frameGrid}>
               <button
+                className={`${styles.frameCard} ${selectedFrameId === null ? styles.frameActive : ''}`}
+                onClick={() => setSelectedFrameId(null)}
+              >
+                <div className={styles.framePreview}>
+                  <div className={styles.noFramePlaceholder}>
+                    <span className={styles.noFrameIcon}>&#10005;</span>
+                    <span className={styles.noFrameLabel}>Nessuna</span>
+                  </div>
+                </div>
+                <span className={styles.frameName}>Nessuna cornice</span>
+              </button>
+              <button
                 className={`${styles.frameCard} ${selectedFrameId === '__default__' ? styles.frameActive : ''}`}
                 onClick={() => setSelectedFrameId('__default__')}
               >
@@ -424,7 +436,7 @@ export function PhotoBoothPage() {
               ))}
             </div>
             <p className={styles.selectedFrameLabel}>
-              Cornice selezionata: <strong>{selectedFrameId === '__default__' ? 'Diapositiva' : frames.find((f) => f.id === selectedFrameId)?.name ?? 'Nessuna'}</strong>
+              Cornice selezionata: <strong>{selectedFrameId === null ? 'Nessuna' : selectedFrameId === '__default__' ? 'Diapositiva' : frames.find((f) => f.id === selectedFrameId)?.name ?? '—'}</strong>
             </p>
           </section>
         )}

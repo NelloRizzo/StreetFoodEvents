@@ -4,7 +4,7 @@ import { apiRequest } from '../lib/api'
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { ConfirmModal } from '../components/ConfirmModal'
-import styles from './EventUsersPage.module.scss'
+import styles from './FramesPage.module.scss'
 
 type ModalState = { open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }
 
@@ -76,14 +76,14 @@ export function FramesPage() {
 
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Nuova cornice</h2>
-          <div className={styles.linkRow}>
-            <input type="text" value={frameName} onChange={(e) => setFrameName(e.target.value)} placeholder="Nome cornice" style={{ flex: 1, padding: 8, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }} />
-            <select value={frameTextPosition.vertical} onChange={(e) => setFrameTextPosition((p) => ({ ...p, vertical: e.target.value }))} style={{ flex: 1, padding: 8, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }}>
+          <div className={styles.form}>
+            <input type="text" value={frameName} onChange={(e) => setFrameName(e.target.value)} placeholder="Nome cornice" style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }} />
+            <select value={frameTextPosition.vertical} onChange={(e) => setFrameTextPosition((p) => ({ ...p, vertical: e.target.value }))} style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }}>
               <option value="top">Alto</option>
               <option value="center">Centro</option>
               <option value="bottom">Basso</option>
             </select>
-            <select value={frameTextPosition.horizontal} onChange={(e) => setFrameTextPosition((p) => ({ ...p, horizontal: e.target.value }))} style={{ flex: 1, padding: 8, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }}>
+            <select value={frameTextPosition.horizontal} onChange={(e) => setFrameTextPosition((p) => ({ ...p, horizontal: e.target.value }))} style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }}>
               <option value="left">Sinistra</option>
               <option value="center">Centro</option>
               <option value="right">Destra</option>
