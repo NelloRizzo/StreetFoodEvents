@@ -54,7 +54,7 @@
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: repeat(4, 1fr);
   gap: 4px;
-  padding: 4px;
+  padding: 4px 4px 8px;
   z-index: 1;
   background: rgba(17, 17, 17, 0.45);
 }
