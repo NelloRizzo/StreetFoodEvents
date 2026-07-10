@@ -16,9 +16,9 @@ type EventData = {
   coverImage?: { url: string; publicId: string } | null
 }
 
-const ROTATE_MS = 5_000
 const POLL_MS = 2 * 60_000
 const PHOTOS_PER_PAGE = 16
+const ROTATE_OPTIONS = [5, 10, 15, 20, 30] as const
 
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr]
@@ -34,6 +34,7 @@ export function SlideshowPage() {
   const [batch, setBatch] = useState<Photo[]>([])
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
+  const [rotateSec, setRotateSec] = useState<number>(10)
   const allRef = useRef<Photo[]>([])
   const refreshRef = useRef<() => void>(() => {})
 
@@ -68,13 +69,6 @@ export function SlideshowPage() {
 
     const pollId = setInterval(fetchPhotos, POLL_MS)
 
-    const rotateId = setInterval(() => {
-      const items = allRef.current
-      if (items.length > 0) {
-        setBatch(shuffle(items).slice(0, PHOTOS_PER_PAGE))
-      }
-    }, ROTATE_MS)
-
     apiRequest<{ item: EventData }>(`/events/${eventId}`)
       .then((res) => { if (!cancelled) setEventData(res.item) })
       .catch(() => {})
@@ -84,9 +78,19 @@ export function SlideshowPage() {
     return () => {
       cancelled = true
       clearInterval(pollId)
-      clearInterval(rotateId)
     }
   }, [eventId])
+
+  useEffect(() => {
+    if (rotateSec <= 0) return
+    const rotateId = setInterval(() => {
+      const items = allRef.current
+      if (items.length > 0) {
+        setBatch(shuffle(items).slice(0, PHOTOS_PER_PAGE))
+      }
+    }, rotateSec * 1000)
+    return () => clearInterval(rotateId)
+  }, [rotateSec])
 
   const hasPhotos = batch.length > 0
 
@@ -111,6 +115,17 @@ export function SlideshowPage() {
             <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
           </svg>
         </button>
+        <div className={styles.speedControl}>
+          {ROTATE_OPTIONS.map((s) => (
+            <button
+              key={s}
+              className={`${styles.speedBtn} ${rotateSec === s ? styles.speedActive : ''}`}
+              onClick={() => setRotateSec(s)}
+            >
+              {s}s
+            </button>
+          ))}
+        </div>
       </div>
 
       {hasPhotos ? (

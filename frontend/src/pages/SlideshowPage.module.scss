@@ -144,3 +144,30 @@
 .refreshBtn:hover {
   background: rgba(0, 0, 0, 0.18);
 }
+
+.speedControl {
+  display: flex;
+  gap: 2px;
+  margin-left: 0.5rem;
+}
+
+.speedBtn {
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: #555;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.speedBtn:hover {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.speedActive {
+  background: #111;
+  color: #fff;
+}
