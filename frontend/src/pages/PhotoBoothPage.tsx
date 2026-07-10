@@ -421,6 +421,17 @@ export function PhotoBoothPage() {
                 playsInline
                 className={styles.video}
               />
+              {selectedFrameId && (() => {
+                const overlayFrame = frames.find((f) => f.id === selectedFrameId)
+                return overlayFrame ? (
+                  <img
+                    src={overlayFrame.image.url}
+                    alt={overlayFrame.name}
+                    className={styles.frameOverlay}
+                    crossOrigin="anonymous"
+                  />
+                ) : null
+              })()}
               {showGrid && (
                 <div className={styles.gridOverlay}>
                   <div className={styles.gridLine} style={{ left: '33.33%', top: 0, width: 1, height: '100%' }} />

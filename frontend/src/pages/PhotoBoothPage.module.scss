@@ -207,6 +207,16 @@
   max-width: 640px;
 }
 
+.frameOverlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .gridOverlay {
   position: absolute;
   inset: 0;
@@ -421,4 +431,149 @@
 
 .galleryLink:hover {
   text-decoration: underline;
+}
+
+/* ── Mobile minimal capture layout ── */
+
+@media (max-width: 600px) {
+  .page {
+    padding: 0.75rem 0;
+  }
+
+  .backLink {
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .title {
+    font-size: 1.1rem;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .section {
+    margin-bottom: 1rem;
+  }
+
+  .sectionTitle {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .frameGrid {
+    gap: 0.5rem;
+  }
+
+  .frameCard {
+    width: 80px;
+    padding: 0.4rem;
+    gap: 0.25rem;
+  }
+
+  .framePreview {
+    aspect-ratio: 1;
+    border-radius: 4px;
+  }
+
+  .noFrameIcon {
+    font-size: 1rem;
+  }
+
+  .noFrameLabel {
+    font-size: 0.6rem;
+  }
+
+  .frameName {
+    font-size: 0.65rem;
+  }
+
+  .selectedFrameLabel {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+  }
+
+  .video {
+    max-width: 100%;
+    border-radius: var(--radius-sm);
+  }
+
+  .videoWrap {
+    max-width: 100%;
+  }
+
+  .previewWrap {
+    max-width: 100%;
+  }
+
+  .toolbar {
+    max-width: 100%;
+    gap: 0.35rem;
+    padding: 0 0.25rem;
+  }
+
+  .toolBtn {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.72rem;
+    gap: 0.2rem;
+  }
+
+  .toolIcon {
+    font-size: 0.85rem;
+  }
+
+  .toolLabel {
+    display: none;
+  }
+
+  .zoomBtn {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.85rem;
+  }
+
+  .zoomValue {
+    min-width: 2rem;
+    font-size: 0.72rem;
+  }
+
+  .shutterBtn {
+    width: 64px;
+    height: 64px;
+    font-size: 0.8rem;
+    border-width: 3px;
+  }
+
+  .actions {
+    gap: 0.5rem;
+  }
+
+  .retakeBtn {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .uploadBtn {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.8rem;
+  }
+
+  .recentStrip {
+    gap: 0.5rem;
+  }
+
+  .recentCard {
+    width: 80px;
+  }
+
+  .cameraBtn {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.85rem;
+  }
+
+  .countdown {
+    font-size: 4rem;
+  }
 }
