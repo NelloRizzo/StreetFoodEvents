@@ -35,6 +35,7 @@ export function SlideshowPage() {
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const allRef = useRef<Photo[]>([])
+  const refreshRef = useRef<() => void>(() => {})
 
   const closeModal = useCallback(() => setSelectedPhoto(null), [])
 
@@ -78,6 +79,8 @@ export function SlideshowPage() {
       .then((res) => { if (!cancelled) setEventData(res.item) })
       .catch(() => {})
 
+    refreshRef.current = fetchPhotos
+
     return () => {
       cancelled = true
       clearInterval(pollId)
@@ -89,6 +92,10 @@ export function SlideshowPage() {
 
   return (
     <div className={styles.fullscreen}>
+      {eventData?.coverImage?.url && (
+        <img src={eventData.coverImage.url} alt="" className={styles.coverBg} />
+      )}
+
       {hasPhotos ? (
         <div className={styles.grid}>
           {batch.map((p) => (
@@ -98,12 +105,12 @@ export function SlideshowPage() {
             </div>
           ))}
           {Array.from({ length: PHOTOS_PER_PAGE - batch.length }).map((_, i) => (
-            <div key={`empty-${i}`} className={styles.photo} style={{ background: '#222' }} />
+            <div key={`empty-${i}`} className={styles.photo} style={{ background: 'transparent' }} />
           ))}
         </div>
       ) : (
         eventData?.coverImage?.url && (
-          <img src={eventData.coverImage.url} alt="" className={styles.cover} />
+          <img src={eventData.coverImage.url} alt="" className={styles.coverFull} />
         )
       )}
 
@@ -119,6 +126,10 @@ export function SlideshowPage() {
       <div className={styles.footer}>
         Se vedi una tua foto segna il suo numero e recati al Welcome Point per ottenerla
       </div>
+
+      <button className={styles.refreshBtn} onClick={() => refreshRef.current()} title="Aggiorna">
+        &#8635;
+      </button>
 
       {selectedPhoto && (
         <div className={styles.overlay} onClick={closeModal}>
