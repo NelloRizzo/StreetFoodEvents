@@ -8,18 +8,14 @@
 }
 
 .header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.2rem 1.5rem;
+  gap: 0.75rem;
+  padding: 0.6rem 1.5rem;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(4px);
   z-index: 2;
-  pointer-events: none;
 }
 
 .logo {
@@ -38,16 +34,13 @@
 }
 
 .footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
   text-align: center;
-  padding: 1.2rem 1.5rem;
+  padding: 0.5rem 1.5rem;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(4px);
   color: #111;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   z-index: 2;
@@ -55,8 +48,8 @@
 }
 
 .grid {
-  position: absolute;
-  inset: 0;
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: repeat(4, 1fr);
@@ -132,27 +125,22 @@
 }
 
 .refreshBtn {
-  position: fixed;
-  bottom: 5rem;
-  right: 1.2rem;
-  z-index: 3;
-  width: 2.4rem;
-  height: 2.4rem;
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 1.2rem;
+  background: rgba(0, 0, 0, 0.08);
+  color: #111;
+  font-size: 1.1rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s;
 }
 
 .refreshBtn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.18);
 }

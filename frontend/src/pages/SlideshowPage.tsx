@@ -96,6 +96,18 @@ export function SlideshowPage() {
         <img src={eventData.coverImage.url} alt="" className={styles.coverBg} />
       )}
 
+      <div className={styles.header}>
+        {eventData?.logo?.url && (
+          <img src={eventData.logo.url} alt="" className={styles.logo} />
+        )}
+        <span className={styles.eventName}>
+          {eventData?.name ?? 'Street Food Events'}
+        </span>
+        <button className={styles.refreshBtn} onClick={() => refreshRef.current()} title="Aggiorna">
+          &#8635;
+        </button>
+      </div>
+
       {hasPhotos ? (
         <div className={styles.grid}>
           {batch.map((p) => (
@@ -114,22 +126,9 @@ export function SlideshowPage() {
         )
       )}
 
-      <div className={styles.header}>
-        {eventData?.logo?.url && (
-          <img src={eventData.logo.url} alt="" className={styles.logo} />
-        )}
-        <span className={styles.eventName}>
-          {eventData?.name ?? 'Street Food Events'}
-        </span>
-      </div>
-
       <div className={styles.footer}>
         Se vedi una tua foto segna il suo numero e recati al Welcome Point per ottenerla
       </div>
-
-      <button className={styles.refreshBtn} onClick={() => refreshRef.current()} title="Aggiorna">
-        &#8635;
-      </button>
 
       {selectedPhoto && (
         <div className={styles.overlay} onClick={closeModal}>
