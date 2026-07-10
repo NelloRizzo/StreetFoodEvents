@@ -16,12 +16,7 @@ I file di documentazione sono in `docs/`. Modifiche a questi file NON attivano u
 
 ## Repo structure
 
-Two independent npm packages (`backend/`, `frontend/`) plus one Python app (`photo-point/`). No monorepo tool. The `printer-agent/` package was removed (Jul 2026) — thermal printer connects directly to Windows cash register machine via `window.print()`.
-
-### photo-point (`photo-point/`)
-Python (Flask) server on port 9400. Photo booth app for Raspberry Pi + USB camera.
-Takes photos with custom frame overlays, prints via CUPS, or sends via SMTP email.
-Not deployed on Render. See `photo-point/README.md`.
+Two independent npm packages (`backend/`, `frontend/`). No monorepo tool. The `printer-agent/` package was removed (Jul 2026) — thermal printer connects directly to Windows cash register machine via `window.print()`. The `photo-point/` Python app was removed (Jul 2026) — photo booth functionality now lives in `frontend/src/pages/PhotoBoothPage.tsx`.
 
 ## Backend (`backend/`)
 
@@ -85,6 +80,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | Route | Element | Description |
 |---|---|---|
 | `/events/:eventId/galleria` | EventGalleryPage | Galleria foto con stampa e selezione |
+| `/events/:eventId/slideshow` | SlideshowPage | Slideshow automatico con rotazione e cornici |
 
 ### API routes — Reports
 | Method | Route | Auth | Description |

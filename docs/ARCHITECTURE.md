@@ -79,3 +79,9 @@ Considerazioni progettuali e decisioni architetturali.
 - No `@/*` alias — imports are relative.
 - SCSS uses `@use` for token imports (`_tokens.scss`), not `@import`.
 - Build runs typecheck first (`tsc -b`), so type errors block the build.
+
+## CSS Grid + Flex overflow — gotcha
+- **Problema**: in un layout flex column (`display: flex; flex-direction: column`), una griglia CSS interna con `grid-template-rows: repeat(N, 1fr)` può sovrapporsi al footer. Le righe CSS Grid hanno un `min-height: auto` di default che impedisce loro di restringersi sotto il contenuto intrinseco delle cella (immagini, testo). Questo "spinge" la griglia oltre il suo flex allocation, e il footer (con z-index più alto e background opaco) copre le righe inferiori.
+- **Fix**: usare `grid-template-rows: repeat(N, minmax(0, 1fr))` — il `minmax(0, ...)` permette alle righe di restringersi a 0. Combinare con `min-height: 0` sul container flex, `overflow: hidden` sulla griglia, e `min-height: 0; overflow: hidden` sugli item della griglia (`.photoWrapper`).
+- **Cosa NON fare**: non usare `backdrop-filter: blur()` su elementi con `z-index` più alto di un container semi-trasparente — il blur si estende visivamente oltre i bounds dell'elemento e copre il contenuto sottostante. Usare background opaco al suo posto.
+- **object-fit in griglie**: `object-fit: cover` riempie la cella ma ritaglia; `object-fit: contain` mostra l'intera immagine ma lascia spazi vuoti. Con poche righe (es. 4×2) le celle sono abbastanza alte per `contain`. Con molte righe (es. 4×4) le celle sono basse e `cover` è preferibile per evitare spazi vuoti che il footer può coprire.

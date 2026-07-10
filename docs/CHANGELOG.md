@@ -278,3 +278,18 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] Upload foto su server con frameId opzionale
 - [x] Selettore cornici con preview prima dello scatto
 - [x] Navigazione post-upload verso la galleria
+
+### Slideshow improvements (Jul 2026)
+- [x] Selettore velocità rotazione nello header (5s, 10s, 15s, 20s, 30s)
+- [x] 8 foto per volta (griglia 4×2) con object-fit contain
+- [x] Fix overflow griglia: minmax(0,1fr) per righe, overflow:hidden, min-height:0 sui wrapper
+- [x] Fix footer che copriva la griglia: background opaco, rimosso backdrop-filter blur
+
+## Session History
+
+### Slideshow improvements (Jul 2026)
+- Selettore velocità rotazione: useState `rotateSec` (default 10s), useEffect separato da fetch/poll
+- Griglia ridotta da 4×4 (16) a 4×2 (8) per evitare righe basse coperte dal footer
+- CSS Grid gotcha: `grid-template-rows: repeat(N, 1fr)` impedisce alle righe di restringersi sotto il contenuto intrinseco; fix con `minmax(0, 1fr)`
+- Footer backdrop-filter blur si estende visivamente oltre i suoi bounds; rimosso in favore di background opaco
+- object-fit: contain (non cover) per foto slideshow — le celle alte delle 2 righe bastano a contenere le foto senza ritaglio
