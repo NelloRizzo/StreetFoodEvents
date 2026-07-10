@@ -129,20 +129,45 @@ export function PhotoBoothPage() {
 
     const vw = video.videoWidth
     const vh = video.videoHeight
-    const size = OUTPUT_SIZE
-    canvas.width = size
-    canvas.height = size
+
+    // Output dimensions adapt to frame aspect ratio (or camera if no frame)
+    let outW = OUTPUT_SIZE
+    let outH = OUTPUT_SIZE
+
+    if (selectedFrameId) {
+      const selF = frames.find((f) => f.id === selectedFrameId)
+      if (selF?.image?.width && selF?.image?.height) {
+        const frameRatio = selF.image.width / selF.image.height
+        if (frameRatio >= 1) {
+          outH = Math.round(OUTPUT_SIZE / frameRatio)
+        } else {
+          outW = Math.round(OUTPUT_SIZE * frameRatio)
+        }
+      }
+    } else if (vw && vh) {
+      const cameraRatio = vw / vh
+      if (cameraRatio >= 1) {
+        outH = Math.round(OUTPUT_SIZE / cameraRatio)
+      } else {
+        outW = Math.round(OUTPUT_SIZE * cameraRatio)
+      }
+    }
+
+    canvas.width = outW
+    canvas.height = outH
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     ctx.fillStyle = '#fff'
-    ctx.fillRect(0, 0, size, size)
+    ctx.fillRect(0, 0, outW, outH)
 
-    const scale = Math.max(size / vw, size / vh)
+    // Video cropped to fill canvas (center crop)
+    const scale = Math.max(outW / vw, outH / vh)
     const sw = vw * scale
     const sh = vh * scale
-    ctx.drawImage(video, (size - sw) / 2, (size - sh) / 2, sw, sh)
+    ctx.drawImage(video, (outW - sw) / 2, (outH - sh) / 2, sw, sh)
 
+    // Frame drawn at full canvas size — no distortion since ratios match
     if (selectedFrameId) {
       try {
         const selF = frames.find((f) => f.id === selectedFrameId)
@@ -155,7 +180,7 @@ export function PhotoBoothPage() {
             img.onload = () => resolve()
             img.onerror = () => reject(new Error('Frame load failed'))
           })
-          ctx.drawImage(img, 0, 0, size, size)
+          ctx.drawImage(img, 0, 0, outW, outH)
         }
       } catch {
         // frame not available — continue without
@@ -192,9 +217,11 @@ export function PhotoBoothPage() {
         dateStr += `  ${locLabel}`
       }
 
-      const padding = Math.round(size * 0.045)
-      const nameFontSize = Math.round(size * 0.038)
-      const dateFontSize = Math.round(size * 0.024)
+      // Text sizing based on the shorter dimension for consistent look
+      const minDim = Math.min(outW, outH)
+      const padding = Math.round(minDim * 0.045)
+      const nameFontSize = Math.round(minDim * 0.038)
+      const dateFontSize = Math.round(minDim * 0.024)
 
       const selF = frames.find((f) => f.id === selectedFrameId)
       const tPos = selF?.textPosition ?? { vertical: 'bottom' as const, horizontal: 'center' as const }
@@ -206,14 +233,14 @@ export function PhotoBoothPage() {
 
       switch (tPos.horizontal) {
         case 'left': textAlign = 'left'; textX = padding; break
-        case 'right': textAlign = 'right'; textX = size - padding; break
-        default: textAlign = 'center'; textX = size / 2
+        case 'right': textAlign = 'right'; textX = outW - padding; break
+        default: textAlign = 'center'; textX = outW / 2
       }
 
       switch (tPos.vertical) {
         case 'top': textBaseline = 'top'; textY = padding; break
-        case 'bottom': textBaseline = 'bottom'; textY = size - padding; break
-        default: textBaseline = 'middle'; textY = size / 2
+        case 'bottom': textBaseline = 'bottom'; textY = outH - padding; break
+        default: textBaseline = 'middle'; textY = outH / 2
       }
 
       ctx.textAlign = textAlign
@@ -228,10 +255,10 @@ export function PhotoBoothPage() {
       ctx.fillText(nameStr, textX, textY)
 
       const offsetY = textBaseline === 'top'
-        ? nameFontSize + Math.round(size * 0.012)
+        ? nameFontSize + Math.round(minDim * 0.012)
         : textBaseline === 'bottom'
-          ? -(nameFontSize + Math.round(size * 0.012))
-          : nameFontSize + Math.round(size * 0.012)
+          ? -(nameFontSize + Math.round(minDim * 0.012))
+          : nameFontSize + Math.round(minDim * 0.012)
 
       ctx.font = `${dateFontSize}px sans-serif`
       ctx.fillStyle = textColor
@@ -357,6 +384,16 @@ export function PhotoBoothPage() {
     }
   }, [stream])
 
+  const previewAspectRatio = (() => {
+    if (selectedFrameId) {
+      const selF = frames.find((f) => f.id === selectedFrameId)
+      if (selF?.image?.width && selF?.image?.height) {
+        return selF.image.width / selF.image.height
+      }
+    }
+    return 16 / 9
+  })()
+
   return (
     <div className={styles.page}>
       <div className="page-shell">
@@ -413,7 +450,10 @@ export function PhotoBoothPage() {
           <div className={styles.cameraBox}>
             <div
               className={styles.videoWrap}
-              style={{ display: captured || !cameraReady ? 'none' : undefined }}
+              style={{
+                display: captured || !cameraReady ? 'none' : undefined,
+                aspectRatio: `${previewAspectRatio}`,
+              }}
             >
               <video
                 ref={videoRef}
