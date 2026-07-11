@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
-import { createOrder, cancelOrder, type Order } from '../lib/orders'
+import { createOrder, cancelOrder, updateOrderStatus, type Order } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './CashierOrderPage.module.scss'
@@ -255,7 +255,9 @@ export function EventCashierPage() {
         })),
         paymentOnCreate: { creditAmount: effectiveCredit },
       })
-      setCreatedOrder(response.item)
+
+      await updateOrderStatus(response.item.id, 'preparing')
+      setCreatedOrder({ ...response.item, status: 'preparing' })
       resetOrder()
     } catch (e) {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante la creazione ordine')

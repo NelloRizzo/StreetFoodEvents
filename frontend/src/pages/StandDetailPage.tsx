@@ -264,6 +264,10 @@ export function StandDetailPage() {
   const eventName = (id: string) => events.find((e) => e.id === id)?.name ?? id
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? id
 
+  const filteredEventProducts = selectedActionEventId
+    ? eventProducts.filter((ep) => ep.eventId === selectedActionEventId)
+    : eventProducts
+
   if (isLoading || !stand) return null
 
   return (
@@ -380,7 +384,7 @@ export function StandDetailPage() {
         </section>
 
         <section className={styles.section} id="prodotti">
-          <h2 className={styles.sectionTitle}>Prodotti ({eventProducts.length})</h2>
+          <h2 className={styles.sectionTitle}>Prodotti ({filteredEventProducts.length})</h2>
 
           {!showProductForm && !showNewProductForm && (
             <div className={styles.productActions}>
@@ -492,7 +496,7 @@ export function StandDetailPage() {
           )}
 
           <div className={styles.productList}>
-            {eventProducts.map((ep) => (
+            {filteredEventProducts.map((ep) => (
               <div key={ep.id} className={styles.productCard}>
                 <div className={styles.productCardBody}>
                   <strong>{productName(ep.productId)}</strong>
@@ -523,7 +527,7 @@ export function StandDetailPage() {
               </div>
             ))}
 
-            {eventProducts.length === 0 && !showProductForm && !showNewProductForm && (
+            {filteredEventProducts.length === 0 && !showProductForm && !showNewProductForm && (
               <p className={styles.empty}>Nessun prodotto associato a questo stand.</p>
             )}
           </div>
