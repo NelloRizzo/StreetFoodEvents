@@ -44,8 +44,10 @@ export function EventProductsPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   const fetchItems = async () => {
-    const data = await apiRequest<{ items: EventProduct[] }>('/event-products')
-    setItems(data.items)
+    try {
+      const data = await apiRequest<{ items: EventProduct[] }>('/event-products')
+      setItems(data.items)
+    } catch { /* ignore */ }
     setIsLoading(false)
   }
 
