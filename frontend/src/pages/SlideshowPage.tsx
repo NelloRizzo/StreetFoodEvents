@@ -16,11 +16,7 @@ type EventData = {
   coverImage?: { url: string; publicId: string } | null
 }
 
-type ConnStatus = 'online' | 'waking' | 'offline'
-
 const POLL_MS = 2 * 60_000
-const FETCH_TIMEOUT_MS = 30_000
-const WAKING_THRESHOLD_MS = 5_000
 const PHOTOS_PER_PAGE = 8
 const ROTATE_OPTIONS = [5, 10, 15, 20, 30] as const
 
@@ -39,7 +35,6 @@ export function SlideshowPage() {
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [rotateSec, setRotateSec] = useState<number>(10)
-  const [connStatus, setConnStatus] = useState<ConnStatus>('online')
   const allRef = useRef<Photo[]>([])
   const refreshRef = useRef<() => void>(() => {})
 
@@ -56,40 +51,6 @@ export function SlideshowPage() {
     if (!eventId) return
     let cancelled = false
 
-    const API_URL = import.meta.env.VITE_API_URL ?? '/api'
-    const HEALTH_URL = API_URL.replace(/\/api\/?$/, '') + '/health'
-
-    const checkConnection = () => {
-      const start = Date.now()
-      const controller = new AbortController()
-      const timer = setTimeout(() => {
-        if (!cancelled) setConnStatus('offline')
-        controller.abort()
-      }, FETCH_TIMEOUT_MS)
-
-      fetch(`${HEALTH_URL}?_t=${start}`, {
-        signal: controller.signal,
-        cache: 'no-store',
-      })
-        .then((r) => {
-          if (!r.ok) throw new Error('not ok')
-          return r.json()
-        })
-        .then((data) => {
-          if (cancelled) return
-          const elapsed = Date.now() - start
-          if (data?.status === 'ok') {
-            setConnStatus(elapsed > WAKING_THRESHOLD_MS ? 'waking' : 'online')
-          } else {
-            setConnStatus('offline')
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setConnStatus('offline')
-        })
-        .finally(() => clearTimeout(timer))
-    }
-
     const fetchPhotos = () => {
       apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`)
         .then((res) => {
@@ -104,10 +65,8 @@ export function SlideshowPage() {
         .catch(() => {})
     }
 
-    checkConnection()
     fetchPhotos()
 
-    const healthId = setInterval(checkConnection, POLL_MS)
     const pollId = setInterval(fetchPhotos, POLL_MS)
 
     apiRequest<{ item: EventData }>(`/events/${eventId}`)
@@ -118,7 +77,6 @@ export function SlideshowPage() {
 
     return () => {
       cancelled = true
-      clearInterval(healthId)
       clearInterval(pollId)
     }
   }, [eventId])
@@ -149,7 +107,6 @@ export function SlideshowPage() {
         <span className={styles.eventName}>
           {eventData?.name ?? 'Street Food Events'}
         </span>
-        <span className={`${styles.statusDot} ${connStatus === 'online' ? styles.statusOnline : connStatus === 'waking' ? styles.statusWaking : styles.statusOffline}`} title={connStatus === 'online' ? 'Connesso' : connStatus === 'waking' ? 'Risveglio in corso...' : 'Disconnesso'} />
         <button className={styles.refreshBtn} onClick={() => refreshRef.current()} title="Aggiorna">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 2v6h-6" />
