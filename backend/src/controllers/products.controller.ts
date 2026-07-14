@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 
 import { ProductModel } from '../models/product.model';
+import { EventProductModel } from '../models/event-product.model';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -161,6 +162,8 @@ export async function deleteProduct(req: Request, res: Response) {
             message: 'Product not found'
         });
     }
+
+    await EventProductModel.deleteMany({ productId });
 
     return res.status(204).send();
 }
