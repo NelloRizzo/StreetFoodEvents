@@ -63,6 +63,10 @@ export function SlideshowPage() {
       })
         .then((res) => {
           if (cancelled) return
+          if (!res || !Array.isArray(res.items)) {
+            setIsConnected(false)
+            return
+          }
           setIsConnected(true)
           allRef.current = res.items
           setBatch(
