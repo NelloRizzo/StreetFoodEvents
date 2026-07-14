@@ -53,27 +53,20 @@ export function SlideshowPage() {
     if (!eventId) return
     let cancelled = false
 
-    const fetchPhotos = () => {
+    const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
+
+    const checkConnection = () => {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
-      apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`, {
+      fetch(`${API_BASE}/health?_t=${Date.now()}`, {
         signal: controller.signal,
         cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
       })
-        .then((res) => {
-          if (cancelled) return
-          if (!res || !Array.isArray(res.items)) {
-            setIsConnected(false)
-            return
-          }
-          setIsConnected(true)
-          allRef.current = res.items
-          setBatch(
-            res.items.length > 0
-              ? shuffle(res.items).slice(0, PHOTOS_PER_PAGE)
-              : []
-          )
+        .then((r) => r.json())
+        .then((data) => {
+          if (!cancelled) setIsConnected(data?.status === 'ok')
         })
         .catch(() => {
           if (!cancelled) setIsConnected(false)
@@ -81,8 +74,24 @@ export function SlideshowPage() {
         .finally(() => clearTimeout(timer))
     }
 
+    const fetchPhotos = () => {
+      apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`)
+        .then((res) => {
+          if (cancelled) return
+          allRef.current = res.items
+          setBatch(
+            res.items.length > 0
+              ? shuffle(res.items).slice(0, PHOTOS_PER_PAGE)
+              : []
+          )
+        })
+        .catch(() => {})
+    }
+
+    checkConnection()
     fetchPhotos()
 
+    const healthId = setInterval(checkConnection, POLL_MS)
     const pollId = setInterval(fetchPhotos, POLL_MS)
 
     apiRequest<{ item: EventData }>(`/events/${eventId}`)
@@ -93,6 +102,7 @@ export function SlideshowPage() {
 
     return () => {
       cancelled = true
+      clearInterval(healthId)
       clearInterval(pollId)
     }
   }, [eventId])
