@@ -35,6 +35,7 @@ export function SlideshowPage() {
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [rotateSec, setRotateSec] = useState<number>(10)
+  const [isConnected, setIsConnected] = useState<boolean>(true)
   const allRef = useRef<Photo[]>([])
   const refreshRef = useRef<() => void>(() => {})
 
@@ -55,6 +56,7 @@ export function SlideshowPage() {
       apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`)
         .then((res) => {
           if (cancelled) return
+          setIsConnected(true)
           allRef.current = res.items
           setBatch(
             res.items.length > 0
@@ -62,7 +64,9 @@ export function SlideshowPage() {
               : []
           )
         })
-        .catch(() => {})
+        .catch(() => {
+          if (!cancelled) setIsConnected(false)
+        })
     }
 
     fetchPhotos()
@@ -107,6 +111,7 @@ export function SlideshowPage() {
         <span className={styles.eventName}>
           {eventData?.name ?? 'Street Food Events'}
         </span>
+        <span className={`${styles.statusDot} ${isConnected ? styles.statusOnline : styles.statusOffline}`} title={isConnected ? 'Connesso' : 'Disconnesso'} />
         <button className={styles.refreshBtn} onClick={() => refreshRef.current()} title="Aggiorna">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 2v6h-6" />
