@@ -17,6 +17,7 @@ type EventData = {
 }
 
 const POLL_MS = 2 * 60_000
+const FETCH_TIMEOUT_MS = 30_000
 const PHOTOS_PER_PAGE = 8
 const ROTATE_OPTIONS = [5, 10, 15, 20, 30] as const
 
@@ -53,7 +54,13 @@ export function SlideshowPage() {
     let cancelled = false
 
     const fetchPhotos = () => {
-      apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`)
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+      apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`, {
+        signal: controller.signal,
+        cache: 'no-store',
+      })
         .then((res) => {
           if (cancelled) return
           setIsConnected(true)
@@ -67,6 +74,7 @@ export function SlideshowPage() {
         .catch(() => {
           if (!cancelled) setIsConnected(false)
         })
+        .finally(() => clearTimeout(timer))
     }
 
     fetchPhotos()
