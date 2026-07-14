@@ -53,13 +53,14 @@ export function SlideshowPage() {
     if (!eventId) return
     let cancelled = false
 
-    const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
+    const API_URL = import.meta.env.VITE_API_URL ?? '/api'
+    const HEALTH_URL = API_URL.replace(/\/api\/?$/, '') + '/health'
 
     const checkConnection = () => {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
-      fetch(`${API_BASE}/health?_t=${Date.now()}`, {
+      fetch(`${HEALTH_URL}?_t=${Date.now()}`, {
         signal: controller.signal,
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache' },
