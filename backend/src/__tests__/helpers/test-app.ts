@@ -11,6 +11,15 @@ import { eventProductsRouter } from '../../routes/event-products.routes';
 import { eventUsersRouter } from '../../routes/event-users.routes';
 import { favoritesRouter } from '../../routes/favorites.routes';
 import { ordersRouter } from '../../routes/orders.routes';
+import { aliasesRouter, resolveRouter } from '../../routes/aliases.routes';
+import { rolesRouter } from '../../routes/roles.routes';
+import { userRolesRouter } from '../../routes/user-roles.routes';
+import { userStationsRouter } from '../../routes/user-stations.routes';
+import { eventPhotosRouter } from '../../routes/event-photos.routes';
+import { eventFramesRouter } from '../../routes/event-frames.routes';
+import { poisRouter } from '../../routes/pois.routes';
+import { usageContractsRouter } from '../../routes/usage-contracts.routes';
+import { framesRouter } from '../../routes/frames.routes';
 
 export function createTestApp() {
     const app = express();
@@ -33,6 +42,16 @@ export function createTestApp() {
     app.use('/api/event-users', eventUsersRouter);
     app.use('/api/favorites', favoritesRouter);
     app.use('/api/orders', ordersRouter);
+    app.use('/api/aliases', aliasesRouter);
+    app.use('/api/resolve', resolveRouter);
+    app.use('/api/roles', rolesRouter);
+    app.use('/api/user-roles', userRolesRouter);
+    app.use('/api/user-stations', userStationsRouter);
+    app.use('/api/events/:eventId/photos', eventPhotosRouter);
+    app.use('/api/events/:eventId/frames', eventFramesRouter);
+    app.use('/api/frames', framesRouter);
+    app.use('/api/pois', poisRouter);
+    app.use('/api/usage-contracts', usageContractsRouter);
 
     return app;
 }

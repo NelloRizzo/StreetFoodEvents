@@ -121,3 +121,105 @@ export function createAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
         ...overrides
     };
 }
+
+export function createTestRole(overrides: Partial<{
+    name: string;
+    description: string | null;
+    scope: 'platform' | 'event' | 'stand';
+    slug: string;
+    permissions: string[];
+    isSystem: boolean;
+    isActive: boolean;
+}> = {}) {
+    return {
+        name: `Role ${Date.now()}`,
+        description: null,
+        scope: 'event',
+        slug: `role-${Date.now()}`,
+        permissions: [],
+        isSystem: false,
+        isActive: true,
+        ...overrides
+    };
+}
+
+export function createTestAlias(overrides: Partial<{
+    text: string;
+    entityType: 'event' | 'stand';
+    entityRef: Types.ObjectId;
+}> = {}) {
+    return {
+        text: `alias-${Date.now()}`,
+        entityType: 'event',
+        entityRef: new Types.ObjectId(),
+        ...overrides
+    };
+}
+
+export function createTestPoi(overrides: Partial<{
+    eventId: Types.ObjectId;
+    name: string;
+    description: string | null;
+    location: { type: string; coordinates: number[] };
+    iconType: string | null;
+}> = {}) {
+    return {
+        eventId: new Types.ObjectId(),
+        name: `POI ${Date.now()}`,
+        description: null,
+        location: { type: 'Point', coordinates: [12.5, 41.9] },
+        iconType: null,
+        ...overrides
+    };
+}
+
+export function createTestUsageContract(overrides: Partial<{
+    userId: Types.ObjectId;
+    eventId: Types.ObjectId;
+    maxStands: number;
+    status: 'active' | 'suspended' | 'expired';
+    createdBy: Types.ObjectId;
+}> = {}) {
+    return {
+        userId: new Types.ObjectId(),
+        eventId: new Types.ObjectId(),
+        maxStands: 1,
+        status: 'active',
+        createdBy: new Types.ObjectId(),
+        ...overrides
+    };
+}
+
+export function createTestUserRole(overrides: Partial<{
+    userId: Types.ObjectId;
+    roleId: Types.ObjectId;
+    eventId: Types.ObjectId | null;
+    standId: Types.ObjectId | null;
+    assignedBy: Types.ObjectId | null;
+    isActive: boolean;
+}> = {}) {
+    return {
+        userId: new Types.ObjectId(),
+        roleId: new Types.ObjectId(),
+        eventId: null,
+        standId: null,
+        assignedBy: null,
+        isActive: true,
+        ...overrides
+    };
+}
+
+export function createTestUserStation(overrides: Partial<{
+    userId: Types.ObjectId;
+    stationId: Types.ObjectId;
+    assignedBy: Types.ObjectId | null;
+    isActive: boolean;
+}> = {}) {
+    return {
+        userId: new Types.ObjectId(),
+        stationId: new Types.ObjectId(),
+        assignedBy: null,
+        isActive: true,
+        ...overrides
+    };
+}

@@ -16,7 +16,12 @@ const collectionsToClear = [
     'roles',
     'userroles',
     'userstations',
-    'sessions'
+    'sessions',
+    'aliases',
+    'eventphotos',
+    'eventframes',
+    'pois',
+    'usagecontracts'
 ];
 
 beforeAll(async () => {
