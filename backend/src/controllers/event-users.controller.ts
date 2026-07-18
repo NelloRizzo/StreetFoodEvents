@@ -12,7 +12,7 @@ function isValidObjectId(value: string | undefined): value is string {
 function toEventUserResponse(eventUser: {
   _id: Types.ObjectId;
   eventId: Types.ObjectId;
-  userId: Types.ObjectId;
+  userId?: Types.ObjectId | null;
   balance?: number;
   isActive?: boolean;
   joinedAt?: Date;
@@ -23,7 +23,7 @@ function toEventUserResponse(eventUser: {
   return {
     id: eventUser._id.toString(),
     eventId: eventUser.eventId.toString(),
-    userId: eventUser.userId.toString(),
+    userId: eventUser.userId?.toString() ?? null,
     balance: eventUser.balance ?? 0,
     isActive: eventUser.isActive ?? true,
     joinedAt: eventUser.joinedAt ?? null,

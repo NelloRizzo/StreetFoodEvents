@@ -203,6 +203,62 @@ export async function populateEvents(
     { upsert: true, new: true },
   );
 
+  await UserRoleModel.findOneAndUpdate(
+    {
+      userId: seedUsers.cashierUser._id,
+      roleId: seedRoles.exchangeAdminRole._id,
+      eventId: springEvent._id,
+      standId: null,
+    },
+    {
+      $set: {
+        userId: seedUsers.cashierUser._id,
+        roleId: seedRoles.exchangeAdminRole._id,
+        eventId: springEvent._id,
+        standId: null,
+        assignedBy: seedUsers.adminUser._id,
+        isActive: true,
+      },
+    },
+    { upsert: true, new: true },
+  );
+
+  await EventUserModel.findOneAndUpdate(
+    {
+      eventId: springEvent._id,
+      userId: null,
+    },
+    {
+      $set: {
+        eventId: springEvent._id,
+        userId: null,
+        balance: 0,
+        isActive: true,
+        joinedAt: new Date('2026-06-12T09:00:00.000Z'),
+        notes: 'Cliente generico per operazioni anonime',
+      },
+    },
+    { upsert: true, new: true },
+  );
+
+  await EventUserModel.findOneAndUpdate(
+    {
+      eventId: lakeEvent._id,
+      userId: null,
+    },
+    {
+      $set: {
+        eventId: lakeEvent._id,
+        userId: null,
+        balance: 0,
+        isActive: true,
+        joinedAt: new Date('2026-07-03T10:00:00.000Z'),
+        notes: 'Cliente generico per operazioni anonime',
+      },
+    },
+    { upsert: true, new: true },
+  );
+
   if (!customerSpringWallet || !customerLakeWallet) {
     throw new Error('Failed to seed event users');
   }

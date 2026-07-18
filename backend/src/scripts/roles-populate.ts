@@ -103,7 +103,15 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     permissions: ['contests:read', 'contests:create', 'contests:update', 'contests:delete', 'contest-pois:read', 'contest-pois:create', 'contest-pois:update', 'contest-pois:delete'],
   });
 
-  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole || !photoAdminRole || !photoPrintRole || !contestAdminRole) {
+  const exchangeAdminRole = await upsertRole({
+    name: 'Exchange Admin',
+    slug: 'exchange-admin',
+    scope: 'event',
+    description: 'Gestisce il cambio valuta (top-up e refund) per un evento.',
+    permissions: ['exchanges:read', 'exchanges:create', 'payments:read', 'payments:create', 'payments:refund'],
+  });
+
+  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole || !photoAdminRole || !photoPrintRole || !contestAdminRole || !exchangeAdminRole) {
     throw new Error('Failed to seed roles');
   }
 
@@ -137,6 +145,7 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     photoAdminRole,
     photoPrintRole,
     contestAdminRole,
+    exchangeAdminRole,
   };
 }
 

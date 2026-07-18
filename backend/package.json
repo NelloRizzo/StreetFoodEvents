@@ -13,6 +13,7 @@
     "populate:database": "tsx src/scripts/populate-database.ts",
     "reset:database": "tsx src/scripts/reset-database.ts",
     "migrate:add-contest-admin-role": "tsx src/scripts/migrate-add-contest-admin-role.ts",
+    "migrate:add-exchange-admin-role": "tsx src/scripts/migrate-add-exchange-admin-role.ts",
     "fix:notti-cilentane": "tsx src/scripts/fix-notti-cilentane.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

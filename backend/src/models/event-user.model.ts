@@ -11,7 +11,7 @@ const eventUserSchema = new Schema(
         userId: {
             type: Schema.Types.ObjectId,
             ref: 'User',
-            required: true,
+            default: null,
             index: true
         },
         balance: {
@@ -42,7 +42,7 @@ const eventUserSchema = new Schema(
     }
 );
 
-eventUserSchema.index({ eventId: 1, userId: 1 }, { unique: true });
+eventUserSchema.index({ eventId: 1, userId: 1 }, { unique: true, partialFilterExpression: { userId: { $type: 'objectId' } } });
 
 export type EventUser = InferSchemaType<typeof eventUserSchema>;
 

@@ -82,6 +82,7 @@ export function EventDetailPage() {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [hasPhotoPrint, setHasPhotoPrint] = useState(false)
   const [hasContestAdmin, setHasContestAdmin] = useState(false)
+  const [hasExchangeAdmin, setHasExchangeAdmin] = useState(false)
   const [cpois, setCpois] = useState<{ id: string; name: string; hint: string | null }[]>([])
   const [showCpoiForm, setShowCpoiForm] = useState(false)
   const [cpoiForm, setCpoiForm] = useState({ name: '', hint: '' })
@@ -186,6 +187,7 @@ export function EventDetailPage() {
         setHasPhotoPrint(data.isPlatformAdmin || eventRoles.some((r) => ['photo-admin', 'photo-print'].includes(r.slug)))
         const isContestAdmin = data.isPlatformAdmin || eventRoles.some((r) => r.slug === 'contest-admin')
         setHasContestAdmin(isContestAdmin)
+        setHasExchangeAdmin(data.isPlatformAdmin || eventRoles.some((r) => r.slug === 'exchange-admin'))
         if (isContestAdmin) {
           listContestPois(eventId).then((d) => setCpois(d.items)).catch(() => {})
           listContests(eventId).then((d) => setContests(d.items)).catch(() => {})
@@ -768,6 +770,13 @@ export function EventDetailPage() {
               </button>
             )
           ))}
+        </>)}
+
+        {hasExchangeAdmin && (<>
+          <h2 className={styles.sectionTitle}>Cambio valuta</h2>
+          <Link to={`/events/${eventId}/cambio`} className={styles.actionBtnOutline}>
+            Gestisci cambio
+          </Link>
         </>)}
 
       </div>
