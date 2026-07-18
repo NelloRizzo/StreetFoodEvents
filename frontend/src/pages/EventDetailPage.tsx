@@ -10,6 +10,7 @@ import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { MapPicker } from '../components/MapPicker'
+import { listContestPois, createContestPoi, deleteContestPoi, listContests, createContest, updateContest, deleteContest, getContestPoiQrCodes } from '../lib/contests'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import styles from './EventDetailPage.module.scss'
 
@@ -80,6 +81,26 @@ export function EventDetailPage() {
   const [hasEventRole, setHasEventRole] = useState(false)
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [hasPhotoPrint, setHasPhotoPrint] = useState(false)
+  const [hasContestAdmin, setHasContestAdmin] = useState(false)
+  const [cpois, setCpois] = useState<{ id: string; name: string; hint: string | null }[]>([])
+  const [showCpoiForm, setShowCpoiForm] = useState(false)
+  const [cpoiForm, setCpoiForm] = useState({ name: '', hint: '' })
+  const [savingCpoi, setSavingCpoi] = useState(false)
+  const [contests, setContests] = useState<{ id: string; name: string; isActive: boolean; orderedPOIIds: string[]; durationMinutes: number; startsAt: string; endsAt: string; prize: string | null; requireSequence: boolean; description: string | null }[]>([])
+  const [showContestForm, setShowContestForm] = useState(false)
+  const [editingContestId, setEditingContestId] = useState<string | null>(null)
+  const [contestForm, setContestForm] = useState({
+    name: '',
+    description: '',
+    startsAt: '',
+    endsAt: '',
+    durationMinutes: 30,
+    requireSequence: false,
+    prize: '',
+    isActive: true,
+    orderedPOIIds: [] as string[],
+  })
+  const [savingContest, setSavingContest] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [favId, setFavId] = useState<string | null>(null)
   const [favLoading, setFavLoading] = useState(false)
@@ -163,6 +184,12 @@ export function EventDetailPage() {
         )
         setIsPlatformAdmin(data.isPlatformAdmin)
         setHasPhotoPrint(data.isPlatformAdmin || eventRoles.some((r) => ['photo-admin', 'photo-print'].includes(r.slug)))
+        const isContestAdmin = data.isPlatformAdmin || eventRoles.some((r) => r.slug === 'contest-admin')
+        setHasContestAdmin(isContestAdmin)
+        if (isContestAdmin) {
+          listContestPois(eventId).then((d) => setCpois(d.items)).catch(() => {})
+          listContests(eventId).then((d) => setContests(d.items)).catch(() => {})
+        }
       })
       .catch(() => {})
   }, [eventId, isAuthenticated])
@@ -496,6 +523,253 @@ export function EventDetailPage() {
             </Link>
           )}
           </>)}
+
+        {hasContestAdmin && (<>
+          <h2 className={styles.sectionTitle}>
+            Contest <span className={styles.count}>{contests.length}</span>
+          </h2>
+
+          <Link to={`/events/${eventId}/contests`} className={styles.actionBtnOutline} style={{ marginBottom: '0.5rem', display: 'inline-block' }}>
+            Vedi contest pubblici
+          </Link>
+
+          {/* Contest POI management */}
+          <h3 style={{ color: 'var(--color-ink-strong)', fontSize: '1rem', margin: '1rem 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            POI del contest
+            <button className={styles.poiToggleBtn} onClick={() => setShowCpoiForm((p) => !p)}>
+              {showCpoiForm ? 'Chiudi' : 'Nuovo POI'}
+            </button>
+          </h3>
+
+          {showCpoiForm && (
+            <div className={styles.poiForm}>
+              <label className={styles.poiField}>
+                Nome
+                <input type="text" value={cpoiForm.name} onChange={(e) => setCpoiForm((p) => ({ ...p, name: e.target.value }))} />
+              </label>
+              <label className={styles.poiField}>
+                Indizio
+                <input type="text" value={cpoiForm.hint} onChange={(e) => setCpoiForm((p) => ({ ...p, hint: e.target.value }))} />
+              </label>
+              <div className={styles.poiFormActions}>
+                <button className={styles.saveBtn} onClick={async () => {
+                  if (!eventId || savingCpoi || !cpoiForm.name.trim()) return
+                  setSavingCpoi(true)
+                  try {
+                    await createContestPoi({ eventId, name: cpoiForm.name.trim(), hint: cpoiForm.hint.trim() || null })
+                    const data = await listContestPois(eventId)
+                    setCpois(data.items)
+                    setCpoiForm({ name: '', hint: '' })
+                    setShowCpoiForm(false)
+                  } catch { /* ignore */ }
+                  setSavingCpoi(false)
+                }} disabled={savingCpoi}>
+                  {savingCpoi ? 'Salvataggio...' : 'Crea POI'}
+                </button>
+                <button className={styles.cancelBtn} onClick={() => { setShowCpoiForm(false); setCpoiForm({ name: '', hint: '' }) }}>Annulla</button>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.poiList}>
+            {cpois.map((cpoi) => (
+              <div key={cpoi.id} className={styles.poiCard}>
+                <div className={styles.poiCardBody}>
+                  <strong className={styles.poiCardName}>{cpoi.name}</strong>
+                  {cpoi.hint && <span className={styles.poiCardDesc} style={{ fontStyle: 'italic' }}>{cpoi.hint}</span>}
+                </div>
+                <div className={styles.poiCardActions}>
+                  <button className={styles.dangerBtn} onClick={async () => {
+                    try {
+                      await deleteContestPoi(cpoi.id)
+                      setCpois((prev) => prev.filter((p) => p.id !== cpoi.id))
+                    } catch { /* ignore */ }
+                  }}>Elimina</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Contest list + create */}
+          <h3 style={{ color: 'var(--color-ink-strong)', fontSize: '1rem', margin: '1.5rem 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            Contest
+            <button className={styles.poiToggleBtn} onClick={() => { setShowContestForm((p) => !p); if (!showContestForm) { setEditingContestId(null); setContestForm({ name: '', description: '', startsAt: '', endsAt: '', durationMinutes: 30, requireSequence: false, prize: '', isActive: true, orderedPOIIds: cpois.map((p) => p.id) }) } }}>
+              {showContestForm ? 'Chiudi' : editingContestId ? 'Modifica contest' : 'Nuovo contest'}
+            </button>
+          </h3>
+
+          {showContestForm && (
+            <div className={styles.poiForm}>
+              <label className={styles.poiField}>
+                Nome
+                <input type="text" value={contestForm.name} onChange={(e) => setContestForm((p) => ({ ...p, name: e.target.value }))} />
+              </label>
+              <label className={styles.poiField}>
+                Descrizione
+                <textarea rows={2} value={contestForm.description} onChange={(e) => setContestForm((p) => ({ ...p, description: e.target.value }))} />
+              </label>
+              <label className={styles.poiField}>
+                Inizio
+                <input type="datetime-local" value={contestForm.startsAt} onChange={(e) => setContestForm((p) => ({ ...p, startsAt: e.target.value }))} />
+              </label>
+              <label className={styles.poiField}>
+                Fine
+                <input type="datetime-local" value={contestForm.endsAt} onChange={(e) => setContestForm((p) => ({ ...p, endsAt: e.target.value }))} />
+              </label>
+              <label className={styles.poiField}>
+                Durata (minuti)
+                <input type="number" min={1} value={contestForm.durationMinutes} onChange={(e) => setContestForm((p) => ({ ...p, durationMinutes: Number(e.target.value) }))} />
+              </label>
+              <label className={styles.poiField}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={contestForm.requireSequence} onChange={(e) => setContestForm((p) => ({ ...p, requireSequence: e.target.checked }))} />
+                  Sequenza ordinata
+                </label>
+              </label>
+              <label className={styles.poiField}>
+                Premio
+                <input type="text" value={contestForm.prize} onChange={(e) => setContestForm((p) => ({ ...p, prize: e.target.value }))} />
+              </label>
+              <label className={styles.poiField}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={contestForm.isActive} onChange={(e) => setContestForm((p) => ({ ...p, isActive: e.target.checked }))} />
+                  Attivo
+                </label>
+              </label>
+              <label className={styles.poiField}>
+                <span>POI del contest da includere</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  {cpois.map((cpoi) => (
+                    <label key={cpoi.id} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={contestForm.orderedPOIIds.includes(cpoi.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, cpoi.id] }))
+                          } else {
+                            setContestForm((p) => ({ ...p, orderedPOIIds: p.orderedPOIIds.filter((id) => id !== cpoi.id) }))
+                          }
+                        }}
+                      />
+                      {cpoi.name}
+                    </label>
+                  ))}
+                </div>
+              </label>
+              <div className={styles.poiFormActions}>
+                <button className={styles.saveBtn} onClick={async () => {
+                  if (!eventId || savingContest || !contestForm.name.trim() || !contestForm.startsAt || !contestForm.endsAt) return
+                  setSavingContest(true)
+                  try {
+                    const payload = {
+                      eventId,
+                      name: contestForm.name.trim(),
+                      description: contestForm.description.trim() || null,
+                      startsAt: new Date(contestForm.startsAt).toISOString(),
+                      endsAt: new Date(contestForm.endsAt).toISOString(),
+                      durationMinutes: contestForm.durationMinutes,
+                      requireSequence: contestForm.requireSequence,
+                      prize: contestForm.prize.trim() || null,
+                      isActive: contestForm.isActive,
+                      orderedPOIIds: contestForm.orderedPOIIds,
+                    }
+                    if (editingContestId) {
+                      await updateContest(editingContestId, payload)
+                    } else {
+                      await createContest(payload)
+                    }
+                    const data = await listContests(eventId)
+                    setContests(data.items)
+                    setShowContestForm(false)
+                    setEditingContestId(null)
+                  } catch { /* ignore */ }
+                  setSavingContest(false)
+                }} disabled={savingContest}>
+                  {savingContest ? 'Salvataggio...' : editingContestId ? 'Aggiorna contest' : 'Crea contest'}
+                </button>
+                <button className={styles.cancelBtn} onClick={() => { setShowContestForm(false); setEditingContestId(null) }}>Annulla</button>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.poiList}>
+            {contests.map((contest) => (
+              <div key={contest.id} className={styles.poiCard}>
+                <div className={styles.poiCardBody}>
+                  <strong className={styles.poiCardName}>{contest.name}</strong>
+                  <span>{contest.isActive ? 'Attivo' : 'Inattivo'} &middot; {contest.durationMinutes} min &middot; {contest.requireSequence ? 'Ordinato' : 'Libero'}</span>
+                  {contest.prize && <span className={styles.poiCardDesc}>Premio: {contest.prize}</span>}
+                </div>
+                <div className={styles.poiCardActions}>
+                  <button className={styles.textBtn} onClick={async () => {
+                    setEditingContestId(contest.id)
+                    setContestForm({
+                      name: contest.name,
+                      description: contest.description ?? '',
+                      startsAt: contest.startsAt.slice(0, 16),
+                      endsAt: contest.endsAt.slice(0, 16),
+                      durationMinutes: contest.durationMinutes,
+                      requireSequence: contest.requireSequence,
+                      prize: contest.prize ?? '',
+                      isActive: contest.isActive,
+                      orderedPOIIds: contest.orderedPOIIds,
+                    })
+                    setShowContestForm(true)
+                  }}>Modifica</button>
+                  <button className={styles.dangerBtn} onClick={async () => {
+                    try {
+                      await deleteContest(contest.id)
+                      setContests((prev) => prev.filter((c) => c.id !== contest.id))
+                    } catch { /* ignore */ }
+                  }}>Elimina</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* QR print button */}
+          {contests.map((contest) => (
+            contest.orderedPOIIds.length > 0 && (
+              <button key={contest.id} className={styles.actionBtnOutline} style={{ margin: '0.5rem 0', display: 'block' }} onClick={async () => {
+                try {
+                  const data = await getContestPoiQrCodes(contest.id)
+                  const win = window.open('', '_blank')
+                  if (!win) return
+                  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>QR Code POI - ${contest.name}</title>
+  <style>
+    @page { size: A4; margin: 1cm; }
+    body { font-family: sans-serif; }
+    .page-break { page-break-after: always; }
+    .card { text-align: center; padding: 1cm; }
+    .card img { width: 300px; height: 300px; image-rendering: pixelated; }
+    .card h2 { margin: 0.5rem 0; }
+  </style>
+</head>
+<body>
+  ${data.items.map((item, i) => `
+    <div class="card${i < data.items.length - 1 ? ' page-break' : ''}">
+      <h2>${item.poiName}</h2>
+      <img src="${item.qrCode}" alt="QR ${item.poiName}" />
+      <p>Inquadra il QR per scansionare il POI</p>
+    </div>
+  `).join('')}
+  <script>window.print();window.close()</script>
+</body>
+</html>`
+                  win.document.write(html)
+                  win.document.close()
+                } catch { /* ignore */ }
+              }}>
+                Stampa QR - {contest.name}
+              </button>
+            )
+          ))}
+        </>)}
+
       </div>
 
       <ConfirmModal

@@ -1,0 +1,193 @@
+@use '../styles/tokens' as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 1.5rem;
+  padding-bottom: 2rem;
+  min-height: 0;
+}
+
+.error {
+  color: var(--color-danger);
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.contestName {
+  font-size: 1.25rem;
+  color: var(--color-ink-strong);
+}
+
+.timer {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--color-brand);
+  padding: 0.25rem 0.75rem;
+  background: var(--color-brand-glow);
+  border-radius: var(--radius-card);
+  white-space: nowrap;
+}
+
+.timerUrgent {
+  color: var(--color-danger);
+  background: rgba(192, 57, 43, 0.1);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.toast {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-card);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: center;
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.toastOk {
+  background: var(--color-success);
+  color: #fff;
+}
+
+.toastErr {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.poiGrid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.poiItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  opacity: 0.7;
+  transition: opacity var(--ease-standard), border-color var(--ease-standard);
+}
+
+.poiFound {
+  opacity: 1;
+  border-color: var(--color-success);
+  background: rgba(43, 138, 74, 0.06);
+}
+
+.poiStatus {
+  font-size: 1.3rem;
+  width: 1.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.poiName {
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.scanBtn {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: 1rem;
+  background: var(--color-brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-card);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--ease-standard), transform var(--ease-standard);
+
+  &:hover {
+    background: var(--color-brand-deep);
+    transform: translateY(-1px);
+  }
+}
+
+// Finished state
+.finishedCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.finishIcon {
+  font-size: 4rem;
+}
+
+.finishTitle {
+  font-size: 2rem;
+  color: var(--color-ink-strong);
+}
+
+.finishDesc {
+  font-size: 1.1rem;
+  color: var(--color-ink-soft);
+}
+
+.prizeTag {
+  display: inline-block;
+  background: var(--color-highlight);
+  color: var(--color-ink-strong);
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-pill);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.verifyBtn {
+  margin-top: 1rem;
+  padding: 0.85rem 2rem;
+  background: var(--color-brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-card);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--ease-standard);
+
+  &:hover {
+    background: var(--color-brand-deep);
+  }
+}

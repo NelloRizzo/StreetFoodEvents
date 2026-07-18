@@ -1,0 +1,133 @@
+@use '../styles/tokens' as *;
+
+.page {
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+.error {
+  color: var(--color-danger);
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.title {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  color: var(--color-ink-strong);
+  margin-bottom: 0.25rem;
+}
+
+.contestName {
+  color: var(--color-ink-soft);
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1rem;
+  border-radius: var(--radius-card);
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.win {
+  background: rgba(43, 138, 74, 0.1);
+  border: 1px solid var(--color-success);
+  color: var(--color-success);
+}
+
+.lose {
+  background: rgba(192, 57, 43, 0.08);
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+}
+
+.resultIcon {
+  font-size: 1.8rem;
+}
+
+.resultText {
+  font-size: 1.05rem;
+}
+
+.section {
+  margin-top: 1.5rem;
+
+  h2 {
+    font-size: 1rem;
+    color: var(--color-ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.poiList {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.poiRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+}
+
+.poiStatus {
+  font-size: 1rem;
+  width: 1.25rem;
+  text-align: center;
+}
+
+.poiName {
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.poiFound {
+  border-color: var(--color-success);
+}
+
+.details {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--color-ink);
+
+  strong {
+    color: var(--color-ink-strong);
+  }
+}
+
+.awardBtn {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  margin: 2rem auto 0;
+  padding: 1rem;
+  background: var(--color-brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-card);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--ease-standard);
+
+  &:hover {
+    background: var(--color-brand-deep);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}

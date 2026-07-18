@@ -4,6 +4,7 @@ import { populateEvents } from './events-populate';
 import { populateFavorites } from './favorites-populate';
 import { populateOrders } from './orders-populate';
 import { populatePois } from './pois-populate';
+import { populateContests } from './contest-populate';
 import { populateProducts } from './products-populate';
 import { populateRoles } from './roles-populate';
 import { populateStandRoles } from './stand-roles-populate';
@@ -29,6 +30,7 @@ async function run() {
   await populateTransactions(users, events);
   await populateUserStations(users, stations);
   await populatePois(events);
+  await populateContests(events);
   await populateFavorites(users, events);
   await populateUsageContracts();
 

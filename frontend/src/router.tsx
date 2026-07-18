@@ -42,6 +42,10 @@ import { MenuPrintPage } from './pages/MenuPrintPage'
 import { AliasRedirectPage } from './pages/AliasRedirectPage'
 import { SlideshowPage } from './pages/SlideshowPage'
 import { FramesPage } from './pages/FramesPage'
+import { EventContestsPage } from './pages/EventContestsPage'
+import { ContestPage } from './pages/ContestPage'
+import { ContestPlayPage } from './pages/ContestPlayPage'
+import { ContestVerifyPage } from './pages/ContestVerifyPage'
 
 export const router = createBrowserRouter([
   {
@@ -211,11 +215,27 @@ export const router = createBrowserRouter([
     path: 'show/:entityType/:alias',
     element: <AliasRedirectPage />,
   },
-  {
-    path: 'events/:eventId/slideshow',
-    element: <SlideshowPage />,
-  },
-  {
+      {
+        path: 'events/:eventId/contests',
+        element: <EventContestsPage />,
+      },
+      {
+        path: 'contest/:contestId',
+        element: <ContestPage />,
+      },
+      {
+        path: 'contest/:contestId/play',
+        element: <ContestPlayPage />,
+      },
+      {
+        path: 'contest/:contestId/verify/:participantId',
+        element: <ContestVerifyPage />,
+      },
+      {
+        path: 'events/:eventId/slideshow',
+        element: <SlideshowPage />,
+      },
+      {
     element: <RequireAuth />,
     children: [
       {

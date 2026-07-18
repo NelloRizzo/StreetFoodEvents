@@ -183,6 +183,26 @@ export async function populateEvents(
     { upsert: true, new: true },
   );
 
+  await UserRoleModel.findOneAndUpdate(
+    {
+      userId: seedUsers.cashierUser._id,
+      roleId: seedRoles.contestAdminRole._id,
+      eventId: springEvent._id,
+      standId: null,
+    },
+    {
+      $set: {
+        userId: seedUsers.cashierUser._id,
+        roleId: seedRoles.contestAdminRole._id,
+        eventId: springEvent._id,
+        standId: null,
+        assignedBy: seedUsers.adminUser._id,
+        isActive: true,
+      },
+    },
+    { upsert: true, new: true },
+  );
+
   if (!customerSpringWallet || !customerLakeWallet) {
     throw new Error('Failed to seed event users');
   }

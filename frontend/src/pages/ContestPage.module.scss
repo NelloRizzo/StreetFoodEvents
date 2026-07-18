@@ -1,0 +1,152 @@
+@use '../styles/tokens' as *;
+
+.page {
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+.error {
+  color: var(--color-danger);
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.hero {
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  color: var(--color-ink-strong);
+  margin-bottom: 0.75rem;
+}
+
+.description {
+  font-size: 1.05rem;
+  color: var(--color-ink-soft);
+  line-height: 1.6;
+  max-width: 36rem;
+  margin-bottom: 1rem;
+}
+
+.prize {
+  display: inline-block;
+  background: var(--color-highlight);
+  color: var(--color-ink-strong);
+  padding: 0.35rem 1rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.infoRow {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+
+  strong {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--color-ink-soft);
+    letter-spacing: 0.05em;
+  }
+
+  span {
+    font-size: 0.9rem;
+    color: var(--color-ink);
+  }
+}
+
+.poiSection {
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.1rem;
+    color: var(--color-ink-strong);
+    margin-bottom: 1rem;
+  }
+}
+
+.poiList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.poiCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.poiIndex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.poiBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.poiName {
+  font-size: 0.95rem;
+  color: var(--color-ink-strong);
+}
+
+.poiHint {
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  font-style: italic;
+}
+
+.startBtn {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: 1rem;
+  background: var(--color-brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-card);
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--ease-standard), transform var(--ease-standard);
+
+  &:hover {
+    background: var(--color-brand-deep);
+    transform: translateY(-1px);
+  }
+}
+
+.notAvailable {
+  text-align: center;
+  color: var(--color-ink-soft);
+  padding: 2rem 0;
+}

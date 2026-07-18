@@ -4,6 +4,7 @@ Tutte le feature implementate, in ordine cronologico.
 
 ## Luglio 2026
 - Slideshow, galleria, invio email foto, stampa full-page.
+- Contest: caccia ai POI con QR code, partecipazione anonima, ruoli contest-admin.
 
 ## Feature Checklist
 
@@ -290,6 +291,30 @@ Tutte le feature implementate, in ordine cronologico.
 ### Slideshow improvements (Jul 2026)
 - Selettore velocità rotazione: useState `rotateSec` (default 10s), useEffect separato da fetch/poll
 - Griglia ridotta da 4×4 (16) a 4×2 (8) per evitare righe basse coperte dal footer
-- CSS Grid gotcha: `grid-template-rows: repeat(N, 1fr)` impedisce alle righe di restringersi sotto il contenuto intrinseco; fix con `minmax(0, 1fr)`
+- CSS Grid gotcha: `grid-template-rows: repeat(N, 1fr)` impedisce alle righe di restringersi sotto il contenuto intrinseco delle cella (immagini, testo); fix con `minmax(0, 1fr)`
 - Footer backdrop-filter blur si estende visivamente oltre i suoi bounds; rimosso in favore di background opaco
 - object-fit: contain (non cover) per foto slideshow — le celle alte delle 2 righe bastano a contenere le foto senza ritaglio
+
+### Contest / Caccia ai POI (Jul 2026)
+- [x] Modello Contest (eventId, nome, descrizione, startsAt, endsAt, durationMinutes, requireSequence, premio, isActive, orderedPOIIds)
+- [x] Modello ContestPOI (eventId, nome, hint, sequenceOrder) — POI non visibili in mappa, riutilizzabili tra contest dello stesso evento
+- [x] Modello ContestParticipation (contestId, participantId UUID, scannedPOIIds, startedAt, completedAt, isWinner, prizeAwarded)
+- [x] Ruolo `contest-admin` (scope event) con permessi contests e contest-pois CRUD
+- [x] API /api/contests con CRUD separata per contest-pois (condivisi), contest, scan, partecipazione, premiazione
+- [x] API /api/contests/:contestId/poi-qrcodes — genera QR code per ogni POI del contest (dataURL, stampa HTML)
+- [x] GET /api/contests — pubblico, lista contest attivi per evento
+- [x] POST /api/contests/:contestId/scan — pubblico, registra scansione con validazione sequenza e tempo
+- [x] Frontend: EventContestsPage — lista pubblica contest attivi per evento
+- [x] Frontend: ContestPage — dettaglio contest con lista POI (nomi + hint), pulsante "Inizia", countdown info
+- [x] Frontend: ContestPlayPage — gioco: countdown live, scanner QR, POI trovati/mancanti, messaggi toast
+- [x] Frontend: ContestVerifyPage — verifica vincita, dettagli partecipazione, pulsante consegna premio (solo contest-admin)
+- [x] Frontend: EventDetailPage — sezione admin contest (creazione POI contest, creazione contest, stampa QR POI)
+- [x] Seed: 4 ContestPOI + 2 Contest per springEvent, Marco ha anche ruolo contest-admin
+
+#### Decisioni progettuali
+- ContestPOI è modello separato da POI (quelli evento hanno coordinate e sono visibili in mappa, ContestPOI no)
+- ContestPOI condivisibili tra più contest dello stesso evento (CRUD separata da Contest)
+- Partecipazione anonima via UUID salvato in localStorage (nessuna registrazione richiesta)
+- QR code generato come dataURL (qrcode npm), stampa via finestra HTML pura (pattern Menu Print)
+- Scadenza partecipazione: countdown lato client + validazione lato server su ogni scan
+- Il pulsante "Consegna premio" in ContestVerifyPage è accessibile solo a utenti autenticati con ruolo contest-admin o platform-admin

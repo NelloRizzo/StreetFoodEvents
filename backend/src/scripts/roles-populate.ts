@@ -95,7 +95,15 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     permissions: ['photos:read'],
   });
 
-  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole || !photoAdminRole || !photoPrintRole) {
+  const contestAdminRole = await upsertRole({
+    name: 'Contest Admin',
+    slug: 'contest-admin',
+    scope: 'event',
+    description: 'Gestisce contest e POI di contest per l\'evento.',
+    permissions: ['contests:read', 'contests:create', 'contests:update', 'contests:delete', 'contest-pois:read', 'contest-pois:create', 'contest-pois:update', 'contest-pois:delete'],
+  });
+
+  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole || !photoAdminRole || !photoPrintRole || !contestAdminRole) {
     throw new Error('Failed to seed roles');
   }
 
@@ -128,6 +136,7 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     standPickupRole,
     photoAdminRole,
     photoPrintRole,
+    contestAdminRole,
   };
 }
 
