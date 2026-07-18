@@ -12,7 +12,7 @@ type ContestData = {
   endsAt: string
   durationMinutes: number
   requireSequence: boolean
-  prize: string | null
+  prizes: { label: string; awarded: boolean }[]
   isActive: boolean
 }
 
@@ -70,7 +70,11 @@ export function ContestPage() {
       <div className={styles.hero}>
         <h1 className={styles.title}>{contest.name}</h1>
         {contest.description && <p className={styles.description}>{contest.description}</p>}
-        {contest.prize && <span className={styles.prize}>Premio: {contest.prize}</span>}
+        {(contest.prizes ?? []).length > 0 && (
+          <span className={styles.prize}>
+            Premi: {(contest.prizes ?? []).filter((p) => p.awarded).length}/{(contest.prizes ?? []).length}
+          </span>
+        )}
       </div>
 
       <div className={styles.infoRow}>

@@ -46,7 +46,7 @@ import { EventContestsPage } from './pages/EventContestsPage'
 import { ContestPage } from './pages/ContestPage'
 import { ContestPlayPage } from './pages/ContestPlayPage'
 import { ContestVerifyPage } from './pages/ContestVerifyPage'
-import { EventCambioPage } from './pages/EventCambioPage'
+import { EventExchangePage } from './pages/EventExchangePage'
 
 export const router = createBrowserRouter([
   {
@@ -244,8 +244,8 @@ export const router = createBrowserRouter([
         element: <EventCashierPage />,
       },
       {
-        path: 'events/:eventId/cambio',
-        element: <EventCambioPage />,
+        path: 'events/:eventId/exchange',
+        element: <EventExchangePage />,
       },
     ],
   },

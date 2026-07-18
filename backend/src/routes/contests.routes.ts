@@ -87,6 +87,11 @@ contestsRouter.get(
     asyncHandler(contestsController.getParticipation)
 );
 
+contestsRouter.get(
+    '/:contestId/status',
+    asyncHandler(contestsController.getContestStatus)
+);
+
 contestsRouter.patch(
     '/:contestId/participation/:participantId/award',
     asyncHandler(authMiddleware),

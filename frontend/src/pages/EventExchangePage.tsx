@@ -4,6 +4,7 @@ import { apiRequest } from '../lib/api'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useAuth } from '../features/auth/auth-context'
 import styles from './EventDetailPage.module.scss'
+import cambioStyles from './EventExchangePage.module.scss'
 
 type ExchangeUser = {
   id: string
@@ -42,7 +43,7 @@ type BalanceSummary = {
   currencySymbol: string | null
 }
 
-export function EventCambioPage() {
+export function EventExchangePage() {
   const { eventId } = useParams<{ eventId: string }>()
   const { isAuthenticated } = useAuth()
 
@@ -105,10 +106,10 @@ export function EventCambioPage() {
       setSelectedUserBalance(res.newBalance)
       setTopUpAmount('')
       setTopUpDesc('')
-      setModal({ open: true, variant: 'alert', title: 'Top-up effettuato', message: `Caricati ${amount} crediti. Nuovo saldo: ${res.newBalance}` })
+      setModal({ open: true, variant: 'alert', title: 'Top-up completed', message: `Topped up ${amount} credits. New balance: ${res.newBalance}` })
       fetchData()
     } catch (err) {
-      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante il top-up' })
+      setModal({ open: true, variant: 'alert', title: 'Error', message: (err as { message?: string }).message || 'Error during top-up' })
     } finally {
       setSubmitting(null)
     }
@@ -127,10 +128,10 @@ export function EventCambioPage() {
       setSelectedUserBalance(res.newBalance)
       setRefundAmount('')
       setRefundDesc('')
-      setModal({ open: true, variant: 'alert', title: 'Rimborso effettuato', message: `Rimborsati ${amount} crediti. Nuovo saldo: ${res.newBalance}` })
+      setModal({ open: true, variant: 'alert', title: 'Refund completed', message: `Refunded ${amount} credits. New balance: ${res.newBalance}` })
       fetchData()
     } catch (err) {
-      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante il rimborso' })
+      setModal({ open: true, variant: 'alert', title: 'Error', message: (err as { message?: string }).message || 'Error during refund' })
     } finally {
       setSubmitting(null)
     }
@@ -142,148 +143,144 @@ export function EventCambioPage() {
   if (forbidden) {
     return (
       <div className={styles.page}>
-        <h1 className={styles.pageTitle}>Accesso negato</h1>
-        <p>Non hai i permessi per accedere a questa pagina.</p>
-        <Link to={`/events/${eventId}`} className={styles.backBtn}>Torna all'evento</Link>
+        <h1 className={styles.pageTitle}>Access denied</h1>
+        <p>You do not have permission to access this page.</p>
+        <Link to={`/events/${eventId}`} className={styles.backBtn}>Back to event</Link>
       </div>
     )
   }
 
   return (
     <div className={styles.page}>
-      <Link to={`/events/${eventId}`} className={styles.backBtn}>&larr; Torna all'evento</Link>
-      <h1 className={styles.pageTitle}>Cambio - {eventName || 'Caricamento...'}</h1>
+      <Link to={`/events/${eventId}`} className={styles.backBtn}>&larr; Back to event</Link>
+      <h1 className={styles.pageTitle}>Exchange - {eventName || 'Loading...'}</h1>
 
       {loading ? (
-        <p>Caricamento...</p>
+        <p>Loading...</p>
       ) : (
         <>
-          <section style={{ marginBottom: '2rem' }}>
-            <h2 className={styles.sectionTitle}>Riepilogo cassa</h2>
+          <section className={cambioStyles.section}>
+            <h2 className={styles.sectionTitle}>Cash summary</h2>
             {balance && (
-              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                <div style={{ background: 'var(--color-surface)', padding: '1rem', borderRadius: '8px', minWidth: '160px' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--color-ink-weak)' }}>Totale carichi</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-green)' }}>{symbol}{balance.totalTopUp.toFixed(2)}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-ink-weak)' }}>({balance.topUpCount} operazioni)</div>
+              <div className={cambioStyles.cardRow}>
+                <div className={cambioStyles.statCard}>
+                  <div className={cambioStyles.statLabel}>Total top-ups</div>
+                  <div className={cambioStyles.statValue}>{symbol}{balance.totalTopUp.toFixed(2)}</div>
+                  <div className={cambioStyles.statSub}>({balance.topUpCount} transactions)</div>
                 </div>
-                <div style={{ background: 'var(--color-surface)', padding: '1rem', borderRadius: '8px', minWidth: '160px' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--color-ink-weak)' }}>Totale rimborsi</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-red)' }}>-{symbol}{balance.totalRefund.toFixed(2)}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-ink-weak)' }}>({balance.refundCount} operazioni)</div>
+                <div className={cambioStyles.statCard}>
+                  <div className={cambioStyles.statLabel}>Total refunds</div>
+                  <div className={`${cambioStyles.statValue} ${cambioStyles.statValueNegative}`}>-{symbol}{balance.totalRefund.toFixed(2)}</div>
+                  <div className={cambioStyles.statSub}>({balance.refundCount} transactions)</div>
                 </div>
-                <div style={{ background: 'var(--color-surface)', padding: '1rem', borderRadius: '8px', minWidth: '160px' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--color-ink-weak)' }}>Saldo netto cassa</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 700, color: balance.netBalance >= 0 ? 'var(--color-green)' : 'var(--color-red)' }}>{symbol}{balance.netBalance.toFixed(2)}</div>
+                <div className={cambioStyles.statCard}>
+                  <div className={cambioStyles.statLabel}>Net cash balance</div>
+                  <div className={cambioStyles.statValue}>{symbol}{balance.netBalance.toFixed(2)}</div>
                 </div>
               </div>
             )}
           </section>
 
-          <section style={{ marginBottom: '2rem' }}>
-            <h2 className={styles.sectionTitle}>Seleziona utente</h2>
+          <section className={cambioStyles.section}>
+            <h2 className={styles.sectionTitle}>Select user</h2>
             <select
               value={selectedUserId}
+              className={cambioStyles.userSelect}
               onChange={(e) => {
                 const uid = e.target.value
                 setSelectedUserId(uid)
                 const u = users.find((x) => x.id === uid)
                 setSelectedUserBalance(u?.balance ?? 0)
               }}
-              style={{ width: '100%', maxWidth: '400px', padding: '0.5rem', fontSize: '1rem' }}
             >
-              <option value="">-- Seleziona --</option>
+              <option value="">-- Select --</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.isAnonymous
-                    ? `\u{1F464} Cliente generico (saldo: ${symbol}${u.balance})`
-                    : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${symbol}${u.balance}`}
+                    ? `\u{1F464} Generic customer (balance: ${symbol}${u.balance})`
+                    : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - balance: ${symbol}${u.balance}`}
                 </option>
               ))}
             </select>
 
             {selectedUser && (
-              <p style={{ marginTop: '0.5rem', color: 'var(--color-ink-weak)' }}>
-                Saldo corrente: <strong>{symbol}{(selectedUserBalance ?? selectedUser.balance).toFixed(2)}</strong>
-                {selectedUser.isAnonymous && ' - Cliente generico'}
+              <p className={cambioStyles.userInfo}>
+                Current balance: <strong>{symbol}{(selectedUserBalance ?? selectedUser.balance).toFixed(2)}</strong>
+                {selectedUser.isAnonymous && ' - Generic customer'}
               </p>
             )}
           </section>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+          <div className={cambioStyles.formGrid}>
             <section>
-              <h2 className={styles.sectionTitle}>Carica crediti (Reale &rarr; Virtuale)</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'var(--color-surface)', padding: '1rem', borderRadius: '8px' }}>
-                <label>
-                  Importo
+              <h2 className={styles.sectionTitle}>Top-up (Real &rarr; Virtual)</h2>
+              <div className={cambioStyles.formCard}>
+                <label className={cambioStyles.field}>
+                  Amount
                   <input type="number" min="0.01" step="0.01" value={topUpAmount}
                     onChange={(e) => setTopUpAmount(e.target.value)}
-                    disabled={!selectedUserId || submitting === 'topup'}
-                    style={{ width: '100%', padding: '0.5rem', fontSize: '1rem', marginTop: '0.25rem' }} />
+                    disabled={!selectedUserId || submitting === 'topup'} />
                 </label>
-                <label>
-                  Causale (opzionale)
+                <label className={cambioStyles.field}>
+                  Note (optional)
                   <input type="text" value={topUpDesc}
                     onChange={(e) => setTopUpDesc(e.target.value)}
-                    disabled={!selectedUserId || submitting === 'topup'}
-                    style={{ width: '100%', padding: '0.5rem', fontSize: '1rem', marginTop: '0.25rem' }} />
+                    disabled={!selectedUserId || submitting === 'topup'} />
                 </label>
-                <button className={styles.saveBtn} onClick={handleTopUp}
+                <button className={cambioStyles.btnTopUp} onClick={handleTopUp}
                   disabled={!selectedUserId || !topUpAmount || submitting === 'topup'}>
-                  {submitting === 'topup' ? 'Caricamento...' : `Carica ${symbol}`}
+                  {submitting === 'topup' ? 'Loading...' : `Top-up ${symbol}`}
                 </button>
               </div>
             </section>
 
             <section>
-              <h2 className={styles.sectionTitle}>Rimborsa crediti (Virtuale &rarr; Reale)</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'var(--color-surface)', padding: '1rem', borderRadius: '8px' }}>
-                <label>
-                  Importo
+              <h2 className={styles.sectionTitle}>Refund (Virtual &rarr; Real)</h2>
+              <div className={cambioStyles.formCard}>
+                <label className={cambioStyles.field}>
+                  Amount
                   <input type="number" min="0.01" step="0.01" value={refundAmount}
                     onChange={(e) => setRefundAmount(e.target.value)}
-                    disabled={!selectedUserId || submitting === 'refund'}
-                    style={{ width: '100%', padding: '0.5rem', fontSize: '1rem', marginTop: '0.25rem' }} />
+                    disabled={!selectedUserId || submitting === 'refund'} />
                 </label>
-                <label>
-                  Causale (opzionale)
+                <label className={cambioStyles.field}>
+                  Note (optional)
                   <input type="text" value={refundDesc}
                     onChange={(e) => setRefundDesc(e.target.value)}
-                    disabled={!selectedUserId || submitting === 'refund'}
-                    style={{ width: '100%', padding: '0.5rem', fontSize: '1rem', marginTop: '0.25rem' }} />
+                    disabled={!selectedUserId || submitting === 'refund'} />
                 </label>
-                <button className={styles.dangerBtn} onClick={handleRefund}
+                <button className={cambioStyles.btnRefund} onClick={handleRefund}
                   disabled={!selectedUserId || !refundAmount || submitting === 'refund'}>
-                  {submitting === 'refund' ? 'Rimborso...' : `Rimborsa ${symbol}`}
+                  {submitting === 'refund' ? 'Refunding...' : `Refund ${symbol}`}
                 </button>
               </div>
             </section>
           </div>
 
           <section>
-            <h2 className={styles.sectionTitle}>Storico operazioni</h2>
+            <h2 className={styles.sectionTitle}>Transaction history</h2>
             {transactions.length === 0 ? (
-              <p className={styles.empty}>Nessuna operazione di cambio effettuata.</p>
+              <p className={styles.empty}>No exchange transactions recorded.</p>
             ) : (
               <>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
-                      <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo</th>
-                      <th style={{ textAlign: 'right', padding: '0.5rem' }}>Saldo dopo</th>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Causale</th>
+                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Date</th>
+                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Type</th>
+                      <th style={{ textAlign: 'right', padding: '0.5rem' }}>Amount</th>
+                      <th style={{ textAlign: 'right', padding: '0.5rem' }}>Balance after</th>
+                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Note</th>
                     </tr>
                   </thead>
                   <tbody>
                     {transactions.map((tx) => (
                       <tr key={tx.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                         <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
-                          {new Date(tx.occurredAt).toLocaleString('it-IT')}
+                          {new Date(tx.occurredAt).toLocaleString('en-GB')}
                         </td>
                         <td style={{ padding: '0.5rem' }}>
-                          {tx.type === 'top-up' ? 'Carica' : 'Rimborso'}
+                          {tx.type === 'top-up' ? 'Top-up' : 'Refund'}
                         </td>
                         <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: tx.type === 'top-up' ? 'var(--color-green)' : 'var(--color-red)' }}>
                           {tx.type === 'top-up' ? '+' : '-'}{symbol}{tx.amount.toFixed(2)}
@@ -302,11 +299,11 @@ export function EventCambioPage() {
                 {txTotalPages > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
                     <button className={styles.textBtn} disabled={txPage <= 1} onClick={() => setTxPage((p) => Math.max(1, p - 1))}>
-                      Precedente
+                      Previous
                     </button>
                     <span style={{ padding: '0.25rem 0.5rem' }}>{txPage} / {txTotalPages}</span>
                     <button className={styles.textBtn} disabled={txPage >= txTotalPages} onClick={() => setTxPage((p) => p + 1)}>
-                      Successiva
+                      Next
                     </button>
                   </div>
                 )}

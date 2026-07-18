@@ -122,12 +122,13 @@ function toContestResponse(contest: {
     endsAt: Date;
     durationMinutes: number;
     requireSequence?: boolean;
-    prize?: string | null;
+    prizes?: Array<{ label: string; awarded: boolean }>;
     isActive?: boolean;
     orderedPOIIds?: Types.ObjectId[];
     createdAt: Date;
     updatedAt: Date;
 }) {
+    const prizes = contest.prizes ?? [];
     return {
         id: contest._id.toString(),
         eventId: contest.eventId.toString(),
@@ -137,7 +138,8 @@ function toContestResponse(contest: {
         endsAt: contest.endsAt,
         durationMinutes: contest.durationMinutes,
         requireSequence: contest.requireSequence ?? false,
-        prize: contest.prize ?? null,
+        prizes: prizes.map((p) => ({ label: p.label, awarded: p.awarded })),
+        awardedPrizesCount: prizes.filter((p) => p.awarded).length,
         isActive: contest.isActive ?? true,
         orderedPOIIds: (contest.orderedPOIIds ?? []).map((id) => id.toString()),
         createdAt: contest.createdAt,
@@ -182,7 +184,7 @@ async function createContest(req: Request, res: Response) {
     const {
         eventId, name, description,
         startsAt, endsAt, durationMinutes,
-        requireSequence, prize, isActive, orderedPOIIds
+        requireSequence, prizes, isActive, orderedPOIIds
     } = req.body;
 
     if (!eventId || !isValidObjectId(eventId)) {
@@ -191,11 +193,18 @@ async function createContest(req: Request, res: Response) {
     if (!name || typeof name !== 'string' || !name.trim()) {
         return res.status(400).json({ message: 'Name is required' });
     }
-    if (!startsAt || !endsAt) {
-        return res.status(400).json({ message: 'startsAt and endsAt are required' });
+    if (!startsAt) {
+        return res.status(400).json({ message: 'startsAt is required' });
     }
     if (!durationMinutes || durationMinutes < 1) {
         return res.status(400).json({ message: 'durationMinutes must be >= 1' });
+    }
+
+    const startDate = new Date(startsAt);
+    const endDate = endsAt ? new Date(endsAt) : new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+
+    if (prizes && !Array.isArray(prizes)) {
+        return res.status(400).json({ message: 'prizes must be an array' });
     }
 
     if (orderedPOIIds && Array.isArray(orderedPOIIds)) {
@@ -210,11 +219,11 @@ async function createContest(req: Request, res: Response) {
         eventId,
         name: name.trim(),
         description: description ?? null,
-        startsAt: new Date(startsAt),
-        endsAt: new Date(endsAt),
+        startsAt: startDate,
+        endsAt: endDate,
         durationMinutes,
         requireSequence: requireSequence ?? false,
-        prize: prize ?? null,
+        prizes: (prizes ?? []).map((p: { label: string }) => ({ label: p.label, awarded: false })),
         isActive: isActive ?? true,
         orderedPOIIds: orderedPOIIds ?? []
     });
@@ -233,16 +242,23 @@ async function updateContest(req: Request, res: Response) {
     }
     const {
         name, description, startsAt, endsAt, durationMinutes,
-        requireSequence, prize, isActive, orderedPOIIds
+        requireSequence, prizes, isActive, orderedPOIIds
     } = req.body;
 
     if (name !== undefined) contest.name = name.trim();
     if (description !== undefined) contest.description = description;
     if (startsAt !== undefined) contest.startsAt = new Date(startsAt);
-    if (endsAt !== undefined) contest.endsAt = new Date(endsAt);
     if (durationMinutes !== undefined) contest.durationMinutes = durationMinutes;
+
+    if (endsAt !== undefined) {
+        contest.endsAt = new Date(endsAt);
+    } else if (startsAt !== undefined || durationMinutes !== undefined) {
+        contest.endsAt = new Date(contest.startsAt.getTime() + contest.durationMinutes * 60 * 1000);
+    }
     if (requireSequence !== undefined) contest.requireSequence = requireSequence;
-    if (prize !== undefined) contest.prize = prize;
+    if (prizes !== undefined) {
+        contest.prizes = prizes.map((p: { label: string; awarded?: boolean }) => ({ label: p.label, awarded: p.awarded ?? false }));
+    }
     if (isActive !== undefined) contest.isActive = isActive;
     if (orderedPOIIds !== undefined) {
         contest.orderedPOIIds = orderedPOIIds.filter((id: string) => isValidObjectId(id)).map((id: string) => new Types.ObjectId(id));
@@ -341,9 +357,24 @@ async function registerScan(req: Request, res: Response) {
 
     participation.scannedPOIIds.push(poiObjectId);
 
-    if (participation.scannedPOIIds.length === contest.orderedPOIIds.length) {
+    const allScanned = participation.scannedPOIIds.length === contest.orderedPOIIds.length;
+
+    if (allScanned) {
         participation.completedAt = now;
-        participation.isWinner = true;
+        const prize = (contest.prizes ?? []).find((p) => !p.awarded);
+        if (prize) {
+            participation.isWinner = true;
+            participation.awardedPrizeLabel = prize.label;
+            prize.awarded = true;
+
+            const allAwarded = (contest.prizes ?? []).every((p) => p.awarded);
+            if (allAwarded) {
+                contest.isActive = false;
+            }
+            await contest.save();
+        } else {
+            participation.isWinner = false;
+        }
     }
 
     await participation.save();
@@ -379,6 +410,7 @@ function getParticipationState(participation: {
     isWinner?: boolean | null;
     prizeAwarded?: boolean;
     deviceName?: string | null;
+    awardedPrizeLabel?: string | null;
 }) {
     return {
         id: participation._id.toString(),
@@ -389,6 +421,7 @@ function getParticipationState(participation: {
         completedAt: participation.completedAt,
         isWinner: participation.isWinner,
         prizeAwarded: participation.prizeAwarded ?? false,
+        awardedPrizeLabel: participation.awardedPrizeLabel ?? null,
         deviceName: participation.deviceName ?? null
     };
 }
@@ -418,6 +451,26 @@ async function awardPrize(req: Request, res: Response) {
     participation.prizeAwarded = true;
     await participation.save();
     return res.status(200).json(getParticipationState(participation));
+}
+
+async function getContestStatus(req: Request, res: Response) {
+    const contestId = req.params.contestId;
+    if (!isValidObjectId(contestId)) {
+        return res.status(400).json({ message: 'Invalid contest id' });
+    }
+    const contest = await ContestModel.findById(contestId);
+    if (!contest) {
+        return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    const prizes = contest.prizes ?? [];
+    return res.status(200).json({
+        prizes: prizes.map((p) => ({ label: p.label, awarded: p.awarded })),
+        awardedPrizesCount: prizes.filter((p) => p.awarded).length,
+        totalPrizes: prizes.length,
+        isActive: contest.isActive,
+        endsAt: contest.endsAt
+    });
 }
 
 // ── POI QR Codes ──
@@ -465,6 +518,7 @@ export const contestsController = {
     registerScan,
     getParticipation,
     awardPrize,
+    getContestStatus,
     // QR
     getContestPoiQrCodes
 };

@@ -8,7 +8,7 @@ import styles from './ContestVerifyPage.module.scss'
 type ContestData = {
   name: string
   requireSequence: boolean
-  prize: string | null
+  prizes: { label: string; awarded: boolean }[]
 }
 
 type PoiBrief = {
@@ -142,9 +142,9 @@ export function ContestVerifyPage() {
             <strong>Stato:</strong>{' '}
             {isWin ? 'Vinto' : participation.isWinner === false ? 'Fallito' : 'In corso'}
           </div>
-          {contest.prize && (
+          {(contest.prizes ?? []).length > 0 && (
             <div>
-              <strong>Premio:</strong> {contest.prize}
+              <strong>Premi assegnati:</strong> {(contest.prizes ?? []).filter((p) => p.awarded).length}/{(contest.prizes ?? []).length}
             </div>
           )}
           <div>

@@ -85,3 +85,12 @@ Considerazioni progettuali e decisioni architetturali.
 - **Fix**: usare `grid-template-rows: repeat(N, minmax(0, 1fr))` — il `minmax(0, ...)` permette alle righe di restringersi a 0. Combinare con `min-height: 0` sul container flex, `overflow: hidden` sulla griglia, e `min-height: 0; overflow: hidden` sugli item della griglia (`.photoWrapper`).
 - **Cosa NON fare**: non usare `backdrop-filter: blur()` su elementi con `z-index` più alto di un container semi-trasparente — il blur si estende visivamente oltre i bounds dell'elemento e copre il contenuto sottostante. Usare background opaco al suo posto.
 - **object-fit in griglie**: `object-fit: cover` riempie la cella ma ritaglia; `object-fit: contain` mostra l'intera immagine ma lascia spazi vuoti. Con poche righe (es. 4×2) le celle sono abbastanza alte per `contain`. Con molte righe (es. 4×4) le celle sono basse e `cover` è preferibile per evitare spazi vuoti che il footer può coprire.
+-
+- ## Contest / Exchange
+- - **Contest prizes** are stored as `prizes: [{ label: string, awarded: boolean }]` array on the Contest model, not a single `prize` string.
+- - **Auto-stop**: when all prizes are awarded, `contest.isActive` becomes `false` automatically.
+- - **Winner selection**: first N participants to scan all POIs win prizes in order. `registerScan` assigns the next un-awarded prize on completion.
+- - **Anonymous EventUser**: `EventUser.userId` is optional (`null`). The `{ eventId: 1, userId: 1 }` unique index uses `partialFilterExpression: { userId: { $type: 'objectId' } }` to allow multiple null userIds (though only one anonymous Customer per event).
+- - **Exchange admin**: `exchange-admin` role (scope event) with permissions `exchanges:read`, `exchanges:create`, `payments:read`, `payments:create`, `payments:refund`.
+- - **Exchange operations**: top-up (real→virtual) is `EventUserTransaction` type `top-up`, direction `credit`. Refund (virtual→real) is type `refund`, direction `debit`. Both use reference type `cambio`.
+- - **EndsAt** is always required on Contest model. If not provided on creation, it's calculated from `startsAt + durationMinutes`. The `endsAt` field allows manual early termination.

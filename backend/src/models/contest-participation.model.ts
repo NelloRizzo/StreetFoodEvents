@@ -37,6 +37,11 @@ const contestParticipationSchema = new Schema(
         prizeAwarded: {
             type: Boolean,
             default: false
+        },
+        awardedPrizeLabel: {
+            type: String,
+            trim: true,
+            default: null
         }
     },
     {

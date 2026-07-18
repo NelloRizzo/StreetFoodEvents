@@ -10,7 +10,8 @@ type ContestData = {
   name: string
   durationMinutes: number
   requireSequence: boolean
-  prize: string | null
+  prizes: { label: string; awarded: boolean }[]
+  awardedPrizesCount: number
 }
 
 type PoiBrief = {
@@ -24,6 +25,7 @@ type ParticipationState = {
   completedAt: string | null
   isWinner: boolean | null
   prizeAwarded: boolean
+  awardedPrizeLabel: string | null
 }
 
 function getParticipantId(contestId: string): string | null {
@@ -76,6 +78,7 @@ export function ContestPlayPage() {
             completedAt: part.completedAt,
             isWinner: part.isWinner,
             prizeAwarded: part.prizeAwarded,
+            awardedPrizeLabel: part.awardedPrizeLabel ?? null,
           })
           if (part.completedAt || part.isWinner !== null) {
             setFinished(true)
@@ -123,6 +126,7 @@ export function ContestPlayPage() {
         completedAt: result.completedAt,
         isWinner: result.isWinner,
         prizeAwarded: result.prizeAwarded,
+        awardedPrizeLabel: result.awardedPrizeLabel ?? null,
       })
       setScanMessage({ ok: true, text: 'POI trovato!' })
       setTimeout(() => setScanMessage(null), 2000)
@@ -188,7 +192,7 @@ export function ContestPlayPage() {
               <span className={styles.finishIcon}>&#127881;</span>
               <h2 className={styles.finishTitle}>Complimenti!</h2>
               <p className={styles.finishDesc}>Hai trovato tutti i POI!</p>
-              {contest.prize && <span className={styles.prizeTag}>Premio: {contest.prize}</span>}
+              {participation?.awardedPrizeLabel && <span className={styles.prizeTag}>Hai vinto: {participation.awardedPrizeLabel}</span>}
               <button
                 className={styles.verifyBtn}
                 onClick={() => navigate(`/contest/${contestId}/verify/${participantIdLocal}`)}
@@ -234,6 +238,11 @@ export function ContestPlayPage() {
         {/* Header */}
         <div className={styles.header}>
           <h1 className={styles.contestName}>{contest.name}</h1>
+          {contest.prizes.length > 0 && (
+            <div className={styles.prizeStatus}>
+              Prizes: {contest.awardedPrizesCount}/{contest.prizes.length}
+            </div>
+          )}
           <div className={`${styles.timer} ${timeLeft !== null && timeLeft < 60 ? styles.timerUrgent : ''}`}>
             {timeLeft !== null ? formatTime(timeLeft) : '--:--'}
           </div>

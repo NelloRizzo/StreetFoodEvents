@@ -72,7 +72,7 @@ export async function populateContests(seedEvents: SeedEventsResult) {
                 endsAt: then,
                 durationMinutes: 30,
                 requireSequence: true,
-                prize: 'Un cocktail omaggio',
+                prizes: [{ label: 'Un cocktail omaggio', awarded: false }],
                 isActive: true,
                 orderedPOIIds: [cpoi1._id, cpoi2._id, cpoi3._id, cpoi4._id]
             }
@@ -91,7 +91,11 @@ export async function populateContests(seedEvents: SeedEventsResult) {
                 endsAt: then,
                 durationMinutes: 45,
                 requireSequence: false,
-                prize: 'Un panino gourmet omaggio',
+                prizes: [
+                    { label: 'Un panino gourmet omaggio', awarded: false },
+                    { label: 'Una bottiglia di vino', awarded: false },
+                    { label: 'Un buono da 20€', awarded: false }
+                ],
                 isActive: true,
                 orderedPOIIds: [cpoi1._id, cpoi2._id, cpoi3._id, cpoi4._id]
             }

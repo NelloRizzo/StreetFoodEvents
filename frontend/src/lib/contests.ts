@@ -8,6 +8,11 @@ export type ContestPOI = {
   sequenceOrder: number
 }
 
+export type ContestPrize = {
+  label: string
+  awarded: boolean
+}
+
 export type Contest = {
   id: string
   eventId: string
@@ -17,7 +22,8 @@ export type Contest = {
   endsAt: string
   durationMinutes: number
   requireSequence: boolean
-  prize: string | null
+  prizes: ContestPrize[]
+  awardedPrizesCount: number
   isActive: boolean
   orderedPOIIds: string[]
 }
@@ -35,6 +41,7 @@ export type Participation = {
   completedAt: string | null
   isWinner: boolean | null
   prizeAwarded: boolean
+  awardedPrizeLabel: string | null
   deviceName: string | null
 }
 
@@ -86,10 +93,9 @@ export function createContest(data: {
   name: string
   description?: string | null
   startsAt: string
-  endsAt: string
   durationMinutes: number
   requireSequence?: boolean
-  prize?: string | null
+  prizes?: { label: string }[]
   isActive?: boolean
   orderedPOIIds?: string[]
 }) {
@@ -106,7 +112,7 @@ export function updateContest(contestId: string, data: Partial<{
   endsAt: string
   durationMinutes: number
   requireSequence: boolean
-  prize: string | null
+  prizes: { label: string; awarded?: boolean }[]
   isActive: boolean
   orderedPOIIds: string[]
 }>) {
@@ -137,6 +143,16 @@ export function awardPrize(contestId: string, participantId: string) {
   return apiRequest<Participation>(`/contests/${contestId}/participation/${participantId}/award`, {
     method: 'PATCH',
   })
+}
+
+export function getContestStatus(contestId: string) {
+  return apiRequest<{
+    prizes: { label: string; awarded: boolean }[]
+    awardedPrizesCount: number
+    totalPrizes: number
+    isActive: boolean
+    endsAt: string
+  }>(`/contests/${contestId}/status`)
 }
 
 // ── QR Codes ──

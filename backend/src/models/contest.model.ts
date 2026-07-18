@@ -36,10 +36,12 @@ const contestSchema = new Schema(
             type: Boolean,
             default: false
         },
-        prize: {
-            type: String,
-            trim: true,
-            default: null
+        prizes: {
+            type: [{
+                label: { type: String, trim: true, required: true },
+                awarded: { type: Boolean, default: false }
+            }],
+            default: []
         },
         isActive: {
             type: Boolean,
