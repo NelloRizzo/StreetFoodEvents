@@ -34,10 +34,27 @@ export const app = express();
 app.disable('x-powered-by');
 app.set('sessionCookieName', env.AUTH_SESSION_COOKIE_NAME);
 
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:4000',
+    'https://streetfoodevents.onrender.com',
+    'https://streetfoodevents-api.onrender.com',
+    'https://streetfoodevents-2.onrender.com',
+    'https://streetfoodevents-backend.onrender.com'
+];
+
 app.use(
     cors({
-        origin: true,
-        credentials: true
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(null, origin);
+            }
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Cookie', 'Authorization']
     })
 );
 app.use(helmet());
