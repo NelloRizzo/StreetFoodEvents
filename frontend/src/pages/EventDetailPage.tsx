@@ -518,11 +518,12 @@ export function EventDetailPage() {
 
           <AliasManager entityType="event" entityRef={eventId!} />
 
-          {isPlatformAdmin && (
-            <Link to="/frames" className={styles.actionBtnOutline}>
+          {isPlatformAdmin && (<>
+            <h2 className={styles.sectionTitle}>Cornici</h2>
+            <Link to="/frames" className={styles.actionBtn}>
               Gestisci cornici
             </Link>
-          )}
+          </>)}
           </>)}
 
         {hasContestAdmin && (<>
@@ -530,7 +531,7 @@ export function EventDetailPage() {
             Contest <span className={styles.count}>{contests.length}</span>
           </h2>
 
-          <Link to={`/events/${eventId}/contests`} className={styles.actionBtnOutline} style={{ marginBottom: '0.5rem', display: 'inline-block' }}>
+          <Link to={`/events/${eventId}/contests`} className={styles.actionBtn} style={{ marginBottom: '0.5rem', display: 'inline-block' }}>
             Vedi contest pubblici
           </Link>
 
@@ -818,7 +819,7 @@ export function EventDetailPage() {
 
         {hasExchangeAdmin && (<>
           <h2 className={styles.sectionTitle}>Cambio valuta</h2>
-          <Link to={`/events/${eventId}/exchange`} className={styles.actionBtnOutline}>
+          <Link to={`/events/${eventId}/exchange`} className={styles.actionBtn}>
             Gestisci cambio
           </Link>
         </>)}

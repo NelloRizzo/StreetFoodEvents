@@ -58,6 +58,19 @@ export function EventExchangePage() {
   const [users, setUsers] = useState<ExchangeUser[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [txPage, setTxPage] = useState(1)
+  const [txTotalPages, setTxPages] = useState(1)
+
+  const [selectedUserId, setSelectedUserId] = useState('')
+  const [selectedUserBalance, setSelectedUserBalance] = useState(0)
+  const [topUpAmount, setTopUpAmount] = useState('')
+  const [topUpDesc, setTopUpDesc] = useState('')
+  const [refundAmount, setRefundAmount] = useState('')
+  const [refundDesc, setRefundDesc] = useState('')
+  const [submitting, setSubmitting] = useState<'topup' | 'refund' | null>(null)
+  const [modal, setModal] = useState<{ open: boolean; variant: 'confirm' | 'alert'; title: string; message: string }>({
+    open: false, variant: 'alert', title: '', message: ''
+  })
+  const [txPage, setTxPage] = useState(1)
   const [txTotalPages, setTxTotalPages] = useState(1)
 
   const [selectedUserId, setSelectedUserId] = useState('')
