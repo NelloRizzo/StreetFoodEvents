@@ -35,6 +35,7 @@ function toCpoiResponse(cpoi: {
     eventId: Types.ObjectId;
     name: string;
     hint?: string | null;
+    groups?: string[];
     sequenceOrder?: number;
     createdAt: Date;
     updatedAt: Date;
@@ -44,6 +45,7 @@ function toCpoiResponse(cpoi: {
         eventId: cpoi.eventId.toString(),
         name: cpoi.name,
         hint: cpoi.hint ?? null,
+        groups: cpoi.groups ?? [],
         sequenceOrder: cpoi.sequenceOrder ?? 0,
         createdAt: cpoi.createdAt,
         updatedAt: cpoi.updatedAt
@@ -63,7 +65,7 @@ async function getContestPoi(req: Request, res: Response) {
 }
 
 async function createContestPoi(req: Request, res: Response) {
-    const { eventId, name, hint } = req.body;
+    const { eventId, name, hint, groups } = req.body;
     if (!eventId || !isValidObjectId(eventId)) {
         return res.status(400).json({ message: 'Valid eventId is required' });
     }
@@ -76,6 +78,7 @@ async function createContestPoi(req: Request, res: Response) {
         eventId,
         name: name.trim(),
         hint: hint ?? null,
+        groups: Array.isArray(groups) ? groups.filter((g: string) => typeof g === 'string' && g.trim()) : [],
         sequenceOrder: (maxOrder?.sequenceOrder ?? 0) + 1
     });
 
@@ -91,9 +94,10 @@ async function updateContestPoi(req: Request, res: Response) {
     if (!poi) {
         return res.status(404).json({ message: 'Contest POI not found' });
     }
-    const { name, hint, sequenceOrder } = req.body;
+    const { name, hint, groups, sequenceOrder } = req.body;
     if (name !== undefined) poi.name = name.trim();
     if (hint !== undefined) poi.hint = hint;
+    if (groups !== undefined) poi.groups = Array.isArray(groups) ? groups.filter((g: string) => typeof g === 'string' && g.trim()) : [];
     if (sequenceOrder !== undefined) poi.sequenceOrder = sequenceOrder;
     await poi.save();
     return res.status(200).json({ item: toCpoiResponse(poi) });
@@ -125,6 +129,8 @@ function toContestResponse(contest: {
     prizes?: Array<{ label: string; awarded: boolean }>;
     isActive?: boolean;
     orderedPOIIds?: Types.ObjectId[];
+    pickConfig?: { groupPicks: Array<{ group: string; count: number }> } | null;
+    autoPickedPOIIds?: Types.ObjectId[];
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -142,6 +148,8 @@ function toContestResponse(contest: {
         awardedPrizesCount: prizes.filter((p) => p.awarded).length,
         isActive: contest.isActive ?? true,
         orderedPOIIds: (contest.orderedPOIIds ?? []).map((id) => id.toString()),
+        pickConfig: contest.pickConfig ?? null,
+        autoPickedPOIIds: (contest.autoPickedPOIIds ?? []).map((id) => id.toString()),
         createdAt: contest.createdAt,
         updatedAt: contest.updatedAt
     };
@@ -184,7 +192,7 @@ async function createContest(req: Request, res: Response) {
     const {
         eventId, name, description,
         startsAt, endsAt, durationMinutes,
-        requireSequence, prizes, isActive, orderedPOIIds
+        requireSequence, prizes, isActive, orderedPOIIds, pickConfig
     } = req.body;
 
     if (!eventId || !isValidObjectId(eventId)) {
@@ -207,12 +215,26 @@ async function createContest(req: Request, res: Response) {
         return res.status(400).json({ message: 'prizes must be an array' });
     }
 
-    if (orderedPOIIds && Array.isArray(orderedPOIIds)) {
-        for (const id of orderedPOIIds) {
-            if (!isValidObjectId(id)) {
-                return res.status(400).json({ message: `Invalid POI id: ${id}` });
+    let poIds: string[] = orderedPOIIds ?? [];
+    let autoPicked: string[] = [];
+
+    if (pickConfig?.groupPicks?.length > 0) {
+        const pool = new Set(poIds);
+        for (const gp of pickConfig.groupPicks) {
+            const available = await ContestPOIModel.find({
+                eventId,
+                groups: { $in: [gp.group] },
+                _id: { $nin: [...pool].map((id) => new Types.ObjectId(id)) }
+            });
+            const shuffled = [...available].sort(() => Math.random() - 0.5);
+            const picked = shuffled.slice(0, gp.count);
+            for (const p of picked) {
+                const id = p._id.toString();
+                pool.add(id);
+                autoPicked.push(id);
             }
         }
+        poIds = [...pool];
     }
 
     const contest = await ContestModel.create({
@@ -225,7 +247,9 @@ async function createContest(req: Request, res: Response) {
         requireSequence: requireSequence ?? false,
         prizes: (prizes ?? []).map((p: { label: string }) => ({ label: p.label, awarded: false })),
         isActive: isActive ?? true,
-        orderedPOIIds: orderedPOIIds ?? []
+        orderedPOIIds: poIds.map((id) => new Types.ObjectId(id)),
+        pickConfig: pickConfig ?? null,
+        autoPickedPOIIds: autoPicked.map((id) => new Types.ObjectId(id))
     });
 
     return res.status(201).json({ item: toContestResponse(contest) });
@@ -242,7 +266,7 @@ async function updateContest(req: Request, res: Response) {
     }
     const {
         name, description, startsAt, endsAt, durationMinutes,
-        requireSequence, prizes, isActive, orderedPOIIds
+        requireSequence, prizes, isActive, orderedPOIIds, pickConfig
     } = req.body;
 
     if (name !== undefined) contest.name = name.trim();
@@ -260,7 +284,45 @@ async function updateContest(req: Request, res: Response) {
         contest.prizes = prizes.map((p: { label: string; awarded?: boolean }) => ({ label: p.label, awarded: p.awarded ?? false }));
     }
     if (isActive !== undefined) contest.isActive = isActive;
-    if (orderedPOIIds !== undefined) {
+
+    if (pickConfig !== undefined) {
+        const oldAutoSet = new Set(
+            (contest.autoPickedPOIIds ?? []).map((id) => id.toString())
+        );
+        const bodyIds = (orderedPOIIds ?? []).filter((id: string) => isValidObjectId(id));
+
+        const manualSet = new Set<string>();
+        for (const id of bodyIds) {
+            if (!oldAutoSet.has(id)) manualSet.add(id);
+        }
+        for (const id of (contest.orderedPOIIds ?? []).map((id) => id.toString())) {
+            if (!oldAutoSet.has(id)) manualSet.add(id);
+        }
+
+        const newAuto: string[] = [];
+        if (pickConfig?.groupPicks?.length > 0) {
+            const pool = new Set(manualSet);
+            for (const gp of pickConfig.groupPicks) {
+                const available = await ContestPOIModel.find({
+                    eventId: contest.eventId,
+                    groups: { $in: [gp.group] },
+                    _id: { $nin: [...pool].map((id) => new Types.ObjectId(id)) }
+                });
+                const shuffled = [...available].sort(() => Math.random() - 0.5);
+                const picked = shuffled.slice(0, gp.count);
+                for (const p of picked) {
+                    const id = p._id.toString();
+                    pool.add(id);
+                    newAuto.push(id);
+                }
+            }
+            contest.orderedPOIIds = [...pool].map((id) => new Types.ObjectId(id));
+        } else {
+            contest.orderedPOIIds = [...manualSet].map((id) => new Types.ObjectId(id));
+        }
+        contest.autoPickedPOIIds = newAuto.map((id) => new Types.ObjectId(id));
+        contest.pickConfig = pickConfig;
+    } else if (orderedPOIIds !== undefined) {
         contest.orderedPOIIds = orderedPOIIds.filter((id: string) => isValidObjectId(id)).map((id: string) => new Types.ObjectId(id));
     }
 

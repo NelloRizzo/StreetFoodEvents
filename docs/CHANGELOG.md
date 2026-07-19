@@ -311,6 +311,29 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] Frontend: EventDetailPage — sezione admin contest (creazione POI contest, creazione contest, stampa QR POI)
 - [x] Seed: 4 ContestPOI + 2 Contest per springEvent, Marco ha anche ruolo contest-admin
 
+### Contest POI per gruppi con selezione casuale (Jul 2026)
+- [x] Campo `groups[]` su ContestPOI (array di stringhe) — un POI può appartenere a più gruppi
+- [x] Campo `pickConfig` su Contest (`{ groupPicks: { group, count }[] }`) + `autoPickedPOIIds` tracciamento
+- [x] Backend: auto-pick alla creazione — dati i gruppi e il numero per gruppo, seleziona POI casuali e li aggiunge a orderedPOIIds
+- [x] Backend: updateContest preserva POI manuali + ricalcola auto-pick se pickConfig cambia
+- [x] Frontend: form CPOI con input "Gruppi (separati da virgola)" e badge gruppo nelle card
+- [x] Frontend: sezione "Prelievo automatico per gruppi" nel form contest con aggiunta/rimozione gruppi
+- [x] Frontend: POI divisi per gruppo nella pool del drag-and-drop (+ header "Senza gruppo" per quelli senza gruppo)
+
+### Drag-and-drop contest POI selection (Jul 2026)
+- [x] Sostituito checkboxes + frecce su/giù con HTML5 drag-and-drop nativo
+- [x] Pool POI disponibili (trascina per aggiungere) vs Ordine POI (trascina per riordinare)
+- [x] Duplicati permessi — stesso POI può apparire più volte nell'ordine
+- [x] Rimozione via pulsante ×, riordino via drag all'interno della lista ordinata
+
+### EventExchangePage riscritta (Jul 2026)
+- [x] Rimosse duplicazioni degli state hooks che causavano ridefinizioni
+- [x] Struttura JSX corretta con chiusure section/div appropriate
+- [x] Tutte le stringhe in italiano
+
+### Traduzioni italiano contest form (Jul 2026)
+- [x] Sostituiti testi inglesi rimasti: "Ordered sequence" → "Sequenza ordinata", "Prizes" → "Premi", ecc.
+
 #### Decisioni progettuali
 - ContestPOI è modello separato da POI (quelli evento hanno coordinate e sono visibili in mappa, ContestPOI no)
 - ContestPOI condivisibili tra più contest dello stesso evento (CRUD separata da Contest)

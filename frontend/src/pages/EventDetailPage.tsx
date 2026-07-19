@@ -83,11 +83,11 @@ export function EventDetailPage() {
   const [hasPhotoPrint, setHasPhotoPrint] = useState(false)
   const [hasContestAdmin, setHasContestAdmin] = useState(false)
   const [hasExchangeAdmin, setHasExchangeAdmin] = useState(false)
-  const [cpois, setCpois] = useState<{ id: string; name: string; hint: string | null }[]>([])
+  const [cpois, setCpois] = useState<{ id: string; name: string; hint: string | null; groups: string[] }[]>([])
   const [showCpoiForm, setShowCpoiForm] = useState(false)
-  const [cpoiForm, setCpoiForm] = useState({ name: '', hint: '' })
+  const [cpoiForm, setCpoiForm] = useState({ name: '', hint: '', groupsInput: '' })
   const [savingCpoi, setSavingCpoi] = useState(false)
-  const [contests, setContests] = useState<{ id: string; name: string; isActive: boolean; orderedPOIIds: string[]; durationMinutes: number; startsAt: string; prizes: { label: string; awarded: boolean }[]; awardedPrizesCount: number; requireSequence: boolean; description: string | null }[]>([])
+  const [contests, setContests] = useState<{ id: string; name: string; isActive: boolean; orderedPOIIds: string[]; durationMinutes: number; startsAt: string; prizes: { label: string; awarded: boolean }[]; awardedPrizesCount: number; requireSequence: boolean; description: string | null; pickConfig: { groupPicks: { group: string; count: number }[] } | null; autoPickedPOIIds: string[] }[]>([])
   const [showContestForm, setShowContestForm] = useState(false)
   const [editingContestId, setEditingContestId] = useState<string | null>(null)
   const [contestForm, setContestForm] = useState({
@@ -99,6 +99,7 @@ export function EventDetailPage() {
     prizes: [{ label: '' }] as { label: string }[],
     isActive: true,
     orderedPOIIds: [] as string[],
+    pickConfig: null as { groupPicks: { group: string; count: number }[] } | null,
   })
   const [savingContest, setSavingContest] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
@@ -553,22 +554,27 @@ export function EventDetailPage() {
                 Indizio
                 <input type="text" value={cpoiForm.hint} onChange={(e) => setCpoiForm((p) => ({ ...p, hint: e.target.value }))} />
               </label>
+              <label className={styles.poiField}>
+                Gruppi (separati da virgola)
+                <input type="text" value={cpoiForm.groupsInput} placeholder="es. Cibo, Bevande, Giochi" onChange={(e) => setCpoiForm((p) => ({ ...p, groupsInput: e.target.value }))} />
+              </label>
               <div className={styles.poiFormActions}>
                 <button className={styles.saveBtn} onClick={async () => {
                   if (!eventId || savingCpoi || !cpoiForm.name.trim()) return
                   setSavingCpoi(true)
                   try {
-                    await createContestPoi({ eventId, name: cpoiForm.name.trim(), hint: cpoiForm.hint.trim() || null })
+                    const groups = cpoiForm.groupsInput.split(',').map((g) => g.trim()).filter(Boolean)
+                    await createContestPoi({ eventId, name: cpoiForm.name.trim(), hint: cpoiForm.hint.trim() || null, groups: groups.length > 0 ? groups : undefined })
                     const data = await listContestPois(eventId)
                     setCpois(data.items)
-                    setCpoiForm({ name: '', hint: '' })
+                    setCpoiForm({ name: '', hint: '', groupsInput: '' })
                     setShowCpoiForm(false)
                   } catch { /* ignore */ }
                   setSavingCpoi(false)
                 }} disabled={savingCpoi}>
                   {savingCpoi ? 'Salvataggio...' : 'Crea POI'}
                 </button>
-                <button className={styles.cancelBtn} onClick={() => { setShowCpoiForm(false); setCpoiForm({ name: '', hint: '' }) }}>Annulla</button>
+                <button className={styles.cancelBtn} onClick={() => { setShowCpoiForm(false); setCpoiForm({ name: '', hint: '', groupsInput: '' }) }}>Annulla</button>
               </div>
             </div>
           )}
@@ -579,6 +585,13 @@ export function EventDetailPage() {
                 <div className={styles.poiCardBody}>
                   <strong className={styles.poiCardName}>{cpoi.name}</strong>
                   {cpoi.hint && <span className={styles.poiCardDesc} style={{ fontStyle: 'italic' }}>{cpoi.hint}</span>}
+                  {cpoi.groups.length > 0 && (
+                    <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                      {cpoi.groups.map((g) => (
+                        <span key={g} className={styles.poiGroupBadge}>{g}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className={styles.poiCardActions}>
                   <button className={styles.dangerBtn} onClick={async () => {
@@ -595,8 +608,8 @@ export function EventDetailPage() {
           {/* Contest list + create */}
           <h3 style={{ color: 'var(--color-ink-strong)', fontSize: '1rem', margin: '1.5rem 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             Contest
-            <button className={styles.poiToggleBtn} onClick={() => { setShowContestForm((p) => !p); if (!showContestForm) { setEditingContestId(null); setContestForm({ name: '', description: '', startsAt: '', durationMinutes: 30, requireSequence: false, prizes: [{ label: '' }], isActive: true, orderedPOIIds: cpois.map((p) => p.id) }) } }}>
-              {showContestForm ? 'Close' : editingContestId ? 'Edit contest' : 'New contest'}
+            <button className={styles.poiToggleBtn} onClick={() => { setShowContestForm((p) => !p); if (!showContestForm) { setEditingContestId(null); setContestForm({ name: '', description: '', startsAt: '', durationMinutes: 30, requireSequence: false, prizes: [{ label: '' }], isActive: true, orderedPOIIds: cpois.map((p) => p.id), pickConfig: null }) } }}>
+              {showContestForm ? 'Chiudi' : editingContestId ? 'Modifica contest' : 'Nuovo contest'}
             </button>
           </h3>
 
@@ -615,21 +628,21 @@ export function EventDetailPage() {
                 <input type="datetime-local" value={contestForm.startsAt} onChange={(e) => setContestForm((p) => ({ ...p, startsAt: e.target.value }))} />
               </label>
               <label className={styles.poiField}>
-                Duration (minutes)
+                Durata (minuti)
                 <input type="number" min={1} value={contestForm.durationMinutes} onChange={(e) => setContestForm((p) => ({ ...p, durationMinutes: Number(e.target.value) }))} />
               </label>
                 <label className={styles.poiField}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                     <input type="checkbox" checked={contestForm.requireSequence} onChange={(e) => setContestForm((p) => ({ ...p, requireSequence: e.target.checked }))} />
-                    Ordered sequence
+                    Sequenza ordinata
                   </label>
                 </label>
               <label className={styles.poiField}>
-                <span>Prizes</span>
+                <span>Premi</span>
                 {contestForm.prizes.map((prize, i) => (
                   <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
                     <input
-                      type="text" value={prize.label} placeholder={`Prize ${i + 1}`}
+                      type="text" value={prize.label} placeholder={`Premio ${i + 1}`}
                       onChange={(e) => {
                         const arr = [...contestForm.prizes]
                         arr[i] = { label: e.target.value }
@@ -646,7 +659,7 @@ export function EventDetailPage() {
                 ))}
                 <button type="button" className={styles.textBtn} style={{ marginTop: '0.25rem' }} onClick={() => {
                   setContestForm((p) => ({ ...p, prizes: [...p.prizes, { label: '' }] }))
-                }}>+ Add prize</button>
+                }}>+ Aggiungi premio</button>
               </label>
               <label className={styles.poiField}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
@@ -654,56 +667,149 @@ export function EventDetailPage() {
                   Attivo
                 </label>
               </label>
+
+              {cpois.filter((p) => p.groups.length > 0).length > 0 && (
+                <div className={styles.poiField}>
+                  <span>Prelievo automatico per gruppi</span>
+                  <small style={{ opacity: 0.6, display: 'block', marginBottom: '0.25rem' }}>
+                    Se configurato, il backend selezioner&agrave; casualmente N POI da ciascun gruppo.
+                  </small>
+                  {(contestForm.pickConfig?.groupPicks ?? []).map((gp, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                      <input type="text" value={gp.group} placeholder="Nome gruppo"
+                        onChange={(e) => {
+                          const arr = [...(contestForm.pickConfig?.groupPicks ?? [])]
+                          arr[i] = { ...arr[i], group: e.target.value }
+                          setContestForm((p) => ({ ...p, pickConfig: { groupPicks: arr } }))
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <input type="number" min={1} value={gp.count}
+                        onChange={(e) => {
+                          const arr = [...(contestForm.pickConfig?.groupPicks ?? [])]
+                          arr[i] = { ...arr[i], count: Number(e.target.value) }
+                          setContestForm((p) => ({ ...p, pickConfig: { groupPicks: arr } }))
+                        }}
+                        style={{ width: '70px' }}
+                      />
+                      <button type="button" className={styles.textBtn} onClick={() => {
+                        const arr = (contestForm.pickConfig?.groupPicks ?? []).filter((_, j) => j !== i)
+                        setContestForm((p) => ({ ...p, pickConfig: arr.length > 0 ? { groupPicks: arr } : null }))
+                      }}>&times;</button>
+                    </div>
+                  ))}
+                  <button type="button" className={styles.textBtn} style={{ marginTop: '0.25rem' }} onClick={() => {
+                    const arr = [...(contestForm.pickConfig?.groupPicks ?? []), { group: '', count: 1 }]
+                    setContestForm((p) => ({ ...p, pickConfig: { groupPicks: arr } }))
+                  }}>+ Aggiungi gruppo</button>
+                </div>
+              )}
+
               <label className={styles.poiField}>
-                <span>Contest POIs (drag to reorder)</span>
-                <div className={styles.chipContainer}>
-                  {cpois.map((cpoi) => {
-                    const idx = contestForm.orderedPOIIds.indexOf(cpoi.id)
-                    const selected = idx !== -1
-                    return (
-                      <label key={cpoi.id} className={`${styles.poiCardInline}`}>
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, cpoi.id] }))
-                            } else {
-                              setContestForm((p) => ({ ...p, orderedPOIIds: p.orderedPOIIds.filter((id) => id !== cpoi.id) }))
-                            }
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                    <span>POI disponibili <small style={{ opacity: 0.6 }}>(trascina per aggiungere)</small></span>
+                    <div className={styles.poiPool}>
+                      {cpois.filter((p) => p.groups.length === 0).length > 0 && (
+                        <div className={styles.poiGroupHeader}>Senza gruppo</div>
+                      )}
+                      {cpois.filter((p) => p.groups.length === 0).map((cpoi) => (
+                        <div key={cpoi.id}
+                          className={styles.poiPoolItem}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/poi-id', cpoi.id)
+                            e.dataTransfer.effectAllowed = 'copy'
                           }}
-                        />
-                        <span>{cpoi.name}</span>
-                        {selected && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--color-ink-weak)' }}>
-                            #{idx + 1}
-                            <button type="button" className={styles.textBtn}
-                              onClick={() => {
-                                if (idx <= 0) return
-                                const arr = [...contestForm.orderedPOIIds]
-                                const tmp = arr[idx - 1]
-                                arr[idx - 1] = arr[idx]
-                                arr[idx] = tmp
-                                setContestForm((p) => ({ ...p, orderedPOIIds: arr }))
+                        >
+                          {cpoi.name}
+                        </div>
+                      ))}
+                      {[...new Set(cpois.flatMap((p) => p.groups))].map((group) => (
+                        <div key={group}>
+                          <div className={styles.poiGroupHeader}>{group}</div>
+                          {cpois.filter((p) => p.groups.includes(group)).map((cpoi) => (
+                            <div key={cpoi.id}
+                              className={styles.poiPoolItem}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/poi-id', cpoi.id)
+                                e.dataTransfer.effectAllowed = 'copy'
                               }}
-                              style={{ marginLeft: '0.25rem', fontSize: '0.7rem' }}
-                            >&uarr;</button>
-                            <button type="button" className={styles.textBtn}
-                              onClick={() => {
-                                if (idx >= contestForm.orderedPOIIds.length - 1) return
+                            >
+                              {cpoi.name}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                    <span>Ordine POI <small style={{ opacity: 0.6 }}>(trascina per riordinare, &times; per rimuovere)</small></span>
+                    <div
+                      className={styles.poiOrderedList}
+                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        const poiId = e.dataTransfer.getData('text/poi-id')
+                        if (poiId) {
+                          setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, poiId] }))
+                          return
+                        }
+                        const fromIdx = e.dataTransfer.getData('text/poi-index')
+                        if (fromIdx) {
+                          const fi = Number(fromIdx)
+                          if (isNaN(fi)) return
+                          const arr = [...contestForm.orderedPOIIds]
+                          const [removed] = arr.splice(fi, 1)
+                          arr.splice(contestForm.orderedPOIIds.length, 0, removed)
+                          setContestForm((p) => ({ ...p, orderedPOIIds: arr }))
+                        }
+                      }}
+                    >
+                      {contestForm.orderedPOIIds.length === 0 && (
+                        <div className={styles.poiOrderedEmpty}>
+                          Trascina qui i POI
+                        </div>
+                      )}
+                      {contestForm.orderedPOIIds.map((poiId, idx) => {
+                        const poi = cpois.find((p) => p.id === poiId)
+                        return (
+                          <div key={`${poiId}-${idx}`}
+                            className={styles.poiOrderedItem}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('text/poi-index', String(idx))
+                              e.dataTransfer.effectAllowed = 'move'
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault()
+                              e.dataTransfer.dropEffect = 'move'
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault()
+                              const fromIdx = e.dataTransfer.getData('text/poi-index')
+                              if (fromIdx) {
+                                const fi = Number(fromIdx)
+                                if (isNaN(fi) || fi === idx) return
                                 const arr = [...contestForm.orderedPOIIds]
-                                const tmp = arr[idx + 1]
-                                arr[idx + 1] = arr[idx]
-                                arr[idx] = tmp
+                                const [removed] = arr.splice(fi, 1)
+                                arr.splice(idx, 0, removed)
                                 setContestForm((p) => ({ ...p, orderedPOIIds: arr }))
+                              }
+                            }}
+                          >
+                            <span className={styles.poiOrderedItemLabel}>{idx + 1}. {poi?.name || poiId}</span>
+                            <button type="button" className={styles.poiOrderedItemRemove}
+                              onClick={() => {
+                                setContestForm((p) => ({ ...p, orderedPOIIds: p.orderedPOIIds.filter((_, i) => i !== idx) }))
                               }}
-                              style={{ fontSize: '0.7rem' }}
-                            >&darr;</button>
-                          </span>
-                        )}
-                      </label>
-                    )
-                  })}
+                            >&times;</button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
               </label>
               <div className={styles.poiFormActions}>
@@ -711,7 +817,11 @@ export function EventDetailPage() {
                   if (!eventId || savingContest || !contestForm.name.trim() || !contestForm.startsAt) return
                   setSavingContest(true)
                   try {
-                    const payload = {
+                    const payload: {
+                      eventId: string; name: string; description: string | null; startsAt: string;
+                      durationMinutes: number; requireSequence: boolean; prizes: { label: string }[];
+                      isActive: boolean; orderedPOIIds: string[]; pickConfig: { groupPicks: { group: string; count: number }[] } | null;
+                    } = {
                       eventId,
                       name: contestForm.name.trim(),
                       description: contestForm.description.trim() || null,
@@ -721,6 +831,7 @@ export function EventDetailPage() {
                       requireSequence: contestForm.requireSequence,
                       isActive: contestForm.isActive,
                       orderedPOIIds: contestForm.orderedPOIIds,
+                      pickConfig: contestForm.pickConfig,
                     }
                     if (editingContestId) {
                       await updateContest(editingContestId, payload)
@@ -761,6 +872,7 @@ export function EventDetailPage() {
                       prizes: (contest.prizes ?? []).length > 0 ? contest.prizes.map((p) => ({ label: p.label })) : [{ label: '' }],
                       isActive: contest.isActive,
                       orderedPOIIds: contest.orderedPOIIds,
+                      pickConfig: contest.pickConfig,
                     })
                     setShowContestForm(true)
                   }}>Modifica</button>

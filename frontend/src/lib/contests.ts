@@ -5,7 +5,13 @@ export type ContestPOI = {
   eventId: string
   name: string
   hint: string | null
+  groups: string[]
   sequenceOrder: number
+}
+
+export type GroupPick = {
+  group: string
+  count: number
 }
 
 export type ContestPrize = {
@@ -26,6 +32,8 @@ export type Contest = {
   awardedPrizesCount: number
   isActive: boolean
   orderedPOIIds: string[]
+  pickConfig: { groupPicks: GroupPick[] } | null
+  autoPickedPOIIds: string[]
 }
 
 export type ContestWithPois = Contest & {
@@ -57,14 +65,14 @@ export function listContestPois(eventId: string) {
   return apiRequest<{ items: ContestPOI[] }>(`/contests/contest-pois?eventId=${eventId}`)
 }
 
-export function createContestPoi(data: { eventId: string; name: string; hint?: string | null }) {
+export function createContestPoi(data: { eventId: string; name: string; hint?: string | null; groups?: string[] }) {
   return apiRequest<{ item: ContestPOI }>('/contests/contest-pois', {
     method: 'POST',
     bodyJson: data,
   })
 }
 
-export function updateContestPoi(poiId: string, data: { name?: string; hint?: string | null; sequenceOrder?: number }) {
+export function updateContestPoi(poiId: string, data: { name?: string; hint?: string | null; groups?: string[]; sequenceOrder?: number }) {
   return apiRequest<{ item: ContestPOI }>(`/contests/contest-pois/${poiId}`, {
     method: 'PATCH',
     bodyJson: data,
@@ -98,6 +106,7 @@ export function createContest(data: {
   prizes?: { label: string }[]
   isActive?: boolean
   orderedPOIIds?: string[]
+  pickConfig?: { groupPicks: GroupPick[] } | null
 }) {
   return apiRequest<{ item: Contest }>('/contests', {
     method: 'POST',
@@ -115,6 +124,7 @@ export function updateContest(contestId: string, data: Partial<{
   prizes: { label: string; awarded?: boolean }[]
   isActive: boolean
   orderedPOIIds: string[]
+  pickConfig: { groupPicks: GroupPick[] } | null
 }>) {
   return apiRequest<{ item: Contest }>(`/contests/${contestId}`, {
     method: 'PATCH',

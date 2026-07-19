@@ -558,6 +558,110 @@
   margin-top: 0.25rem;
 }
 
+.poiPool {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+  padding: 0.5rem;
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-sm);
+  min-height: 60px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.poiPoolItem {
+  padding: 0.35rem 0.6rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: grab;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+    opacity: 0.6;
+  }
+}
+
+.poiGroupHeader {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-ink-weak);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.3rem 0.5rem 0.1rem;
+}
+
+.poiOrderedList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+  padding: 0.5rem;
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-sm);
+  min-height: 60px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.poiOrderedItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-brand);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: grab;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+    opacity: 0.6;
+  }
+}
+
+.poiOrderedItemLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poiOrderedItemRemove {
+  background: none;
+  border: none;
+  color: var(--color-red);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.poiOrderedEmpty {
+  font-size: 0.8rem;
+  color: var(--color-ink-weak);
+  text-align: center;
+  padding: 0.75rem;
+}
+
+.poiGroupBadge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fff;
+}
+
 @media (min-width: 48rem) {
   .standGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

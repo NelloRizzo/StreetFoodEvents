@@ -19,6 +19,10 @@ const contestPOISchema = new Schema(
             default: null,
             maxlength: 300
         },
+        groups: {
+            type: [String],
+            default: []
+        },
         sequenceOrder: {
             type: Number,
             default: 0

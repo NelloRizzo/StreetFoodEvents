@@ -39,7 +39,6 @@ type BalanceSummary = {
   netBalance: number
   topUpCount: number
   refundCount: number
-  currencyName: string
   currencySymbol: string | null
   sinceResetTopUp: number
   sinceResetRefund: number
@@ -55,31 +54,20 @@ export function EventExchangePage() {
   const [loading, setLoading] = useState(true)
   const [eventName, setEventName] = useState('')
   const [balance, setBalance] = useState<BalanceSummary | null>(null)
+
   const [users, setUsers] = useState<ExchangeUser[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [txPage, setTxPage] = useState(1)
-  const [txTotalPages, setTxPages] = useState(1)
-
-  const [selectedUserId, setSelectedUserId] = useState('')
-  const [selectedUserBalance, setSelectedUserBalance] = useState(0)
-  const [topUpAmount, setTopUpAmount] = useState('')
-  const [topUpDesc, setTopUpDesc] = useState('')
-  const [refundAmount, setRefundAmount] = useState('')
-  const [refundDesc, setRefundDesc] = useState('')
-  const [submitting, setSubmitting] = useState<'topup' | 'refund' | null>(null)
-  const [modal, setModal] = useState<{ open: boolean; variant: 'confirm' | 'alert'; title: string; message: string }>({
-    open: false, variant: 'alert', title: '', message: ''
-  })
   const [txPage, setTxPage] = useState(1)
   const [txTotalPages, setTxTotalPages] = useState(1)
 
   const [selectedUserId, setSelectedUserId] = useState('')
-  const [selectedUserBalance, setSelectedUserBalance] = useState(0)
+  const [selUserBalance, setSelUserBalance] = useState(0)
   const [topUpAmount, setTopUpAmount] = useState('')
   const [topUpDesc, setTopUpDesc] = useState('')
   const [refundAmount, setRefundAmount] = useState('')
   const [refundDesc, setRefundDesc] = useState('')
   const [submitting, setSubmitting] = useState<'topup' | 'refund' | null>(null)
+
   const [modal, setModal] = useState<{ open: boolean; variant: 'confirm' | 'alert'; title: string; message: string }>({
     open: false, variant: 'alert', title: '', message: ''
   })
@@ -120,7 +108,7 @@ export function EventExchangePage() {
         method: 'POST',
         bodyJson: { eventUserId: selectedUserId, amount, description: topUpDesc.trim() || undefined }
       })
-      setSelectedUserBalance(res.newBalance)
+      setSelUserBalance(res.newBalance)
       setTopUpAmount('')
       setTopUpDesc('')
       setModal({ open: true, variant: 'alert', title: 'Carico completato', message: `Caricati ${amount} crediti. Nuovo saldo: ${res.newBalance}` })
@@ -142,7 +130,7 @@ export function EventExchangePage() {
         method: 'POST',
         bodyJson: { eventUserId: selectedUserId, amount, description: refundDesc.trim() || undefined }
       })
-      setSelectedUserBalance(res.newBalance)
+      setSelUserBalance(res.newBalance)
       setRefundAmount('')
       setRefundDesc('')
       setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati ${amount} crediti. Nuovo saldo: ${res.newBalance}` })
@@ -163,11 +151,11 @@ export function EventExchangePage() {
   }
 
   const selectedUser = users.find((u) => u.id === selectedUserId)
-  const symbol = balance?.currencySymbol || ''
+  const sym = balance?.currencySymbol || '$'
 
   if (forbidden) {
     return (
-      <div className={styles.page}>
+      <div className={`page-shell ${styles.page}`}>
         <h1 className={styles.pageTitle}>Accesso negato</h1>
         <p>Non hai i permessi per accedere a questa pagina.</p>
         <Link to={`/events/${eventId}`} className={styles.backBtn}>Torna all'evento</Link>
@@ -176,7 +164,7 @@ export function EventExchangePage() {
   }
 
   return (
-    <div className={styles.page}>
+    <div className={`page-shell ${styles.page}`}>
       <Link to={`/events/${eventId}`} className={styles.backBtn}>&larr; Torna all'evento</Link>
       <h1 className={styles.pageTitle}>Cambio - {eventName || 'Caricamento...'}</h1>
 
@@ -191,23 +179,23 @@ export function EventExchangePage() {
                 <div className={cambioStyles.cardRow}>
                   <div className={cambioStyles.statCard}>
                     <div className={cambioStyles.statLabel}>Totali da sempre</div>
-                    <div className={cambioStyles.statValue}>{symbol}{balance.totalTopUp.toFixed(2)}</div>
+                    <div className={cambioStyles.statValue}>{sym}{balance.totalTopUp.toFixed(2)}</div>
                     <div className={cambioStyles.statSub}>({balance.topUpCount} carichi)</div>
                   </div>
                   <div className={cambioStyles.statCard}>
                     <div className={cambioStyles.statLabel}>Rimborsi da sempre</div>
-                    <div className={`${cambioStyles.statValue} ${cambioStyles.statValueNegative}`}>-{symbol}{balance.totalRefund.toFixed(2)}</div>
+                    <div className={`${cambioStyles.statValue} ${cambioStyles.statValueNegative}`}>-{sym}{balance.totalRefund.toFixed(2)}</div>
                     <div className={cambioStyles.statSub}>({balance.refundCount} rimborsi)</div>
                   </div>
                   <div className={cambioStyles.statCard}>
                     <div className={cambioStyles.statLabel}>Saldo netto totale</div>
-                    <div className={cambioStyles.statValue}>{symbol}{balance.netBalance.toFixed(2)}</div>
+                    <div className={cambioStyles.statValue}>{sym}{balance.netBalance.toFixed(2)}</div>
                   </div>
                 </div>
                 <div className={cambioStyles.cardRow}>
                   <div className={cambioStyles.statCard}>
                     <div className={cambioStyles.statLabel}>Dall'ultimo azzeramento</div>
-                    <div className={cambioStyles.statValue}>{symbol}{balance.netSinceReset.toFixed(2)}</div>
+                    <div className={cambioStyles.statValue}>{sym}{balance.netSinceReset.toFixed(2)}</div>
                     <div className={cambioStyles.statSub}>{balance.lastResetAt ? `dal ${new Date(balance.lastResetAt).toLocaleString('it-IT')}` : 'Mai azzerato'}</div>
                   </div>
                   <div className={cambioStyles.statCard}>
@@ -220,7 +208,7 @@ export function EventExchangePage() {
           </section>
 
           <section className={cambioStyles.section}>
-            <h2 className={styles.sectionTitle}>Select user</h2>
+            <h2 className={styles.sectionTitle}>Seleziona utente</h2>
             <select
               value={selectedUserId}
               className={cambioStyles.userSelect}
@@ -228,22 +216,22 @@ export function EventExchangePage() {
                 const uid = e.target.value
                 setSelectedUserId(uid)
                 const u = users.find((x) => x.id === uid)
-                setSelectedUserBalance(u?.balance ?? 0)
+                setSelUserBalance(u?.balance ?? 0)
               }}
             >
               <option value="">-- Seleziona --</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.isAnonymous
-                    ? `\u{1F464} Cliente generico (saldo: ${symbol}${u.balance})`
-                    : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${symbol}${u.balance}`}
+                    ? `\u{1F464} Cliente generico (saldo: ${sym}${u.balance})`
+                    : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${sym}${u.balance}`}
                 </option>
               ))}
             </select>
 
             {selectedUser && (
               <p className={cambioStyles.userInfo}>
-                Current balance: <strong>{symbol}{(selectedUserBalance ?? selectedUser.balance).toFixed(2)}</strong>
+                Saldo: <strong>{sym}{(selUserBalance ?? selectedUser.balance).toFixed(2)}</strong>
                 {selectedUser.isAnonymous && ' - Cliente generico'}
               </p>
             )}
@@ -251,63 +239,63 @@ export function EventExchangePage() {
 
           <div className={cambioStyles.formGrid}>
             <section>
-              <h2 className={styles.sectionTitle}>Top-up (Real &rarr; Virtual)</h2>
+              <h2 className={styles.sectionTitle}>Carica (Reale &rarr; Virtuale)</h2>
               <div className={cambioStyles.formCard}>
                 <label className={cambioStyles.field}>
-                  Amount
+                  Importo
                   <input type="number" min="0.01" step="0.01" value={topUpAmount}
                     onChange={(e) => setTopUpAmount(e.target.value)}
                     disabled={!selectedUserId || submitting === 'topup'} />
                 </label>
                 <label className={cambioStyles.field}>
-                  Note (optional)
+                  Note (opzionale)
                   <input type="text" value={topUpDesc}
                     onChange={(e) => setTopUpDesc(e.target.value)}
                     disabled={!selectedUserId || submitting === 'topup'} />
                 </label>
                 <button className={cambioStyles.btnTopUp} onClick={handleTopUp}
                   disabled={!selectedUserId || !topUpAmount || submitting === 'topup'}>
-                  {submitting === 'topup' ? 'Loading...' : `Top-up ${symbol}`}
+                  {submitting === 'topup' ? 'Caricamento...' : `Carica ${sym}`}
                 </button>
               </div>
             </section>
 
             <section>
-              <h2 className={styles.sectionTitle}>Refund (Virtual &rarr; Real)</h2>
+              <h2 className={styles.sectionTitle}>Rimborsa (Virtuale &rarr; Reale)</h2>
               <div className={cambioStyles.formCard}>
                 <label className={cambioStyles.field}>
-                  Amount
+                  Importo
                   <input type="number" min="0.01" step="0.01" value={refundAmount}
                     onChange={(e) => setRefundAmount(e.target.value)}
                     disabled={!selectedUserId || submitting === 'refund'} />
                 </label>
                 <label className={cambioStyles.field}>
-                  Note (optional)
+                  Note (opzionale)
                   <input type="text" value={refundDesc}
                     onChange={(e) => setRefundDesc(e.target.value)}
                     disabled={!selectedUserId || submitting === 'refund'} />
                 </label>
                 <button className={cambioStyles.btnRefund} onClick={handleRefund}
                   disabled={!selectedUserId || !refundAmount || submitting === 'refund'}>
-                  {submitting === 'refund' ? 'Refunding...' : `Refund ${symbol}`}
+                  {submitting === 'refund' ? 'Rimborso in corso...' : `Rimborsa ${sym}`}
                 </button>
               </div>
             </section>
           </div>
 
           <section>
-            <h2 className={styles.sectionTitle}>Transaction history</h2>
+            <h2 className={styles.sectionTitle}>Storico transazioni</h2>
             {transactions.length === 0 ? (
-              <p className={styles.empty}>No exchange transactions recorded.</p>
+              <p className={styles.empty}>Nessuna transazione di cambio registrata.</p>
             ) : (
               <>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Date</th>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Type</th>
-                      <th style={{ textAlign: 'right', padding: '0.5rem' }}>Amount</th>
-                      <th style={{ textAlign: 'right', padding: '0.5rem' }}>Balance after</th>
+                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
+                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
+                      <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo</th>
+                      <th style={{ textAlign: 'right', padding: '0.5rem' }}>Saldo dopo</th>
                       <th style={{ textAlign: 'left', padding: '0.5rem' }}>Note</th>
                     </tr>
                   </thead>
@@ -315,18 +303,18 @@ export function EventExchangePage() {
                     {transactions.map((tx) => (
                       <tr key={tx.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                         <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
-                          {new Date(tx.occurredAt).toLocaleString('en-GB')}
+                          {new Date(tx.occurredAt).toLocaleString('it-IT')}
                         </td>
                         <td style={{ padding: '0.5rem' }}>
-                          {tx.type === 'top-up' ? 'Top-up' : 'Refund'}
+                          {tx.type === 'top-up' ? 'Carico' : 'Rimborso'}
                         </td>
                         <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: tx.type === 'top-up' ? 'var(--color-green)' : 'var(--color-red)' }}>
-                          {tx.type === 'top-up' ? '+' : '-'}{symbol}{tx.amount.toFixed(2)}
+                          {tx.type === 'top-up' ? '+' : '-'}{sym}{tx.amount.toFixed(2)}
                         </td>
                         <td style={{ padding: '0.5rem', textAlign: 'right' }}>
-                          {symbol}{tx.balanceAfter.toFixed(2)}
+                          {sym}{tx.balanceAfter.toFixed(2)}
                         </td>
-                        <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden' }}>
                           {tx.description || '-'}
                         </td>
                       </tr>
@@ -337,11 +325,11 @@ export function EventExchangePage() {
                 {txTotalPages > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
                     <button className={styles.textBtn} disabled={txPage <= 1} onClick={() => setTxPage((p) => Math.max(1, p - 1))}>
-                      Previous
+                      Precedente
                     </button>
                     <span style={{ padding: '0.25rem 0.5rem' }}>{txPage} / {txTotalPages}</span>
                     <button className={styles.textBtn} disabled={txPage >= txTotalPages} onClick={() => setTxPage((p) => p + 1)}>
-                      Next
+                      Successivo
                     </button>
                   </div>
                 )}

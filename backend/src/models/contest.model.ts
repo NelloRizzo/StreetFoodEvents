@@ -52,6 +52,20 @@ const contestSchema = new Schema(
             type: [Schema.Types.ObjectId],
             ref: 'ContestPOI',
             default: []
+        },
+        pickConfig: {
+            type: {
+                groupPicks: [{
+                    group: { type: String, required: true },
+                    count: { type: Number, required: true, min: 1 }
+                }]
+            },
+            default: null
+        },
+        autoPickedPOIIds: {
+            type: [Schema.Types.ObjectId],
+            ref: 'ContestPOI',
+            default: []
         }
     },
     {
