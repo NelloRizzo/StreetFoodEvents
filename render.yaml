@@ -41,7 +41,7 @@ services:
     plan: free
     rootDir: frontend
     buildCommand: npm ci --include=dev && npm run build
-    startCommand: npx serve -s dist -l $PORT
+    startCommand: node server.mjs
     envVars:
       - key: NODE_ENV
         value: production
