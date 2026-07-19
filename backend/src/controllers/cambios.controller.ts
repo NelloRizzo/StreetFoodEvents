@@ -62,6 +62,12 @@ async function listUsers(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
 
+    await EventUserModel.findOneAndUpdate(
+        { eventId: eventCtx.eventId, userId: null, isActive: true },
+        { $setOnInsert: { balance: 0, joinedAt: new Date() } },
+        { upsert: true, new: true }
+    );
+
     const eventUsers = await EventUserModel.find({ eventId: eventCtx.eventId, isActive: true })
         .populate('userId', 'firstName lastName email')
         .sort({ 'userId': 1 })
