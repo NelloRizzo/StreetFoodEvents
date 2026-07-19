@@ -28,7 +28,7 @@ const eventUserTransactionSchema = new Schema(
         userId: {
             type: Schema.Types.ObjectId,
             ref: 'User',
-            required: true,
+            default: null,
             index: true
         },
         type: {
