@@ -31,7 +31,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | `npm run start` | `node dist/server.js` |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | `eslint .` |
-| `npm run test` | `vitest run` (80 tests) |
+| `npm run test` | `vitest run` (187 tests) |
 | `npm run populate:database` | `tsx src/scripts/populate-database.ts` |
 | `npm run reset:database` | `tsx src/scripts/reset-database.ts --password=<password>` |
 
@@ -43,6 +43,11 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 - Cloudinary required.
 - ESLint flat config.
 - Entrypoint: `src/server.ts` → `src/app.ts` → `src/routes/`.
+
+### Gotchas (backend — data layer)
+- `EventUserTransaction.userId` is nullable (`default: null`). Anonymous EventUsers don't have a userId, so transactions for them store `userId: null`.
+- `ContestPOI.groups` is an array of strings (`[String]`), not a single string. A POI can belong to multiple groups.
+- `Contest.pickConfig` (`{ groupPicks: { group, count }[] }`) defines auto-pick rules per group. `Contest.autoPickedPOIIds` tracks which POIs were auto-selected. Manual POI additions are preserved when `pickConfig` changes.
 
 ### API routes
 `GET /health` (no auth). All `/api/*` routes: GET are public except users/event-users/event-products/favorites/orders/upload. POST/PATCH/DELETE are protected.
@@ -82,11 +87,53 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | `/events/:eventId/galleria` | EventGalleryPage | Galleria foto con stampa e selezione |
 | `/events/:eventId/slideshow` | SlideshowPage | Slideshow automatico con rotazione e cornici |
 
+### Frontend — Exchange route
+| Route | Element | Description |
+|---|---|---|
+| `/events/:eventId/exchange` | EventExchangePage | Cambio valuta (crediti), solo exchange-admin / platform-admin |
+
+### Frontend — Contest routes
+| Route | Element | Description |
+|---|---|---|
+| Richieste API gestite da `EventDetailPage.tsx` nelle sezioni Contest POI, poi create/edit contest | | |
+
 ### API routes — Reports
 | Method | Route | Auth | Description |
 |---|---|---|---|
 | GET | `/orders/report/stand/:standId` | auth | Report per singolo stand (stand owner) |
 | GET | `/orders/report/event/:eventId` | auth | Report evento aggregato per-stand (event-admin/event-cashier) |
+
+### API routes — Cambio valuta
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/cambios/:eventId/users` | exchange-admin / platform-admin | Lista utenti cambio (auto-crea anonimo se mancante) |
+| GET | `/api/cambios/:eventId/balance` | exchange-admin / platform-admin | Saldo cassa (top-up/refund aggregati) |
+| GET | `/api/cambios/:eventId/transactions` | exchange-admin / platform-admin | Storico transazioni (paginato) |
+| POST | `/api/cambios/:eventId/top-up` | exchange-admin / platform-admin | Carica crediti (reale → virtuale) |
+| POST | `/api/cambios/:eventId/refund` | exchange-admin / platform-admin | Rimborsa crediti (virtuale → reale) |
+| POST | `/api/cambios/:eventId/reset-cash-register` | exchange-admin / platform-admin | Azzera cassa |
+| GET | `/api/cambios/:eventId/cash-register-reset` | exchange-admin / platform-admin | Data ultimo azzeramento |
+
+### API routes — Contest POI
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/contests/contest-pois?eventId=` | contest-admin / platform-admin | Lista POI contest |
+| POST | `/api/contests/contest-pois` | contest-admin / platform-admin | Crea POI contest (name, hint, groups[]) |
+| PATCH | `/api/contests/contest-pois/:poiId` | contest-admin / platform-admin | Modifica POI contest |
+| DELETE | `/api/contests/contest-pois/:poiId` | contest-admin / platform-admin | Elimina POI contest |
+
+### API routes — Contests
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/contests?eventId=` | no | Lista contest pubblici |
+| GET | `/api/contests/:contestId` | no | Dettaglio contest + POI |
+| POST | `/api/contests/` | contest-admin / platform-admin | Crea contest (con pickConfig per auto-pick gruppi) |
+| PATCH | `/api/contests/:contestId` | contest-admin / platform-admin | Modifica contest |
+| DELETE | `/api/contests/:contestId` | contest-admin / platform-admin | Elimina contest |
+| POST | `/api/contests/:contestId/scan` | no | Registra scansione POI |
+| GET | `/api/contests/:contestId/participation/:participantId` | no | Stato partecipazione |
+| PATCH | `/api/contests/:contestId/participation/:participantId/award` | contest-admin / platform-admin | Consegna premio |
+| GET | `/api/contests/:contestId/poi-qrcodes` | contest-admin / platform-admin | QR code per ogni POI del contest |
 
 ## Frontend (`frontend/`)
 

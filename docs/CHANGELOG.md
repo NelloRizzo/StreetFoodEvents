@@ -341,3 +341,7 @@ Tutte le feature implementate, in ordine cronologico.
 - QR code generato come dataURL (qrcode npm), stampa via finestra HTML pura (pattern Menu Print)
 - Scadenza partecipazione: countdown lato client + validazione lato server su ogni scan
 - Il pulsante "Consegna premio" in ContestVerifyPage è accessibile solo a utenti autenticati con ruolo contest-admin o platform-admin
+
+### Bug fix: EventUserTransaction.userId nullable (Jul 2026)
+- [x] `userId: required: true` → `default: null` sul modello EventUserTransaction
+- [x] Fix: validazione falliva per transazioni anonime (userId era null ma richiesto)
