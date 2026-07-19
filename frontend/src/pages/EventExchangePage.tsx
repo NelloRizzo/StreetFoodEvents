@@ -41,6 +41,10 @@ type BalanceSummary = {
   refundCount: number
   currencyName: string
   currencySymbol: string | null
+  sinceResetTopUp: number
+  sinceResetRefund: number
+  netSinceReset: number
+  lastResetAt: string | null
 }
 
 export function EventExchangePage() {
@@ -106,10 +110,10 @@ export function EventExchangePage() {
       setSelectedUserBalance(res.newBalance)
       setTopUpAmount('')
       setTopUpDesc('')
-      setModal({ open: true, variant: 'alert', title: 'Top-up completed', message: `Topped up ${amount} credits. New balance: ${res.newBalance}` })
+      setModal({ open: true, variant: 'alert', title: 'Carico completato', message: `Caricati ${amount} crediti. Nuovo saldo: ${res.newBalance}` })
       fetchData()
     } catch (err) {
-      setModal({ open: true, variant: 'alert', title: 'Error', message: (err as { message?: string }).message || 'Error during top-up' })
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante il carico' })
     } finally {
       setSubmitting(null)
     }
@@ -128,13 +132,21 @@ export function EventExchangePage() {
       setSelectedUserBalance(res.newBalance)
       setRefundAmount('')
       setRefundDesc('')
-      setModal({ open: true, variant: 'alert', title: 'Refund completed', message: `Refunded ${amount} credits. New balance: ${res.newBalance}` })
+      setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati ${amount} crediti. Nuovo saldo: ${res.newBalance}` })
       fetchData()
     } catch (err) {
-      setModal({ open: true, variant: 'alert', title: 'Error', message: (err as { message?: string }).message || 'Error during refund' })
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante il rimborso' })
     } finally {
       setSubmitting(null)
     }
+  }
+
+  const handleResetCashRegister = async () => {
+    if (!eventId) return
+    try {
+      await apiRequest(`/cambios/${eventId}/reset-cash-register`, { method: 'POST' })
+      fetchData()
+    } catch { /* ignore */ }
   }
 
   const selectedUser = users.find((u) => u.id === selectedUserId)
@@ -143,41 +155,54 @@ export function EventExchangePage() {
   if (forbidden) {
     return (
       <div className={styles.page}>
-        <h1 className={styles.pageTitle}>Access denied</h1>
-        <p>You do not have permission to access this page.</p>
-        <Link to={`/events/${eventId}`} className={styles.backBtn}>Back to event</Link>
+        <h1 className={styles.pageTitle}>Accesso negato</h1>
+        <p>Non hai i permessi per accedere a questa pagina.</p>
+        <Link to={`/events/${eventId}`} className={styles.backBtn}>Torna all'evento</Link>
       </div>
     )
   }
 
   return (
     <div className={styles.page}>
-      <Link to={`/events/${eventId}`} className={styles.backBtn}>&larr; Back to event</Link>
-      <h1 className={styles.pageTitle}>Exchange - {eventName || 'Loading...'}</h1>
+      <Link to={`/events/${eventId}`} className={styles.backBtn}>&larr; Torna all'evento</Link>
+      <h1 className={styles.pageTitle}>Cambio - {eventName || 'Caricamento...'}</h1>
 
       {loading ? (
-        <p>Loading...</p>
+        <p>Caricamento...</p>
       ) : (
         <>
           <section className={cambioStyles.section}>
-            <h2 className={styles.sectionTitle}>Cash summary</h2>
+            <h2 className={styles.sectionTitle}>Riepilogo cassa</h2>
             {balance && (
-              <div className={cambioStyles.cardRow}>
-                <div className={cambioStyles.statCard}>
-                  <div className={cambioStyles.statLabel}>Total top-ups</div>
-                  <div className={cambioStyles.statValue}>{symbol}{balance.totalTopUp.toFixed(2)}</div>
-                  <div className={cambioStyles.statSub}>({balance.topUpCount} transactions)</div>
+              <>
+                <div className={cambioStyles.cardRow}>
+                  <div className={cambioStyles.statCard}>
+                    <div className={cambioStyles.statLabel}>Totali da sempre</div>
+                    <div className={cambioStyles.statValue}>{symbol}{balance.totalTopUp.toFixed(2)}</div>
+                    <div className={cambioStyles.statSub}>({balance.topUpCount} carichi)</div>
+                  </div>
+                  <div className={cambioStyles.statCard}>
+                    <div className={cambioStyles.statLabel}>Rimborsi da sempre</div>
+                    <div className={`${cambioStyles.statValue} ${cambioStyles.statValueNegative}`}>-{symbol}{balance.totalRefund.toFixed(2)}</div>
+                    <div className={cambioStyles.statSub}>({balance.refundCount} rimborsi)</div>
+                  </div>
+                  <div className={cambioStyles.statCard}>
+                    <div className={cambioStyles.statLabel}>Saldo netto totale</div>
+                    <div className={cambioStyles.statValue}>{symbol}{balance.netBalance.toFixed(2)}</div>
+                  </div>
                 </div>
-                <div className={cambioStyles.statCard}>
-                  <div className={cambioStyles.statLabel}>Total refunds</div>
-                  <div className={`${cambioStyles.statValue} ${cambioStyles.statValueNegative}`}>-{symbol}{balance.totalRefund.toFixed(2)}</div>
-                  <div className={cambioStyles.statSub}>({balance.refundCount} transactions)</div>
+                <div className={cambioStyles.cardRow}>
+                  <div className={cambioStyles.statCard}>
+                    <div className={cambioStyles.statLabel}>Dall'ultimo azzeramento</div>
+                    <div className={cambioStyles.statValue}>{symbol}{balance.netSinceReset.toFixed(2)}</div>
+                    <div className={cambioStyles.statSub}>{balance.lastResetAt ? `dal ${new Date(balance.lastResetAt).toLocaleString('it-IT')}` : 'Mai azzerato'}</div>
+                  </div>
+                  <div className={cambioStyles.statCard}>
+                    <div className={cambioStyles.statLabel}>&nbsp;</div>
+                    <button className={styles.dangerBtn} onClick={handleResetCashRegister}>Azzerra cassa</button>
+                  </div>
                 </div>
-                <div className={cambioStyles.statCard}>
-                  <div className={cambioStyles.statLabel}>Net cash balance</div>
-                  <div className={cambioStyles.statValue}>{symbol}{balance.netBalance.toFixed(2)}</div>
-                </div>
-              </div>
+              </>
             )}
           </section>
 
@@ -193,12 +218,12 @@ export function EventExchangePage() {
                 setSelectedUserBalance(u?.balance ?? 0)
               }}
             >
-              <option value="">-- Select --</option>
+              <option value="">-- Seleziona --</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.isAnonymous
-                    ? `\u{1F464} Generic customer (balance: ${symbol}${u.balance})`
-                    : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - balance: ${symbol}${u.balance}`}
+                    ? `\u{1F464} Cliente generico (saldo: ${symbol}${u.balance})`
+                    : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${symbol}${u.balance}`}
                 </option>
               ))}
             </select>
@@ -206,7 +231,7 @@ export function EventExchangePage() {
             {selectedUser && (
               <p className={cambioStyles.userInfo}>
                 Current balance: <strong>{symbol}{(selectedUserBalance ?? selectedUser.balance).toFixed(2)}</strong>
-                {selectedUser.isAnonymous && ' - Generic customer'}
+                {selectedUser.isAnonymous && ' - Cliente generico'}
               </p>
             )}
           </section>

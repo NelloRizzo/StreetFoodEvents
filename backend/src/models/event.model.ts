@@ -105,6 +105,10 @@ const eventSchema = new Schema(
         unifiedCashierEnabled: {
             type: Boolean,
             default: false
+        },
+        cashRegisterResetAt: {
+            type: Date,
+            default: null
         }
     },
     {

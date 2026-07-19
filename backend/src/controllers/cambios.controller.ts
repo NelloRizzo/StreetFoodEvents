@@ -89,8 +89,29 @@ async function getBalance(req: Request, res: Response) {
 
     const exchangeTypes = ['top-up', 'refund'];
 
+    const { event, eventId: eventIdStr } = eventCtx;
+    const resetAt = event.cashRegisterResetAt;
+    const sinceResetMatch: Record<string, unknown> = {
+        eventId: new Types.ObjectId(eventCtx.eventId),
+        type: { $in: exchangeTypes }
+    };
+    if (resetAt) {
+        sinceResetMatch.occurredAt = { $gt: resetAt };
+    }
+
     const aggregation = await EventUserTransactionModel.aggregate([
         { $match: { eventId: new Types.ObjectId(eventCtx.eventId), type: { $in: exchangeTypes } } },
+        {
+            $group: {
+                _id: '$type',
+                total: { $sum: '$amount' },
+                count: { $sum: 1 }
+            }
+        }
+    ]);
+
+    const sinceResetAgg = await EventUserTransactionModel.aggregate([
+        { $match: sinceResetMatch },
         {
             $group: {
                 _id: '$type',
@@ -104,6 +125,8 @@ async function getBalance(req: Request, res: Response) {
     let totalRefund = 0;
     let topUpCount = 0;
     let refundCount = 0;
+    let sinceResetTopUp = 0;
+    let sinceResetRefund = 0;
 
     for (const row of aggregation) {
         if (row._id === 'top-up') {
@@ -115,6 +138,14 @@ async function getBalance(req: Request, res: Response) {
         }
     }
 
+    for (const row of sinceResetAgg) {
+        if (row._id === 'top-up') {
+            sinceResetTopUp = row.total;
+        } else if (row._id === 'refund') {
+            sinceResetRefund = row.total;
+        }
+    }
+
     return res.status(200).json({
         totalTopUp,
         totalRefund,
@@ -122,7 +153,11 @@ async function getBalance(req: Request, res: Response) {
         topUpCount,
         refundCount,
         currencyName: eventCtx.event.currencyName,
-        currencySymbol: eventCtx.event.currencySymbol
+        currencySymbol: eventCtx.event.currencySymbol,
+        sinceResetTopUp,
+        sinceResetRefund,
+        netSinceReset: sinceResetTopUp - sinceResetRefund,
+        lastResetAt: resetAt
     });
 }
 
@@ -241,10 +276,34 @@ async function refund(req: Request, res: Response) {
     }
 }
 
+async function resetCashRegister(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    eventCtx.event.cashRegisterResetAt = new Date();
+    await eventCtx.event.save();
+
+    return res.status(200).json({
+        message: 'Cassa azzerata',
+        cashRegisterResetAt: eventCtx.event.cashRegisterResetAt
+    });
+}
+
+async function getCashRegisterReset(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    return res.status(200).json({
+        cashRegisterResetAt: eventCtx.event.cashRegisterResetAt
+    });
+}
+
 export const cambiosController = {
     listUsers,
     getBalance,
     listTransactions,
     topUp,
-    refund
+    refund,
+    resetCashRegister,
+    getCashRegisterReset
 };

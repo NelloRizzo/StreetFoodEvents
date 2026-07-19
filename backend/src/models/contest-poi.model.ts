@@ -5,8 +5,7 @@ const contestPOISchema = new Schema(
         eventId: {
             type: Schema.Types.ObjectId,
             ref: 'Event',
-            required: true,
-            index: true
+            required: true
         },
         name: {
             type: String,

@@ -169,6 +169,14 @@ export const router = createBrowserRouter([
             element: <EventReportPage />,
           },
           {
+            path: 'events/:eventId/cashier',
+            element: <EventCashierPage />,
+          },
+          {
+            path: 'events/:eventId/exchange',
+            element: <EventExchangePage />,
+          },
+          {
             path: 'events/:eventId/galleria',
             element: <EventGalleryPage />,
           },
@@ -216,37 +224,24 @@ export const router = createBrowserRouter([
     path: 'show/:entityType/:alias',
     element: <AliasRedirectPage />,
   },
-      {
-        path: 'events/:eventId/contests',
-        element: <EventContestsPage />,
-      },
-      {
-        path: 'contest/:contestId',
-        element: <ContestPage />,
-      },
-      {
-        path: 'contest/:contestId/play',
-        element: <ContestPlayPage />,
-      },
-      {
-        path: 'contest/:contestId/verify/:participantId',
-        element: <ContestVerifyPage />,
-      },
-      {
-        path: 'events/:eventId/slideshow',
-        element: <SlideshowPage />,
-      },
-      {
-    element: <RequireAuth />,
-    children: [
-      {
-        path: 'events/:eventId/cashier',
-        element: <EventCashierPage />,
-      },
-      {
-        path: 'events/:eventId/exchange',
-        element: <EventExchangePage />,
-      },
-    ],
+  {
+    path: 'events/:eventId/contests',
+    element: <EventContestsPage />,
+  },
+  {
+    path: 'contest/:contestId',
+    element: <ContestPage />,
+  },
+  {
+    path: 'contest/:contestId/play',
+    element: <ContestPlayPage />,
+  },
+  {
+    path: 'contest/:contestId/verify/:participantId',
+    element: <ContestVerifyPage />,
+  },
+  {
+    path: 'events/:eventId/slideshow',
+    element: <SlideshowPage />,
   },
 ])
