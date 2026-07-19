@@ -62,11 +62,10 @@ async function listUsers(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
 
-    await EventUserModel.findOneAndUpdate(
-        { eventId: eventCtx.eventId, userId: null, isActive: true },
-        { $setOnInsert: { balance: 0, joinedAt: new Date() } },
-        { upsert: true, new: true }
-    );
+    const existing = await EventUserModel.findOne({ eventId: eventCtx.eventId, userId: null, isActive: true });
+    if (!existing) {
+        await EventUserModel.create({ eventId: eventCtx.eventId, userId: null, balance: 0 });
+    }
 
     const eventUsers = await EventUserModel.find({ eventId: eventCtx.eventId, isActive: true })
         .populate('userId', 'firstName lastName email')
@@ -235,7 +234,8 @@ async function topUp(req: Request, res: Response) {
         if (error instanceof EventUserTransactionError) {
             return res.status(400).json({ message: error.message });
         }
-        throw error;
+        console.error('topUp error:', error);
+        return res.status(500).json({ message: (error as Error).message || 'Internal server error' });
     }
 }
 
@@ -278,7 +278,8 @@ async function refund(req: Request, res: Response) {
         if (error instanceof EventUserTransactionError) {
             return res.status(400).json({ message: error.message });
         }
-        throw error;
+        console.error('refund error:', error);
+        return res.status(500).json({ message: (error as Error).message || 'Internal server error' });
     }
 }
 
