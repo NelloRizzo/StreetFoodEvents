@@ -12,7 +12,3 @@
 - [ ] Frontend EventDetailPage: mostrare POI divisi per gruppo, checkbox per selezionarli manualmente
 - [ ] Frontend EventDetailPage: permettere aggiunte manuali prima e dopo la selezione automatica
 - [ ] ContestPlayPage e registerScan devono funzionare invariati (orderedPOIIds risolto a POI specifici)
-
-### Deploy
-
-- [ ] **Errore 403 su clone GitHub** — verificare token di accesso/repo su Render Deploy Settings
