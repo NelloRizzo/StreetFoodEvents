@@ -75,25 +75,28 @@ export function EventExchangePage() {
   const fetchData = useCallback(async () => {
     if (!eventId || !isAuthenticated) return
     setLoading(true)
+    let any403 = false
     try {
-      const [ev, bal, usrs, txs] = await Promise.all([
-        apiRequest<{ name: string }>(`/events/${eventId}`),
+      const ev = await apiRequest<{ item: { name: string } }>(`/events/${eventId}`)
+      setEventName(ev.item.name)
+    } catch { /* event name non essenziale */}
+    try {
+      const [bal, usrs, txs] = await Promise.all([
         apiRequest<BalanceSummary>(`/cambios/${eventId}/balance`),
         apiRequest<{ items: ExchangeUser[] }>(`/cambios/${eventId}/users`),
         apiRequest<{ items: Transaction[]; pagination: { page: number; totalPages: number } }>(`/cambios/${eventId}/transactions?page=${txPage}&limit=20`),
       ])
-      setEventName(ev.name)
       setBalance(bal)
       setUsers(usrs.items)
       setTransactions(txs.items)
       setTxTotalPages(txs.pagination.totalPages)
     } catch (err) {
       if ((err as { status?: number }).status === 403) {
-        setForbidden(true)
+        any403 = true
       }
-    } finally {
-      setLoading(false)
     }
+    if (any403) setForbidden(true)
+    setLoading(false)
   }, [eventId, isAuthenticated, txPage])
 
   useEffect(() => { fetchData() }, [fetchData])
