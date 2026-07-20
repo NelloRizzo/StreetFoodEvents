@@ -379,7 +379,7 @@ export function EventExchangePage() {
                         <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
                         <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo {currencyName}</th>
                         <th style={{ textAlign: 'right', padding: '0.5rem' }}>Equivalente €</th>
-                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Saldo dopo</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Saldo dopo<br /><span style={{ fontWeight: 400, fontSize: '0.75rem' }}>(crediti / €)</span></th>
                         <th style={{ textAlign: 'left', padding: '0.5rem' }}>Operatore</th>
                         <th style={{ textAlign: 'left', padding: '0.5rem' }}>Note</th>
                       </tr>
@@ -397,10 +397,11 @@ export function EventExchangePage() {
                             {tx.type === 'top-up' ? '+' : '-'}{fmt(tx.amount)}
                           </td>
                           <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-text-muted)' }}>
-                            {tx.realAmount != null ? fmtEur(tx.realAmount) : '-'}
+                            {fmtEur(tx.realAmount ?? (tx.amount / rate))}
                           </td>
                           <td style={{ padding: '0.5rem', textAlign: 'right' }}>
                             {fmt(tx.balanceAfter)}
+                            <br /><span className={cambioStyles.eurValue}>{fmtEur(tx.balanceAfter / rate)}</span>
                           </td>
                           <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
                             {tx.performedByName || '-'}
