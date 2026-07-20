@@ -31,6 +31,7 @@ type EventItem = {
   startDate: string
   endDate: string
   currencyName: string
+  exchangeRate: number
   url: string | null
   shortDescription: string | null
   longDescription: string | null
@@ -63,6 +64,7 @@ type EventFormData = {
   startDate: string
   endDate: string
   currencyName: string
+  exchangeRate: string
   url: string
   shortDescription: string
   longDescription: string
@@ -93,6 +95,7 @@ const emptyForm: EventFormData = {
   startDate: '',
   endDate: '',
   currencyName: '',
+  exchangeRate: '1',
   url: '',
   shortDescription: '',
   longDescription: '',
@@ -380,6 +383,7 @@ export function EventsPage() {
       startDate: ev.startDate.slice(0, 10),
       endDate: ev.endDate.slice(0, 10),
       currencyName: ev.currencyName,
+      exchangeRate: String(ev.exchangeRate ?? 1),
       url: ev.url ?? '',
       shortDescription: ev.shortDescription ?? '',
       longDescription: ev.longDescription ?? '',
@@ -431,6 +435,7 @@ export function EventsPage() {
       startDate: form.startDate,
       endDate: form.endDate,
       currencyName: form.currencyName,
+      exchangeRate: form.exchangeRate ? Number(form.exchangeRate) : 1,
       url: form.url || null,
       shortDescription: form.shortDescription || null,
       longDescription: form.longDescription || null,
@@ -561,9 +566,15 @@ export function EventsPage() {
                   <input id="ev-end" type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required />
                 </div>
               </div>
-              <div className={styles.field}>
-                <label htmlFor="ev-currency">Nome moneta evento *</label>
-                <input id="ev-currency" value={form.currencyName} onChange={(e) => setForm({ ...form, currencyName: e.target.value })} placeholder="es. StreetCoin" required />
+              <div className={styles.fieldRow}>
+                <div className={styles.field}>
+                  <label htmlFor="ev-currency">Nome moneta evento *</label>
+                  <input id="ev-currency" value={form.currencyName} onChange={(e) => setForm({ ...form, currencyName: e.target.value })} placeholder="es. StreetCoin" required />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="ev-rate">Tasso di cambio (1 € = X moneta)</label>
+                  <input id="ev-rate" type="number" min="0.01" step="0.01" value={form.exchangeRate} onChange={(e) => setForm({ ...form, exchangeRate: e.target.value })} placeholder="1" />
+                </div>
               </div>
               <div className={styles.field}>
                 <label htmlFor="ev-url">Sito ufficiale</label>

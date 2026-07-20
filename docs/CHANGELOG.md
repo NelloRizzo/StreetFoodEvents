@@ -345,3 +345,19 @@ Tutte le feature implementate, in ordine cronologico.
 ### Bug fix: EventUserTransaction.userId nullable (Jul 2026)
 - [x] `userId: required: true` → `default: null` sul modello EventUserTransaction
 - [x] Fix: validazione falliva per transazioni anonime (userId era null ma richiesto)
+
+### Tasso di cambio evento + revisione pagina Exchange (Jul 2026)
+- [x] Aggiunto `exchangeRate` (Number, default 1) al modello Event
+- [x] Aggiunto `realAmount` (Number, nullable) a EventUserTransaction per tracciare l'equivalente in EUR
+- [x] createEvent/updateEvent/toEventResponse includono exchangeRate
+- [x] Top-up: amount in EUR, backend calcola crediti = EUR * exchangeRate, store realAmount
+- [x] Refund: amount in crediti, backend calcola EUR = crediti / exchangeRate, store realAmount
+- [x] getBalance: aggiunti `exchangeRate`, `myTopUp/Refund/NetBalance/Count` (filtrati per performedByUserId), `mySinceReset*`
+- [x] listTransactions: performedByUserId popolato con firstName/lastName, restituito come `performedByName`
+- [x] Event exchange form: nuovo campo "Tasso di cambio (1 € = X moneta)"
+- [x] EventExchangePage: simbolo moneta = iniziale in cerchio (CurrencySymbol component)
+- [x] Statistiche cassa divise in "Tutte le postazioni" e "Questa postazione"
+- [x] Tutti gli importi mostrano equivalente in EUR con prefisso €
+- [x] Form Carica: input in EUR, preview crediti; Form Rimborsa: input in crediti, preview EUR
+- [x] Tabella storico: colonne Importo {currencyName}, Equivalente €, Operatore
+- [x] Tutti i 187 test backend passano, frontend build OK

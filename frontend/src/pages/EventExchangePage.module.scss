@@ -2,6 +2,38 @@
   margin-bottom: 2rem;
 }
 
+.currencyCircle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  background: var(--color-brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.75em;
+  vertical-align: middle;
+  margin-right: 0.3em;
+  flex-shrink: 0;
+}
+
+.eurValue {
+  font-size: 0.65em;
+  font-weight: 400;
+  color: var(--color-ink-weak);
+}
+
+.creditValue {
+  font-weight: 700;
+}
+
+.preview {
+  font-size: 0.8rem;
+  color: var(--color-ink-weak);
+  margin: -0.25rem 0 0;
+}
+
 .cardRow {
   display: flex;
   gap: 1.5rem;

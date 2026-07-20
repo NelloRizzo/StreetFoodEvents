@@ -42,6 +42,7 @@ function toEventResponse(event: {
     endDate: Date;
     currencyName: string;
     currencySymbol?: unknown | null;
+    exchangeRate?: number | null;
     themeBrand?: string | null;
     themeText?: string | null;
     themeSurface?: string | null;
@@ -65,6 +66,7 @@ function toEventResponse(event: {
         endDate: event.endDate,
         currencyName: event.currencyName,
         currencySymbol: event.currencySymbol ?? null,
+        exchangeRate: event.exchangeRate ?? 1,
         themeBrand: event.themeBrand ?? null,
         themeText: event.themeText ?? null,
         themeSurface: event.themeSurface ?? null,
@@ -161,6 +163,7 @@ export async function createEvent(req: Request, res: Response) {
         endDate,
         currencyName,
         currencySymbol,
+        exchangeRate,
         themeBrand,
         themeText,
         themeSurface,
@@ -186,6 +189,7 @@ export async function createEvent(req: Request, res: Response) {
         endDate: new Date(endDate),
         currencyName,
         currencySymbol: currencySymbol ?? null,
+        exchangeRate: exchangeRate ?? 1,
         themeBrand: themeBrand ?? null,
         themeText: themeText ?? null,
         themeSurface: themeSurface ?? null,
@@ -229,6 +233,7 @@ export async function updateEvent(req: Request, res: Response) {
         endDate,
         currencyName,
         currencySymbol,
+        exchangeRate,
         themeBrand,
         themeText,
         themeSurface,
@@ -268,6 +273,10 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (currencySymbol !== undefined) {
         event.currencySymbol = currencySymbol;
+    }
+
+    if (exchangeRate !== undefined) {
+        event.exchangeRate = exchangeRate;
     }
 
     if (themeBrand !== undefined) {

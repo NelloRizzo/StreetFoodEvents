@@ -37,7 +37,7 @@ function toEventUserTransactionResponse(transaction: {
   _id: Types.ObjectId;
   eventUserId: Types.ObjectId;
   eventId: Types.ObjectId;
-  userId: Types.ObjectId;
+  userId?: Types.ObjectId | null;
   type: string;
   direction: string;
   amount: number;
@@ -54,7 +54,7 @@ function toEventUserTransactionResponse(transaction: {
     id: transaction._id.toString(),
     eventUserId: transaction.eventUserId.toString(),
     eventId: transaction.eventId.toString(),
-    userId: transaction.userId.toString(),
+    userId: transaction.userId?.toString() ?? null,
     type: transaction.type,
     direction: transaction.direction,
     amount: transaction.amount,

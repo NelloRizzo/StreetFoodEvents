@@ -45,6 +45,11 @@ const eventSchema = new Schema(
             type: imageSchema,
             default: null
         },
+        exchangeRate: {
+            type: Number,
+            default: 1,
+            min: 0.01
+        },
         themeBrand: {
             type: String,
             trim: true,

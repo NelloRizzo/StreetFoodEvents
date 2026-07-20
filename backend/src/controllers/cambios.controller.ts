@@ -4,6 +4,7 @@ import { Types } from 'mongoose';
 import { EventUserModel } from '../models/event-user.model';
 import { EventUserTransactionModel } from '../models/event-user-transaction.model';
 import { EventModel } from '../models/event.model';
+import { UserModel } from '../models/user.model';
 import { createEventUserTransaction, EventUserTransactionError } from '../services/event-user-transactions.service';
 
 function isValidObjectId(value: string | undefined): value is string {
@@ -14,10 +15,11 @@ function toTransactionResponse(t: {
     _id: Types.ObjectId;
     eventUserId: Types.ObjectId;
     eventId: Types.ObjectId;
-    userId: Types.ObjectId | null;
+    userId?: Types.ObjectId | null;
     type: string;
     direction: string;
     amount: number;
+    realAmount?: number | null;
     balanceAfter: number;
     description?: string | null;
     performedByUserId?: Types.ObjectId | null;
@@ -34,6 +36,7 @@ function toTransactionResponse(t: {
         type: t.type,
         direction: t.direction,
         amount: t.amount,
+        realAmount: t.realAmount ?? null,
         balanceAfter: t.balanceAfter,
         description: t.description ?? null,
         performedByUserId: t.performedByUserId?.toString() ?? null,
@@ -92,77 +95,76 @@ async function getBalance(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
 
+    const currentUserId = req.user!.id;
     const exchangeTypes = ['top-up', 'refund'];
+    const eventIdObj = new Types.ObjectId(eventCtx.eventId);
 
-    const { event, eventId: eventIdStr } = eventCtx;
+    const { event } = eventCtx;
     const resetAt = event.cashRegisterResetAt;
+
+    const allTimeMatch = { eventId: eventIdObj, type: { $in: exchangeTypes } };
     const sinceResetMatch: Record<string, unknown> = {
-        eventId: new Types.ObjectId(eventCtx.eventId),
+        eventId: eventIdObj,
         type: { $in: exchangeTypes }
     };
     if (resetAt) {
         sinceResetMatch.occurredAt = { $gt: resetAt };
     }
 
-    const aggregation = await EventUserTransactionModel.aggregate([
-        { $match: { eventId: new Types.ObjectId(eventCtx.eventId), type: { $in: exchangeTypes } } },
-        {
-            $group: {
-                _id: '$type',
-                total: { $sum: '$amount' },
-                count: { $sum: 1 }
-            }
-        }
+    const [aggregation, sinceResetAgg, myAggregation, mySinceResetAgg] = await Promise.all([
+        EventUserTransactionModel.aggregate([
+            { $match: allTimeMatch },
+            { $group: { _id: '$type', total: { $sum: '$amount' }, count: { $sum: 1 } } }
+        ]),
+        EventUserTransactionModel.aggregate([
+            { $match: sinceResetMatch },
+            { $group: { _id: '$type', total: { $sum: '$amount' }, count: { $sum: 1 } } }
+        ]),
+        EventUserTransactionModel.aggregate([
+            { $match: { ...allTimeMatch, performedByUserId: new Types.ObjectId(currentUserId) } },
+            { $group: { _id: '$type', total: { $sum: '$amount' }, count: { $sum: 1 } } }
+        ]),
+        EventUserTransactionModel.aggregate([
+            { $match: { ...sinceResetMatch, performedByUserId: new Types.ObjectId(currentUserId) } },
+            { $group: { _id: '$type', total: { $sum: '$amount' }, count: { $sum: 1 } } }
+        ])
     ]);
 
-    const sinceResetAgg = await EventUserTransactionModel.aggregate([
-        { $match: sinceResetMatch },
-        {
-            $group: {
-                _id: '$type',
-                total: { $sum: '$amount' },
-                count: { $sum: 1 }
-            }
+    function extract(rows: { _id: string; total: number; count: number }[]) {
+        let topUp = 0, refund = 0, topUpCount = 0, refundCount = 0;
+        for (const row of rows) {
+            if (row._id === 'top-up') { topUp = row.total; topUpCount = row.count; }
+            else if (row._id === 'refund') { refund = row.total; refundCount = row.count; }
         }
-    ]);
-
-    let totalTopUp = 0;
-    let totalRefund = 0;
-    let topUpCount = 0;
-    let refundCount = 0;
-    let sinceResetTopUp = 0;
-    let sinceResetRefund = 0;
-
-    for (const row of aggregation) {
-        if (row._id === 'top-up') {
-            totalTopUp = row.total;
-            topUpCount = row.count;
-        } else if (row._id === 'refund') {
-            totalRefund = row.total;
-            refundCount = row.count;
-        }
+        return { topUp, refund, topUpCount, refundCount };
     }
 
-    for (const row of sinceResetAgg) {
-        if (row._id === 'top-up') {
-            sinceResetTopUp = row.total;
-        } else if (row._id === 'refund') {
-            sinceResetRefund = row.total;
-        }
-    }
+    const all = extract(aggregation);
+    const since = extract(sinceResetAgg);
+    const my = extract(myAggregation);
+    const mySince = extract(mySinceResetAgg);
 
     return res.status(200).json({
-        totalTopUp,
-        totalRefund,
-        netBalance: totalTopUp - totalRefund,
-        topUpCount,
-        refundCount,
-        currencyName: eventCtx.event.currencyName,
-        currencySymbol: eventCtx.event.currencySymbol,
-        sinceResetTopUp,
-        sinceResetRefund,
-        netSinceReset: sinceResetTopUp - sinceResetRefund,
-        lastResetAt: resetAt
+        totalTopUp: all.topUp,
+        totalRefund: all.refund,
+        netBalance: all.topUp - all.refund,
+        topUpCount: all.topUpCount,
+        refundCount: all.refundCount,
+        myTopUp: my.topUp,
+        myRefund: my.refund,
+        myNetBalance: my.topUp - my.refund,
+        myTopUpCount: my.topUpCount,
+        myRefundCount: my.refundCount,
+        sinceResetTopUp: since.topUp,
+        sinceResetRefund: since.refund,
+        netSinceReset: since.topUp - since.refund,
+        mySinceResetTopUp: mySince.topUp,
+        mySinceResetRefund: mySince.refund,
+        myNetSinceReset: mySince.topUp - mySince.refund,
+        lastResetAt: resetAt,
+        exchangeRate: event.exchangeRate ?? 1,
+        currencyName: event.currencyName,
+        currencySymbol: event.currencySymbol
     });
 }
 
@@ -184,8 +186,19 @@ async function listTransactions(req: Request, res: Response) {
         EventUserTransactionModel.countDocuments({ eventId: eventCtx.eventId, type: { $in: exchangeTypes } })
     ]);
 
+    const performerIds = [...new Set(transactions.map(t => t.performedByUserId?.toString()).filter(Boolean))];
+    const performers = performerIds.length > 0
+        ? await UserModel.find({ _id: { $in: performerIds } }).select('firstName lastName').lean()
+        : [];
+    const performerMap = new Map(performers.map(p => [p._id.toString(), `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Operatore']));
+
+    const items = transactions.map(t => ({
+        ...toTransactionResponse(t),
+        performedByName: t.performedByUserId ? (performerMap.get(t.performedByUserId.toString()) ?? null) : null
+    }));
+
     return res.status(200).json({
-        items: transactions.map(toTransactionResponse),
+        items,
         pagination: {
             page,
             limit,
@@ -214,12 +227,16 @@ async function topUp(req: Request, res: Response) {
         return res.status(404).json({ message: 'Event user not found for this event' });
     }
 
+    const exchangeRate = eventCtx.event.exchangeRate ?? 1;
+    const creditAmount = Math.round(amount * exchangeRate * 100) / 100;
+
     try {
         const result = await createEventUserTransaction({
             eventUserId: eventUser._id,
             type: 'top-up',
             direction: 'credit',
-            amount,
+            amount: creditAmount,
+            realAmount: amount,
             description: description?.trim() || 'Cambio: carica crediti (reale → virtuale)',
             performedByUserId: req.user!.id,
             referenceType: 'cambio',
@@ -258,12 +275,16 @@ async function refund(req: Request, res: Response) {
         return res.status(404).json({ message: 'Event user not found for this event' });
     }
 
+    const exchangeRate = eventCtx.event.exchangeRate ?? 1;
+    const realAmount = Math.round(amount / exchangeRate * 100) / 100;
+
     try {
         const result = await createEventUserTransaction({
             eventUserId: eventUser._id,
             type: 'refund',
             direction: 'debit',
             amount,
+            realAmount,
             description: description?.trim() || 'Cambio: rimborso crediti (virtuale → reale)',
             performedByUserId: req.user!.id,
             referenceType: 'cambio',

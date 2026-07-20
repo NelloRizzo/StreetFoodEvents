@@ -46,6 +46,8 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 
 ### Gotchas (backend — data layer)
 - `EventUserTransaction.userId` is nullable (`default: null`). Anonymous EventUsers don't have a userId, so transactions for them store `userId: null`.
+- `EventUserTransaction.realAmount` stores the EUR equivalent at time of transaction (for top-up: EUR input, for refund: credits input / exchangeRate).
+- `Event.exchangeRate` defines how many event currency units = 1 EUR. Default 1 (1:1).
 - `ContestPOI.groups` is an array of strings (`[String]`), not a single string. A POI can belong to multiple groups.
 - `Contest.pickConfig` (`{ groupPicks: { group, count }[] }`) defines auto-pick rules per group. `Contest.autoPickedPOIIds` tracks which POIs were auto-selected. Manual POI additions are preserved when `pickConfig` changes.
 

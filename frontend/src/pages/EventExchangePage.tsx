@@ -27,9 +27,11 @@ type Transaction = {
   type: string
   direction: string
   amount: number
+  realAmount: number | null
   balanceAfter: number
   description: string | null
   performedByUserId: string | null
+  performedByName: string | null
   occurredAt: string
 }
 
@@ -39,11 +41,30 @@ type BalanceSummary = {
   netBalance: number
   topUpCount: number
   refundCount: number
-  currencySymbol: string | null
+  myTopUp: number
+  myRefund: number
+  myNetBalance: number
+  myTopUpCount: number
+  myRefundCount: number
   sinceResetTopUp: number
   sinceResetRefund: number
   netSinceReset: number
+  mySinceResetTopUp: number
+  mySinceResetRefund: number
+  myNetSinceReset: number
   lastResetAt: string | null
+  exchangeRate: number
+  currencyName: string
+  currencySymbol: string | null
+}
+
+function CurrencySymbol({ name }: { name: string }) {
+  const initial = name.charAt(0).toUpperCase()
+  return (
+    <span className={cambioStyles.currencyCircle} title={name}>
+      {initial}
+    </span>
+  )
 }
 
 export function EventExchangePage() {
@@ -114,7 +135,9 @@ export function EventExchangePage() {
       setSelUserBalance(res.newBalance)
       setTopUpAmount('')
       setTopUpDesc('')
-      setModal({ open: true, variant: 'alert', title: 'Carico completato', message: `Caricati ${amount} crediti. Nuovo saldo: ${res.newBalance}` })
+      const rate = balance?.exchangeRate ?? 1
+      const credits = amount * rate
+      setModal({ open: true, variant: 'alert', title: 'Carico completato', message: `Caricati €${amount.toFixed(2)} → ${credits.toFixed(2)} ${balance?.currencyName ?? 'crediti'}. Nuovo saldo: ${res.newBalance}` })
       fetchData()
     } catch (err) {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante il carico' })
@@ -136,7 +159,9 @@ export function EventExchangePage() {
       setSelUserBalance(res.newBalance)
       setRefundAmount('')
       setRefundDesc('')
-      setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati ${amount} crediti. Nuovo saldo: ${res.newBalance}` })
+      const rate = balance?.exchangeRate ?? 1
+      const real = amount / rate
+      setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'} → €${real.toFixed(2)}. Nuovo saldo: ${res.newBalance}` })
       fetchData()
     } catch (err) {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante il rimborso' })
@@ -154,7 +179,11 @@ export function EventExchangePage() {
   }
 
   const selectedUser = users.find((u) => u.id === selectedUserId)
-  const sym = balance?.currencySymbol || '$'
+  const rate = balance?.exchangeRate ?? 1
+  const currencyName = balance?.currencyName ?? 'crediti'
+
+  function fmt(v: number) { return v.toFixed(2) }
+  function fmtEur(v: number) { return `€${v.toFixed(2)}` }
 
   if (forbidden) {
     return (
@@ -169,36 +198,75 @@ export function EventExchangePage() {
   return (
     <div className={`page-shell ${styles.page}`}>
       <Link to={`/events/${eventId}`} className={styles.backBtn}>&larr; Torna all'evento</Link>
-      <h1 className={styles.pageTitle}>Cambio - {eventName || 'Caricamento...'}</h1>
+      <h1 className={styles.pageTitle}>
+        <CurrencySymbol name={currencyName} /> Cambio - {eventName || 'Caricamento...'}
+      </h1>
 
       {loading ? (
         <p>Caricamento...</p>
       ) : (
         <>
           <section className={cambioStyles.section}>
-            <h2 className={styles.sectionTitle}>Riepilogo cassa</h2>
+            <h2 className={styles.sectionTitle}><CurrencySymbol name={currencyName} /> Riepilogo cassa</h2>
             {balance && (
               <>
                 <div className={cambioStyles.cardRow}>
                   <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>Totali da sempre</div>
-                    <div className={cambioStyles.statValue}>{sym}{balance.totalTopUp.toFixed(2)}</div>
-                    <div className={cambioStyles.statSub}>({balance.topUpCount} carichi)</div>
+                    <div className={cambioStyles.statLabel}>Tutte le postazioni — Carichi</div>
+                    <div className={cambioStyles.statValue}>
+                      <span className={cambioStyles.creditValue}>{fmt(balance.totalTopUp)}</span>
+                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.netBalance)} equival.)</span>
+                    </div>
+                    <div className={cambioStyles.statSub}>({balance.topUpCount} operazioni)</div>
                   </div>
                   <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>Rimborsi da sempre</div>
-                    <div className={`${cambioStyles.statValue} ${cambioStyles.statValueNegative}`}>-{sym}{balance.totalRefund.toFixed(2)}</div>
-                    <div className={cambioStyles.statSub}>({balance.refundCount} rimborsi)</div>
+                    <div className={cambioStyles.statLabel}>Tutte le postazioni — Rimborsi</div>
+                    <div className={`${cambioStyles.statValue} ${cambioStyles.statValueNegative}`}>
+                      -{fmt(balance.totalRefund)}
+                      <span className={cambioStyles.eurValue}> (-{fmtEur(balance.totalRefund / rate)} equival.)</span>
+                    </div>
+                    <div className={cambioStyles.statSub}>({balance.refundCount} operazioni)</div>
                   </div>
                   <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>Saldo netto totale</div>
-                    <div className={cambioStyles.statValue}>{sym}{balance.netBalance.toFixed(2)}</div>
+                    <div className={cambioStyles.statLabel}>Tutte le postazioni — Saldo netto</div>
+                    <div className={cambioStyles.statValue}>
+                      {fmt(balance.netBalance)}
+                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.netBalance / rate)})</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={cambioStyles.cardRow}>
+                  <div className={cambioStyles.statCard}>
+                    <div className={cambioStyles.statLabel}>Questa postazione — Carichi</div>
+                    <div className={cambioStyles.statValue}>
+                      {fmt(balance.myTopUp)}
+                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.myNetBalance)} equival.)</span>
+                    </div>
+                    <div className={cambioStyles.statSub}>({balance.myTopUpCount} operazioni)</div>
+                  </div>
+                  <div className={cambioStyles.statCard}>
+                    <div className={cambioStyles.statLabel}>Questa postazione — Rimborsi</div>
+                    <div className={`${cambioStyles.statValue} ${cambioStyles.statValueNegative}`}>
+                      -{fmt(balance.myRefund)}
+                      <span className={cambioStyles.eurValue}> (-{fmtEur(balance.myRefund / rate)} equival.)</span>
+                    </div>
+                    <div className={cambioStyles.statSub}>({balance.myRefundCount} operazioni)</div>
+                  </div>
+                  <div className={cambioStyles.statCard}>
+                    <div className={cambioStyles.statLabel}>Questa postazione — Saldo netto</div>
+                    <div className={cambioStyles.statValue}>
+                      {fmt(balance.myNetBalance)}
+                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.myNetBalance / rate)})</span>
+                    </div>
                   </div>
                 </div>
                 <div className={cambioStyles.cardRow}>
                   <div className={cambioStyles.statCard}>
                     <div className={cambioStyles.statLabel}>Dall'ultimo azzeramento</div>
-                    <div className={cambioStyles.statValue}>{sym}{balance.netSinceReset.toFixed(2)}</div>
+                    <div className={cambioStyles.statValue}>
+                      {fmt(balance.netSinceReset)}
+                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.netSinceReset / rate)})</span>
+                    </div>
                     <div className={cambioStyles.statSub}>{balance.lastResetAt ? `dal ${new Date(balance.lastResetAt).toLocaleString('it-IT')}` : 'Mai azzerato'}</div>
                   </div>
                   <div className={cambioStyles.statCard}>
@@ -211,7 +279,7 @@ export function EventExchangePage() {
           </section>
 
           <section className={cambioStyles.section}>
-            <h2 className={styles.sectionTitle}>Seleziona utente</h2>
+            <h2 className={styles.sectionTitle}><CurrencySymbol name={currencyName} /> Seleziona utente</h2>
             <select
               value={selectedUserId}
               className={cambioStyles.userSelect}
@@ -226,15 +294,16 @@ export function EventExchangePage() {
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.isAnonymous
-                    ? `\u{1F464} Cliente generico (saldo: ${sym}${u.balance})`
-                    : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${sym}${u.balance}`}
+                    ? `\u{1F464} Cliente generico (saldo: ${fmt(u.balance)})`
+                    : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${fmt(u.balance)}`}
                 </option>
               ))}
             </select>
 
             {selectedUser && (
               <p className={cambioStyles.userInfo}>
-                Saldo: <strong>{sym}{(selUserBalance ?? selectedUser.balance).toFixed(2)}</strong>
+                Saldo: <strong>{fmt(selUserBalance ?? selectedUser.balance)}</strong>
+                <span className={cambioStyles.eurValue}> ({fmtEur((selUserBalance ?? selectedUser.balance) / rate)})</span>
                 {selectedUser.isAnonymous && ' - Cliente generico'}
               </p>
             )}
@@ -242,14 +311,19 @@ export function EventExchangePage() {
 
           <div className={cambioStyles.formGrid}>
             <section>
-              <h2 className={styles.sectionTitle}>Carica (Reale &rarr; Virtuale)</h2>
+              <h2 className={styles.sectionTitle}>Carica (Reale &rarr; <CurrencySymbol name={currencyName} /> Virtuale)</h2>
               <div className={cambioStyles.formCard}>
                 <label className={cambioStyles.field}>
-                  Importo
+                  Importo €
                   <input type="number" min="0.01" step="0.01" value={topUpAmount}
                     onChange={(e) => setTopUpAmount(e.target.value)}
                     disabled={!selectedUserId || submitting === 'topup'} />
                 </label>
+                {topUpAmount && parseFloat(topUpAmount) > 0 && (
+                  <p className={cambioStyles.preview}>
+                    ≈ {(parseFloat(topUpAmount) * rate).toFixed(2)} {currencyName}
+                  </p>
+                )}
                 <label className={cambioStyles.field}>
                   Note (opzionale)
                   <input type="text" value={topUpDesc}
@@ -258,20 +332,25 @@ export function EventExchangePage() {
                 </label>
                 <button className={cambioStyles.btnTopUp} onClick={handleTopUp}
                   disabled={!selectedUserId || !topUpAmount || submitting === 'topup'}>
-                  {submitting === 'topup' ? 'Caricamento...' : `Carica ${sym}`}
+                  {submitting === 'topup' ? 'Caricamento...' : `Carica €`}
                 </button>
               </div>
             </section>
 
             <section>
-              <h2 className={styles.sectionTitle}>Rimborsa (Virtuale &rarr; Reale)</h2>
+              <h2 className={styles.sectionTitle}>Rimborsa (<CurrencySymbol name={currencyName} /> Virtuale &rarr; Reale)</h2>
               <div className={cambioStyles.formCard}>
                 <label className={cambioStyles.field}>
-                  Importo
+                  Importo {currencyName}
                   <input type="number" min="0.01" step="0.01" value={refundAmount}
                     onChange={(e) => setRefundAmount(e.target.value)}
                     disabled={!selectedUserId || submitting === 'refund'} />
                 </label>
+                {refundAmount && parseFloat(refundAmount) > 0 && (
+                  <p className={cambioStyles.preview}>
+                    ≈ €{(parseFloat(refundAmount) / rate).toFixed(2)}
+                  </p>
+                )}
                 <label className={cambioStyles.field}>
                   Note (opzionale)
                   <input type="text" value={refundDesc}
@@ -280,50 +359,60 @@ export function EventExchangePage() {
                 </label>
                 <button className={cambioStyles.btnRefund} onClick={handleRefund}
                   disabled={!selectedUserId || !refundAmount || submitting === 'refund'}>
-                  {submitting === 'refund' ? 'Rimborso in corso...' : `Rimborsa ${sym}`}
+                  {submitting === 'refund' ? 'Rimborso in corso...' : `Rimborsa ${currencyName}`}
                 </button>
               </div>
             </section>
           </div>
 
           <section>
-            <h2 className={styles.sectionTitle}>Storico transazioni</h2>
+            <h2 className={styles.sectionTitle}><CurrencySymbol name={currencyName} /> Storico transazioni</h2>
             {transactions.length === 0 ? (
               <p className={styles.empty}>Nessuna transazione di cambio registrata.</p>
             ) : (
               <>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
-                      <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo</th>
-                      <th style={{ textAlign: 'right', padding: '0.5rem' }}>Saldo dopo</th>
-                      <th style={{ textAlign: 'left', padding: '0.5rem' }}>Note</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.map((tx) => (
-                      <tr key={tx.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
-                          {new Date(tx.occurredAt).toLocaleString('it-IT')}
-                        </td>
-                        <td style={{ padding: '0.5rem' }}>
-                          {tx.type === 'top-up' ? 'Carico' : 'Rimborso'}
-                        </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: tx.type === 'top-up' ? 'var(--color-green)' : 'var(--color-red)' }}>
-                          {tx.type === 'top-up' ? '+' : '-'}{sym}{tx.amount.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>
-                          {sym}{tx.balanceAfter.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden' }}>
-                          {tx.description || '-'}
-                        </td>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo {currencyName}</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Equivalente €</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Saldo dopo</th>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Operatore</th>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Note</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {transactions.map((tx) => (
+                        <tr key={tx.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                          <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
+                            {new Date(tx.occurredAt).toLocaleString('it-IT')}
+                          </td>
+                          <td style={{ padding: '0.5rem' }}>
+                            {tx.type === 'top-up' ? 'Carico' : 'Rimborso'}
+                          </td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: tx.type === 'top-up' ? 'var(--color-green)' : 'var(--color-red)' }}>
+                            {tx.type === 'top-up' ? '+' : '-'}{fmt(tx.amount)}
+                          </td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-text-muted)' }}>
+                            {tx.realAmount != null ? fmtEur(tx.realAmount) : '-'}
+                          </td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>
+                            {fmt(tx.balanceAfter)}
+                          </td>
+                          <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
+                            {tx.performedByName || '-'}
+                          </td>
+                          <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden' }}>
+                            {tx.description || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
                 {txTotalPages > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>

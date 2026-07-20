@@ -47,6 +47,11 @@ const eventUserTransactionSchema = new Schema(
             required: true,
             min: 1
         },
+        realAmount: {
+            type: Number,
+            default: null,
+            min: 0
+        },
         balanceAfter: {
             type: Number,
             required: true,
