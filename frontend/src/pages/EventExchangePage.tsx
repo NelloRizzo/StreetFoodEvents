@@ -207,7 +207,7 @@ export function EventExchangePage() {
       ) : (
         <>
           <section className={cambioStyles.section}>
-            <h2 className={styles.sectionTitle}><CurrencySymbol name={currencyName} /> Riepilogo cassa</h2>
+            <h2 className={styles.sectionTitle}>Riepilogo cassa</h2>
             {balance && (
               <>
                 <div className={cambioStyles.cardRow}>
@@ -215,7 +215,7 @@ export function EventExchangePage() {
                     <div className={cambioStyles.statLabel}>Tutte le postazioni — Carichi</div>
                     <div className={cambioStyles.statValue}>
                       <span className={cambioStyles.creditValue}>{fmt(balance.totalTopUp)}</span>
-                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.netBalance)} equival.)</span>
+                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.totalTopUp / rate)} equival.)</span>
                     </div>
                     <div className={cambioStyles.statSub}>({balance.topUpCount} operazioni)</div>
                   </div>
@@ -240,7 +240,7 @@ export function EventExchangePage() {
                     <div className={cambioStyles.statLabel}>Questa postazione — Carichi</div>
                     <div className={cambioStyles.statValue}>
                       {fmt(balance.myTopUp)}
-                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.myNetBalance)} equival.)</span>
+                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.myTopUp / rate)} equival.)</span>
                     </div>
                     <div className={cambioStyles.statSub}>({balance.myTopUpCount} operazioni)</div>
                   </div>
@@ -279,7 +279,7 @@ export function EventExchangePage() {
           </section>
 
           <section className={cambioStyles.section}>
-            <h2 className={styles.sectionTitle}><CurrencySymbol name={currencyName} /> Seleziona utente</h2>
+            <h2 className={styles.sectionTitle}>Seleziona utente</h2>
             <select
               value={selectedUserId}
               className={cambioStyles.userSelect}
@@ -311,7 +311,7 @@ export function EventExchangePage() {
 
           <div className={cambioStyles.formGrid}>
             <section>
-              <h2 className={styles.sectionTitle}>Carica (Reale &rarr; <CurrencySymbol name={currencyName} /> Virtuale)</h2>
+              <h2 className={styles.sectionTitle}>Carica (Reale &rarr; Virtuale)</h2>
               <div className={cambioStyles.formCard}>
                 <label className={cambioStyles.field}>
                   Importo €
@@ -338,7 +338,7 @@ export function EventExchangePage() {
             </section>
 
             <section>
-              <h2 className={styles.sectionTitle}>Rimborsa (<CurrencySymbol name={currencyName} /> Virtuale &rarr; Reale)</h2>
+              <h2 className={styles.sectionTitle}>Rimborsa (Virtuale &rarr; Reale)</h2>
               <div className={cambioStyles.formCard}>
                 <label className={cambioStyles.field}>
                   Importo {currencyName}
@@ -366,7 +366,7 @@ export function EventExchangePage() {
           </div>
 
           <section>
-            <h2 className={styles.sectionTitle}><CurrencySymbol name={currencyName} /> Storico transazioni</h2>
+            <h2 className={styles.sectionTitle}>Storico transazioni</h2>
             {transactions.length === 0 ? (
               <p className={styles.empty}>Nessuna transazione di cambio registrata.</p>
             ) : (
