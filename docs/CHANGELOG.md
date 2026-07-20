@@ -360,4 +360,8 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] Tutti gli importi mostrano equivalente in EUR con prefisso €
 - [x] Form Carica: input in EUR, preview crediti; Form Rimborsa: input in crediti, preview EUR
 - [x] Tabella storico: colonne Importo {currencyName}, Equivalente €, Operatore
+- [x] "Saldo dopo": crediti + EUR equivalent in colonna
+- [x] EUR equivalent calcolato da amount/rate per vecchie transazioni senza realAmount
+- [x] CurrencySymbol rimosso dalle sezioni secondarie (solo nell'h1)
+- [x] Fix: EUR carichi usava netBalance invece di totalTopUp
 - [x] Tutti i 187 test backend passano, frontend build OK

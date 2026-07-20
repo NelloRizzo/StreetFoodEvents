@@ -165,3 +165,26 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Jul 2026 — exchange rate + per-station reports)
+### Completed
+- `Event.exchangeRate` (Number, default 1, min 0.01) + create/update/response
+- `EventUserTransaction.realAmount` (Number, nullable) per EUR tracking
+- topUp: amount in EUR, credits = EUR × rate; refund: amount in credits, EUR = credits / rate
+- getBalance: `myTopUp/Refund/NetBalance/Count` (per performedByUserId), `exchangeRate`
+- listTransactions: `performedByName` from User model (populated per request)
+- EventsPage form: "Tasso di cambio (1 € = X moneta)" field
+- EventExchangePage: currency initial in circle (h1 only), EUR equiv via €
+- Stat cards: "Tutte le postazioni" (all) + "Questa postazione" (current user)
+- EUR fallback per vecchie transazioni (amount/rate se realAmount è null)
+- "Saldo dopo" colonna: crediti + EUR equivalent
+
+### API changes
+- `POST /api/cambios/:eventId/top-up` — amount in EUR, credits = EUR × exchangeRate
+- `POST /api/cambios/:eventId/refund` — amount in credits, EUR returned = credits / exchangeRate
+- `GET /api/cambios/:eventId/balance` — response includes `exchangeRate`, `myTopUp`, `myRefund`, `myNetBalance`, `myTopUpCount`, `myRefundCount`, `mySinceResetTopUp`, `mySinceResetRefund`, `myNetSinceReset`
+- `GET /api/cambios/:eventId/transactions` — response includes `performedByName` per item
+
+### Next steps
+- Trigger deploy on Render after latest pushes
+- Verify exchange page end-to-end on production (rate, per-station, operator column)
