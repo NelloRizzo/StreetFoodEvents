@@ -890,7 +890,7 @@ export function EventDetailPage() {
           {/* QR print button */}
           {contests.map((contest) => (
             contest.orderedPOIIds.length > 0 && (
-              <button key={contest.id} className={styles.actionBtnOutline} style={{ margin: '0.5rem 0', display: 'block' }} onClick={async () => {
+              <button key={contest.id} className={styles.actionBtn} style={{ margin: '0.5rem 0', display: 'block' }} onClick={async () => {
                 try {
                   const data = await getContestPoiQrCodes(contest.id)
                   const win = window.open('', '_blank')
@@ -901,22 +901,36 @@ export function EventDetailPage() {
   <title>QR Code POI - ${contest.name}</title>
   <style>
     @page { size: A4; margin: 1cm; }
-    body { font-family: sans-serif; }
+    body { font-family: sans-serif; margin: 0; padding: 0.5cm; }
     .page-break { page-break-after: always; }
-    .card { text-align: center; padding: 1cm; }
-    .card img { width: 300px; height: 300px; image-rendering: pixelated; }
-    .card h2 { margin: 0.5rem 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5cm; }
+    .card { text-align: center; padding: 0.5cm; border: 1px solid #ddd; border-radius: 8px; break-inside: avoid; }
+    .card img { width: 200px; height: 200px; image-rendering: pixelated; }
+    .card h2 { margin: 0.3rem 0; font-size: 1rem; }
+    .card p { margin: 0; font-size: 0.75rem; color: #666; }
   </style>
 </head>
 <body>
-  ${data.items.map((item, i) => `
-    <div class="card${i < data.items.length - 1 ? ' page-break' : ''}">
+  ${data.items.reduce((acc, item, i) => {
+    if (i % 4 === 0) acc += '<div class="grid">'
+    acc += `
+    <div class="card">
       <h2>${item.poiName}</h2>
-      <img src="${item.qrCode}" alt="QR ${item.poiName}" />
+      <img src="${item.qrCode}" alt="QR ${item.poiName}" onload="this.style.opacity=1" style="opacity:0;transition:opacity .2s" />
       <p>Inquadra il QR per scansionare il POI</p>
-    </div>
-  `).join('')}
-  <script>window.print();window.close()</script>
+    </div>`
+    if (i % 4 === 3 || i === data.items.length - 1) {
+      acc += '</div>'
+      if (i < data.items.length - 1) acc += '<div class="page-break"></div>'
+    }
+    return acc
+  }, '')}
+  <script>
+    let loaded = document.querySelectorAll('img').length;
+    if (loaded === 0) { window.print(); window.close(); return; }
+    let count = 0;
+    document.querySelectorAll('img').forEach(img => img.onload = () => { if (++count >= loaded) { window.print(); window.close(); } });
+  </script>
 </body>
 </html>`
                   win.document.write(html)
