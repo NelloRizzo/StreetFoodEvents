@@ -362,6 +362,34 @@ export async function eventQrCode(req: Request, res: Response) {
   return res.status(200).json({ qrCode: qrDataUrl });
 }
 
+export async function eventContestsQrCode(req: Request, res: Response) {
+  const eventId = req.params.eventId;
+
+  if (!isValidObjectId(eventId)) {
+    return res.status(400).json({ message: 'Invalid event id' });
+  }
+
+  const event = await EventModel.findById(eventId);
+
+  if (!event) {
+    return res.status(404).json({ message: 'Event not found' });
+  }
+
+  const origin = req.headers.origin ?? `${req.protocol}://${req.headers.host}`;
+  const url = `${origin}/events/${eventId}/contests`;
+
+  const qrDataUrl = await qrcode.toDataURL(url, {
+    width: 400,
+    margin: 2,
+    color: {
+      dark: '#264137',
+      light: '#ffffff'
+    }
+  });
+
+  return res.status(200).json({ qrCode: qrDataUrl });
+}
+
 export async function deleteEvent(req: Request, res: Response) {
     const eventId = req.params.eventId;
 

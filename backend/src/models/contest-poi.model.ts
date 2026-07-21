@@ -13,11 +13,9 @@ const contestPOISchema = new Schema(
             trim: true,
             maxlength: 160
         },
-        hint: {
-            type: String,
-            trim: true,
-            default: null,
-            maxlength: 300
+        hints: {
+            type: [String],
+            default: []
         },
         groups: {
             type: [String],

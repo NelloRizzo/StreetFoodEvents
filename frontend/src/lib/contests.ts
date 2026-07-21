@@ -4,7 +4,7 @@ export type ContestPOI = {
   id: string
   eventId: string
   name: string
-  hint: string | null
+  hints: string[]
   groups: string[]
   sequenceOrder: number
 }
@@ -17,6 +17,11 @@ export type GroupPick = {
 export type ContestPrize = {
   label: string
   awarded: boolean
+}
+
+export type PoiHintSelection = {
+  poiId: string
+  hintIndex: number
 }
 
 export type Contest = {
@@ -34,6 +39,7 @@ export type Contest = {
   orderedPOIIds: string[]
   pickConfig: { groupPicks: GroupPick[] } | null
   autoPickedPOIIds: string[]
+  poiHintSelections: PoiHintSelection[]
 }
 
 export type ContestWithPois = Contest & {
@@ -65,14 +71,14 @@ export function listContestPois(eventId: string) {
   return apiRequest<{ items: ContestPOI[] }>(`/contests/contest-pois?eventId=${eventId}`)
 }
 
-export function createContestPoi(data: { eventId: string; name: string; hint?: string | null; groups?: string[] }) {
+export function createContestPoi(data: { eventId: string; name: string; hints?: string[]; groups?: string[] }) {
   return apiRequest<{ item: ContestPOI }>('/contests/contest-pois', {
     method: 'POST',
     bodyJson: data,
   })
 }
 
-export function updateContestPoi(poiId: string, data: { name?: string; hint?: string | null; groups?: string[]; sequenceOrder?: number }) {
+export function updateContestPoi(poiId: string, data: { name?: string; hints?: string[]; groups?: string[]; sequenceOrder?: number }) {
   return apiRequest<{ item: ContestPOI }>(`/contests/contest-pois/${poiId}`, {
     method: 'PATCH',
     bodyJson: data,
@@ -107,6 +113,7 @@ export function createContest(data: {
   isActive?: boolean
   orderedPOIIds?: string[]
   pickConfig?: { groupPicks: GroupPick[] } | null
+  poiHintSelections?: PoiHintSelection[]
 }) {
   return apiRequest<{ item: Contest }>('/contests', {
     method: 'POST',
@@ -125,6 +132,7 @@ export function updateContest(contestId: string, data: Partial<{
   isActive: boolean
   orderedPOIIds: string[]
   pickConfig: { groupPicks: GroupPick[] } | null
+  poiHintSelections: PoiHintSelection[]
 }>) {
   return apiRequest<{ item: Contest }>(`/contests/${contestId}`, {
     method: 'PATCH',

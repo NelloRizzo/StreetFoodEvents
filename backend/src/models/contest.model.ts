@@ -66,6 +66,13 @@ const contestSchema = new Schema(
             type: [Schema.Types.ObjectId],
             ref: 'ContestPOI',
             default: []
+        },
+        poiHintSelections: {
+            type: [{
+                poiId: { type: Schema.Types.ObjectId, ref: 'ContestPOI', required: true },
+                hintIndex: { type: Number, required: true, min: 0 }
+            }],
+            default: []
         }
     },
     {

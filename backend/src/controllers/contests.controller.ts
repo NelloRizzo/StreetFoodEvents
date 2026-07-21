@@ -34,7 +34,7 @@ function toCpoiResponse(cpoi: {
     _id: Types.ObjectId;
     eventId: Types.ObjectId;
     name: string;
-    hint?: string | null;
+    hints?: string[];
     groups?: string[];
     sequenceOrder?: number;
     createdAt: Date;
@@ -44,7 +44,7 @@ function toCpoiResponse(cpoi: {
         id: cpoi._id.toString(),
         eventId: cpoi.eventId.toString(),
         name: cpoi.name,
-        hint: cpoi.hint ?? null,
+        hints: cpoi.hints ?? [],
         groups: cpoi.groups ?? [],
         sequenceOrder: cpoi.sequenceOrder ?? 0,
         createdAt: cpoi.createdAt,
@@ -65,7 +65,7 @@ async function getContestPoi(req: Request, res: Response) {
 }
 
 async function createContestPoi(req: Request, res: Response) {
-    const { eventId, name, hint, groups } = req.body;
+    const { eventId, name, hints, groups } = req.body;
     if (!eventId || !isValidObjectId(eventId)) {
         return res.status(400).json({ message: 'Valid eventId is required' });
     }
@@ -77,7 +77,7 @@ async function createContestPoi(req: Request, res: Response) {
     const poi = await ContestPOIModel.create({
         eventId,
         name: name.trim(),
-        hint: hint ?? null,
+        hints: Array.isArray(hints) ? hints.filter((h: string) => typeof h === 'string' && h.trim()).map((h: string) => h.trim()) : [],
         groups: Array.isArray(groups) ? groups.filter((g: string) => typeof g === 'string' && g.trim()) : [],
         sequenceOrder: (maxOrder?.sequenceOrder ?? 0) + 1
     });
@@ -94,9 +94,9 @@ async function updateContestPoi(req: Request, res: Response) {
     if (!poi) {
         return res.status(404).json({ message: 'Contest POI not found' });
     }
-    const { name, hint, groups, sequenceOrder } = req.body;
+    const { name, hints, groups, sequenceOrder } = req.body;
     if (name !== undefined) poi.name = name.trim();
-    if (hint !== undefined) poi.hint = hint;
+    if (hints !== undefined) poi.hints = Array.isArray(hints) ? hints.filter((h: string) => typeof h === 'string' && h.trim()).map((h: string) => h.trim()) : [];
     if (groups !== undefined) poi.groups = Array.isArray(groups) ? groups.filter((g: string) => typeof g === 'string' && g.trim()) : [];
     if (sequenceOrder !== undefined) poi.sequenceOrder = sequenceOrder;
     await poi.save();
@@ -131,6 +131,7 @@ function toContestResponse(contest: {
     orderedPOIIds?: Types.ObjectId[];
     pickConfig?: { groupPicks: Array<{ group: string; count: number }> } | null;
     autoPickedPOIIds?: Types.ObjectId[];
+    poiHintSelections?: Array<{ poiId: Types.ObjectId; hintIndex: number }>;
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -150,6 +151,10 @@ function toContestResponse(contest: {
         orderedPOIIds: (contest.orderedPOIIds ?? []).map((id) => id.toString()),
         pickConfig: contest.pickConfig ?? null,
         autoPickedPOIIds: (contest.autoPickedPOIIds ?? []).map((id) => id.toString()),
+        poiHintSelections: (contest.poiHintSelections ?? []).map((s) => ({
+            poiId: s.poiId.toString(),
+            hintIndex: s.hintIndex
+        })),
         createdAt: contest.createdAt,
         updatedAt: contest.updatedAt
     };
@@ -179,11 +184,17 @@ async function getContest(req: Request, res: Response) {
     const contestData = toContestResponse(contest);
 
     const pois = await ContestPOIModel.find({ _id: { $in: contest.orderedPOIIds } }).sort({ sequenceOrder: 1 });
-    const poisResponse = pois.map((p) => ({
-        id: p._id.toString(),
-        name: p.name,
-        hint: p.hint ?? null
-    }));
+    const hintSelectionMap = new Map(
+        (contest.poiHintSelections ?? []).map((s) => [s.poiId.toString(), s.hintIndex])
+    );
+    const poisResponse = pois.map((p) => {
+        const idx = hintSelectionMap.get(p._id.toString()) ?? 0;
+        return {
+            id: p._id.toString(),
+            name: p.name,
+            hint: (p.hints && p.hints.length > 0 && idx < p.hints.length) ? p.hints[idx] : null
+        };
+    });
 
     return res.status(200).json({ item: contestData, pois: poisResponse });
 }
@@ -192,7 +203,7 @@ async function createContest(req: Request, res: Response) {
     const {
         eventId, name, description,
         startsAt, endsAt, durationMinutes,
-        requireSequence, prizes, isActive, orderedPOIIds, pickConfig
+        requireSequence, prizes, isActive, orderedPOIIds, pickConfig, poiHintSelections
     } = req.body;
 
     if (!eventId || !isValidObjectId(eventId)) {
@@ -249,7 +260,8 @@ async function createContest(req: Request, res: Response) {
         isActive: isActive ?? true,
         orderedPOIIds: poIds.map((id) => new Types.ObjectId(id)),
         pickConfig: pickConfig ?? null,
-        autoPickedPOIIds: autoPicked.map((id) => new Types.ObjectId(id))
+        autoPickedPOIIds: autoPicked.map((id) => new Types.ObjectId(id)),
+        poiHintSelections: Array.isArray(poiHintSelections) ? poiHintSelections.filter((s: { poiId: string; hintIndex: number }) => isValidObjectId(s.poiId)).map((s: { poiId: string; hintIndex: number }) => ({ poiId: new Types.ObjectId(s.poiId), hintIndex: s.hintIndex })) : []
     });
 
     return res.status(201).json({ item: toContestResponse(contest) });
@@ -266,7 +278,7 @@ async function updateContest(req: Request, res: Response) {
     }
     const {
         name, description, startsAt, endsAt, durationMinutes,
-        requireSequence, prizes, isActive, orderedPOIIds, pickConfig
+        requireSequence, prizes, isActive, orderedPOIIds, pickConfig, poiHintSelections
     } = req.body;
 
     if (name !== undefined) contest.name = name.trim();
@@ -324,6 +336,14 @@ async function updateContest(req: Request, res: Response) {
         contest.pickConfig = pickConfig;
     } else if (orderedPOIIds !== undefined) {
         contest.orderedPOIIds = orderedPOIIds.filter((id: string) => isValidObjectId(id)).map((id: string) => new Types.ObjectId(id));
+    }
+
+    if (poiHintSelections !== undefined) {
+        const selections = Array.isArray(poiHintSelections)
+            ? poiHintSelections.filter((s: { poiId: string; hintIndex: number }) => isValidObjectId(s.poiId))
+                .map((s: { poiId: string; hintIndex: number }) => ({ poiId: new Types.ObjectId(s.poiId), hintIndex: s.hintIndex }))
+            : [];
+        contest.set('poiHintSelections', selections);
     }
 
     await contest.save();
