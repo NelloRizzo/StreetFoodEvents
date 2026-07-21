@@ -190,14 +190,14 @@ export function EventExchangePage() {
       <div className={`page-shell ${styles.page}`}>
         <h1 className={styles.pageTitle}>Accesso negato</h1>
         <p>Non hai i permessi per accedere a questa pagina.</p>
-        <Link to={`/events/${eventId}`} className={styles.backBtn}>Torna all'evento</Link>
+        <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
       </div>
     )
   }
 
   return (
     <div className={`page-shell ${styles.page}`}>
-      <Link to={`/events/${eventId}`} className={styles.backBtn}>&larr; Torna all'evento</Link>
+      <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
       <h1 className={styles.pageTitle}>
         <CurrencySymbol name={currencyName} /> Cambio - {eventName || 'Caricamento...'}
       </h1>
