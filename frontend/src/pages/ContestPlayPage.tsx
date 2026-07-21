@@ -8,7 +8,8 @@ import styles from './ContestPlayPage.module.scss'
 type ContestData = {
   id: string
   name: string
-  durationMinutes: number
+  startsAt: string
+  endsAt: string
   requireSequence: boolean
   prizes: { label: string; awarded: boolean }[]
   awardedPrizesCount: number
@@ -45,7 +46,6 @@ export function ContestPlayPage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [scanMessage, setScanMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [finished, setFinished] = useState(false)
-  const startedAtRef = useRef<number | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const participantIdLocal = getParticipantId(contestId!)
@@ -92,23 +92,13 @@ export function ContestPlayPage() {
       })
   }, [contestId])
 
-  // Countdown timer
+  // Countdown to contest end
   useEffect(() => {
     if (!contest || finished) return
 
-    if (!startedAtRef.current) {
-      startedAtRef.current = Date.now()
-    }
-
     function tick() {
-      const elapsed = (Date.now() - startedAtRef.current!) / 1000
-      const remaining = Math.max(0, contest!.durationMinutes * 60 - elapsed)
+      const remaining = Math.max(0, (new Date(contest!.endsAt).getTime() - Date.now()) / 1000)
       setTimeLeft(remaining)
-
-      if (remaining <= 0) {
-        setFinished(true)
-        setParticipation((prev) => prev ? { ...prev, isWinner: false, completedAt: new Date().toISOString() } : null)
-      }
     }
 
     tick()
@@ -183,16 +173,17 @@ export function ContestPlayPage() {
   if (finished) {
     const isWin = participation?.isWinner === true
     const scannedCount = participation?.scannedPOIIds.length ?? 0
+    const allScanned = scannedCount === pois.length
 
     return (
       <div className={`page-shell ${styles.page}`}>
         <div className={styles.finishedCard}>
-          {isWin ? (
+          {isWin && allScanned && participation?.awardedPrizeLabel ? (
             <>
               <span className={styles.finishIcon}>&#127881;</span>
               <h2 className={styles.finishTitle}>Complimenti!</h2>
               <p className={styles.finishDesc}>Hai trovato tutti i POI!</p>
-              {participation?.awardedPrizeLabel && <span className={styles.prizeTag}>Hai vinto: {participation.awardedPrizeLabel}</span>}
+              <span className={styles.prizeTag}>Hai vinto: {participation.awardedPrizeLabel}</span>
               <button
                 className={styles.verifyBtn}
                 onClick={() => navigate(`/contest/${contestId}/verify/${participantIdLocal}`)}
@@ -200,11 +191,11 @@ export function ContestPlayPage() {
                 Mostra verifica
               </button>
             </>
-          ) : participation?.completedAt ? (
+          ) : isWin && allScanned ? (
             <>
-              <span className={styles.finishIcon}>&#9203;</span>
-              <h2 className={styles.finishTitle}>Tempo scaduto!</h2>
-              <p className={styles.finishDesc}>Hai trovato {scannedCount} di {pois.length} POI.</p>
+              <span className={styles.finishIcon}>&#127881;</span>
+              <h2 className={styles.finishTitle}>Complimenti!</h2>
+              <p className={styles.finishDesc}>Hai trovato tutti i POI!</p>
               <button
                 className={styles.verifyBtn}
                 onClick={() => navigate(`/contest/${contestId}/verify/${participantIdLocal}`)}

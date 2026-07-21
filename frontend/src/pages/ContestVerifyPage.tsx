@@ -22,6 +22,7 @@ type ParticipationData = {
   completedAt: string | null
   isWinner: boolean | null
   prizeAwarded: boolean
+  awardedPrizeLabel: string | null
 }
 
 export function ContestVerifyPage() {
@@ -50,6 +51,7 @@ export function ContestVerifyPage() {
           completedAt: partData.completedAt,
           isWinner: partData.isWinner,
           prizeAwarded: partData.prizeAwarded,
+          awardedPrizeLabel: partData.awardedPrizeLabel ?? null,
         })
         setIsLoading(false)
       })
@@ -70,6 +72,7 @@ export function ContestVerifyPage() {
         completedAt: result.completedAt,
         isWinner: result.isWinner,
         prizeAwarded: result.prizeAwarded,
+        awardedPrizeLabel: result.awardedPrizeLabel ?? null,
       })
     } catch { /* ignore */ }
     setAwarding(false)
@@ -92,10 +95,15 @@ export function ContestVerifyPage() {
       <p className={styles.contestName}>{contest.name}</p>
 
       <div className={`${styles.result} ${isWin ? styles.win : styles.lose}`}>
-        {isWin ? (
+        {isWin && participation.awardedPrizeLabel ? (
           <>
             <span className={styles.resultIcon}>&#127881;</span>
-            <span className={styles.resultText}>Complimenti, hai vinto!</span>
+            <span className={styles.resultText}>Complimenti, hai vinto {participation.awardedPrizeLabel}!</span>
+          </>
+        ) : isWin ? (
+          <>
+            <span className={styles.resultIcon}>&#127881;</span>
+            <span className={styles.resultText}>Hai completato il contest!</span>
           </>
         ) : participation.isWinner === false ? (
           <>
@@ -153,7 +161,7 @@ export function ContestVerifyPage() {
         </div>
       </section>
 
-      {isWin && !participation.prizeAwarded && isAuthenticated && (
+      {isWin && participation.awardedPrizeLabel && !participation.prizeAwarded && isAuthenticated && (
         <button className={styles.awardBtn} onClick={handleAward} disabled={awarding}>
           {awarding ? 'Consegna in corso...' : 'Consegna premio'}
         </button>

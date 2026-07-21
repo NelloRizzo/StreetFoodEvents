@@ -14,6 +14,7 @@ type EventData = {
   name: string
   logo?: { url: string; publicId: string } | null
   coverImage?: { url: string; publicId: string } | null
+  slideshowTitle?: string | null
 }
 
 const POLL_MS = 2 * 60_000
@@ -35,10 +36,29 @@ export function SlideshowPage() {
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [rotateSec, setRotateSec] = useState<number>(10)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const titleRef = useRef<HTMLInputElement>(null)
   const allRef = useRef<Photo[]>([])
   const refreshRef = useRef<() => void>(() => {})
 
   const closeModal = useCallback(() => setSelectedPhoto(null), [])
+
+  async function saveTitle(value: string) {
+    if (!eventId) return
+    setEditingTitle(false)
+    const trimmed = value.trim()
+    if (trimmed === (eventData?.slideshowTitle ?? '')) return
+    setEventData((prev) => prev ? { ...prev, slideshowTitle: trimmed || null } : prev)
+    try {
+      await apiRequest(`/events/${eventId}`, { method: 'PATCH', bodyJson: { slideshowTitle: trimmed || null } })
+    } catch { /* ignore */ }
+  }
+
+  function startEditing() {
+    setTitleDraft(eventData?.slideshowTitle ?? '')
+    setEditingTitle(true)
+  }
 
   useEffect(() => {
     if (!selectedPhoto) return
@@ -46,6 +66,13 @@ export function SlideshowPage() {
     globalThis.addEventListener('keydown', onKey)
     return () => globalThis.removeEventListener('keydown', onKey)
   }, [selectedPhoto, closeModal])
+
+  useEffect(() => {
+    if (editingTitle && titleRef.current) {
+      titleRef.current.focus()
+      titleRef.current.select()
+    }
+  }, [editingTitle])
 
   useEffect(() => {
     if (!eventId) return
@@ -104,9 +131,29 @@ export function SlideshowPage() {
         {eventData?.logo?.url && (
           <img src={eventData.logo.url} alt="" className={styles.logo} />
         )}
-        <span className={styles.eventName}>
-          {eventData?.name ?? 'Street Food Events'}
-        </span>
+        <div className={styles.titleGroup}>
+          <span className={styles.eventName}>
+            {eventData?.name ?? 'Street Food Events'}
+          </span>
+          {editingTitle ? (
+            <input
+              ref={titleRef}
+              className={styles.titleInput}
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={(e) => saveTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { (e.target as HTMLInputElement).blur() }
+                if (e.key === 'Escape') { setEditingTitle(false) }
+              }}
+              placeholder="Titolo slideshow..."
+            />
+          ) : (
+            <span className={styles.slideshowTitle} onClick={startEditing}>
+              {eventData?.slideshowTitle || 'Clicca per aggiungere un titolo...'}
+            </span>
+          )}
+        </div>
         <button className={styles.refreshBtn} onClick={() => refreshRef.current()} title="Aggiorna">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 2v6h-6" />

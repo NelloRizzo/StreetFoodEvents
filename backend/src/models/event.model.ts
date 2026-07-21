@@ -114,6 +114,12 @@ const eventSchema = new Schema(
         cashRegisterResetAt: {
             type: Date,
             default: null
+        },
+        slideshowTitle: {
+            type: String,
+            trim: true,
+            default: null,
+            maxlength: 300
         }
     },
     {

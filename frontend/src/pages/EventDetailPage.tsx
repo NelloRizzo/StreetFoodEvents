@@ -885,11 +885,21 @@ export function EventDetailPage() {
                     })
                     setShowContestForm(true)
                   }}>Modifica</button>
-                  <button className={styles.dangerBtn} onClick={async () => {
-                    try {
-                      await deleteContest(contest.id)
-                      setContests((prev) => prev.filter((c) => c.id !== contest.id))
-                    } catch { /* ignore */ }
+                  <button className={styles.dangerBtn} onClick={() => {
+                    setModal({
+                      open: true,
+                      variant: 'confirm',
+                      title: 'Eliminare contest?',
+                      message: 'Questa azione è irreversibile.',
+                      danger: true,
+                      onConfirm: async () => {
+                        try {
+                          await deleteContest(contest.id)
+                          setContests((prev) => prev.filter((c) => c.id !== contest.id))
+                        } catch { /* ignore */ }
+                        setModal((prev) => ({ ...prev, open: false }))
+                      },
+                    })
                   }}>Elimina</button>
                 </div>
               </div>

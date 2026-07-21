@@ -55,6 +55,7 @@ function toEventResponse(event: {
     gallery?: unknown[];
     cashPaymentsEnabled?: boolean | null;
     unifiedCashierEnabled?: boolean | null;
+    slideshowTitle?: string | null;
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -79,6 +80,7 @@ function toEventResponse(event: {
         gallery: event.gallery ?? [],
         cashPaymentsEnabled: event.cashPaymentsEnabled ?? true,
         unifiedCashierEnabled: event.unifiedCashierEnabled ?? false,
+        slideshowTitle: event.slideshowTitle ?? null,
         createdAt: event.createdAt,
         updatedAt: event.updatedAt
     };
@@ -175,7 +177,8 @@ export async function createEvent(req: Request, res: Response) {
         logo,
         gallery,
         cashPaymentsEnabled,
-        unifiedCashierEnabled
+        unifiedCashierEnabled,
+        slideshowTitle
     } = req.body;
 
     if (location && !location.googleMapsUrl) {
@@ -201,7 +204,8 @@ export async function createEvent(req: Request, res: Response) {
         logo: logo ?? null,
         gallery: gallery ?? [],
         cashPaymentsEnabled: cashPaymentsEnabled ?? true,
-        unifiedCashierEnabled: unifiedCashierEnabled ?? false
+        unifiedCashierEnabled: unifiedCashierEnabled ?? false,
+        slideshowTitle: slideshowTitle ?? null
     });
 
     return res.status(201).json({
@@ -245,7 +249,8 @@ export async function updateEvent(req: Request, res: Response) {
         logo,
         gallery,
         cashPaymentsEnabled,
-        unifiedCashierEnabled
+        unifiedCashierEnabled,
+        slideshowTitle
     } = req.body;
 
     if (name !== undefined) {
@@ -325,6 +330,10 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (unifiedCashierEnabled !== undefined) {
         event.unifiedCashierEnabled = unifiedCashierEnabled;
+    }
+
+    if (slideshowTitle !== undefined) {
+        event.slideshowTitle = slideshowTitle;
     }
 
     await event.save();

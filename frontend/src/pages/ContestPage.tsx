@@ -44,13 +44,6 @@ export function ContestPage() {
       })
   }, [contestId])
 
-  function handleStart() {
-    if (!contestId || !contest) return
-    const pid = localStorage.getItem(`contest_${contestId}_participantId`) || crypto.randomUUID()
-    localStorage.setItem(`contest_${contestId}_participantId`, pid)
-    navigate(`/contest/${contestId}/play`)
-  }
-
   if (isLoading) return null
   if (error || !contest) {
     return (
@@ -79,10 +72,6 @@ export function ContestPage() {
 
       <div className={styles.infoRow}>
         <div className={styles.info}>
-          <strong>Durata</strong>
-          <span>{contest.durationMinutes} minuti</span>
-        </div>
-        <div className={styles.info}>
           <strong>Ordine</strong>
           <span>{contest.requireSequence ? 'Sequenza precisa' : 'Libero'}</span>
         </div>
@@ -108,8 +97,13 @@ export function ContestPage() {
       </section>
 
       {canPlay ? (
-        <button className={styles.startBtn} onClick={handleStart}>
-          Inizia il contest!
+        <button className={styles.startBtn} onClick={() => {
+          if (!contestId) return
+          const pid = localStorage.getItem(`contest_${contestId}_participantId`) || crypto.randomUUID()
+          localStorage.setItem(`contest_${contestId}_participantId`, pid)
+          navigate(`/contest/${contestId}/play`)
+        }}>
+          Partecipa al contest!
         </button>
       ) : (
         <p className={styles.notAvailable}>

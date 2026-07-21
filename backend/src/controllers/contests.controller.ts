@@ -417,14 +417,6 @@ async function registerScan(req: Request, res: Response) {
         return res.status(400).json({ message: 'Participation already completed' });
     }
 
-    const elapsed = (now.getTime() - participation.startedAt.getTime()) / 60000;
-    if (elapsed > contest.durationMinutes) {
-        participation.completedAt = now;
-        participation.isWinner = false;
-        await participation.save();
-        return res.status(400).json({ message: 'Time expired', state: getParticipationState(participation) });
-    }
-
     if (participation.scannedPOIIds.some((id) => id.toString() === poiId)) {
         return res.status(400).json({ message: 'POI already scanned' });
     }
@@ -455,7 +447,7 @@ async function registerScan(req: Request, res: Response) {
             }
             await contest.save();
         } else {
-            participation.isWinner = false;
+            participation.isWinner = true;
         }
     }
 
