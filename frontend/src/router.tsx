@@ -47,6 +47,7 @@ import { ContestPage } from './pages/ContestPage'
 import { ContestPlayPage } from './pages/ContestPlayPage'
 import { ContestVerifyPage } from './pages/ContestVerifyPage'
 import { EventExchangePage } from './pages/EventExchangePage'
+import { ContestDeliveryPage } from './pages/ContestDeliveryPage'
 
 export const router = createBrowserRouter([
   {
@@ -116,6 +117,10 @@ export const router = createBrowserRouter([
       {
         path: 'contest/:contestId/verify/:participantId',
         element: <ContestVerifyPage />,
+      },
+      {
+        path: 'contest/:contestId/consegna',
+        element: <ContestDeliveryPage />,
       },
       {
         path: 'events/:eventId/slideshow',

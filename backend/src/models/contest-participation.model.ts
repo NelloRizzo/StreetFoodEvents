@@ -42,6 +42,12 @@ const contestParticipationSchema = new Schema(
             type: String,
             trim: true,
             default: null
+        },
+        claimCode: {
+            type: String,
+            trim: true,
+            default: null,
+            maxlength: 10
         }
     },
     {

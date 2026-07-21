@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
-import { getContest, getParticipation, registerScan } from '../lib/contests'
+import { getContest, getContestLeaderboard, getParticipation, registerScan } from '../lib/contests'
+import type { LeaderboardItem } from '../lib/contests'
 import { QRScanner } from '../components/QRScanner'
+import { apiRequest } from '../lib/api'
 import styles from './ContestPlayPage.module.scss'
 
 type ContestData = {
@@ -27,6 +29,7 @@ type ParticipationState = {
   isWinner: boolean | null
   prizeAwarded: boolean
   awardedPrizeLabel: string | null
+  claimCode: string | null
 }
 
 function getParticipantId(contestId: string): string | null {
@@ -46,6 +49,8 @@ export function ContestPlayPage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [scanMessage, setScanMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [finished, setFinished] = useState(false)
+  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[] | null>(null)
+  const [claimQrDataUrl, setClaimQrDataUrl] = useState<string | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const participantIdLocal = getParticipantId(contestId!)
@@ -79,6 +84,7 @@ export function ContestPlayPage() {
             isWinner: part.isWinner,
             prizeAwarded: part.prizeAwarded,
             awardedPrizeLabel: part.awardedPrizeLabel ?? null,
+            claimCode: part.claimCode ?? null,
           })
           if (part.completedAt || part.isWinner !== null) {
             setFinished(true)
@@ -106,6 +112,22 @@ export function ContestPlayPage() {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [contest, finished])
 
+  // Fetch leaderboard on finish
+  useEffect(() => {
+    if (!finished || !contestId) return
+    getContestLeaderboard(contestId)
+      .then((data) => setLeaderboard(data.items))
+      .catch(() => {})
+  }, [finished, contestId])
+
+  // Fetch claim QR code when participation is complete
+  useEffect(() => {
+    if (!finished || !contestId || !participation?.claimCode) return
+    apiRequest<{ qrCode: string }>(`/contests/${contestId}/claim/${participation.claimCode}/qrcode`)
+      .then((data) => setClaimQrDataUrl(data.qrCode))
+      .catch(() => {})
+  }, [finished, contestId, participation?.claimCode])
+
   async function handleScanPoi(poiId: string) {
     if (!contestId || !participantIdLocal || finished) return
 
@@ -117,6 +139,7 @@ export function ContestPlayPage() {
         isWinner: result.isWinner,
         prizeAwarded: result.prizeAwarded,
         awardedPrizeLabel: result.awardedPrizeLabel ?? null,
+        claimCode: result.claimCode ?? null,
       })
       setScanMessage({ ok: true, text: 'POI trovato!' })
       setTimeout(() => setScanMessage(null), 2000)
@@ -184,6 +207,16 @@ export function ContestPlayPage() {
               <h2 className={styles.finishTitle}>Complimenti!</h2>
               <p className={styles.finishDesc}>Hai trovato tutti i POI!</p>
               <span className={styles.prizeTag}>Hai vinto: {participation.awardedPrizeLabel}</span>
+              {participation?.claimCode && (
+                <div className={styles.claimCodeBox}>
+                  <span className={styles.claimCodeLabel}>Mostra questo QR per ritirare il premio</span>
+                  {claimQrDataUrl ? (
+                    <img src={claimQrDataUrl} alt="Claim QR" className={styles.claimQr} />
+                  ) : (
+                    <span className={styles.claimCode}>{participation.claimCode}</span>
+                  )}
+                </div>
+              )}
               <button
                 className={styles.verifyBtn}
                 onClick={() => navigate(`/contest/${contestId}/verify/${participantIdLocal}`)}
@@ -196,6 +229,16 @@ export function ContestPlayPage() {
               <span className={styles.finishIcon}>&#127881;</span>
               <h2 className={styles.finishTitle}>Complimenti!</h2>
               <p className={styles.finishDesc}>Hai trovato tutti i POI!</p>
+              {participation?.claimCode && (
+                <div className={styles.claimCodeBox}>
+                  <span className={styles.claimCodeLabel}>Il tuo codice identificativo</span>
+                  {claimQrDataUrl ? (
+                    <img src={claimQrDataUrl} alt="Claim QR" className={styles.claimQr} />
+                  ) : (
+                    <span className={styles.claimCode}>{participation.claimCode}</span>
+                  )}
+                </div>
+              )}
               <button
                 className={styles.verifyBtn}
                 onClick={() => navigate(`/contest/${contestId}/verify/${participantIdLocal}`)}
@@ -217,6 +260,28 @@ export function ContestPlayPage() {
             </>
           )}
         </div>
+
+        {leaderboard && leaderboard.length > 0 && (
+          <div className={styles.leaderboard}>
+            <h3 className={styles.leaderboardTitle}>Classifica</h3>
+            <div className={styles.leaderboardList}>
+              {leaderboard.map((entry) => {
+                const isMe = entry.participantId === participantIdLocal
+                return (
+                  <div key={entry.participantId} className={`${styles.leaderboardRow} ${isMe ? styles.leaderboardRowMe : ''}`}>
+                    <span className={styles.leaderboardPos}>#{entry.position}</span>
+                    <span className={styles.leaderboardName}>
+                      {isMe ? 'Tu' : `Partecipante #${entry.position}`}
+                    </span>
+                    <span className={styles.leaderboardStats}>
+                      {entry.scannedCount}/{entry.totalPOIs} POI
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     )
   }

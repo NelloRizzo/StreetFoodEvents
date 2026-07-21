@@ -1,0 +1,152 @@
+@use '../styles/tokens' as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+.title {
+  font-size: 1.4rem;
+  color: var(--color-ink-strong);
+  margin: 0;
+}
+
+.contestName {
+  font-size: 0.95rem;
+  color: var(--color-ink-soft);
+  margin: 0;
+}
+
+.error {
+  color: var(--color-danger);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.success {
+  color: var(--color-success);
+  text-align: center;
+  padding: 0.5rem 0;
+  font-weight: 600;
+}
+
+.section {
+  h2 {
+    font-size: 1rem;
+    color: var(--color-ink-strong);
+    margin: 0 0 0.75rem;
+  }
+}
+
+.inputRow {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.textInput {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: var(--color-surface-raised);
+  color: var(--color-ink-strong);
+  outline: none;
+
+  &:focus {
+    border-color: var(--color-brand);
+  }
+}
+
+.lookupBtn {
+  padding: 0.7rem 1.25rem;
+  border: none;
+  border-radius: var(--radius-card);
+  background: var(--color-brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--color-brand-deep);
+  }
+}
+
+.scanBtn {
+  display: block;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 2px dashed var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--color-brand);
+    background: var(--color-brand-glow);
+  }
+}
+
+.participantCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.partRow {
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.delivered {
+  color: var(--color-ink-soft);
+  font-weight: 600;
+}
+
+.ready {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.notWin {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.awardBtn {
+  margin-top: 0.5rem;
+  padding: 0.85rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-card);
+  background: var(--color-success);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}

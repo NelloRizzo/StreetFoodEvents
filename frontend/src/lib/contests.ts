@@ -57,12 +57,24 @@ export type Participation = {
   prizeAwarded: boolean
   awardedPrizeLabel: string | null
   deviceName: string | null
+  claimCode: string | null
 }
 
 export type PoiQrCode = {
   poiId: string
   poiName: string
   qrCode: string
+}
+
+export type LeaderboardItem = {
+  position: number
+  participantId: string
+  scannedCount: number
+  totalPOIs: number
+  completedAt: string
+  isWinner: boolean | null
+  prizeAwarded: boolean
+  awardedPrizeLabel: string | null
 }
 
 // ── Contest POI API ──
@@ -177,4 +189,10 @@ export function getContestStatus(contestId: string) {
 
 export function getContestPoiQrCodes(contestId: string) {
   return apiRequest<{ items: PoiQrCode[] }>(`/contests/${contestId}/poi-qrcodes`)
+}
+
+// ── Leaderboard ──
+
+export function getContestLeaderboard(contestId: string) {
+  return apiRequest<{ items: LeaderboardItem[] }>(`/contests/${contestId}/leaderboard`)
 }

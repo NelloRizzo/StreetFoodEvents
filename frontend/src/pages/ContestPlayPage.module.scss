@@ -191,3 +191,88 @@
     background: var(--color-brand-deep);
   }
 }
+
+.claimCodeBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+  padding: 1rem 2rem;
+  background: var(--color-brand-glow);
+  border: 2px dashed var(--color-brand);
+  border-radius: var(--radius-card);
+}
+
+.claimCodeLabel {
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.claimCode {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--color-brand);
+  letter-spacing: 0.15em;
+}
+
+.claimQr {
+  width: 180px;
+  height: 180px;
+  border-radius: 8px;
+  image-rendering: pixelated;
+}
+
+.leaderboard {
+  margin-top: 2rem;
+  padding: 0 1.5rem 2rem;
+}
+
+.leaderboardTitle {
+  font-size: 1.1rem;
+  color: var(--color-ink-strong);
+  margin-bottom: 0.75rem;
+}
+
+.leaderboardList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.leaderboardRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.leaderboardRowMe {
+  border-color: var(--color-brand);
+  background: var(--color-brand-glow);
+}
+
+.leaderboardPos {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-ink-strong);
+  min-width: 2rem;
+}
+
+.leaderboardName {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.leaderboardStats {
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  white-space: nowrap;
+}

@@ -16,6 +16,26 @@ function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
 }
 
+function generateClaimCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
+
+async function generateUniqueClaimCode(contestId: string): Promise<string> {
+    let code: string;
+    let exists: boolean;
+    do {
+        code = generateClaimCode();
+        const found = await ContestParticipationModel.exists({ contestId, claimCode: code });
+        exists = found !== null;
+    } while (exists);
+    return code;
+}
+
 // ── ContestPOI CRUD ──
 
 async function listContestPois(req: Request, res: Response) {
@@ -409,7 +429,8 @@ async function registerScan(req: Request, res: Response) {
             scannedPOIIds: [],
             startedAt: now,
             completedAt: null,
-            isWinner: null
+            isWinner: null,
+            claimCode: await generateUniqueClaimCode(contestId)
         });
     }
 
@@ -474,6 +495,51 @@ async function getParticipation(req: Request, res: Response) {
     return res.status(200).json(getParticipationState(participation));
 }
 
+// ── Claim Code ──
+
+async function getParticipationByClaimCode(req: Request, res: Response) {
+    const contestId = req.params.contestId;
+    const claimCode = req.params.claimCode;
+
+    if (!isValidObjectId(contestId)) {
+        return res.status(400).json({ message: 'Invalid contest id' });
+    }
+    if (!claimCode || typeof claimCode !== 'string') {
+        return res.status(400).json({ message: 'claimCode is required' });
+    }
+
+    const participation = await ContestParticipationModel.findOne({ contestId, claimCode: claimCode.toUpperCase() });
+    if (!participation) {
+        return res.status(404).json({ message: 'Claim code not found' });
+    }
+
+    return res.status(200).json(getParticipationState(participation));
+}
+
+async function getClaimQrCode(req: Request, res: Response) {
+    const contestId = req.params.contestId;
+    const claimCode = req.params.claimCode;
+
+    if (!isValidObjectId(contestId)) {
+        return res.status(400).json({ message: 'Invalid contest id' });
+    }
+    if (!claimCode || typeof claimCode !== 'string') {
+        return res.status(400).json({ message: 'claimCode is required' });
+    }
+
+    const participation = await ContestParticipationModel.findOne({ contestId, claimCode: claimCode.toUpperCase() });
+    if (!participation) {
+        return res.status(404).json({ message: 'Claim code not found' });
+    }
+
+    const origin = req.headers.origin ?? `${req.protocol}://${req.headers.host}`;
+    const url = `${origin}/contest/${contestId}/consegna?claimCode=${claimCode.toUpperCase()}`;
+
+    const qrDataUrl = await qrcode.toDataURL(url, QR_OPTIONS);
+
+    return res.status(200).json({ qrCode: qrDataUrl });
+}
+
 function getParticipationState(participation: {
     _id: Types.ObjectId;
     contestId: Types.ObjectId;
@@ -485,6 +551,7 @@ function getParticipationState(participation: {
     prizeAwarded?: boolean;
     deviceName?: string | null;
     awardedPrizeLabel?: string | null;
+    claimCode?: string | null;
 }) {
     return {
         id: participation._id.toString(),
@@ -496,7 +563,8 @@ function getParticipationState(participation: {
         isWinner: participation.isWinner,
         prizeAwarded: participation.prizeAwarded ?? false,
         awardedPrizeLabel: participation.awardedPrizeLabel ?? null,
-        deviceName: participation.deviceName ?? null
+        deviceName: participation.deviceName ?? null,
+        claimCode: participation.claimCode ?? null
     };
 }
 
@@ -575,6 +643,40 @@ async function getContestPoiQrCodes(req: Request, res: Response) {
     return res.status(200).json({ items });
 }
 
+// ── Leaderboard ──
+
+async function getContestLeaderboard(req: Request, res: Response) {
+    const contestId = req.params.contestId;
+    if (!isValidObjectId(contestId)) {
+        return res.status(400).json({ message: 'Invalid contest id' });
+    }
+
+    const contest = await ContestModel.findById(contestId);
+    if (!contest) {
+        return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    const totalPOIs = contest.orderedPOIIds.length;
+
+    const participations = await ContestParticipationModel.find({
+        contestId,
+        completedAt: { $ne: null }
+    }).sort({ completedAt: 1 });
+
+    const items = participations.map((p, i) => ({
+        position: i + 1,
+        participantId: p.participantId,
+        scannedCount: p.scannedPOIIds.length,
+        totalPOIs,
+        completedAt: p.completedAt,
+        isWinner: p.isWinner,
+        prizeAwarded: p.prizeAwarded,
+        awardedPrizeLabel: p.awardedPrizeLabel ?? null,
+    }));
+
+    return res.status(200).json({ items });
+}
+
 export const contestsController = {
     // ContestPOI
     listContestPois,
@@ -591,8 +693,12 @@ export const contestsController = {
     // Scan
     registerScan,
     getParticipation,
+    getParticipationByClaimCode,
+    getClaimQrCode,
     awardPrize,
     getContestStatus,
     // QR
-    getContestPoiQrCodes
+    getContestPoiQrCodes,
+    // Leaderboard
+    getContestLeaderboard
 };

@@ -131,3 +131,43 @@
     cursor: not-allowed;
   }
 }
+
+.leaderboardList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.leaderboardRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.leaderboardRowMe {
+  border-color: var(--color-brand);
+  background: var(--color-brand-glow);
+}
+
+.leaderboardPos {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-ink-strong);
+  min-width: 2rem;
+}
+
+.leaderboardName {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.leaderboardStats {
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  white-space: nowrap;
+}

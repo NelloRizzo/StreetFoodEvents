@@ -107,3 +107,22 @@ contestsRouter.get(
     asyncHandler(hasRole(['contest-admin', 'platform-admin'])),
     asyncHandler(contestsController.getContestPoiQrCodes)
 );
+
+// ── Claim Code ──
+
+contestsRouter.get(
+    '/:contestId/claim/:claimCode',
+    asyncHandler(contestsController.getParticipationByClaimCode)
+);
+
+contestsRouter.get(
+    '/:contestId/claim/:claimCode/qrcode',
+    asyncHandler(contestsController.getClaimQrCode)
+);
+
+// ── Leaderboard ──
+
+contestsRouter.get(
+    '/:contestId/leaderboard',
+    asyncHandler(contestsController.getContestLeaderboard)
+);

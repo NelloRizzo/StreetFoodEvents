@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
-import { getContest, getParticipation, awardPrize } from '../lib/contests'
+import { getContest, getContestLeaderboard, getParticipation, awardPrize } from '../lib/contests'
+import type { LeaderboardItem } from '../lib/contests'
 import { useAuth } from '../features/auth/auth-context'
 import styles from './ContestVerifyPage.module.scss'
 
@@ -23,6 +24,7 @@ type ParticipationData = {
   isWinner: boolean | null
   prizeAwarded: boolean
   awardedPrizeLabel: string | null
+  claimCode: string | null
 }
 
 export function ContestVerifyPage() {
@@ -34,6 +36,7 @@ export function ContestVerifyPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [awarding, setAwarding] = useState(false)
+  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[] | null>(null)
 
   useEffect(() => {
     if (!contestId || !participantId) return
@@ -52,6 +55,7 @@ export function ContestVerifyPage() {
           isWinner: partData.isWinner,
           prizeAwarded: partData.prizeAwarded,
           awardedPrizeLabel: partData.awardedPrizeLabel ?? null,
+          claimCode: partData.claimCode ?? null,
         })
         setIsLoading(false)
       })
@@ -60,6 +64,13 @@ export function ContestVerifyPage() {
         setIsLoading(false)
       })
   }, [contestId, participantId])
+
+  useEffect(() => {
+    if (!contestId) return
+    getContestLeaderboard(contestId)
+      .then((data) => setLeaderboard(data.items))
+      .catch(() => {})
+  }, [contestId])
 
   async function handleAward() {
     if (!contestId || !participantId || awarding) return
@@ -73,6 +84,7 @@ export function ContestVerifyPage() {
         isWinner: result.isWinner,
         prizeAwarded: result.prizeAwarded,
         awardedPrizeLabel: result.awardedPrizeLabel ?? null,
+        claimCode: result.claimCode ?? null,
       })
     } catch { /* ignore */ }
     setAwarding(false)
@@ -158,6 +170,11 @@ export function ContestVerifyPage() {
           <div>
             <strong>Premio ritirato:</strong> {participation.prizeAwarded ? 'S\u00ec' : 'No'}
           </div>
+          {participation.claimCode && (
+            <div>
+              <strong>Codice ritiro:</strong> {participation.claimCode}
+            </div>
+          )}
         </div>
       </section>
 
@@ -165,6 +182,28 @@ export function ContestVerifyPage() {
         <button className={styles.awardBtn} onClick={handleAward} disabled={awarding}>
           {awarding ? 'Consegna in corso...' : 'Consegna premio'}
         </button>
+      )}
+
+      {leaderboard && leaderboard.length > 0 && (
+        <section className={styles.section}>
+          <h2>Classifica</h2>
+          <div className={styles.leaderboardList}>
+            {leaderboard.map((entry) => {
+              const isMe = entry.participantId === participantId
+              return (
+                <div key={entry.participantId} className={`${styles.leaderboardRow} ${isMe ? styles.leaderboardRowMe : ''}`}>
+                  <span className={styles.leaderboardPos}>#{entry.position}</span>
+                  <span className={styles.leaderboardName}>
+                    {isMe ? 'Tu' : `Partecipante #${entry.position}`}
+                  </span>
+                  <span className={styles.leaderboardStats}>
+                    {entry.scannedCount}/{entry.totalPOIs} POI
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
       )}
     </div>
   )
