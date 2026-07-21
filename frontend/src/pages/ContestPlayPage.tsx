@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 
 import { getContest, getContestLeaderboard, getParticipation, registerScan } from '../lib/contests'
 import type { LeaderboardItem } from '../lib/contests'
@@ -39,7 +39,6 @@ function getParticipantId(contestId: string): string | null {
 export function ContestPlayPage() {
   const { contestId } = useParams<{ contestId: string }>()
   const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
   const [contest, setContest] = useState<ContestData | null>(null)
   const [pois, setPois] = useState<PoiBrief[]>([])
   const [participation, setParticipation] = useState<ParticipationState | null>(null)
@@ -217,12 +216,6 @@ export function ContestPlayPage() {
                   )}
                 </div>
               )}
-              <button
-                className={styles.verifyBtn}
-                onClick={() => navigate(`/contest/${contestId}/verify/${participantIdLocal}`)}
-              >
-                Mostra verifica
-              </button>
             </>
           ) : isWin && allScanned ? (
             <>
@@ -239,24 +232,12 @@ export function ContestPlayPage() {
                   )}
                 </div>
               )}
-              <button
-                className={styles.verifyBtn}
-                onClick={() => navigate(`/contest/${contestId}/verify/${participantIdLocal}`)}
-              >
-                Mostra verifica
-              </button>
             </>
           ) : (
             <>
               <span className={styles.finishIcon}>&#9203;</span>
               <h2 className={styles.finishTitle}>Tempo scaduto!</h2>
               <p className={styles.finishDesc}>Hai trovato {scannedCount} di {pois.length} POI.</p>
-              <button
-                className={styles.verifyBtn}
-                onClick={() => navigate(`/contest/${contestId}/verify/${participantIdLocal}`)}
-              >
-                Mostra verifica
-              </button>
             </>
           )}
         </div>
