@@ -22,22 +22,28 @@ export function AppLayout() {
     trackPageView(location.pathname)
   }, [location.pathname])
 
+  const isSlideshow = location.pathname.includes('/slideshow')
+
   return (
     <div className={styles.app} id="top">
-      <Navbar
-        isAuthenticated={isAuthenticated}
-        user={user}
-        onLogout={logout}
-      />
+      {!isSlideshow && (
+        <Navbar
+          isAuthenticated={isAuthenticated}
+          user={user}
+          onLogout={logout}
+        />
+      )}
 
       <Outlet />
 
-      <footer className={styles.footer}>
-        <div className={`page-shell ${styles.footerInner}`}>
-          <span>&copy; {new Date().getFullYear()} Street Food Events</span>
-          <Link to="/privacy">Privacy Policy</Link>
-        </div>
-      </footer>
+      {!isSlideshow && (
+        <footer className={styles.footer}>
+          <div className={`page-shell ${styles.footerInner}`}>
+            <span>&copy; {new Date().getFullYear()} Street Food Events</span>
+            <Link to="/privacy">Privacy Policy</Link>
+          </div>
+        </footer>
+      )}
 
       <CookieConsentBanner />
     </div>
