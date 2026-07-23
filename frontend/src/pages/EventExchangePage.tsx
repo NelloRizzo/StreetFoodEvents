@@ -17,6 +17,7 @@ type ExchangeUser = {
   isAnonymous: boolean
   isActive: boolean
   joinedAt: string
+  displayName: string | null
 }
 
 type Transaction = {
@@ -88,6 +89,8 @@ export function EventExchangePage() {
   const [refundAmount, setRefundAmount] = useState('')
   const [refundDesc, setRefundDesc] = useState('')
   const [submitting, setSubmitting] = useState<'topup' | 'refund' | null>(null)
+  const [guestName, setGuestName] = useState('')
+  const [creatingGuest, setCreatingGuest] = useState(false)
 
   const [modal, setModal] = useState<{ open: boolean; variant: 'confirm' | 'alert'; title: string; message: string }>({
     open: false, variant: 'alert', title: '', message: ''
@@ -176,6 +179,23 @@ export function EventExchangePage() {
       await apiRequest(`/cambios/${eventId}/reset-cash-register`, { method: 'POST' })
       fetchData()
     } catch { /* ignore */ }
+  }
+
+  const handleCreateGuest = async () => {
+    if (!eventId) return
+    setCreatingGuest(true)
+    try {
+      await apiRequest<{ item: ExchangeUser }>(`/cambios/${eventId}/guests`, {
+        method: 'POST',
+        bodyJson: { displayName: guestName.trim() || undefined }
+      })
+      setGuestName('')
+      fetchData()
+    } catch (err) {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante la creazione del cliente' })
+    } finally {
+      setCreatingGuest(false)
+    }
   }
 
   const selectedUser = users.find((u) => u.id === selectedUserId)
@@ -280,25 +300,37 @@ export function EventExchangePage() {
 
           <section className={cambioStyles.section}>
             <h2 className={styles.sectionTitle}>Seleziona utente</h2>
-            <select
-              value={selectedUserId}
-              className={cambioStyles.userSelect}
-              onChange={(e) => {
-                const uid = e.target.value
-                setSelectedUserId(uid)
-                const u = users.find((x) => x.id === uid)
-                setSelUserBalance(u?.balance ?? 0)
-              }}
-            >
-              <option value="">-- Seleziona --</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.isAnonymous
-                    ? `\u{1F464} Cliente generico (saldo: ${fmt(u.balance)})`
-                    : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${fmt(u.balance)}`}
-                </option>
-              ))}
-            </select>
+            <div className={cambioStyles.userRow}>
+              <select
+                value={selectedUserId}
+                className={cambioStyles.userSelect}
+                onChange={(e) => {
+                  const uid = e.target.value
+                  setSelectedUserId(uid)
+                  const u = users.find((x) => x.id === uid)
+                  setSelUserBalance(u?.balance ?? 0)
+                }}
+              >
+                <option value="">-- Seleziona --</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.isAnonymous
+                      ? (u.displayName ? `\u{1F464} ${u.displayName} (saldo: ${fmt(u.balance)})` : `\u{1F464} Cliente generico (saldo: ${fmt(u.balance)})`)
+                      : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${fmt(u.balance)}`}
+                  </option>
+                ))}
+              </select>
+              <div className={cambioStyles.guestCreate}>
+                <input type="text" placeholder="Nome cliente..." value={guestName}
+                  className={cambioStyles.guestInput}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateGuest() }}
+                  disabled={creatingGuest} />
+                <button className={cambioStyles.btnGuest} onClick={handleCreateGuest} disabled={creatingGuest}>
+                  {creatingGuest ? '...' : '+ Crea'}
+                </button>
+              </div>
+            </div>
 
             {selectedUser && (
               <p className={cambioStyles.userInfo}>

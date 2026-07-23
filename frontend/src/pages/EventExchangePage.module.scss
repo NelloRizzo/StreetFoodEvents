@@ -106,6 +106,45 @@
   background: #fff;
 }
 
+.userRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.guestCreate {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.guestInput {
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  width: 200px;
+}
+
+.btnGuest {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--color-brand);
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
 .userInfo {
   margin-top: 0.5rem;
   color: var(--color-ink-weak);

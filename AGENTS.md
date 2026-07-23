@@ -113,6 +113,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | GET | `/api/cambios/:eventId/transactions` | exchange-admin / platform-admin | Storico transazioni (paginato) |
 | POST | `/api/cambios/:eventId/top-up` | exchange-admin / platform-admin | Carica crediti (reale → virtuale) |
 | POST | `/api/cambios/:eventId/refund` | exchange-admin / platform-admin | Rimborsa crediti (virtuale → reale) |
+| POST | `/api/cambios/:eventId/guests` | exchange-admin / platform-admin | Crea cliente al volo (displayName opzionale) |
 | POST | `/api/cambios/:eventId/reset-cash-register` | exchange-admin / platform-admin | Azzera cassa |
 | GET | `/api/cambios/:eventId/cash-register-reset` | exchange-admin / platform-admin | Data ultimo azzeramento |
 

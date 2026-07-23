@@ -794,9 +794,9 @@ export function EventDetailPage() {
                             }}
                             onDrop={(e) => {
                               e.preventDefault()
-                              e.stopPropagation()
                               const fromIdx = e.dataTransfer.getData('text/poi-index')
                               if (fromIdx) {
+                                e.stopPropagation()
                                 const fi = Number(fromIdx)
                                 if (isNaN(fi) || fi === idx) return
                                 const arr = [...contestForm.orderedPOIIds]

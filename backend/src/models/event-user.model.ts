@@ -34,6 +34,12 @@ const eventUserSchema = new Schema(
             trim: true,
             default: null,
             maxlength: 500
+        },
+        displayName: {
+            type: String,
+            trim: true,
+            default: null,
+            maxlength: 100
         }
     },
     {

@@ -79,13 +79,14 @@ async function listUsers(req: Request, res: Response) {
         id: eu._id.toString(),
         eventId: eu.eventId.toString(),
         userId: eu.userId?._id?.toString() ?? null,
-        firstName: (eu.userId as { firstName?: string })?.firstName ?? null,
+        firstName: (eu.userId as { firstName?: string })?.firstName ?? (!eu.userId && (eu as { displayName?: string }).displayName ? (eu as { displayName?: string }).displayName! : null),
         lastName: (eu.userId as { lastName?: string })?.lastName ?? null,
         email: (eu.userId as { email?: string })?.email ?? null,
         balance: eu.balance,
         isAnonymous: !eu.userId,
         isActive: eu.isActive,
-        joinedAt: eu.joinedAt
+        joinedAt: eu.joinedAt,
+        displayName: (eu as { displayName?: string }).displayName ?? null
     }));
 
     return res.status(200).json({ items });
@@ -326,6 +327,37 @@ async function getCashRegisterReset(req: Request, res: Response) {
     });
 }
 
+async function createGuest(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const { displayName } = req.body as { displayName?: string };
+    const name = displayName?.trim() || null;
+
+    const eventUser = await EventUserModel.create({
+        eventId: eventCtx.eventId,
+        userId: null,
+        displayName: name,
+        balance: 0
+    });
+
+    return res.status(201).json({
+        item: {
+            id: eventUser._id.toString(),
+            eventId: eventUser.eventId.toString(),
+            userId: null,
+            firstName: name,
+            lastName: null,
+            email: null,
+            balance: 0,
+            isAnonymous: true,
+            isActive: true,
+            joinedAt: eventUser.joinedAt,
+            displayName: name
+        }
+    });
+}
+
 export const cambiosController = {
     listUsers,
     getBalance,
@@ -333,5 +365,6 @@ export const cambiosController = {
     topUp,
     refund,
     resetCashRegister,
-    getCashRegisterReset
+    getCashRegisterReset,
+    createGuest
 };
