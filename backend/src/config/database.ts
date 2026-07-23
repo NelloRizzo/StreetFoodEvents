@@ -16,6 +16,19 @@ export async function connectDatabase() {
     autoIndex: isDevelopment
   });
 
+  const eventUsers = connection.connection.collection('eventusers');
+  const indexes = await eventUsers.indexes();
+  const hasOldIndex = indexes.some(
+    (idx) => idx.key && (idx.key as Record<string, number>).eventId === 1 && (idx.key as Record<string, number>).userId === 1 && !idx.partialFilterExpression
+  );
+  if (hasOldIndex) {
+    await eventUsers.dropIndex('eventId_1_userId_1');
+    await eventUsers.createIndex(
+      { eventId: 1, userId: 1 },
+      { unique: true, partialFilterExpression: { userId: { $type: 'objectId' } } }
+    );
+  }
+
   isConnected = true;
 
   return connection.connection;
