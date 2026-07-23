@@ -6,6 +6,7 @@ import { createOrder } from '../lib/orders'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { useAuth } from '../features/auth/auth-context'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { QRCodeDownload } from '../components/QRCodeDownload'
 import styles from './EventStandMenuPage.module.scss'
 
 type MenuItem = {
@@ -173,6 +174,10 @@ export function EventStandMenuPage() {
             <h1 className={styles.title}>{stand.name}</h1>
             {stand.slogan && <p className={styles.slogan}>{stand.slogan}</p>}
           </div>
+          <QRCodeDownload
+            apiPath={`/stands/${standId}/qrcode?eventId=${eventId}`}
+            fileName={`menu-${stand.name}`}
+          />
         </div>
 
         <div className={styles.layout}>

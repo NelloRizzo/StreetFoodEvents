@@ -316,24 +316,7 @@ export function StandDetailPage() {
               ))}
             </select>
           </div>
-          {selectedActionEventId && (
-            <div className={styles.actionRow}>
-              <Link
-                className={styles.primaryBtn}
-                to={`/events/${selectedActionEventId}/stands/${standId}/orders`}
-              >
-                Gestisci ordini
-              </Link>
-              {!selectedEventUnifiedCashier && (
-                <Link
-                  className={styles.cashierBtn}
-                  to={`/events/${selectedActionEventId}/stands/${standId}/order`}
-                >
-                  Nuovo ordine
-                </Link>
-              )}
-            </div>
-          )}
+
         </div>
 
         <section className={styles.section}>
