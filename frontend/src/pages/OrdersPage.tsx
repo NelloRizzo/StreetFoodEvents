@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { fetchOrders, payOrder, cancelOrder, updateOrderStatus, type Order } from '../lib/orders'
+import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './OrdersPage.module.scss'
 
 const statusLabels: Record<string, string> = {
@@ -24,6 +25,7 @@ export function OrdersPage() {
   const [events, setEvents] = useState<{ id: string; name: string }[]>([])
   const [stands, setStands] = useState<{ id: string; name: string }[]>([])
   const [stations, setStations] = useState<{ id: string; name: string; standId: string }[]>([])
+  const [modal, setModal] = useState<{ open: boolean; title: string; message: string }>({ open: false, title: '', message: '' })
 
   const load = async (eventId?: string, standId?: string, stationId?: string, status?: string) => {
     const params: Record<string, string> = {}
@@ -73,18 +75,30 @@ export function OrdersPage() {
   }
 
   const handlePay = async (orderId: string) => {
-    await payOrder(orderId, 0)
-    handleFilter()
+    try {
+      await payOrder(orderId, 0)
+      handleFilter()
+    } catch (err) {
+      setModal({ open: true, title: 'Errore pagamento', message: (err as { message?: string }).message || 'Impossibile completare il pagamento.' })
+    }
   }
 
   const handleCancel = async (orderId: string) => {
-    await cancelOrder(orderId)
-    handleFilter()
+    try {
+      await cancelOrder(orderId)
+      handleFilter()
+    } catch (err) {
+      setModal({ open: true, title: 'Errore', message: (err as { message?: string }).message || 'Impossibile annullare l\'ordine.' })
+    }
   }
 
   const handleStatus = async (orderId: string, status: string) => {
-    await updateOrderStatus(orderId, status)
-    handleFilter()
+    try {
+      await updateOrderStatus(orderId, status)
+      handleFilter()
+    } catch (err) {
+      setModal({ open: true, title: 'Errore', message: (err as { message?: string }).message || 'Impossibile aggiornare lo stato.' })
+    }
   }
 
   function stationNames(items: Order['items']): string[] {
@@ -210,6 +224,16 @@ export function OrdersPage() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={modal.open}
+        variant="alert"
+        title={modal.title}
+        message={modal.message}
+        confirmLabel="OK"
+        onConfirm={() => setModal({ open: false, title: '', message: '' })}
+        onCancel={() => setModal({ open: false, title: '', message: '' })}
+      />
     </div>
   )
 }

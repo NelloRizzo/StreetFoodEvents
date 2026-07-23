@@ -26,7 +26,7 @@ import { eventPhotosRouter } from './routes/event-photos.routes';
 import { framesRouter } from './routes/frames.routes';
 import { poisRouter } from './routes/pois.routes';
 import { contestsRouter } from './routes/contests.routes';
-import { cambiosRouter } from './routes/cambios.routes';
+import { exchangeRouter } from './routes/exchange.routes';
 import { usageContractsRouter } from './routes/usage-contracts.routes';
 
 export const app = express();
@@ -87,7 +87,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/usage-contracts', usageContractsRouter);
 app.use('/api/pois', poisRouter);
 app.use('/api/contests', contestsRouter);
-app.use('/api/cambios', cambiosRouter);
+app.use('/api/exchange', exchangeRouter);
 app.use('/api/aliases', aliasesRouter);
 app.use('/api/resolve', resolveRouter);
 app.use('/api/frames', framesRouter);

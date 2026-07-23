@@ -358,7 +358,7 @@ async function createGuest(req: Request, res: Response) {
     });
 }
 
-export const cambiosController = {
+export const exchangeController = {
     listUsers,
     getBalance,
     listTransactions,

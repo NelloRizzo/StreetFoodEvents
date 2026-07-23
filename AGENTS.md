@@ -108,14 +108,14 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 ### API routes — Cambio valuta
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| GET | `/api/cambios/:eventId/users` | exchange-admin / platform-admin | Lista utenti cambio (auto-crea anonimo se mancante) |
-| GET | `/api/cambios/:eventId/balance` | exchange-admin / platform-admin | Saldo cassa (top-up/refund aggregati) |
-| GET | `/api/cambios/:eventId/transactions` | exchange-admin / platform-admin | Storico transazioni (paginato) |
-| POST | `/api/cambios/:eventId/top-up` | exchange-admin / platform-admin | Carica crediti (reale → virtuale) |
-| POST | `/api/cambios/:eventId/refund` | exchange-admin / platform-admin | Rimborsa crediti (virtuale → reale) |
-| POST | `/api/cambios/:eventId/guests` | exchange-admin / platform-admin | Crea cliente al volo (displayName opzionale) |
-| POST | `/api/cambios/:eventId/reset-cash-register` | exchange-admin / platform-admin | Azzera cassa |
-| GET | `/api/cambios/:eventId/cash-register-reset` | exchange-admin / platform-admin | Data ultimo azzeramento |
+| GET | `/api/exchange/:eventId/users` | exchange-admin / platform-admin | Lista utenti cambio (auto-crea anonimo se mancante) |
+| GET | `/api/exchange/:eventId/balance` | exchange-admin / platform-admin | Saldo cassa (top-up/refund aggregati) |
+| GET | `/api/exchange/:eventId/transactions` | exchange-admin / platform-admin | Storico transazioni (paginato) |
+| POST | `/api/exchange/:eventId/top-up` | exchange-admin / platform-admin | Carica crediti (reale → virtuale) |
+| POST | `/api/exchange/:eventId/refund` | exchange-admin / platform-admin | Rimborsa crediti (virtuale → reale) |
+| POST | `/api/exchange/:eventId/guests` | exchange-admin / platform-admin | Crea cliente al volo (displayName opzionale) |
+| POST | `/api/exchange/:eventId/reset-cash-register` | exchange-admin / platform-admin | Azzera cassa |
+| GET | `/api/exchange/:eventId/cash-register-reset` | exchange-admin / platform-admin | Data ultimo azzeramento |
 
 ### API routes — Contest POI
 | Method | Route | Auth | Description |
@@ -181,10 +181,10 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - "Saldo dopo" colonna: crediti + EUR equivalent
 
 ### API changes
-- `POST /api/cambios/:eventId/top-up` — amount in EUR, credits = EUR × exchangeRate
-- `POST /api/cambios/:eventId/refund` — amount in credits, EUR returned = credits / exchangeRate
-- `GET /api/cambios/:eventId/balance` — response includes `exchangeRate`, `myTopUp`, `myRefund`, `myNetBalance`, `myTopUpCount`, `myRefundCount`, `mySinceResetTopUp`, `mySinceResetRefund`, `myNetSinceReset`
-- `GET /api/cambios/:eventId/transactions` — response includes `performedByName` per item
+- `POST /api/exchange/:eventId/top-up` — amount in EUR, credits = EUR × exchangeRate
+- `POST /api/exchange/:eventId/refund` — amount in credits, EUR returned = credits / exchangeRate
+- `GET /api/exchange/:eventId/balance` — response includes `exchangeRate`, `myTopUp`, `myRefund`, `myNetBalance`, `myTopUpCount`, `myRefundCount`, `mySinceResetTopUp`, `mySinceResetRefund`, `myNetSinceReset`
+- `GET /api/exchange/:eventId/transactions` — response includes `performedByName` per item
 
 ### Next steps
 - Trigger deploy on Render after latest pushes

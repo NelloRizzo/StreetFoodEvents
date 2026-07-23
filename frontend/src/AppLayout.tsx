@@ -23,10 +23,13 @@ export function AppLayout() {
   }, [location.pathname])
 
   const isSlideshow = location.pathname.includes('/slideshow')
+  const isCashier = /\/stands\/[^/]+\/order/.test(location.pathname)
+
+  const hideChrome = isSlideshow || isCashier
 
   return (
     <div className={styles.app} id="top">
-      {!isSlideshow && (
+      {!hideChrome && (
         <Navbar
           isAuthenticated={isAuthenticated}
           user={user}
@@ -36,7 +39,7 @@ export function AppLayout() {
 
       <Outlet />
 
-      {!isSlideshow && (
+      {!hideChrome && (
         <footer className={styles.footer}>
           <div className={`page-shell ${styles.footerInner}`}>
             <span>&copy; {new Date().getFullYear()} Street Food Events</span>

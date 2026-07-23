@@ -197,6 +197,109 @@
   color: #e94560;
 }
 
+/* ── Active orders panel ── */
+.ordersPanel {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  background: #16213e;
+  border-left: 1px solid #0f3460;
+  flex-shrink: 0;
+}
+
+.ordersTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  margin: 0;
+  border-bottom: 1px solid #0f3460;
+  color: #4caf50;
+}
+
+.ordersList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.orderCard {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: #0f3460;
+  border-left: 3px solid #4caf50;
+}
+
+.orderCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.orderNumber {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #e94560;
+}
+
+.orderTotal {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f0f0f0;
+}
+
+.orderCustomer {
+  font-size: 0.78rem;
+  color: #ccc;
+}
+
+.orderCardItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.orderItem {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: #1a1a2e;
+  color: #888;
+}
+
+.orderItemReady {
+  background: #1b4332;
+  color: #4caf50;
+}
+
+.orderProgress {
+  font-size: 0.72rem;
+  color: #888;
+  font-style: italic;
+}
+
+.deliverBtn {
+  margin-top: 0.3rem;
+  padding: 0.45rem;
+  border: none;
+  border-radius: 6px;
+  background: #4caf50;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.deliverBtn:hover {
+  opacity: 0.85;
+}
+
 /* ── Cart panel ── */
 .cartPanel {
   width: 320px;

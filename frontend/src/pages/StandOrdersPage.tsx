@@ -10,6 +10,7 @@ import {
   cancelOrder,
   cancelOrderItems,
   resetOrderCounter,
+  deleteStandOrders,
   type Order,
   type StandReport,
 } from '../lib/orders'
@@ -43,6 +44,7 @@ export function StandOrdersPage() {
   const [report, setReport] = useState<StandReport | null>(null)
   const [cancelTarget, setCancelTarget] = useState<string | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
 
   useEffect(() => {
     if (!standId) return
@@ -146,7 +148,7 @@ export function StandOrdersPage() {
   const title = urlEventId && eventName ? `Ordini — ${eventName}` : 'Ordini dello stand'
   const newOrderLink = urlEventId
     ? `/events/${urlEventId}/stands/${standId}/order`
-    : `/orders/new`
+    : '/dashboard'
 
   return (
     <div className={styles.page}>
@@ -207,6 +209,9 @@ export function StandOrdersPage() {
             </select>
             <button className={styles.secondaryBtn} onClick={handleResetCounter}>
               Azzera contatore
+            </button>
+            <button className={styles.dangerBtn} onClick={() => setConfirmDeleteAll(true)}>
+              Cancella tutti gli ordini
             </button>
           </div>
         </div>
@@ -445,6 +450,23 @@ export function StandOrdersPage() {
           setConfirmReset(false)
         }}
         onCancel={() => setConfirmReset(false)}
+      />
+
+      <ConfirmModal
+        open={confirmDeleteAll}
+        variant="confirm"
+        title="Cancellare tutti gli ordini?"
+        message="Tutti gli ordini di questo stand verranno eliminati definitivamente. Operazione irreversibile."
+        danger
+        confirmLabel="Cancella tutto"
+        onConfirm={async () => {
+          if (!standId) return
+          await deleteStandOrders(standId)
+          setConfirmDeleteAll(false)
+          await load()
+          setReport(null)
+        }}
+        onCancel={() => setConfirmDeleteAll(false)}
       />
     </div>
   )

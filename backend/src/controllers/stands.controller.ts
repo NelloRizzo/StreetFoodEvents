@@ -232,7 +232,10 @@ export async function standQrCode(req: Request, res: Response) {
   }
 
   const origin = req.headers.origin ?? `${req.protocol}://${req.headers.host}`;
-  const url = `${origin}/stands/${standId}`;
+  const eventId = req.query.eventId as string | undefined;
+  const url = eventId
+    ? `${origin}/events/${eventId}/stands/${standId}`
+    : `${origin}/stands/${standId}`;
 
   const qrDataUrl = await qrcode.toDataURL(url, {
     width: 400,

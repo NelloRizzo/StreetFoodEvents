@@ -172,6 +172,14 @@ export function markItemReady(orderId: string, eventProductId: string) {
   })
 }
 
+export function deleteEventOrders(eventId: string) {
+  return apiRequest<{ message: string }>(`/orders/event/${eventId}`, { method: 'DELETE' })
+}
+
+export function deleteStandOrders(standId: string) {
+  return apiRequest<{ message: string }>(`/orders/stand/${standId}`, { method: 'DELETE' })
+}
+
 export function resetOrderCounter(standId: string) {
   return apiRequest<{ message: string }>('/orders/reset-counter', {
     method: 'POST',

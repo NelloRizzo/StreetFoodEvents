@@ -219,16 +219,6 @@ export function Navbar({
                 )}
               </div>
 
-              <div className={styles.dropdownSection}>
-                <NavLink
-                  className={styles.navLink}
-                  to="/orders"
-                  onClick={closeAll}
-                >
-                  Ordini
-                </NavLink>
-              </div>
-
               <div className={styles.dropdownSection} ref={reportsMenuRef}>
                 <button
                   type="button"

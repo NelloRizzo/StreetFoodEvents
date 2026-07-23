@@ -289,7 +289,10 @@ export function StandDetailPage() {
             >
               {isFavorite ? '\u2764' : '\u2661'}
             </button>
-            <QRCodeDownload apiPath={`/stands/${standId}/qrcode`} fileName={`stand-${stand.name}`} />
+            <QRCodeDownload
+              apiPath={`/stands/${standId}/qrcode${selectedActionEventId ? `?eventId=${selectedActionEventId}` : ''}`}
+              fileName={`stand-${stand.name}`}
+            />
           </div>
         </div>
 

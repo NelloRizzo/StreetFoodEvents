@@ -106,9 +106,9 @@ export function EventExchangePage() {
     } catch { /* event name non essenziale */}
     try {
       const [bal, usrs, txs] = await Promise.all([
-        apiRequest<BalanceSummary>(`/cambios/${eventId}/balance`),
-        apiRequest<{ items: ExchangeUser[] }>(`/cambios/${eventId}/users`),
-        apiRequest<{ items: Transaction[]; pagination: { page: number; totalPages: number } }>(`/cambios/${eventId}/transactions?page=${txPage}&limit=20`),
+        apiRequest<BalanceSummary>(`/exchange/${eventId}/balance`),
+        apiRequest<{ items: ExchangeUser[] }>(`/exchange/${eventId}/users`),
+        apiRequest<{ items: Transaction[]; pagination: { page: number; totalPages: number } }>(`/exchange/${eventId}/transactions?page=${txPage}&limit=20`),
       ])
       setBalance(bal)
       setUsers(usrs.items)
@@ -131,7 +131,7 @@ export function EventExchangePage() {
     if (!amount || amount <= 0) return
     setSubmitting('topup')
     try {
-      const res = await apiRequest<{ newBalance: number }>(`/cambios/${eventId}/top-up`, {
+      const res = await apiRequest<{ newBalance: number }>(`/exchange/${eventId}/top-up`, {
         method: 'POST',
         bodyJson: { eventUserId: selectedUserId, amount, description: topUpDesc.trim() || undefined }
       })
@@ -155,7 +155,7 @@ export function EventExchangePage() {
     if (!amount || amount <= 0) return
     setSubmitting('refund')
     try {
-      const res = await apiRequest<{ newBalance: number }>(`/cambios/${eventId}/refund`, {
+      const res = await apiRequest<{ newBalance: number }>(`/exchange/${eventId}/refund`, {
         method: 'POST',
         bodyJson: { eventUserId: selectedUserId, amount, description: refundDesc.trim() || undefined }
       })
@@ -176,7 +176,7 @@ export function EventExchangePage() {
   const handleResetCashRegister = async () => {
     if (!eventId) return
     try {
-      await apiRequest(`/cambios/${eventId}/reset-cash-register`, { method: 'POST' })
+      await apiRequest(`/exchange/${eventId}/reset-cash-register`, { method: 'POST' })
       fetchData()
     } catch { /* ignore */ }
   }
@@ -185,7 +185,7 @@ export function EventExchangePage() {
     if (!eventId) return
     setCreatingGuest(true)
     try {
-      await apiRequest<{ item: ExchangeUser }>(`/cambios/${eventId}/guests`, {
+      await apiRequest<{ item: ExchangeUser }>(`/exchange/${eventId}/guests`, {
         method: 'POST',
         bodyJson: { displayName: guestName.trim() || undefined }
       })

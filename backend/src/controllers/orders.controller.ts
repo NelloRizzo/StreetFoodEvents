@@ -961,6 +961,58 @@ export async function deleteEventOrders(req: Request, res: Response) {
     });
 }
 
+export async function deleteStandOrders(req: Request, res: Response) {
+    const { standId } = req.params;
+
+    if (!isValidObjectId(standId)) {
+        return res.status(400).json({ message: 'Invalid stand id' });
+    }
+
+    const userId = req.user!.id;
+    const userObjectId = new Types.ObjectId(userId);
+    const standObjectId = new Types.ObjectId(standId);
+
+    const isPlatformAdmin = !!(await UserRoleModel.findOne({
+        userId: userObjectId,
+        roleId: (await RoleModel.findOne({ slug: 'platform-admin', scope: 'platform' }))?._id,
+        isActive: true
+    }));
+
+    const stand = await StandModel.findById(standObjectId).select('eventIds');
+    if (!stand) {
+        return res.status(404).json({ message: 'Stand not found' });
+    }
+
+    const eventAdminRole = await RoleModel.findOne({ slug: 'event-admin', scope: 'event' });
+    const isEventAdmin = eventAdminRole ? !!(await UserRoleModel.findOne({
+        userId: userObjectId,
+        roleId: eventAdminRole._id,
+        eventId: { $in: (stand.eventIds ?? []) },
+        isActive: true
+    })) : false;
+
+    const hasStandRole = !!(await UserRoleModel.findOne({
+        userId: userObjectId,
+        standId: standObjectId,
+        isActive: true
+    }));
+
+    if (!isPlatformAdmin && !isEventAdmin && !hasStandRole) {
+        return res.status(403).json({ message: 'You do not have permission to delete orders for this stand' });
+    }
+
+    const deleteResult = await OrderModel.deleteMany({ standId: standObjectId });
+
+    await CounterModel.findOneAndUpdate(
+        { standId: standObjectId },
+        { $set: { seq: 0 } }
+    );
+
+    return res.status(200).json({
+        message: `Deleted ${deleteResult.deletedCount} orders and reset counter for stand`
+    });
+}
+
 export async function resetOrderCounter(req: Request, res: Response) {
     const { standId } = req.body;
 

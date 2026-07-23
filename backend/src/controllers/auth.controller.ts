@@ -400,7 +400,7 @@ export async function getMyStands(req: Request, res: Response) {
   }
 
   return res.status(200).json({
-    stands: stands.map((s) => ({ id: s._id.toString(), name: s.name })),
+    stands: stands.map((s) => ({ id: s._id.toString(), name: s.name, eventIds: (s.eventIds ?? []).map((id) => id.toString()) })),
     stations: Array.from(stationMap.values()),
   });
 }

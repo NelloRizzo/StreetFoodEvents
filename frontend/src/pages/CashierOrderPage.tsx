@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
-import { createOrder } from '../lib/orders'
+import { createOrder, fetchOrders, updateOrderStatus, type Order } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './CashierOrderPage.module.scss'
@@ -72,6 +72,7 @@ export function CashierOrderPage() {
   const [creditAmount, setCreditAmount] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
+  const [activeOrders, setActiveOrders] = useState<Order[]>([])
 
   const [notesModal, setNotesModal] = useState<NotesModalState>({
     open: false,
@@ -122,11 +123,32 @@ export function CashierOrderPage() {
     init()
   }, [eventId, standId])
 
+  const loadActiveOrders = useCallback(async () => {
+    if (!eventId || !standId) return
+    try {
+      const data = await fetchOrders({ eventId, standId, status: 'ready' })
+      setActiveOrders(data.items)
+    } catch { /* ignore */ }
+  }, [eventId, standId])
+
+  useEffect(() => {
+    void loadActiveOrders()
+    const interval = setInterval(loadActiveOrders, 10000)
+    return () => clearInterval(interval)
+  }, [loadActiveOrders])
+
+  const handleDeliver = async (orderId: string) => {
+    try {
+      await updateOrderStatus(orderId, 'completed')
+      loadActiveOrders()
+    } catch { setAlertMsg('Errore durante la consegna') }
+  }
+
   useEffect(() => {
     if (!notesModal.open && notesModal.ep) {
       setNotesModal({ open: false, ep: null as never, selectedStationId: '', quantity: 1, notes: '' })
     }
-  }, [notesModal.open])
+  }, [notesModal.open, notesModal.ep])
 
   const openNotesModal = (ep: EventProduct & { product?: Product; stations?: Station[] }) => {
     if (!ep.product) return
@@ -318,6 +340,39 @@ export function CashierOrderPage() {
             )}
           </div>
         </div>
+
+        {activeOrders.length > 0 && (
+          <div className={styles.ordersPanel}>
+            <h2 className={styles.ordersTitle}>Ordini pronti</h2>
+            <div className={styles.ordersList}>
+              {activeOrders.map((o) => {
+                const collected = o.items.reduce((s, i) => s + (i.ready ? i.subtotal : 0), 0)
+                return (
+                  <div key={o.id} className={styles.orderCard}>
+                    <div className={styles.orderCardHeader}>
+                      <span className={styles.orderNumber}>#{o.orderNumber}</span>
+                      <span className={styles.orderTotal}>&euro;{o.total.toFixed(2)}</span>
+                    </div>
+                    {o.customerName && <span className={styles.orderCustomer}>{o.customerName}</span>}
+                    <div className={styles.orderCardItems}>
+                      {o.items.map((item, idx) => (
+                        <span key={idx} className={`${styles.orderItem} ${item.ready ? styles.orderItemReady : ''}`}>
+                          {item.quantity}x {item.productName}
+                        </span>
+                      ))}
+                    </div>
+                    {collected < o.total && (
+                      <span className={styles.orderProgress}>Raccolti &euro;{collected.toFixed(2)} / &euro;{o.total.toFixed(2)}</span>
+                    )}
+                    <button className={styles.deliverBtn} onClick={() => handleDeliver(o.id)}>
+                      Consegna
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <div className={styles.cartPanel}>
           <h2 className={styles.cartTitle}>Carrello</h2>

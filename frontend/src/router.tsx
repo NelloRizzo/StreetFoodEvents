@@ -9,12 +9,10 @@ import { EventsPage } from './pages/EventsPage'
 import { FavoritesPage } from './pages/FavoritesPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
-import { NewOrderPage } from './pages/NewOrderPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { PlatformPage } from './pages/PlatformPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
-import { OrdersPage } from './pages/OrdersPage'
 import { ProductsPage } from './pages/ProductsPage'
 import { StaffPage } from './pages/StaffPage'
 import { UserRolesPage } from './pages/UserRolesPage'
@@ -162,20 +160,8 @@ export const router = createBrowserRouter([
             element: <FavoritesPage />,
           },
           {
-            path: 'orders',
-            element: <OrdersPage />,
-          },
-          {
-            path: 'orders/new',
-            element: <NewOrderPage />,
-          },
-          {
             path: 'orders/:orderId',
             element: <OrderDetailPage />,
-          },
-          {
-            path: 'orders/stand/:standId',
-            element: <StandOrdersPage />,
           },
           {
             path: 'events/:eventId/stands/:standId/orders',
