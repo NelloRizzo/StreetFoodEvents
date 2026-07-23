@@ -1,6 +1,7 @@
 .fullscreen {
   position: fixed;
   inset: 0;
+  z-index: 20;
   background: #111;
   overflow: hidden;
   display: flex;
@@ -81,6 +82,7 @@
 }
 
 .grid {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: grid;
@@ -88,8 +90,19 @@
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
-  background: rgba(17, 17, 17, 0.85);
+  background: #111;
   overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--cover, none);
+    background-size: cover;
+    background-position: center;
+    opacity: 0.2;
+    pointer-events: none;
+  }
 }
 
 .coverFull {

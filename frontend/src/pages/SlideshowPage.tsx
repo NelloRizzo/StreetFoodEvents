@@ -172,7 +172,7 @@ export function SlideshowPage() {
       </div>
 
       {hasPhotos ? (
-        <div className={styles.grid}>
+        <div className={styles.grid} style={eventData?.coverImage?.url ? { '--cover': `url(${eventData.coverImage.url})` } as React.CSSProperties : undefined}>
           {batch.map((p) => (
             <div key={p.id} className={styles.photoWrapper} onClick={() => setSelectedPhoto(p)}>
               <img src={p.image.url} alt="" className={styles.photo} />
