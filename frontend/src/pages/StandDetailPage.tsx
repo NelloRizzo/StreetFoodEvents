@@ -71,7 +71,6 @@ export function StandDetailPage() {
   const [showNewProductForm, setShowNewProductForm] = useState(false)
   const [newProductForm, setNewProductForm] = useState({ name: '', ingredients: '', price: '', coverImage: null as UploadedImage | null, gallery: [] as UploadedImage[] })
   const [selectedActionEventId, setSelectedActionEventId] = useState('')
-  const [selectedEventUnifiedCashier, setSelectedEventUnifiedCashier] = useState(false)
 
   const fetchStand = async () => {
     const data = await apiRequest<{ item: Stand }>(`/stands/${standId}`)
