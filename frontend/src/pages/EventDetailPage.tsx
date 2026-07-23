@@ -759,7 +759,7 @@ export function EventDetailPage() {
                         e.preventDefault()
                         const poiId = e.dataTransfer.getData('text/poi-id')
                         if (poiId) {
-                          setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, poiId] }))
+                          setContestForm((p) => ({ ...p, orderedPOIIds: p.orderedPOIIds.includes(poiId) ? p.orderedPOIIds : [...p.orderedPOIIds, poiId] }))
                           return
                         }
                         const fromIdx = e.dataTransfer.getData('text/poi-index')
@@ -794,6 +794,7 @@ export function EventDetailPage() {
                             }}
                             onDrop={(e) => {
                               e.preventDefault()
+                              e.stopPropagation()
                               const fromIdx = e.dataTransfer.getData('text/poi-index')
                               if (fromIdx) {
                                 const fi = Number(fromIdx)

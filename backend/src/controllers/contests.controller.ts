@@ -247,25 +247,28 @@ async function createContest(req: Request, res: Response) {
     }
 
     let poIds: string[] = orderedPOIIds ?? [];
-    let autoPicked: string[] = [];
+    const autoPicked: string[] = [];
 
     if (pickConfig?.groupPicks?.length > 0) {
-        const pool = new Set(poIds);
+        const excludedIds = new Set(poIds);
+        const resultIds = [...poIds];
         for (const gp of pickConfig.groupPicks) {
             const available = await ContestPOIModel.find({
                 eventId,
                 groups: { $in: [gp.group] },
-                _id: { $nin: [...pool].map((id) => new Types.ObjectId(id)) }
+                _id: { $nin: [...excludedIds].map((id) => new Types.ObjectId(id)) }
             });
             const shuffled = [...available].sort(() => Math.random() - 0.5);
-            const picked = shuffled.slice(0, gp.count);
-            for (const p of picked) {
+            for (let i = 0; i < gp.count; i++) {
+                const p = shuffled[i % shuffled.length];
+                if (!p) break;
                 const id = p._id.toString();
-                pool.add(id);
+                resultIds.push(id);
                 autoPicked.push(id);
+                excludedIds.add(id);
             }
         }
-        poIds = [...pool];
+        poIds = resultIds;
     }
 
     const contest = await ContestModel.create({
@@ -333,22 +336,25 @@ async function updateContest(req: Request, res: Response) {
 
         const newAuto: string[] = [];
         if (pickConfig?.groupPicks?.length > 0) {
-            const pool = new Set(manualSet);
+            const excludedIds = new Set(manualSet);
+            const resultIds = [...manualSet];
             for (const gp of pickConfig.groupPicks) {
                 const available = await ContestPOIModel.find({
                     eventId: contest.eventId,
                     groups: { $in: [gp.group] },
-                    _id: { $nin: [...pool].map((id) => new Types.ObjectId(id)) }
+                    _id: { $nin: [...excludedIds].map((id) => new Types.ObjectId(id)) }
                 });
                 const shuffled = [...available].sort(() => Math.random() - 0.5);
-                const picked = shuffled.slice(0, gp.count);
-                for (const p of picked) {
+                for (let i = 0; i < gp.count; i++) {
+                    const p = shuffled[i % shuffled.length];
+                    if (!p) break;
                     const id = p._id.toString();
-                    pool.add(id);
+                    resultIds.push(id);
                     newAuto.push(id);
+                    excludedIds.add(id);
                 }
             }
-            contest.orderedPOIIds = [...pool].map((id) => new Types.ObjectId(id));
+            contest.orderedPOIIds = resultIds.map((id) => new Types.ObjectId(id));
         } else {
             contest.orderedPOIIds = [...manualSet].map((id) => new Types.ObjectId(id));
         }
