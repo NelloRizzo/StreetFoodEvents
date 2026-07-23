@@ -8,6 +8,7 @@
 }
 
 .header {
+  position: relative;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -70,6 +71,7 @@
 }
 
 .footer {
+  position: relative;
   flex-shrink: 0;
   text-align: center;
   padding: 0.5rem 1.5rem;
