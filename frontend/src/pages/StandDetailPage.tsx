@@ -202,16 +202,6 @@ export function StandDetailPage() {
     }
   }, [stand, events, selectedActionEventId])
 
-  useEffect(() => {
-    if (!selectedActionEventId) {
-      setSelectedEventUnifiedCashier(false)
-      return
-    }
-    apiRequest<{ item: { unifiedCashierEnabled: boolean } }>(`/events/${selectedActionEventId}`)
-      .then((data) => setSelectedEventUnifiedCashier(data.item.unifiedCashierEnabled ?? false))
-      .catch(() => setSelectedEventUnifiedCashier(false))
-  }, [selectedActionEventId])
-
   const toggleProductStation = (stationId: string) => {
     setProductForm((prev) => ({
       ...prev,
