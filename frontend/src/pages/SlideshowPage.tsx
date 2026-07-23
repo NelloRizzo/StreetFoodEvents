@@ -123,10 +123,6 @@ export function SlideshowPage() {
 
   return (
     <div className={styles.fullscreen}>
-      {eventData?.coverImage?.url && (
-        <img src={eventData.coverImage.url} alt="" className={styles.coverBg} />
-      )}
-
       <div className={styles.header}>
         {eventData?.logo?.url && (
           <img src={eventData.logo.url} alt="" className={styles.logo} />
@@ -187,11 +183,9 @@ export function SlideshowPage() {
             <div key={`empty-${i}`} className={styles.photo} style={{ background: 'transparent' }} />
           ))}
         </div>
-      ) : (
-        eventData?.coverImage?.url && (
-          <img src={eventData.coverImage.url} alt="" className={styles.coverFull} />
-        )
-      )}
+      ) : eventData?.coverImage?.url ? (
+        <img src={eventData.coverImage.url} alt="" className={styles.coverFull} />
+      ) : null}
 
       <div className={styles.footer}>
         Se vedi una tua foto segna il suo numero e recati al Welcome Point per ottenerla
