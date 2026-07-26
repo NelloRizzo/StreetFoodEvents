@@ -129,7 +129,7 @@ export function ContestPage() {
           <p className={styles.notAvailable}>
             {!startsAt ? 'Il contest non è ancora stato avviato.' : now < startsAt ? 'Il contest non è ancora iniziato.' : 'Il contest è terminato.'}
           </p>
-          {isContestAdmin && !contest.isActive && contest.orderedPOIIds && contest.orderedPOIIds.length > 0 && (
+          {isContestAdmin && (!contest.isActive || !startsAt) && contest.orderedPOIIds && contest.orderedPOIIds.length > 0 && (
             <button className={styles.startBtn} onClick={async () => {
               if (!contestId) return
               try {

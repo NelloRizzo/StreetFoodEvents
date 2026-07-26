@@ -303,11 +303,11 @@ async function updateContest(req: Request, res: Response) {
 
     if (name !== undefined) contest.name = name.trim();
     if (description !== undefined) contest.description = description;
-    if (startsAt !== undefined) contest.startsAt = new Date(startsAt);
+    if (startsAt !== undefined) contest.startsAt = startsAt === null ? null : new Date(startsAt);
     if (durationMinutes !== undefined) contest.durationMinutes = durationMinutes;
 
     if (endsAt !== undefined) {
-        contest.endsAt = new Date(endsAt);
+        contest.endsAt = endsAt === null ? null : new Date(endsAt);
     } else if (contest.startsAt && (startsAt !== undefined || durationMinutes !== undefined)) {
         contest.endsAt = new Date(contest.startsAt.getTime() + contest.durationMinutes * 60 * 1000);
     }

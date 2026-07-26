@@ -814,6 +814,8 @@ export function EventDetailPage() {
                     }
                     if (contestForm.startsAt) {
                       payload.startsAt = new Date(contestForm.startsAt).toISOString()
+                    } else {
+                      payload.startsAt = null as unknown as string
                     }
                     if (editingContestId) {
                       await updateContest(editingContestId, payload)
