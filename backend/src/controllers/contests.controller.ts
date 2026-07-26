@@ -203,18 +203,21 @@ async function getContest(req: Request, res: Response) {
     }
     const contestData = toContestResponse(contest);
 
-    const pois = await ContestPOIModel.find({ _id: { $in: contest.orderedPOIIds } }).sort({ sequenceOrder: 1 });
+    const pois = await ContestPOIModel.find({ _id: { $in: contest.orderedPOIIds } });
+    const poiMap = new Map(pois.map((p) => [p._id.toString(), p]));
     const hintSelectionMap = new Map(
         (contest.poiHintSelections ?? []).map((s) => [s.poiId.toString(), s.hintIndex])
     );
-    const poisResponse = pois.map((p) => {
+    const poisResponse = contest.orderedPOIIds.map((id) => {
+        const p = poiMap.get(id.toString());
+        if (!p) return null;
         const idx = hintSelectionMap.get(p._id.toString()) ?? 0;
         return {
             id: p._id.toString(),
             name: p.name,
             hint: (p.hints && p.hints.length > 0 && idx < p.hints.length) ? p.hints[idx] : null
         };
-    });
+    }).filter(Boolean);
 
     return res.status(200).json({ item: contestData, pois: poisResponse });
 }
