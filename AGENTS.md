@@ -134,6 +134,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | PATCH | `/api/contests/:contestId` | contest-admin / platform-admin | Modifica contest |
 | DELETE | `/api/contests/:contestId` | contest-admin / platform-admin | Elimina contest |
 | POST | `/api/contests/:contestId/scan` | no | Registra scansione POI |
+| POST | `/api/contests/:contestId/complete` | no | Completa partecipazione (premia, classifica) |
 | GET | `/api/contests/:contestId/participation/:participantId` | no | Stato partecipazione |
 | PATCH | `/api/contests/:contestId/participation/:participantId/award` | contest-admin / platform-admin | Consegna premio |
 | GET | `/api/contests/:contestId/poi-qrcodes` | contest-admin / platform-admin | QR code per ogni POI del contest |
