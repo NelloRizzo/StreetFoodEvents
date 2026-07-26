@@ -89,6 +89,11 @@ contestsRouter.post(
     asyncHandler(contestsController.registerScan)
 );
 
+contestsRouter.post(
+    '/:contestId/complete',
+    asyncHandler(contestsController.completeParticipation)
+);
+
 contestsRouter.get(
     '/:contestId/participation/:participantId',
     asyncHandler(contestsController.getParticipation)

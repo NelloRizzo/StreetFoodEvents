@@ -480,34 +480,77 @@ async function registerScan(req: Request, res: Response) {
         return res.status(400).json({ message: 'POI already scanned' });
     }
 
+    const uniqueOrderedIds = [...new Set(contest.orderedPOIIds.map((id) => id.toString()))];
+
     if (contest.requireSequence) {
         const nextIndex = participation.scannedPOIIds.length;
-        const expectedPoiId = contest.orderedPOIIds[nextIndex];
-        if (!expectedPoiId || expectedPoiId.toString() !== poiId) {
+        const expectedPoiId = uniqueOrderedIds[nextIndex];
+        if (!expectedPoiId || expectedPoiId !== poiId) {
             return res.status(400).json({ message: 'Wrong POI order. Scan the correct POI first.' });
         }
     }
 
     participation.scannedPOIIds.push(poiObjectId);
 
-    const allScanned = participation.scannedPOIIds.length === contest.orderedPOIIds.length;
+    await participation.save();
+    return res.status(200).json(getParticipationState(participation));
+}
 
-    if (allScanned) {
-        participation.completedAt = now;
-        const prize = (contest.prizes ?? []).find((p) => !p.awarded);
-        if (prize) {
-            participation.isWinner = true;
-            participation.awardedPrizeLabel = prize.label;
-            prize.awarded = true;
+async function completeParticipation(req: Request, res: Response) {
+    const contestId = req.params.contestId;
+    const { participantId } = req.body;
 
-            const allAwarded = (contest.prizes ?? []).every((p) => p.awarded);
-            if (allAwarded) {
-                contest.isActive = false;
-            }
-            await contest.save();
-        } else {
-            participation.isWinner = true;
+    if (!isValidObjectId(contestId)) {
+        return res.status(400).json({ message: 'Invalid contest id' });
+    }
+    if (!participantId || typeof participantId !== 'string') {
+        return res.status(400).json({ message: 'participantId is required' });
+    }
+
+    const contest = await ContestModel.findById(contestId);
+    if (!contest) {
+        return res.status(404).json({ message: 'Contest not found' });
+    }
+    if (!contest.isActive) {
+        return res.status(400).json({ message: 'Contest is not active' });
+    }
+
+    const now = new Date();
+    if (!contest.startsAt || now < contest.startsAt) {
+        return res.status(400).json({ message: 'Contest has not started yet' });
+    }
+    if (contest.endsAt && now > contest.endsAt) {
+        return res.status(400).json({ message: 'Contest has ended' });
+    }
+
+    const participation = await ContestParticipationModel.findOne({ contestId, participantId });
+    if (!participation) {
+        return res.status(404).json({ message: 'Participation not found' });
+    }
+    if (participation.completedAt || participation.isWinner !== null) {
+        return res.status(400).json({ message: 'Participation already completed' });
+    }
+
+    const uniqueOrderedIds = [...new Set(contest.orderedPOIIds.map((id) => id.toString()))];
+    const allScanned = uniqueOrderedIds.every((id) => participation.scannedPOIIds.some((s) => s.toString() === id));
+    if (!allScanned) {
+        return res.status(400).json({ message: 'Not all POIs have been scanned yet' });
+    }
+
+    participation.completedAt = now;
+    const prize = (contest.prizes ?? []).find((p) => !p.awarded);
+    if (prize) {
+        participation.isWinner = true;
+        participation.awardedPrizeLabel = prize.label;
+        prize.awarded = true;
+
+        const allAwarded = (contest.prizes ?? []).every((p) => p.awarded);
+        if (allAwarded) {
+            contest.isActive = false;
         }
+        await contest.save();
+    } else {
+        participation.isWinner = true;
     }
 
     await participation.save();
@@ -735,6 +778,7 @@ export const contestsController = {
     startContest,
     // Scan
     registerScan,
+    completeParticipation,
     getParticipation,
     getParticipationByClaimCode,
     getClaimQrCode,

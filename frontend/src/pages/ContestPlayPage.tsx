@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 
-import { getContest, getContestLeaderboard, getParticipation, registerScan } from '../lib/contests'
+import { getContest, getContestLeaderboard, getParticipation, registerScan, completeParticipation } from '../lib/contests'
 import type { LeaderboardItem } from '../lib/contests'
 import { QRScanner } from '../components/QRScanner'
 import { apiRequest } from '../lib/api'
@@ -15,6 +15,7 @@ type ContestData = {
   requireSequence: boolean
   prizes: { label: string; awarded: boolean }[]
   awardedPrizesCount: number
+  orderedPOIIds: string[]
 }
 
 type PoiBrief = {
@@ -142,12 +143,28 @@ export function ContestPlayPage() {
       })
       setScanMessage({ ok: true, text: 'POI trovato!' })
       setTimeout(() => setScanMessage(null), 2000)
-
-      if (result.completedAt || result.isWinner !== null) {
-        setFinished(true)
-      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Errore scansione'
+      setScanMessage({ ok: false, text: msg })
+      setTimeout(() => setScanMessage(null), 3000)
+    }
+  }
+
+  async function handleComplete() {
+    if (!contestId || !participantIdLocal) return
+    try {
+      const result = await completeParticipation(contestId, participantIdLocal)
+      setParticipation({
+        scannedPOIIds: result.scannedPOIIds,
+        completedAt: result.completedAt,
+        isWinner: result.isWinner,
+        prizeAwarded: result.prizeAwarded,
+        awardedPrizeLabel: result.awardedPrizeLabel ?? null,
+        claimCode: result.claimCode ?? null,
+      })
+      setFinished(true)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Errore durante la verifica'
       setScanMessage({ ok: false, text: msg })
       setTimeout(() => setScanMessage(null), 3000)
     }
@@ -194,7 +211,7 @@ export function ContestPlayPage() {
 
   if (finished) {
     const isWin = participation?.isWinner === true
-    const scannedCount = participation?.scannedPOIIds.length ?? 0
+    const scannedCount = new Set(participation?.scannedPOIIds ?? []).size
     const allScanned = scannedCount === pois.length
 
     return (
@@ -306,9 +323,22 @@ export function ContestPlayPage() {
         </div>
 
         {/* Scan button */}
-        <button className={styles.scanBtn} onClick={() => setShowScanner(true)}>
-          Scansiona QR Code
-        </button>
+        {(() => {
+          const uniquePoiIds = [...new Set(pois.map((p) => p.id))]
+          const allUniqueScanned = uniquePoiIds.every((id) => scannedIds.includes(id))
+          if (allUniqueScanned) {
+            return (
+              <button className={styles.scanBtn} onClick={handleComplete}>
+                Scopri se hai vinto
+              </button>
+            )
+          }
+          return (
+            <button className={styles.scanBtn} onClick={() => setShowScanner(true)}>
+              Scansiona QR Code
+            </button>
+          )
+        })()}
       </div>
 
       {showScanner && (

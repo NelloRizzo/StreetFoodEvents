@@ -169,6 +169,13 @@ export function registerScan(contestId: string, participantId: string, poiId: st
   })
 }
 
+export function completeParticipation(contestId: string, participantId: string) {
+  return apiRequest<Participation>(`/contests/${contestId}/complete`, {
+    method: 'POST',
+    bodyJson: { participantId },
+  })
+}
+
 export function getParticipation(contestId: string, participantId: string) {
   return apiRequest<Participation>(`/contests/${contestId}/participation/${participantId}`)
 }
