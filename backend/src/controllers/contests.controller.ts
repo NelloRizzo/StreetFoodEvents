@@ -142,8 +142,8 @@ function toContestResponse(contest: {
     eventId: Types.ObjectId;
     name: string;
     description?: string | null;
-    startsAt: Date;
-    endsAt: Date;
+    startsAt?: Date | null;
+    endsAt?: Date | null;
     durationMinutes: number;
     requireSequence?: boolean;
     prizes?: Array<{ label: string; awarded: boolean }>;
@@ -232,15 +232,12 @@ async function createContest(req: Request, res: Response) {
     if (!name || typeof name !== 'string' || !name.trim()) {
         return res.status(400).json({ message: 'Name is required' });
     }
-    if (!startsAt) {
-        return res.status(400).json({ message: 'startsAt is required' });
-    }
     if (!durationMinutes || durationMinutes < 1) {
         return res.status(400).json({ message: 'durationMinutes must be >= 1' });
     }
 
-    const startDate = new Date(startsAt);
-    const endDate = endsAt ? new Date(endsAt) : new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+    const startDate = startsAt ? new Date(startsAt) : null;
+    const endDate = startDate ? (endsAt ? new Date(endsAt) : new Date(startDate.getTime() + durationMinutes * 60 * 1000)) : null;
 
     if (prizes && !Array.isArray(prizes)) {
         return res.status(400).json({ message: 'prizes must be an array' });
@@ -311,7 +308,7 @@ async function updateContest(req: Request, res: Response) {
 
     if (endsAt !== undefined) {
         contest.endsAt = new Date(endsAt);
-    } else if (startsAt !== undefined || durationMinutes !== undefined) {
+    } else if (contest.startsAt && (startsAt !== undefined || durationMinutes !== undefined)) {
         contest.endsAt = new Date(contest.startsAt.getTime() + contest.durationMinutes * 60 * 1000);
     }
     if (requireSequence !== undefined) contest.requireSequence = requireSequence;
@@ -389,6 +386,30 @@ async function deleteContest(req: Request, res: Response) {
     return res.status(204).send();
 }
 
+async function startContest(req: Request, res: Response) {
+    const contestId = req.params.contestId;
+    if (!isValidObjectId(contestId)) {
+        return res.status(400).json({ message: 'Invalid contest id' });
+    }
+    const contest = await ContestModel.findById(contestId);
+    if (!contest) {
+        return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    const now = new Date();
+    contest.startsAt = now;
+    contest.endsAt = new Date(now.getTime() + contest.durationMinutes * 60 * 1000);
+    contest.isActive = true;
+    for (const prize of contest.prizes) {
+        prize.awarded = false;
+    }
+
+    await ContestParticipationModel.deleteMany({ contestId });
+    await contest.save();
+
+    return res.status(200).json({ item: toContestResponse(contest) });
+}
+
 // ── Participation & Scan ──
 
 async function registerScan(req: Request, res: Response) {
@@ -414,10 +435,10 @@ async function registerScan(req: Request, res: Response) {
     }
 
     const now = new Date();
-    if (now < contest.startsAt) {
+    if (!contest.startsAt || now < contest.startsAt) {
         return res.status(400).json({ message: 'Contest has not started yet' });
     }
-    if (now > contest.endsAt) {
+    if (contest.endsAt && now > contest.endsAt) {
         return res.status(400).json({ message: 'Contest has ended' });
     }
 
@@ -696,6 +717,7 @@ export const contestsController = {
     createContest,
     updateContest,
     deleteContest,
+    startContest,
     // Scan
     registerScan,
     getParticipation,

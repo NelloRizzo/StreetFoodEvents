@@ -8,8 +8,8 @@ type ContestItem = {
   id: string
   name: string
   description: string | null
-  startsAt: string
-  endsAt: string
+  startsAt: string | null
+  endsAt: string | null
   durationMinutes: number
   requireSequence: boolean
   prize: string | null
@@ -32,7 +32,7 @@ export function EventContestsPage() {
       .then(([ev, data]) => {
         setEventName(ev.item.name)
         const now = new Date()
-        setContests(data.items.filter((c) => c.isActive && new Date(c.endsAt) > now))
+        setContests(data.items.filter((c) => c.isActive && c.endsAt && new Date(c.endsAt) > now))
         setIsLoading(false)
       })
       .catch(() => setIsLoading(false))

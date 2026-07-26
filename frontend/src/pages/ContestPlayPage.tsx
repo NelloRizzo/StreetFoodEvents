@@ -10,8 +10,8 @@ import styles from './ContestPlayPage.module.scss'
 type ContestData = {
   id: string
   name: string
-  startsAt: string
-  endsAt: string
+  startsAt: string | null
+  endsAt: string | null
   requireSequence: boolean
   prizes: { label: string; awarded: boolean }[]
   awardedPrizesCount: number
@@ -102,7 +102,7 @@ export function ContestPlayPage() {
     if (!contest || finished) return
 
     function tick() {
-      const remaining = Math.max(0, (new Date(contest!.endsAt).getTime() - Date.now()) / 1000)
+      const remaining = contest!.endsAt ? Math.max(0, (new Date(contest!.endsAt).getTime() - Date.now()) / 1000) : 0
       setTimeLeft(remaining)
     }
 

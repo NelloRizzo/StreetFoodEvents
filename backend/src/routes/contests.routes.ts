@@ -75,6 +75,13 @@ contestsRouter.delete(
     asyncHandler(contestsController.deleteContest)
 );
 
+contestsRouter.post(
+    '/:contestId/start',
+    asyncHandler(authMiddleware),
+    asyncHandler(hasRole(['contest-admin', 'platform-admin'])),
+    asyncHandler(contestsController.startContest)
+);
+
 // ── Scan ──
 
 contestsRouter.post(

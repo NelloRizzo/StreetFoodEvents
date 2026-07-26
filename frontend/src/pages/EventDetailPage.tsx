@@ -10,7 +10,7 @@ import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { MapPicker } from '../components/MapPicker'
-import { listContestPois, createContestPoi, deleteContestPoi, listContests, createContest, updateContest, deleteContest, getContestPoiQrCodes } from '../lib/contests'
+import { listContestPois, createContestPoi, deleteContestPoi, listContests, createContest, updateContest, deleteContest, startContest, getContestPoiQrCodes } from '../lib/contests'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import styles from './EventDetailPage.module.scss'
 
@@ -87,7 +87,7 @@ export function EventDetailPage() {
   const [showCpoiForm, setShowCpoiForm] = useState(false)
   const [cpoiForm, setCpoiForm] = useState({ name: '', hintsInput: '', groupsInput: '' })
   const [savingCpoi, setSavingCpoi] = useState(false)
-  const [contests, setContests] = useState<{ id: string; name: string; isActive: boolean; orderedPOIIds: string[]; durationMinutes: number; startsAt: string; prizes: { label: string; awarded: boolean }[]; awardedPrizesCount: number; requireSequence: boolean; description: string | null; pickConfig: { groupPicks: { group: string; count: number }[] } | null; autoPickedPOIIds: string[]; poiHintSelections: { poiId: string; hintIndex: number }[] }[]>([])
+  const [contests, setContests] = useState<{ id: string; name: string; isActive: boolean; orderedPOIIds: string[]; durationMinutes: number; startsAt: string | null; prizes: { label: string; awarded: boolean }[]; awardedPrizesCount: number; requireSequence: boolean; description: string | null; pickConfig: { groupPicks: { group: string; count: number }[] } | null; autoPickedPOIIds: string[]; poiHintSelections: { poiId: string; hintIndex: number }[] }[]>([])
   const [showContestForm, setShowContestForm] = useState(false)
   const [editingContestId, setEditingContestId] = useState<string | null>(null)
   const [contestForm, setContestForm] = useState({
@@ -630,7 +630,7 @@ export function EventDetailPage() {
                 <textarea rows={2} value={contestForm.description} onChange={(e) => setContestForm((p) => ({ ...p, description: e.target.value }))} />
               </label>
               <label className={styles.poiField}>
-                Start
+                Start (opzionale — imposta con "Avvia Contest")
                 <input type="datetime-local" value={contestForm.startsAt} onChange={(e) => setContestForm((p) => ({ ...p, startsAt: e.target.value }))} />
               </label>
               <label className={styles.poiField}>
@@ -833,11 +833,11 @@ export function EventDetailPage() {
               </label>
               <div className={styles.poiFormActions}>
                 <button className={styles.saveBtn} onClick={async () => {
-                  if (!eventId || savingContest || !contestForm.name.trim() || !contestForm.startsAt) return
+                  if (!eventId || savingContest || !contestForm.name.trim()) return
                   setSavingContest(true)
                   try {
                     const payload: {
-                      eventId: string; name: string; description: string | null; startsAt: string;
+                      eventId: string; name: string; description: string | null; startsAt?: string;
                       durationMinutes: number; requireSequence: boolean; prizes: { label: string }[];
                       isActive: boolean; orderedPOIIds: string[]; pickConfig: { groupPicks: { group: string; count: number }[] } | null;
                       poiHintSelections: { poiId: string; hintIndex: number }[];
@@ -845,7 +845,6 @@ export function EventDetailPage() {
                       eventId,
                       name: contestForm.name.trim(),
                       description: contestForm.description.trim() || null,
-                      startsAt: new Date(contestForm.startsAt).toISOString(),
                       durationMinutes: contestForm.durationMinutes,
                       prizes: contestForm.prizes.filter((p) => p.label.trim()).map((p) => ({ label: p.label.trim() })),
                       requireSequence: contestForm.requireSequence,
@@ -853,6 +852,9 @@ export function EventDetailPage() {
                       orderedPOIIds: contestForm.orderedPOIIds,
                       pickConfig: contestForm.pickConfig,
                       poiHintSelections: contestForm.poiHintSelections,
+                    }
+                    if (contestForm.startsAt) {
+                      payload.startsAt = new Date(contestForm.startsAt).toISOString()
                     }
                     if (editingContestId) {
                       await updateContest(editingContestId, payload)
@@ -878,16 +880,24 @@ export function EventDetailPage() {
               <div key={contest.id} className={styles.poiCard}>
                 <div className={styles.poiCardBody}>
                   <strong className={styles.poiCardName}>{contest.name}</strong>
-                  <span>{contest.isActive ? 'Attivo' : 'Inattivo'} &middot; {contest.durationMinutes} min &middot; {contest.requireSequence ? 'Ordinato' : 'Libero'}</span>
+                  <span>{!contest.startsAt ? 'Non avviato' : contest.isActive ? 'Attivo' : 'Terminato'} &middot; {contest.durationMinutes} min &middot; {contest.requireSequence ? 'Ordinato' : 'Libero'}</span>
                   {(contest.prizes ?? []).length > 0 && <span className={styles.poiCardDesc}>Premi: {(contest.prizes ?? []).filter((p) => p.awarded).length}/{(contest.prizes ?? []).length}</span>}
                 </div>
                 <div className={styles.poiCardActions}>
+                  {(!contest.startsAt || !contest.isActive) && contest.orderedPOIIds.length > 0 && (
+                    <button className={styles.textBtn} style={{ color: 'var(--color-brand)' }} onClick={async () => {
+                      try {
+                        const data = await startContest(contest.id)
+                        setContests((prev) => prev.map((c) => c.id === contest.id ? data.item : c))
+                      } catch { /* ignore */ }
+                    }}>Avvia</button>
+                  )}
                   <button className={styles.textBtn} onClick={async () => {
                     setEditingContestId(contest.id)
                     setContestForm({
                       name: contest.name,
                       description: contest.description ?? '',
-                      startsAt: contest.startsAt.slice(0, 16),
+                      startsAt: contest.startsAt ? contest.startsAt.slice(0, 16) : '',
                       durationMinutes: contest.durationMinutes,
                       requireSequence: contest.requireSequence,
                       prizes: (contest.prizes ?? []).length > 0 ? contest.prizes.map((p) => ({ label: p.label })) : [{ label: '' }],

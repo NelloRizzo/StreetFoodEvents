@@ -8,8 +8,8 @@ type ContestData = {
   id: string
   name: string
   description: string | null
-  startsAt: string
-  endsAt: string
+  startsAt: string | null
+  endsAt: string | null
   durationMinutes: number
   requireSequence: boolean
   prizes: { label: string; awarded: boolean }[]
@@ -54,9 +54,9 @@ export function ContestPage() {
   }
 
   const now = new Date()
-  const startsAt = new Date(contest.startsAt)
-  const endsAt = new Date(contest.endsAt)
-  const canPlay = contest.isActive && now >= startsAt && now <= endsAt
+  const startsAt = contest.startsAt ? new Date(contest.startsAt) : null
+  const endsAt = contest.endsAt ? new Date(contest.endsAt) : null
+  const canPlay = contest.isActive && startsAt && endsAt && now >= startsAt && now <= endsAt
 
   return (
     <div className={`page-shell ${styles.page}`}>
@@ -77,7 +77,10 @@ export function ContestPage() {
         </div>
         <div className={styles.info}>
           <strong>Disponibile</strong>
-          <span>{startsAt.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} &ndash; {endsAt.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span>
+          <span>{startsAt && endsAt
+            ? `${startsAt.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} – ${endsAt.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}`
+            : 'Non ancora avviato'
+          }</span>
         </div>
       </div>
 
@@ -107,7 +110,7 @@ export function ContestPage() {
         </button>
       ) : (
         <p className={styles.notAvailable}>
-          {now < startsAt ? 'Il contest non è ancora iniziato.' : 'Il contest è terminato.'}
+          {!startsAt ? 'Il contest non è ancora stato avviato.' : now < startsAt ? 'Il contest non è ancora iniziato.' : 'Il contest è terminato.'}
         </p>
       )}
     </div>

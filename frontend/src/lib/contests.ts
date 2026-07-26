@@ -29,8 +29,8 @@ export type Contest = {
   eventId: string
   name: string
   description: string | null
-  startsAt: string
-  endsAt: string
+  startsAt: string | null
+  endsAt: string | null
   durationMinutes: number
   requireSequence: boolean
   prizes: ContestPrize[]
@@ -118,7 +118,7 @@ export function createContest(data: {
   eventId: string
   name: string
   description?: string | null
-  startsAt: string
+  startsAt?: string
   durationMinutes: number
   requireSequence?: boolean
   prizes?: { label: string }[]
@@ -154,6 +154,10 @@ export function updateContest(contestId: string, data: Partial<{
 
 export function deleteContest(contestId: string) {
   return apiRequest<void>(`/contests/${contestId}`, { method: 'DELETE' })
+}
+
+export function startContest(contestId: string) {
+  return apiRequest<{ item: Contest }>(`/contests/${contestId}/start`, { method: 'POST' })
 }
 
 // ── Scan & Participation ──

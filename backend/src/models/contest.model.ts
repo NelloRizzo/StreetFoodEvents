@@ -21,11 +21,11 @@ const contestSchema = new Schema(
         },
         startsAt: {
             type: Date,
-            required: true
+            default: null
         },
         endsAt: {
             type: Date,
-            required: true
+            default: null
         },
         durationMinutes: {
             type: Number,
