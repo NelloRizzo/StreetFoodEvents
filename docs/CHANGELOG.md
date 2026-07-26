@@ -310,8 +310,6 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] Frontend: ContestVerifyPage — verifica vincita, dettagli partecipazione, pulsante consegna premio (solo contest-admin)
 - [x] Frontend: EventDetailPage — sezione admin contest (creazione POI contest, creazione contest, stampa QR POI)
 - [x] Seed: 4 ContestPOI + 2 Contest per springEvent, Marco ha anche ruolo contest-admin
-
-### Contest POI per gruppi con selezione casuale (Jul 2026)
 - [x] Campo `groups[]` su ContestPOI (array di stringhe) — un POI può appartenere a più gruppi
 - [x] Campo `pickConfig` su Contest (`{ groupPicks: { group, count }[] }`) + `autoPickedPOIIds` tracciamento
 - [x] Backend: auto-pick alla creazione — dati i gruppi e il numero per gruppo, seleziona POI casuali e li aggiunge a orderedPOIIds
@@ -365,3 +363,27 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] CurrencySymbol rimosso dalle sezioni secondarie (solo nell'h1)
 - [x] Fix: EUR carichi usava netBalance invece di totalTopUp
 - [x] Tutti i 187 test backend passano, frontend build OK
+
+### Contest: POI duplicati in orderedPOIIds (Jul 2026)
+- [x] Backend `registerScan`: rimosso check "POI already scanned" → ora permette scansione multipla dello stesso POI fino a `orderedCount` occorrenze
+- [x] Backend `registerScan`: sequence check usa `orderedPOIIds[scannedPOIIds.length]` (array completo, non deduplicato)
+- [x] Backend `completeParticipation`: check `scannedPOIIds.length === orderedPOIIds.length` (totale slot, non unici)
+- [x] Frontend POI grid: mostra tutti gli `orderedPOIIds` (inclusi duplicati), non solo `pois` unici
+- [x] Frontend marking: occurrence-based — per ogni posizione, conteggio occorrenze in `orderedPOIIds[0..i]` vs conteggio scansioni in `scannedPOIIds`. Trovato solo quando `scanCount >= occurrence`
+- [x] Frontend: pulsante scan spostato sopra la griglia POI
+- [x] Frontend: POI trovati spostati sotto a quelli da trovare (separati da divider)
+- [x] Frontend: highlight prossimo POI da scansionare (bordo brand, sfondo glow)
+- [x] Frontend: schermata finale usa conteggio slot totali (non unici) per "Hai trovato X di Y POI"
+- [x] SCSS: `.poiNext` (bordo brand + glow), `.poiDivider` (separatore trovati/da trovare)
+
+## Session History
+
+### Contest: POI duplicati in orderedPOIIds (Jul 2026)
+- **Problema**: `orderedPOIIds` può contenere duplicati (es. stesso POI 3 volte = 15 slot, 3 unici). Il codice precedente deduplicava ovunque, causando:
+  1. Scansione unica di un POI lo marcava come "trovato" in tutte le occorrenze (`scannedIds.includes(poi.id)`)
+  2. Il conteggio finale usava gli unici ("3 di 3" invece di "15 di 15")
+  3. `completeParticipation` permetteva il completamento con solo 3 scan su 15 slot
+- **Soluzione backend**: `registerScan` ora permette scansioni multiple dello stesso POI ID (fino a quante volte appare in `orderedPOIIds`). `scannedPOIIds` può contenere duplicati. Sequence check usa l'array completo.
+- **Soluzione frontend**: marking occurrence-based — per ogni posizione `i` in `orderedPOIIds`, si conta quante volte quel POI ID appare in `orderedPOIIds[0..i]` (numero di occorrenza) e si confronta con quante volte è stato scansionato. Un POI è "trovato" solo quando `scanCount >= occurrence`.
+- **Bug fix**: il primo approccio (position-based, `i < scannedIds.length`) era errato — se `orderedPOIIds = [A, B, A]` e `scannedIds = [A, A]`, la posizione 1 (B) veniva marchiata come trovata pur non essendo stata scansionata. Fix con occurrence-based.
+- **Lesson learned**: quando si tracciano duplicati in un array ordinato, non usare la lunghezza come indicatore di progresso. Usare il conteggio occorrenze per ogni POI ID.

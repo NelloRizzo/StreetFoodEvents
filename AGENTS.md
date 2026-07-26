@@ -50,6 +50,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 - `Event.exchangeRate` defines how many event currency units = 1 EUR. Default 1 (1:1).
 - `ContestPOI.groups` is an array of strings (`[String]`), not a single string. A POI can belong to multiple groups.
 - `Contest.pickConfig` (`{ groupPicks: { group, count }[] }`) defines auto-pick rules per group. `Contest.autoPickedPOIIds` tracks which POIs were auto-selected. Manual POI additions are preserved when `pickConfig` changes.
+- `Contest.orderedPOIIds` can contain **duplicates** — the same POI ID can appear multiple times. `scannedPOIIds` also stores duplicates (one entry per scan). Completion = `scannedPOIIds.length === orderedPOIIds.length` (total slots, NOT unique count). Do NOT use `Set` or `includes()` to check if a specific occurrence has been scanned — use occurrence-based counting (see ARCHITECTURE.md).
 
 ### API routes
 `GET /health` (no auth). All `/api/*` routes: GET are public except users/event-users/event-products/favorites/orders/upload. POST/PATCH/DELETE are protected.
@@ -168,25 +169,13 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
-## Session state (Jul 2026 — exchange rate + per-station reports)
+## Session state (Jul 2026 — contest duplicate POIs + occurrence-based marking)
 ### Completed
-- `Event.exchangeRate` (Number, default 1, min 0.01) + create/update/response
-- `EventUserTransaction.realAmount` (Number, nullable) per EUR tracking
-- topUp: amount in EUR, credits = EUR × rate; refund: amount in credits, EUR = credits / rate
-- getBalance: `myTopUp/Refund/NetBalance/Count` (per performedByUserId), `exchangeRate`
-- listTransactions: `performedByName` from User model (populated per request)
-- EventsPage form: "Tasso di cambio (1 € = X moneta)" field
-- EventExchangePage: currency initial in circle (h1 only), EUR equiv via €
-- Stat cards: "Tutte le postazioni" (all) + "Questa postazione" (current user)
-- EUR fallback per vecchie transazioni (amount/rate se realAmount è null)
-- "Saldo dopo" colonna: crediti + EUR equivalent
-
-### API changes
-- `POST /api/exchange/:eventId/top-up` — amount in EUR, credits = EUR × exchangeRate
-- `POST /api/exchange/:eventId/refund` — amount in credits, EUR returned = credits / exchangeRate
-- `GET /api/exchange/:eventId/balance` — response includes `exchangeRate`, `myTopUp`, `myRefund`, `myNetBalance`, `myTopUpCount`, `myRefundCount`, `mySinceResetTopUp`, `mySinceResetRefund`, `myNetSinceReset`
-- `GET /api/exchange/:eventId/transactions` — response includes `performedByName` per item
-
-### Next steps
-- Trigger deploy on Render after latest pushes
-- Verify exchange page end-to-end on production (rate, per-station, operator column)
+- `registerScan`: allows scanning same POI multiple times (up to `orderedCount` in `orderedPOIIds`)
+- `registerScan`: sequence check uses `orderedPOIIds[scannedPOIIds.length]` (full array, not deduplicated)
+- `completeParticipation`: check `scannedPOIIds.length === orderedPOIIds.length` (total slots, not unique)
+- Frontend POI grid: shows all `orderedPOIIds` including duplicates, occurrence-based marking
+- Frontend: scan button moved above POI grid, found POIs at bottom with divider
+- Frontend: highlight next POI to scan (brand border + glow background)
+- Frontend: finished screen uses total slot count for "Hai trovato X di Y POI"
+- SCSS: `.poiNext`, `.poiDivider` styles

@@ -94,3 +94,15 @@ Considerazioni progettuali e decisioni architetturali.
 - - **Exchange admin**: `exchange-admin` role (scope event) with permissions `exchanges:read`, `exchanges:create`, `payments:read`, `payments:create`, `payments:refund`.
 - - **Exchange operations**: top-up (real→virtual) is `EventUserTransaction` type `top-up`, direction `credit`. Refund (virtual→real) is type `refund`, direction `debit`. Both use reference type `cambio`.
 - - **EndsAt** is always required on Contest model. If not provided on creation, it's calculated from `startsAt + durationMinutes`. The `endsAt` field allows manual early termination.
+
+## Contest — Duplicate POIs in orderedPOIIds
+- **`orderedPOIIds` can contain duplicates**: the same POI can appear multiple times in the ordered list (e.g., visited at different times or locations). This means `orderedPOIIds.length` (total slots) differs from the unique POI count.
+- **`scannedPOIIds` stores duplicates**: each scan pushes one entry. If POI A appears 3 times and the user scans it 3 times, `scannedPOIIds` will contain `[A, A, A]`.
+- **Occurrence-based marking**: for each position `i` in `orderedPOIIds`, count how many times that POI ID appears in `orderedPOIIds[0..i]` (occurrence number). A position is "found" only when the total scan count for that POI ID ≥ the occurrence number.
+- **Cosa NON fare**: 
+  - **Non usare** `scannedIds.includes(poi.id)` per marcare un POI come trovato — marcherebbe TUTTE le occorrenze quando ne è stata scansionata solo una.
+  - **Non usare** `i < scannedIds.length` (position-based) — se `orderedPOIIds = [A, B, A]` e `scannedIds = [A, A]`, la posizione 1 (B) verrebbe marchiata come trovata pur non essendo stata scansionata.
+  - **Non usare** `new Set(scannedPOIIds).size` per il conteggio — perderebbe i duplicati e il conteggio sarebbe errato.
+- **Completion check**: `scannedPOIIds.length === orderedPOIIds.length` (conta totale, non unici). Il backend `completeParticipation` usa questo check.
+- **Backend `registerScan`**: prima di push, verifica che `scannedCount < orderedCount` per quel POI ID. Se `scannedCount >= orderedCount`, errore "All occurrences already scanned".
+- **Frontend griglia**: mostra tutti gli `orderedPOIIds` (inclusi duplicati), con i POI trovati spostati in fondo e separati da un divider.
