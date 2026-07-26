@@ -407,6 +407,14 @@ async function startContest(req: Request, res: Response) {
         prize.awarded = false;
     }
 
+    const uniquePoiIds = [...new Set(contest.orderedPOIIds.map((id) => id.toString()))];
+    const pois = await ContestPOIModel.find({ _id: { $in: uniquePoiIds } });
+    const poiHintSelections = pois.map((p) => {
+        const hintCount = (p.hints ?? []).length;
+        return { poiId: p._id, hintIndex: hintCount > 0 ? Math.floor(Math.random() * hintCount) : 0 };
+    });
+    contest.set('poiHintSelections', poiHintSelections);
+
     await ContestParticipationModel.deleteMany({ contestId });
     await contest.save();
 
