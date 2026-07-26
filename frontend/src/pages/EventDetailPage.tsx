@@ -631,7 +631,12 @@ export function EventDetailPage() {
               </label>
               <label className={styles.poiField}>
                 Start (opzionale — imposta con "Avvia Contest")
-                <input type="datetime-local" value={contestForm.startsAt} onChange={(e) => setContestForm((p) => ({ ...p, startsAt: e.target.value }))} />
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input type="datetime-local" value={contestForm.startsAt} onChange={(e) => setContestForm((p) => ({ ...p, startsAt: e.target.value }))} style={{ flex: 1 }} />
+                  {contestForm.startsAt && (
+                    <button type="button" className={styles.textBtn} onClick={() => setContestForm((p) => ({ ...p, startsAt: '' }))}>&times;</button>
+                  )}
+                </div>
               </label>
               <label className={styles.poiField}>
                 Durata (minuti)
