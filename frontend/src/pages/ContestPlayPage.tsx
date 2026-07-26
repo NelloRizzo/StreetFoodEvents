@@ -211,8 +211,9 @@ export function ContestPlayPage() {
 
   if (finished) {
     const isWin = participation?.isWinner === true
-    const scannedCount = new Set(participation?.scannedPOIIds ?? []).size
-    const allScanned = scannedCount === pois.length
+    const scannedCount = participation?.scannedPOIIds.length ?? 0
+    const totalSlots = contest.orderedPOIIds.length
+    const allScanned = scannedCount === totalSlots
 
     return (
       <div className={`page-shell ${styles.page}`}>
@@ -254,7 +255,7 @@ export function ContestPlayPage() {
             <>
               <span className={styles.finishIcon}>&#9203;</span>
               <h2 className={styles.finishTitle}>Tempo scaduto!</h2>
-              <p className={styles.finishDesc}>Hai trovato {scannedCount} di {pois.length} POI.</p>
+              <p className={styles.finishDesc}>Hai trovato {scannedCount} di {totalSlots} POI.</p>
             </>
           )}
         </div>
@@ -309,24 +310,10 @@ export function ContestPlayPage() {
           </div>
         )}
 
-        {/* POI List */}
-        <div className={styles.poiGrid}>
-          {pois.map((poi) => {
-            const found = scannedIds.includes(poi.id)
-            return (
-              <div key={poi.id} className={`${styles.poiItem} ${found ? styles.poiFound : ''}`}>
-                <span className={styles.poiStatus}>{found ? '\u2713' : '\u2753'}</span>
-                <div className={styles.poiName}>{poi.name}</div>
-              </div>
-            )
-          })}
-        </div>
-
         {/* Scan button */}
         {(() => {
-          const uniquePoiIds = [...new Set(pois.map((p) => p.id))]
-          const allUniqueScanned = uniquePoiIds.every((id) => scannedIds.includes(id))
-          if (allUniqueScanned) {
+          const allScanned = scannedIds.length === contest.orderedPOIIds.length
+          if (allScanned) {
             return (
               <button className={styles.scanBtn} onClick={handleComplete}>
                 Scopri se hai vinto
@@ -337,6 +324,38 @@ export function ContestPlayPage() {
             <button className={styles.scanBtn} onClick={() => setShowScanner(true)}>
               Scansiona QR Code
             </button>
+          )
+        })()}
+
+        {/* POI List */}
+        {(() => {
+          const toFind: { poiId: string; index: number }[] = []
+          const found: { poiId: string; index: number }[] = []
+          contest.orderedPOIIds.forEach((poiId, i) => {
+            const entry = { poiId, index: i }
+            if (i < scannedIds.length) found.push(entry)
+            else toFind.push(entry)
+          })
+          const renderPoiEntry = (poiId: string, index: number) => {
+            const poi = pois.find(p => p.id === poiId)
+            const isScanned = index < scannedIds.length
+            const isNext = index === scannedIds.length
+            return (
+              <div
+                key={`${poiId}-${index}`}
+                className={`${styles.poiItem} ${isScanned ? styles.poiFound : ''} ${isNext ? styles.poiNext : ''}`}
+              >
+                <span className={styles.poiStatus}>{isScanned ? '\u2713' : isNext ? '\u2192' : '\u2753'}</span>
+                <div className={styles.poiName}>{poi?.name ?? poiId}</div>
+              </div>
+            )
+          }
+          return (
+            <div className={styles.poiGrid}>
+              {toFind.map(e => renderPoiEntry(e.poiId, e.index))}
+              {found.length > 0 && toFind.length > 0 && <div className={styles.poiDivider} />}
+              {found.map(e => renderPoiEntry(e.poiId, e.index))}
+            </div>
           )
         })()}
       </div>

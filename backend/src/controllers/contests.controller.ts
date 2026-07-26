@@ -476,16 +476,15 @@ async function registerScan(req: Request, res: Response) {
         return res.status(400).json({ message: 'Participation already completed' });
     }
 
-    if (participation.scannedPOIIds.some((id) => id.toString() === poiId)) {
-        return res.status(400).json({ message: 'POI already scanned' });
+    const orderedCount = contest.orderedPOIIds.filter((id) => id.toString() === poiId).length;
+    const scannedCount = participation.scannedPOIIds.filter((id) => id.toString() === poiId).length;
+    if (scannedCount >= orderedCount) {
+        return res.status(400).json({ message: 'All occurrences of this POI have already been scanned' });
     }
 
-    const uniqueOrderedIds = [...new Set(contest.orderedPOIIds.map((id) => id.toString()))];
-
     if (contest.requireSequence) {
-        const nextIndex = participation.scannedPOIIds.length;
-        const expectedPoiId = uniqueOrderedIds[nextIndex];
-        if (!expectedPoiId || expectedPoiId !== poiId) {
+        const expectedPoiId = contest.orderedPOIIds[participation.scannedPOIIds.length]?.toString();
+        if (expectedPoiId !== poiId) {
             return res.status(400).json({ message: 'Wrong POI order. Scan the correct POI first.' });
         }
     }
@@ -531,8 +530,7 @@ async function completeParticipation(req: Request, res: Response) {
         return res.status(400).json({ message: 'Participation already completed' });
     }
 
-    const uniqueOrderedIds = [...new Set(contest.orderedPOIIds.map((id) => id.toString()))];
-    const allScanned = uniqueOrderedIds.every((id) => participation.scannedPOIIds.some((s) => s.toString() === id));
+    const allScanned = participation.scannedPOIIds.length === contest.orderedPOIIds.length;
     if (!allScanned) {
         return res.status(400).json({ message: 'Not all POIs have been scanned yet' });
     }

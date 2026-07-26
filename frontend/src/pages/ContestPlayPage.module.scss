@@ -108,6 +108,19 @@
   background: rgba(43, 138, 74, 0.06);
 }
 
+.poiNext {
+  opacity: 1;
+  border-color: var(--color-brand);
+  background: var(--color-brand-glow);
+}
+
+.poiDivider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--color-line);
+  margin: 0.25rem 0;
+}
+
 .poiStatus {
   font-size: 1.3rem;
   width: 1.5rem;
