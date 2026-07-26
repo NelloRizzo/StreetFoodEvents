@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { getContest } from '../lib/contests'
+import { getContest, startContest } from '../lib/contests'
+import { useAuth } from '../features/auth/auth-context'
+import { apiRequest } from '../lib/api'
 import styles from './ContestPage.module.scss'
 
 type ContestData = {
   id: string
+  eventId: string
   name: string
   description: string | null
   startsAt: string | null
@@ -25,10 +28,12 @@ type PoiBrief = {
 export function ContestPage() {
   const { contestId } = useParams<{ contestId: string }>()
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
   const [contest, setContest] = useState<ContestData | null>(null)
   const [pois, setPois] = useState<PoiBrief[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isContestAdmin, setIsContestAdmin] = useState(false)
 
   useEffect(() => {
     if (!contestId) return
@@ -43,6 +48,16 @@ export function ContestPage() {
         setIsLoading(false)
       })
   }, [contestId])
+
+  useEffect(() => {
+    if (!isAuthenticated || !contest) return
+    apiRequest<{ isPlatformAdmin: boolean; roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles')
+      .then((data) => {
+        const isEventAdmin = data.isPlatformAdmin || data.roles.some((r) => r.slug === 'contest-admin' && (r.scope === 'platform' || (r.scope === 'event' && r.eventId === contest.eventId)))
+        setIsContestAdmin(isEventAdmin)
+      })
+      .catch(() => {})
+  }, [isAuthenticated, contest])
 
   if (isLoading) return null
   if (error || !contest) {
@@ -109,9 +124,22 @@ export function ContestPage() {
           Partecipa al contest!
         </button>
       ) : (
-        <p className={styles.notAvailable}>
-          {!startsAt ? 'Il contest non è ancora stato avviato.' : now < startsAt ? 'Il contest non è ancora iniziato.' : 'Il contest è terminato.'}
-        </p>
+        <>
+          <p className={styles.notAvailable}>
+            {!startsAt ? 'Il contest non è ancora stato avviato.' : now < startsAt ? 'Il contest non è ancora iniziato.' : 'Il contest è terminato.'}
+          </p>
+          {isContestAdmin && !contest.isActive && contest.orderedPOIIds && contest.orderedPOIIds.length > 0 && (
+            <button className={styles.startBtn} onClick={async () => {
+              if (!contestId) return
+              try {
+                const data = await startContest(contestId)
+                setContest(data.item)
+              } catch { /* ignore */ }
+            }}>
+              Avvia il Contest
+            </button>
+          )}
+        </>
       )}
     </div>
   )
