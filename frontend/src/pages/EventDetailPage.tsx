@@ -853,6 +853,24 @@ export function EventDetailPage() {
                       } catch { /* ignore */ }
                     }}>Avvia</button>
                   )}
+                  {contest.isActive && contest.startsAt && (
+                    <button className={styles.dangerBtn} onClick={() => {
+                      setModal({
+                        open: true,
+                        variant: 'confirm',
+                        title: 'Interrompere il contest?',
+                        message: 'Il contest verrà interrotto e potrà essere riavviato.',
+                        danger: true,
+                        onConfirm: async () => {
+                          try {
+                            const data = await updateContest(contest.id, { isActive: false, endsAt: new Date().toISOString() })
+                            setContests((prev) => prev.map((c) => c.id === contest.id ? data.item : c))
+                          } catch { /* ignore */ }
+                          setModal((prev) => ({ ...prev, open: false }))
+                        },
+                      })
+                    }}>Interrompi</button>
+                  )}
                   <button className={styles.textBtn} onClick={async () => {
                     setEditingContestId(contest.id)
                     setContestForm({
