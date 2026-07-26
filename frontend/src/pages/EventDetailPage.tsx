@@ -717,7 +717,13 @@ export function EventDetailPage() {
                     <span>POI disponibili <small style={{ opacity: 0.6 }}>(trascina per aggiungere)</small></span>
                     <div className={styles.poiPool}>
                       {cpois.filter((p) => p.groups.length === 0).length > 0 && (
-                        <div className={styles.poiGroupHeader}>Senza gruppo</div>
+                        <div className={styles.poiGroupHeader}>
+                          Senza gruppo
+                          <button type="button" className={styles.textBtn} style={{ marginLeft: '0.5rem', fontSize: '0.75rem' }} onClick={() => {
+                            const ids = cpois.filter((p) => p.groups.length === 0).map((p) => p.id)
+                            setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, ...ids.filter((id) => !p.orderedPOIIds.includes(id))] }))
+                          }}>Aggiungi</button>
+                        </div>
                       )}
                       {cpois.filter((p) => p.groups.length === 0).map((cpoi) => (
                         <div key={cpoi.id}
@@ -733,7 +739,13 @@ export function EventDetailPage() {
                       ))}
                       {[...new Set(cpois.flatMap((p) => p.groups))].map((group) => (
                         <div key={group}>
-                          <div className={styles.poiGroupHeader}>{group}</div>
+                          <div className={styles.poiGroupHeader}>
+                            {group}
+                            <button type="button" className={styles.textBtn} style={{ marginLeft: '0.5rem', fontSize: '0.75rem' }} onClick={() => {
+                              const ids = cpois.filter((p) => p.groups.includes(group)).map((p) => p.id)
+                              setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, ...ids.filter((id) => !p.orderedPOIIds.includes(id))] }))
+                            }}>Aggiungi</button>
+                          </div>
                           {cpois.filter((p) => p.groups.includes(group)).map((cpoi) => (
                             <div key={cpoi.id}
                               className={styles.poiPoolItem}
