@@ -17,6 +17,7 @@ type ContestData = {
   requireSequence: boolean
   prizes: { label: string; awarded: boolean }[]
   isActive: boolean
+  orderedPOIIds: string[]
 }
 
 type PoiBrief = {
