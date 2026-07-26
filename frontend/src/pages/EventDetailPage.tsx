@@ -678,7 +678,7 @@ export function EventDetailPage() {
                 <div className={styles.poiField}>
                   <span>Prelievo automatico per gruppi</span>
                   <small style={{ opacity: 0.6, display: 'block', marginBottom: '0.25rem' }}>
-                    Se configurato, il backend selezioner&agrave; casualmente N POI da ciascun gruppo. Usa "Aggiungi" per inserire tutti i POI di un gruppo nella lista ordinata.
+                    Configura quanti POI prelevare da ciascun gruppo. "Aggiungi" inserisce N POI casuali per gruppo nella lista ordinata.
                   </small>
                   {(contestForm.pickConfig?.groupPicks ?? []).map((gp, i) => (
                     <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
@@ -698,56 +698,62 @@ export function EventDetailPage() {
                         }}
                         style={{ width: '70px' }}
                       />
-                      <button type="button" className={styles.textBtn} style={{ color: 'var(--color-brand)' }} onClick={() => {
-                        const ids = cpois.filter((p) => p.groups.includes(gp.group)).map((p) => p.id)
-                        setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, ...ids] }))
-                      }}>Aggiungi</button>
                       <button type="button" className={styles.textBtn} onClick={() => {
                         const arr = (contestForm.pickConfig?.groupPicks ?? []).filter((_, j) => j !== i)
                         setContestForm((p) => ({ ...p, pickConfig: arr.length > 0 ? { groupPicks: arr } : null }))
                       }}>&times;</button>
                     </div>
                   ))}
-                  <button type="button" className={styles.textBtn} style={{ marginTop: '0.25rem' }} onClick={() => {
-                    const arr = [...(contestForm.pickConfig?.groupPicks ?? []), { group: '', count: 1 }]
-                    setContestForm((p) => ({ ...p, pickConfig: { groupPicks: arr } }))
-                  }}>+ Aggiungi gruppo</button>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                    <button type="button" className={styles.textBtn} onClick={() => {
+                      const arr = [...(contestForm.pickConfig?.groupPicks ?? []), { group: '', count: 1 }]
+                      setContestForm((p) => ({ ...p, pickConfig: { groupPicks: arr } }))
+                    }}>+ Aggiungi gruppo</button>
+                    {(contestForm.pickConfig?.groupPicks ?? []).length > 0 && (
+                      <button type="button" className={styles.textBtn} style={{ color: 'var(--color-brand)' }} onClick={() => {
+                        const picks = contestForm.pickConfig?.groupPicks ?? []
+                        const newIds: string[] = []
+                        for (const gp of picks) {
+                          if (!gp.group) continue
+                          const pool = cpois.filter((p) => p.groups.includes(gp.group))
+                          const shuffled = [...pool].sort(() => Math.random() - 0.5)
+                          for (let n = 0; n < gp.count; n++) {
+                            const p = shuffled[n % shuffled.length]
+                            if (p) newIds.push(p.id)
+                          }
+                        }
+                        setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, ...newIds] }))
+                      }}>Aggiungi</button>
+                    )}
+                  </div>
                 </div>
               )}
 
               <label className={styles.poiField}>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                   <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                    <span>POI disponibili <small style={{ opacity: 0.6 }}>(trascina per aggiungere)</small></span>
+                    <span>POI disponibili</span>
                     <div className={styles.poiPool}>
                       {cpois.filter((p) => p.groups.length === 0).length > 0 && (
                         <div className={styles.poiGroupHeader}>Senza gruppo</div>
                       )}
                       {cpois.filter((p) => p.groups.length === 0).map((cpoi) => (
-                        <div key={cpoi.id}
-                          className={styles.poiPoolItem}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('text/plain', `poi:${cpoi.id}`)
-                            e.dataTransfer.effectAllowed = 'copy'
-                          }}
-                        >
-                          {cpoi.name}
+                        <div key={cpoi.id} className={styles.poiPoolItem}>
+                          <span className={styles.poiPoolItemName}>{cpoi.name}</span>
+                          <button type="button" className={styles.poiPoolItemAdd} onClick={() => {
+                            setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, cpoi.id] }))
+                          }}>+</button>
                         </div>
                       ))}
                       {[...new Set(cpois.flatMap((p) => p.groups))].map((group) => (
                         <div key={group}>
                           <div className={styles.poiGroupHeader}>{group}</div>
                           {cpois.filter((p) => p.groups.includes(group)).map((cpoi) => (
-                            <div key={cpoi.id}
-                              className={styles.poiPoolItem}
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData('text/plain', `poi:${cpoi.id}`)
-                                e.dataTransfer.effectAllowed = 'copy'
-                              }}
-                            >
-                              {cpoi.name}
+                            <div key={cpoi.id} className={styles.poiPoolItem}>
+                              <span className={styles.poiPoolItemName}>{cpoi.name}</span>
+                              <button type="button" className={styles.poiPoolItemAdd} onClick={() => {
+                                setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, cpoi.id] }))
+                              }}>+</button>
                             </div>
                           ))}
                         </div>
@@ -755,61 +761,17 @@ export function EventDetailPage() {
                     </div>
                   </div>
                   <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                    <span>Ordine POI <small style={{ opacity: 0.6 }}>(trascina per riordinare, &times; per rimuovere)</small></span>
-                    <div
-                      className={styles.poiOrderedList}
-                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-                      onDrop={(e) => {
-                        e.preventDefault()
-                        const raw = e.dataTransfer.getData('text/plain')
-                        if (raw.startsWith('poi:')) {
-                          const poiId = raw.slice(4)
-                          setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, poiId] }))
-                          return
-                        }
-                        if (raw.startsWith('idx:')) {
-                          const fi = Number(raw.slice(4))
-                          if (isNaN(fi)) return
-                          const arr = [...contestForm.orderedPOIIds]
-                          const [removed] = arr.splice(fi, 1)
-                          arr.splice(contestForm.orderedPOIIds.length, 0, removed)
-                          setContestForm((p) => ({ ...p, orderedPOIIds: arr }))
-                        }
-                      }}
-                    >
+                    <span>Ordine POI <small style={{ opacity: 0.6 }}>(&times; per rimuovere)</small></span>
+                    <div className={styles.poiOrderedList}>
                       {contestForm.orderedPOIIds.length === 0 && (
                         <div className={styles.poiOrderedEmpty}>
-                          Trascina qui i POI
+                          Nessun POI selezionato
                         </div>
                       )}
                       {contestForm.orderedPOIIds.map((poiId, idx) => {
                         const poi = cpois.find((p) => p.id === poiId)
                         return (
-                          <div key={`${poiId}-${idx}`}
-                            className={styles.poiOrderedItem}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData('text/plain', `idx:${idx}`)
-                              e.dataTransfer.effectAllowed = 'move'
-                            }}
-                            onDragOver={(e) => {
-                              e.preventDefault()
-                              e.dataTransfer.dropEffect = 'move'
-                            }}
-                            onDrop={(e) => {
-                              e.preventDefault()
-                              const raw = e.dataTransfer.getData('text/plain')
-                              if (raw.startsWith('idx:')) {
-                                e.stopPropagation()
-                                const fi = Number(raw.slice(4))
-                                if (isNaN(fi) || fi === idx) return
-                                const arr = [...contestForm.orderedPOIIds]
-                                const [removed] = arr.splice(fi, 1)
-                                arr.splice(idx, 0, removed)
-                                setContestForm((p) => ({ ...p, orderedPOIIds: arr }))
-                              }
-                            }}
-                          >
+                          <div key={`${poiId}-${idx}`} className={styles.poiOrderedItem}>
                             <span className={styles.poiOrderedItemLabel}>{idx + 1}. {poi?.name || poiId}</span>
                             <button type="button" className={styles.poiOrderedItemRemove}
                               onClick={() => {

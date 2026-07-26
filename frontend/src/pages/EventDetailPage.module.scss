@@ -587,18 +587,33 @@
 }
 
 .poiPoolItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.35rem 0.6rem;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
-  cursor: grab;
-  user-select: none;
+}
 
-  &:active {
-    cursor: grabbing;
-    opacity: 0.6;
-  }
+.poiPoolItemName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poiPoolItemAdd {
+  background: none;
+  border: none;
+  color: var(--color-brand);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
 }
 
 .poiGroupHeader {
@@ -632,13 +647,6 @@
   border: 1px solid var(--color-brand);
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
-  cursor: grab;
-  user-select: none;
-
-  &:active {
-    cursor: grabbing;
-    opacity: 0.6;
-  }
 }
 
 .poiOrderedItemLabel {
