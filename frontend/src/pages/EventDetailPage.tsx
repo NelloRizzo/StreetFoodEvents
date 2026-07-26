@@ -678,7 +678,7 @@ export function EventDetailPage() {
                 <div className={styles.poiField}>
                   <span>Prelievo automatico per gruppi</span>
                   <small style={{ opacity: 0.6, display: 'block', marginBottom: '0.25rem' }}>
-                    Se configurato, il backend selezioner&agrave; casualmente N POI da ciascun gruppo.
+                    Se configurato, il backend selezioner&agrave; casualmente N POI da ciascun gruppo. Usa "Aggiungi" per inserire tutti i POI di un gruppo nella lista ordinata.
                   </small>
                   {(contestForm.pickConfig?.groupPicks ?? []).map((gp, i) => (
                     <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
@@ -698,6 +698,10 @@ export function EventDetailPage() {
                         }}
                         style={{ width: '70px' }}
                       />
+                      <button type="button" className={styles.textBtn} style={{ color: 'var(--color-brand)' }} onClick={() => {
+                        const ids = cpois.filter((p) => p.groups.includes(gp.group)).map((p) => p.id)
+                        setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, ...ids] }))
+                      }}>Aggiungi</button>
                       <button type="button" className={styles.textBtn} onClick={() => {
                         const arr = (contestForm.pickConfig?.groupPicks ?? []).filter((_, j) => j !== i)
                         setContestForm((p) => ({ ...p, pickConfig: arr.length > 0 ? { groupPicks: arr } : null }))
@@ -717,20 +721,14 @@ export function EventDetailPage() {
                     <span>POI disponibili <small style={{ opacity: 0.6 }}>(trascina per aggiungere)</small></span>
                     <div className={styles.poiPool}>
                       {cpois.filter((p) => p.groups.length === 0).length > 0 && (
-                        <div className={styles.poiGroupHeader}>
-                          Senza gruppo
-                          <button type="button" className={styles.textBtn} style={{ marginLeft: '0.5rem', fontSize: '0.75rem' }} onClick={() => {
-                            const ids = cpois.filter((p) => p.groups.length === 0).map((p) => p.id)
-                            setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, ...ids.filter((id) => !p.orderedPOIIds.includes(id))] }))
-                          }}>Aggiungi</button>
-                        </div>
+                        <div className={styles.poiGroupHeader}>Senza gruppo</div>
                       )}
                       {cpois.filter((p) => p.groups.length === 0).map((cpoi) => (
                         <div key={cpoi.id}
                           className={styles.poiPoolItem}
                           draggable
                           onDragStart={(e) => {
-                            e.dataTransfer.setData('text/poi-id', cpoi.id)
+                            e.dataTransfer.setData('text/plain', `poi:${cpoi.id}`)
                             e.dataTransfer.effectAllowed = 'copy'
                           }}
                         >
@@ -739,19 +737,13 @@ export function EventDetailPage() {
                       ))}
                       {[...new Set(cpois.flatMap((p) => p.groups))].map((group) => (
                         <div key={group}>
-                          <div className={styles.poiGroupHeader}>
-                            {group}
-                            <button type="button" className={styles.textBtn} style={{ marginLeft: '0.5rem', fontSize: '0.75rem' }} onClick={() => {
-                              const ids = cpois.filter((p) => p.groups.includes(group)).map((p) => p.id)
-                              setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, ...ids.filter((id) => !p.orderedPOIIds.includes(id))] }))
-                            }}>Aggiungi</button>
-                          </div>
+                          <div className={styles.poiGroupHeader}>{group}</div>
                           {cpois.filter((p) => p.groups.includes(group)).map((cpoi) => (
                             <div key={cpoi.id}
                               className={styles.poiPoolItem}
                               draggable
                               onDragStart={(e) => {
-                                e.dataTransfer.setData('text/poi-id', cpoi.id)
+                                e.dataTransfer.setData('text/plain', `poi:${cpoi.id}`)
                                 e.dataTransfer.effectAllowed = 'copy'
                               }}
                             >
@@ -769,14 +761,14 @@ export function EventDetailPage() {
                       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
                       onDrop={(e) => {
                         e.preventDefault()
-                        const poiId = e.dataTransfer.getData('text/poi-id')
-                        if (poiId) {
-                          setContestForm((p) => ({ ...p, orderedPOIIds: p.orderedPOIIds.includes(poiId) ? p.orderedPOIIds : [...p.orderedPOIIds, poiId] }))
+                        const raw = e.dataTransfer.getData('text/plain')
+                        if (raw.startsWith('poi:')) {
+                          const poiId = raw.slice(4)
+                          setContestForm((p) => ({ ...p, orderedPOIIds: [...p.orderedPOIIds, poiId] }))
                           return
                         }
-                        const fromIdx = e.dataTransfer.getData('text/poi-index')
-                        if (fromIdx) {
-                          const fi = Number(fromIdx)
+                        if (raw.startsWith('idx:')) {
+                          const fi = Number(raw.slice(4))
                           if (isNaN(fi)) return
                           const arr = [...contestForm.orderedPOIIds]
                           const [removed] = arr.splice(fi, 1)
@@ -797,7 +789,7 @@ export function EventDetailPage() {
                             className={styles.poiOrderedItem}
                             draggable
                             onDragStart={(e) => {
-                              e.dataTransfer.setData('text/poi-index', String(idx))
+                              e.dataTransfer.setData('text/plain', `idx:${idx}`)
                               e.dataTransfer.effectAllowed = 'move'
                             }}
                             onDragOver={(e) => {
@@ -806,10 +798,10 @@ export function EventDetailPage() {
                             }}
                             onDrop={(e) => {
                               e.preventDefault()
-                              const fromIdx = e.dataTransfer.getData('text/poi-index')
-                              if (fromIdx) {
+                              const raw = e.dataTransfer.getData('text/plain')
+                              if (raw.startsWith('idx:')) {
                                 e.stopPropagation()
-                                const fi = Number(fromIdx)
+                                const fi = Number(raw.slice(4))
                                 if (isNaN(fi) || fi === idx) return
                                 const arr = [...contestForm.orderedPOIIds]
                                 const [removed] = arr.splice(fi, 1)
