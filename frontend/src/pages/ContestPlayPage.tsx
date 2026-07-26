@@ -213,7 +213,15 @@ export function ContestPlayPage() {
     const isWin = participation?.isWinner === true
     const scannedCount = participation?.scannedPOIIds.length ?? 0
     const totalSlots = contest.orderedPOIIds.length
-    const allScanned = scannedCount === totalSlots
+    const scanCounts = new Map<string, number>()
+    ;(participation?.scannedPOIIds ?? []).forEach((id) => scanCounts.set(id, (scanCounts.get(id) ?? 0) + 1))
+    const allScanned = contest.orderedPOIIds.every((poiId, i) => {
+      let occurrence = 0
+      for (let j = 0; j <= i; j++) {
+        if (contest.orderedPOIIds[j] === poiId) occurrence++
+      }
+      return (scanCounts.get(poiId) ?? 0) >= occurrence
+    })
 
     return (
       <div className={`page-shell ${styles.page}`}>
@@ -312,7 +320,19 @@ export function ContestPlayPage() {
 
         {/* Scan button */}
         {(() => {
-          const allScanned = scannedIds.length === contest.orderedPOIIds.length
+          function countOccurrences(arr: string[], id: string, upTo: number): number {
+            let count = 0
+            for (let j = 0; j <= upTo; j++) {
+              if (arr[j] === id) count++
+            }
+            return count
+          }
+          const scanCounts = new Map<string, number>()
+          scannedIds.forEach((id) => scanCounts.set(id, (scanCounts.get(id) ?? 0) + 1))
+          const allScanned = contest.orderedPOIIds.every((poiId, i) => {
+            const occurrence = countOccurrences(contest.orderedPOIIds, poiId, i)
+            return (scanCounts.get(poiId) ?? 0) >= occurrence
+          })
           if (allScanned) {
             return (
               <button className={styles.scanBtn} onClick={handleComplete}>
@@ -329,17 +349,36 @@ export function ContestPlayPage() {
 
         {/* POI List */}
         {(() => {
+          function countOccurrences(arr: string[], id: string, upTo: number): number {
+            let count = 0
+            for (let j = 0; j <= upTo; j++) {
+              if (arr[j] === id) count++
+            }
+            return count
+          }
+          const scanCounts = new Map<string, number>()
+          scannedIds.forEach((id) => scanCounts.set(id, (scanCounts.get(id) ?? 0) + 1))
+
+          let firstUnfoundIndex = -1
+          const isScannedArr = contest.orderedPOIIds.map((poiId, i) => {
+            const occurrence = countOccurrences(contest.orderedPOIIds, poiId, i)
+            const scans = scanCounts.get(poiId) ?? 0
+            const found = scans >= occurrence
+            if (!found && firstUnfoundIndex === -1) firstUnfoundIndex = i
+            return found
+          })
+
           const toFind: { poiId: string; index: number }[] = []
           const found: { poiId: string; index: number }[] = []
           contest.orderedPOIIds.forEach((poiId, i) => {
             const entry = { poiId, index: i }
-            if (i < scannedIds.length) found.push(entry)
+            if (isScannedArr[i]) found.push(entry)
             else toFind.push(entry)
           })
           const renderPoiEntry = (poiId: string, index: number) => {
             const poi = pois.find(p => p.id === poiId)
-            const isScanned = index < scannedIds.length
-            const isNext = index === scannedIds.length
+            const isScanned = isScannedArr[index]
+            const isNext = index === firstUnfoundIndex
             return (
               <div
                 key={`${poiId}-${index}`}
