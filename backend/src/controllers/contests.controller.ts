@@ -657,10 +657,14 @@ async function getContestPoiQrCodes(req: Request, res: Response) {
         return res.status(404).json({ message: 'Contest not found' });
     }
 
-    const pois = await ContestPOIModel.find({ _id: { $in: contest.orderedPOIIds } }).sort({ sequenceOrder: 1 });
+    const uniquePoiIds = [...new Set(contest.orderedPOIIds.map((id) => id.toString()))];
+    const pois = await ContestPOIModel.find({ _id: { $in: uniquePoiIds } });
+    const poiMap = new Map(pois.map((p) => [p._id.toString(), p]));
     const origin = `${req.protocol}://${req.get('host')}`;
 
-    const items = await Promise.all(pois.map(async (poi) => {
+    const items = await Promise.all(uniquePoiIds.map(async (id) => {
+        const poi = poiMap.get(id);
+        if (!poi) return null;
         const scanUrl = `${origin}/contest/${contestId}/play?poi=${poi._id}`;
         const qrCode = await qrcode.toDataURL(scanUrl, QR_OPTIONS);
         return {
@@ -670,7 +674,7 @@ async function getContestPoiQrCodes(req: Request, res: Response) {
         };
     }));
 
-    return res.status(200).json({ items });
+    return res.status(200).json({ items: items.filter(Boolean) });
 }
 
 // ── Leaderboard ──
