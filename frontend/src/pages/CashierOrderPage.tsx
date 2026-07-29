@@ -259,7 +259,7 @@ export function CashierOrderPage() {
           quantity: i.quantity,
           notes: i.notes || undefined,
         })),
-        paymentOnCreate: effectiveCredit > 0 ? { creditAmount: effectiveCredit } : undefined,
+        paymentOnCreate: { creditAmount: effectiveCredit },
       })
       await updateOrderStatus(response.item.id, 'preparing')
       resetOrder()
