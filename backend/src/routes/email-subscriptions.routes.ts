@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import {
+    exportCsv,
     listSubscriptions,
     subscribe,
     unsubscribe,
@@ -21,6 +22,13 @@ emailSubscriptionsRouter.get(
     asyncHandler(authMiddleware),
     asyncHandler(hasRole(['platform-admin'])),
     asyncHandler(listSubscriptions)
+);
+
+emailSubscriptionsRouter.get(
+    '/export/csv',
+    asyncHandler(authMiddleware),
+    asyncHandler(hasRole(['platform-admin'])),
+    asyncHandler(exportCsv)
 );
 
 emailSubscriptionsRouter.delete(

@@ -105,7 +105,7 @@ export async function unsubscribeByEmail(req: Request, res: Response) {
 }
 
 export async function listSubscriptions(req: Request, res: Response) {
-    const { eventId, isActive, search } = req.query;
+    const { eventId, isActive, marketingConsent, search } = req.query;
 
     const filter: Record<string, unknown> = {};
 
@@ -115,6 +115,9 @@ export async function listSubscriptions(req: Request, res: Response) {
 
     if (isActive === 'true') filter.isActive = true;
     else if (isActive === 'false') filter.isActive = false;
+
+    if (marketingConsent === 'true') filter.marketingConsent = true;
+    else if (marketingConsent === 'false') filter.marketingConsent = false;
 
     if (search && typeof search === 'string') {
         filter.email = { $regex: search, $options: 'i' };
@@ -141,4 +144,56 @@ export async function listSubscriptions(req: Request, res: Response) {
             totalPages: Math.ceil(total / limit)
         }
     });
+}
+
+export async function exportCsv(req: Request, res: Response) {
+    const { eventId, isActive, marketingConsent, search } = req.query;
+
+    const filter: Record<string, unknown> = {};
+
+    if (eventId && isValidObjectId(eventId as string)) {
+        filter.eventId = eventId;
+    }
+
+    if (isActive === 'true') filter.isActive = true;
+    else if (isActive === 'false') filter.isActive = false;
+
+    if (marketingConsent === 'true') filter.marketingConsent = true;
+    else if (marketingConsent === 'false') filter.marketingConsent = false;
+
+    if (search && typeof search === 'string') {
+        filter.email = { $regex: search, $options: 'i' };
+    }
+
+    const subscriptions = await EmailSubscriptionModel.find(filter)
+        .sort({ createdAt: -1 })
+        .lean();
+
+    const header = 'email,displayName,eventId,source,marketingConsent,consentTimestamp,isActive,unsubscribedAt,createdAt,updatedAt';
+    const rows = subscriptions.map((s) => {
+        const escape = (v: unknown) => {
+            const str = v?.toString() ?? '';
+            return str.includes(',') || str.includes('"') || str.includes('\n')
+                ? `"${str.replace(/"/g, '""')}"`
+                : str;
+        };
+        return [
+            escape(s.email),
+            escape(s.displayName),
+            escape(s.eventId?.toString()),
+            escape(s.source),
+            escape(s.marketingConsent),
+            escape(s.consentTimestamp?.toISOString()),
+            escape(s.isActive),
+            escape(s.unsubscribedAt?.toISOString()),
+            escape(s.createdAt?.toISOString()),
+            escape(s.updatedAt?.toISOString()),
+        ].join(',');
+    });
+
+    const csv = [header, ...rows].join('\r\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="email-subscriptions-${new Date().toISOString().slice(0, 10)}.csv"`);
+    return res.status(200).send(csv);
 }
