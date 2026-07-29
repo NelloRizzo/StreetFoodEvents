@@ -220,7 +220,7 @@ export function StandOrdersPage() {
           <div className={styles.reportCard}>
             <div className={styles.reportHeader}>
               <span className={styles.reportTitle}>Riepilogo</span>
-              <span className={styles.reportPeriod}>{startDate} &rarr; {endDate}</span>
+              <span className={styles.reportPeriod}>{new Date(startDate + 'T00:00:00').toLocaleDateString('it-IT')} &rarr; {new Date(endDate + 'T00:00:00').toLocaleDateString('it-IT')}</span>
             </div>
             <div className={styles.reportStats}>
               <div className={styles.reportStat}>
