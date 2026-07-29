@@ -21,7 +21,7 @@ type Subscription = {
 export function EmailSubscriptionsPage() {
   const { user } = useAuth()
   const [items, setItems] = useState<Subscription[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [, setIsLoading] = useState(true)
   const [filterActive, setFilterActive] = useState('')
   const [filterConsent, setFilterConsent] = useState('')
   const [search, setSearch] = useState('')

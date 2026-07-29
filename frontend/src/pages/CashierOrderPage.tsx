@@ -347,7 +347,6 @@ export function CashierOrderPage() {
             <h2 className={styles.ordersTitle}>Ordini in corso</h2>
             <div className={styles.ordersList}>
               {activeOrders.map((o) => {
-                const collected = o.items.reduce((s, i) => s + (i.ready ? i.subtotal : 0), 0)
                 return (
                   <div key={o.id} className={styles.orderCard}>
                     <div className={styles.orderCardHeader}>
