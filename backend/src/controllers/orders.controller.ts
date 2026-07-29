@@ -96,7 +96,14 @@ export async function listOrders(req: Request, res: Response) {
 
     if (req.query.eventId) filter.eventId = req.query.eventId;
     if (req.query.standId) filter.standId = req.query.standId;
-    if (req.query.status) filter.status = req.query.status;
+    if (req.query.status) {
+        const statuses = (req.query.status as string).split(',').map((s) => s.trim()).filter(Boolean);
+        if (statuses.length === 1) {
+            filter.status = statuses[0];
+        } else if (statuses.length > 1) {
+            filter.status = { $in: statuses };
+        }
+    }
     if (req.query.userId) filter.userId = req.query.userId;
     if (req.query.customerId) filter.customerId = req.query.customerId;
     if (req.query.stationId && Types.ObjectId.isValid(req.query.stationId as string)) {
@@ -140,7 +147,14 @@ export async function listMyStationOrders(req: Request, res: Response) {
 
     if (req.query.eventId) filter.eventId = req.query.eventId;
     if (req.query.standId) filter.standId = req.query.standId;
-    if (req.query.status) filter.status = req.query.status;
+    if (req.query.status) {
+        const statuses = (req.query.status as string).split(',').map((s) => s.trim()).filter(Boolean);
+        if (statuses.length === 1) {
+            filter.status = statuses[0];
+        } else if (statuses.length > 1) {
+            filter.status = { $in: statuses };
+        }
+    }
 
     filter['items.stationId'] = { $in: stationIds };
 

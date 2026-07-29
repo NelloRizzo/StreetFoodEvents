@@ -26,6 +26,7 @@ import { eventPhotosRouter } from './routes/event-photos.routes';
 import { framesRouter } from './routes/frames.routes';
 import { poisRouter } from './routes/pois.routes';
 import { contestsRouter } from './routes/contests.routes';
+import { emailSubscriptionsRouter } from './routes/email-subscriptions.routes';
 import { exchangeRouter } from './routes/exchange.routes';
 import { usageContractsRouter } from './routes/usage-contracts.routes';
 
@@ -88,6 +89,7 @@ app.use('/api/usage-contracts', usageContractsRouter);
 app.use('/api/pois', poisRouter);
 app.use('/api/contests', contestsRouter);
 app.use('/api/exchange', exchangeRouter);
+app.use('/api/email-subscriptions', emailSubscriptionsRouter);
 app.use('/api/aliases', aliasesRouter);
 app.use('/api/resolve', resolveRouter);
 app.use('/api/frames', framesRouter);

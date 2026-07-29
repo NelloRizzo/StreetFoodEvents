@@ -106,3 +106,16 @@ Considerazioni progettuali e decisioni architetturali.
 - **Completion check**: `scannedPOIIds.length === orderedPOIIds.length` (conta totale, non unici). Il backend `completeParticipation` usa questo check.
 - **Backend `registerScan`**: prima di push, verifica che `scannedCount < orderedCount` per quel POI ID. Se `scannedCount >= orderedCount`, errore "All occurrences already scanned".
 - **Frontend griglia**: mostra tutti gli `orderedPOIIds` (inclusi duplicati), con i POI trovati spostati in fondo e separati da un divider.
+
+## Email Subscription System (Jul 2026)
+- **Modello `EmailSubscription`**: archivia email per comunicazioni future. `email` indicizzato, `eventId` opzionale. `marketingConsent` separato dal consenso all'invio foto.
+- **UPSERT per email**: `EmailSubscriptionModel.findOneAndUpdate` con `{ upsert: true }` sulla chiave email. Una sola entry per email, aggiornata a ogni nuovo consenso.
+- **API pubblica**: `POST /api/email-subscriptions` non richiede auth (subscribe da qualsiasi contesto). `GET /` e `DELETE /:id` richiedono `platform-admin`.
+- **Consenso tracciato**: `consentTimestamp`, `consentIp`, `source` ('photo-email'|'manual'|'event-registration') permettono di dimostrare la raccolta del consenso.
+
+## Cashier Order Flow — Bug noto (Jul 2026)
+- **Due pagine cassa**: `CashierOrderPage` (stand-level, `/events/:eventId/stands/:standId/order`) e `EventCashierPage` (event-level, `/events/:eventId/cashier`). Condividono `CashierOrderPage.module.scss` ma hanno logica diversa.
+- **Problema**: `CashierOrderPage.handleSubmit` creava l'ordine senza avanzare a `preparing`, a differenza di `EventCashierPage`. L'ordine restava bloccato a `confirmed`/`pending`.
+- **Fix**: aggiunto `updateOrderStatus(response.item.id, 'preparing')` in `CashierOrderPage.handleSubmit`.
+- **Filtro ordini**: `CashierOrderPage.loadActiveOrders` ora usa `status: 'preparing,ready'`. Backend `listOrders` supporta comma-separated per `?status=` → converte in `$in`.
+- **Cosa NON fare**: non dare per scontato che due pagine simili abbiano la stessa logica di flusso ordini. Verificare sempre lo stato dopo la creazione.

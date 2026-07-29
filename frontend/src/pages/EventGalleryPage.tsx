@@ -36,14 +36,18 @@ export function EventGalleryPage() {
   const [emailSent, setEmailSent] = useState(false)
   const [emailError, setEmailError] = useState('')
 
-  const handleSendEmail = useCallback(async (to: string) => {
+  const [marketingConsent, setMarketingConsent] = useState(false)
+
+  const handleSendEmail = useCallback(async (to: string, consent?: boolean) => {
     if (!eventId || !emailModalPhoto || emailSending) return
     setEmailSending(true)
     setEmailError('')
+    const hasConsent = consent ?? marketingConsent
+    setMarketingConsent(hasConsent)
     try {
       await apiRequest(`/events/${eventId}/photos/${emailModalPhoto.id}/send-email`, {
         method: 'POST',
-        body: JSON.stringify({ email: to }),
+        body: JSON.stringify({ email: to, marketingConsent: hasConsent }),
         headers: { 'Content-Type': 'application/json' },
       })
       setEmailSent(true)
@@ -54,7 +58,7 @@ export function EventGalleryPage() {
     } finally {
       setEmailSending(false)
     }
-  }, [eventId, emailModalPhoto, emailSending])
+  }, [eventId, emailModalPhoto, emailSending, marketingConsent])
 
   const themeData = eventId
     ? { themeBrand: null, themeText: null, themeSurface: null, themeHighlight: null }
@@ -358,11 +362,13 @@ export function EventGalleryPage() {
         variant={emailSent ? 'alert' : 'prompt'}
         confirmLabel={emailSent ? 'OK' : emailSending ? 'Invio...' : 'Invia'}
         cancelLabel="Annulla"
-        onConfirm={(to) => {
+        showConsent={!emailSent}
+        consentLabel="Acconsento al trattamento dei miei dati per ricevere comunicazioni promozionali e aggiornamenti sugli eventi. Informativa privacy disponibile nella sezione dedicata."
+        onConfirm={(to, consent) => {
           if (emailSent) {
             setEmailModalPhoto(null)
           } else if (to) {
-            handleSendEmail(to)
+            handleSendEmail(to, consent)
           }
         }}
         onCancel={() => {

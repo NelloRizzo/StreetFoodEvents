@@ -126,7 +126,7 @@ export function CashierOrderPage() {
   const loadActiveOrders = useCallback(async () => {
     if (!eventId || !standId) return
     try {
-      const data = await fetchOrders({ eventId, standId, status: 'ready' })
+      const data = await fetchOrders({ eventId, standId, status: 'preparing,ready' })
       setActiveOrders(data.items)
     } catch { /* ignore */ }
   }, [eventId, standId])
@@ -248,7 +248,7 @@ export function CashierOrderPage() {
     setIsSubmitting(true)
     try {
       const effectiveCredit = payWithCredits ? Math.min(creditAmount || total, total) : 0
-      await createOrder({
+      const response = await createOrder({
         eventId: eventId!,
         standId: standId!,
         customerId: !isDirectOrder && selectedCustomerId ? selectedCustomerId : undefined,
@@ -261,6 +261,7 @@ export function CashierOrderPage() {
         })),
         paymentOnCreate: effectiveCredit > 0 ? { creditAmount: effectiveCredit } : undefined,
       })
+      await updateOrderStatus(response.item.id, 'preparing')
       resetOrder()
     } catch (e) {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
@@ -343,7 +344,7 @@ export function CashierOrderPage() {
 
         {activeOrders.length > 0 && (
           <div className={styles.ordersPanel}>
-            <h2 className={styles.ordersTitle}>Ordini pronti</h2>
+            <h2 className={styles.ordersTitle}>Ordini in corso</h2>
             <div className={styles.ordersList}>
               {activeOrders.map((o) => {
                 const collected = o.items.reduce((s, i) => s + (i.ready ? i.subtotal : 0), 0)

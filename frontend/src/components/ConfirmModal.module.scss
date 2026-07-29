@@ -71,3 +71,20 @@
   margin-bottom: 0.75rem;
   box-sizing: border-box;
 }
+
+.consentLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  line-height: 1.4;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+}
+
+.consentCheckbox {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  cursor: pointer;
+}

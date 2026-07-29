@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
+import { EmailSubscriptionModel } from '../models/email-subscription.model';
 import { EventModel } from '../models/event.model';
 import { EventPhotoModel } from '../models/event-photo.model';
 import { deleteImage } from '../services/cloudinary-upload.service';
@@ -131,7 +132,7 @@ export async function sendEventPhotoEmail(req: Request, res: Response) {
         return res.status(400).json({ message: 'Invalid id' });
     }
 
-    const { email } = req.body;
+    const { email, marketingConsent } = req.body;
     if (!email || typeof email !== 'string' || !email.includes('@')) {
         return res.status(400).json({ message: 'Invalid email address' });
     }
@@ -155,6 +156,25 @@ export async function sendEventPhotoEmail(req: Request, res: Response) {
         const message = err instanceof Error ? err.message : 'Errore sconosciuto';
         return res.status(500).json({ message });
     }
+
+    await EmailSubscriptionModel.findOneAndUpdate(
+        { email: email.toLowerCase().trim() },
+        {
+            $set: {
+                email: email.toLowerCase().trim(),
+                eventId,
+                source: 'photo-email',
+                marketingConsent: !!marketingConsent,
+                consentTimestamp: new Date(),
+                consentIp: req.ip ?? null,
+                isActive: true,
+                unsubscribedAt: null
+            }
+        },
+        { upsert: true, new: true }
+    ).catch((err) => {
+        console.error('[sendEventPhotoEmail] failed to record subscription:', err);
+    });
 
     return res.status(200).json({ message: 'Email sent' });
 }

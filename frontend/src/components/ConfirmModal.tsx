@@ -7,10 +7,12 @@ type Props = {
   message: string
   confirmLabel?: string
   cancelLabel?: string
-  onConfirm?: (promptValue?: string) => void
+  onConfirm?: (promptValue?: string, consent?: boolean) => void
   onCancel?: () => void
   variant?: 'confirm' | 'alert' | 'prompt'
   danger?: boolean
+  showConsent?: boolean
+  consentLabel?: string
 }
 
 export function ConfirmModal({
@@ -23,11 +25,14 @@ export function ConfirmModal({
   onCancel,
   variant = 'confirm',
   danger = false,
+  showConsent = false,
+  consentLabel = '',
 }: Props) {
   const [promptValue, setPromptValue] = useState('')
+  const [consentGiven, setConsentGiven] = useState(false)
 
   useEffect(() => {
-    if (open) setPromptValue('')
+    if (open) { setPromptValue(''); setConsentGiven(false) }
   }, [open])
 
   useEffect(() => {
@@ -55,6 +60,17 @@ export function ConfirmModal({
             autoFocus
           />
         )}
+        {showConsent && variant === 'prompt' && (
+          <label className={styles.consentLabel}>
+            <input
+              type="checkbox"
+              checked={consentGiven}
+              onChange={(e) => setConsentGiven(e.target.checked)}
+              className={styles.consentCheckbox}
+            />
+            {consentLabel}
+          </label>
+        )}
         <div className={styles.actions}>
           {variant !== 'alert' && (
             <button className={styles.cancelBtn} onClick={onCancel}>
@@ -63,7 +79,7 @@ export function ConfirmModal({
           )}
           <button
             className={`${styles.confirmBtn} ${danger ? styles.dangerBtn : ''}`}
-            onClick={() => onConfirm?.(variant === 'prompt' ? promptValue : undefined)}
+            onClick={() => onConfirm?.(variant === 'prompt' ? promptValue : undefined, variant === 'prompt' ? consentGiven : undefined)}
             autoFocus={variant !== 'prompt'}
           >
             {confirmLabel}

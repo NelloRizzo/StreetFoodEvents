@@ -376,7 +376,31 @@ Tutte le feature implementate, in ordine cronologico.
 - [x] Frontend: schermata finale usa conteggio slot totali (non unici) per "Hai trovato X di Y POI"
 - [x] SCSS: `.poiNext` (bordo brand + glow), `.poiDivider` (separatore trovati/da trovare)
 
+### Email subscription + GDPR consent (Jul 2026)
+- [x] Modello `EmailSubscription` (email, eventId, marketingConsent, source, isActive, consentTimestamp, consentIp)
+- [x] API CRUD: `POST /api/email-subscriptions` (subscribe pubblico), `GET /` (admin paginato), `DELETE /:id` (unsubscribe admin), `POST /unsubscribe` (by email)
+- [x] `sendEventPhotoEmail` registra l'email con consenso marketing dopo l'invio (upsert)
+- [x] `ConfirmModal`: nuova prop `showConsent` + `consentLabel` per checkbox privacy
+- [x] `EventGalleryPage`: checkbox consenso nel modale email, invia `marketingConsent` alla API
+- [x] Documento `docs/INFORMATIVA_PRIVACY_EMAIL.md` — informativa GDPR + modulo di consenso firmabile
+
+### Bug fix: ordine non visibile in cassa (Jul 2026)
+- [x] Backend `listOrders` / `listMyStationOrders`: supporto `?status=preparing,ready` (comma-separated → `$in`)
+- [x] `CashierOrderPage.handleSubmit`: ora avanza l'ordine a `preparing` dopo la creazione
+- [x] `CashierOrderPage.loadActiveOrders`: ora mostra ordini `preparing` E `ready`
+- [x] Titolo pannello cambiato da "Ordini pronti" a "Ordini in corso"
+
 ## Session History
+
+### Email subscription + GDPR consent (Jul 2026)
+- **Problema**: le email inserite per l'invio foto non venivano salvate, impossibile inviare promozioni future. Nessun consenso GDPR tracciato.
+- **Soluzione**: nuovo modello `EmailSubscription` con upsert su email. `sendEventPhotoEmail` ora registra automaticamente l'email dopo l'invio. Frontend: checkbox "Acconsento al trattamento..." nel modale email della galleria.
+- **Documento privacy**: `docs/INFORMATIVA_PRIVACY_EMAIL.md` con informativa completa Art. 13 GDPR e modulo di consenso firmabile dal titolare dell'email.
+
+### Bug fix: ordine non visibile in cassa (Jul 2026)
+- **Problema**: l'addetto al ritiro creava un ordine su `CashierOrderPage`, ma non lo vedeva nell'elenco "Ordini pronti". Due cause: (1) `handleSubmit` non avanzava lo stato a `preparing` dopo la creazione (a differenza di `EventCashierPage`); (2) `loadActiveOrders` filtrava solo `status: 'ready'`.
+- **Soluzione**: aggiunto `updateOrderStatus(orderId, 'preparing')` in `handleSubmit`. `loadActiveOrders` ora filtra con `status: 'preparing,ready'`. Backend: `listOrders` e `listMyStationOrders` supportano comma-separated per filtrare più stati contemporaneamente.
+- **Lesson learned**: due pagine cassa (`CashierOrderPage` e `EventCashierPage`) avevano logica di creazione ordine diversa. Ora sono allineate.
 
 ### Contest: POI duplicati in orderedPOIIds (Jul 2026)
 - **Problema**: `orderedPOIIds` può contenere duplicati (es. stesso POI 3 volte = 15 slot, 3 unici). Il codice precedente deduplicava ovunque, causando:

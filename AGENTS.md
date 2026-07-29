@@ -140,6 +140,14 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | PATCH | `/api/contests/:contestId/participation/:participantId/award` | contest-admin / platform-admin | Consegna premio |
 | GET | `/api/contests/:contestId/poi-qrcodes` | contest-admin / platform-admin | QR code per ogni POI del contest |
 
+### API routes — Email Subscriptions
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| POST | `/api/email-subscriptions` | no | Subscribe (crea/aggiorna consenso per email) |
+| POST | `/api/email-subscriptions/unsubscribe` | no | Disiscrizione by email |
+| GET | `/api/email-subscriptions` | platform-admin | Lista iscrizioni (paginata, filtrabile per eventId/isActive/search) |
+| DELETE | `/api/email-subscriptions/:id` | platform-admin | Cancella iscrizione |
+
 ## Frontend (`frontend/`)
 
 React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
@@ -169,13 +177,14 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
-## Session state (Jul 2026 — contest duplicate POIs + occurrence-based marking)
+## Session state (Jul 2026 — email subscription + fix cassa ordini)
 ### Completed
-- `registerScan`: allows scanning same POI multiple times (up to `orderedCount` in `orderedPOIIds`)
-- `registerScan`: sequence check uses `orderedPOIIds[scannedPOIIds.length]` (full array, not deduplicated)
-- `completeParticipation`: check `scannedPOIIds.length === orderedPOIIds.length` (total slots, not unique)
-- Frontend POI grid: shows all `orderedPOIIds` including duplicates, occurrence-based marking
-- Frontend: scan button moved above POI grid, found POIs at bottom with divider
-- Frontend: highlight next POI to scan (brand border + glow background)
-- Frontend: finished screen uses total slot count for "Hai trovato X di Y POI"
-- SCSS: `.poiNext`, `.poiDivider` styles
+- EmailSubscription model + CRUD API (pubblica subscribe, admin list/delete)
+- `sendEventPhotoEmail` registra email + consenso marketing dopo invio
+- ConfirmModal: checkbox consenso privacy per prompt mode
+- EventGalleryPage: consenso marketing nel modale email
+- docs/INFORMATIVA_PRIVACY_EMAIL.md (GDPR + modulo firmabile)
+- `listOrders` / `listMyStationOrders`: supporto comma-separated per `?status=`
+- `CashierOrderPage`: ordine avanza a `preparing` dopo creazione
+- `CashierOrderPage`: mostra ordini `preparing` + `ready` (non solo `ready`)
+- BUG: due pagine cassa (`CashierOrderPage` e `EventCashierPage`) avevano logica diversa — allineata
