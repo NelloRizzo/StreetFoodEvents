@@ -362,12 +362,14 @@ export function CashierOrderPage() {
                         </span>
                       ))}
                     </div>
-                    {collected < o.total && (
-                      <span className={styles.orderProgress}>Raccolti &euro;{collected.toFixed(2)} / &euro;{o.total.toFixed(2)}</span>
+                    {o.status === 'preparing' && (
+                      <span className={styles.orderProgress}>In preparazione</span>
                     )}
-                    <button className={styles.deliverBtn} onClick={() => handleDeliver(o.id)}>
-                      Consegna
-                    </button>
+                    {o.status === 'ready' && (
+                      <button className={styles.deliverBtn} onClick={() => handleDeliver(o.id)}>
+                        Consegna
+                      </button>
+                    )}
                   </div>
                 )
               })}

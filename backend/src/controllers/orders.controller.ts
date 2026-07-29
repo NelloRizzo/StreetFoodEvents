@@ -491,8 +491,8 @@ export async function updateOrderStatus(req: Request, res: Response) {
     }
 
     const validTransitions: Record<string, string[]> = {
-        pending: ['confirmed', 'cancelled'],
-        confirmed: ['preparing', 'cancelled'],
+        pending: ['confirmed', 'completed', 'cancelled'],
+        confirmed: ['preparing', 'completed', 'cancelled'],
         preparing: ['ready'],
         ready: ['completed'],
         completed: [],
@@ -517,6 +517,18 @@ export async function updateOrderStatus(req: Request, res: Response) {
     if (status === 'ready') {
         for (const item of order.items) {
             item.ready = true;
+        }
+    }
+
+    // Skip to completed: mark all items ready and auto-pay if pending
+    if (status === 'completed') {
+        for (const item of order.items) {
+            item.ready = true;
+        }
+        if (order.paymentStatus === 'unpaid') {
+            order.paymentStatus = 'paid';
+            order.paidAt = new Date();
+            if (req.user?.id) order.performedByUserId = req.user.id as never;
         }
     }
 

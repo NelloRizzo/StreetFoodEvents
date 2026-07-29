@@ -642,7 +642,7 @@ describe('Orders API', () => {
         const res = await request(app)
             .patch(`/api/orders/${orderId}/status`)
             .set('Cookie', `sid=${sessionToken}`)
-            .send({ status: 'completed' });
+            .send({ status: 'preparing' });
 
         expect(res.status).toBe(400);
     });
