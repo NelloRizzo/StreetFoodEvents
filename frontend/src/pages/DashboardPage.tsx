@@ -283,6 +283,17 @@ export function DashboardPage() {
                         <span className={styles.standBlockName}>{s.name}</span>
                         <span className={styles.manageHint}>Gestisci ordini</span>
                       </Link>
+                      {s.eventIds.length > 0 && (
+                        <Link
+                          to={`/events/${s.eventIds[0]}/stands/${s.id}/ordersqueue`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.displayLink}
+                        >
+                          <span className={styles.stationChipIcon}>&#128065;</span>
+                          Postazione clienti
+                        </Link>
+                      )}
                       {standStations.length > 0 && (
                         <div className={styles.stationList}>
                           {standStations.map((st) => (
