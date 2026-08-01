@@ -291,7 +291,7 @@ export function DashboardPage() {
                           className={styles.displayLink}
                         >
                           <span className={styles.stationChipIcon}>&#128065;</span>
-                          Postazione clienti
+                          Coda Ordini
                         </Link>
                       )}
                       {standStations.length > 0 && (

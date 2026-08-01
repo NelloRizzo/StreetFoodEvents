@@ -170,7 +170,7 @@ export function StandOrdersPage() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Postazione clienti
+                Coda Ordini
               </Link>
             )}
             <div className={styles.dateGroup}>

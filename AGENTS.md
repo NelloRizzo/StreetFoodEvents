@@ -93,7 +93,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 ### Frontend — Stand display route
 | Route | Element | Description |
 |---|---|---|
-| `/events/:eventId/stands/:standId/ordersqueue` | StandDisplayPage | Postazione clienti: display fullscreen pubblico ordini in lavorazione (auto-refresh 5s) |
+| `/events/:eventId/stands/:standId/ordersqueue` | StandDisplayPage | Coda Ordini: display fullscreen pubblico ordini in lavorazione (auto-refresh 5s) |
 
 ### Frontend — Exchange route
 | Route | Element | Description |
@@ -108,7 +108,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 ### API routes — Orders
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| GET | `/api/orders/stand/:standId/ordersqueue` | no | Postazione clienti: ordini confirmed/preparing/ready (minimi dati, niente prezzi/clienti) |
+| GET | `/api/orders/stand/:standId/ordersqueue` | no | Coda Ordini: ordini confirmed/preparing/ready (minimi dati, niente prezzi/clienti) |
 | GET | `/api/orders` | auth | Lista ordini (filtri eventId, standId, status comma-separated, userId, customerId, stationId, date) |
 
 ### API routes — Reports
@@ -193,7 +193,7 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - Endpoint pubblico `GET /api/orders/stand/:standId/ordersqueue` (confirmed/preparing/ready, minimi dati: niente prezzi, nomi clienti o pagamenti)
 - `StandDisplayPage` fullscreen pubblico su `/events/:eventId/stands/:standId/ordersqueue` (polling 5s, avanzamento articoli per postazione, badge "Pronto")
 - `hideChrome` in AppLayout include le route `/display` (navbar e footer nascosti)
-- Link "Postazione clienti" (nuova tab) nella header di `StandOrdersPage`
+- Link "Coda Ordini" (nuova tab) nella header di `StandOrdersPage` e nella dashboard operatore
 - Helper `fetchStandDisplayOrders` in `frontend/src/lib/orders.ts`
 - Test backend: filtro stati, esclusione pending/completed, 404 stand inesistente
 - I comandi display NON sono protetti: la route è registrata PRIMA di `authMiddleware` in `orders.routes.ts`

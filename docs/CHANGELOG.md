@@ -7,7 +7,7 @@ Tutte le feature implementate, in ordine cronologico.
 - Contest: caccia ai POI con QR code, partecipazione anonima, ruoli contest-admin.
 
 ## Agosto 2026
-- Postazione clienti per stand: display pubblico fullscreen degli ordini in lavorazione (confirmed/preparing/ready) con avanzamento articoli per postazione, polling ogni 5s. Route: `/events/:eventId/stands/:standId/ordersqueue`.
+- Coda Ordini per stand: display pubblico fullscreen degli ordini in lavorazione (confirmed/preparing/ready) con avanzamento articoli per postazione, polling ogni 5s. Route: `/events/:eventId/stands/:standId/ordersqueue`.
 
 ## Feature Checklist
 
