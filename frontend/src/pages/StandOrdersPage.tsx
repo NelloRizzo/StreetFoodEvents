@@ -163,6 +163,16 @@ export function StandOrdersPage() {
             <Link className={styles.primaryBtn} to={newOrderLink}>
               Nuovo ordine
             </Link>
+            {urlEventId && (
+              <Link
+                className={styles.secondaryBtn}
+                to={`/events/${urlEventId}/stands/${standId}/ordersqueue`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Postazione clienti
+              </Link>
+            )}
             <div className={styles.dateGroup}>
               <label className={styles.dateLabel}>Da</label>
               <input

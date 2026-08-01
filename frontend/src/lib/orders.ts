@@ -203,3 +203,30 @@ export function fetchEventReport(eventId: string, startDate?: string, endDate?: 
   const qs = params.toString()
   return apiRequest<EventReport>(`/orders/report/event/${eventId}${qs ? `?${qs}` : ''}`)
 }
+
+export type StandDisplayOrderItem = {
+  productName: string
+  quantity: number
+  stationName: string
+  ready: boolean
+}
+
+export type StandDisplayOrder = {
+  id: string
+  orderNumber: number
+  status: string
+  items: StandDisplayOrderItem[]
+}
+
+export type StandDisplayData = {
+  standId: string
+  standName: string
+  items: StandDisplayOrder[]
+}
+
+export function fetchStandDisplayOrders(standId: string, eventId?: string) {
+  const params = new URLSearchParams()
+  if (eventId) params.set('eventId', eventId)
+  const qs = params.toString()
+  return apiRequest<StandDisplayData>(`/orders/stand/${standId}/ordersqueue${qs ? `?${qs}` : ''}`)
+}

@@ -20,6 +20,7 @@ import { EventDetailPage } from './pages/EventDetailPage'
 import { EventStandMenuPage } from './pages/EventStandMenuPage'
 import { StandDetailPage } from './pages/StandDetailPage'
 import { StandOrdersPage } from './pages/StandOrdersPage'
+import { StandDisplayPage } from './pages/StandDisplayPage'
 import { StationQueuePage } from './pages/StationQueuePage'
 import { ThemePreviewPage } from './pages/ThemePreviewPage'
 import { UsersPage } from './pages/UsersPage'
@@ -83,6 +84,10 @@ export const router = createBrowserRouter([
       {
         path: 'events/:eventId/stands/:standId',
         element: <EventStandMenuPage />,
+      },
+      {
+        path: 'events/:eventId/stands/:standId/ordersqueue',
+        element: <StandDisplayPage />,
       },
       {
         path: 'theme-preview',

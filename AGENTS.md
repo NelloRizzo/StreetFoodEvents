@@ -90,6 +90,11 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | `/events/:eventId/galleria` | EventGalleryPage | Galleria foto con stampa e selezione |
 | `/events/:eventId/slideshow` | SlideshowPage | Slideshow automatico con rotazione e cornici |
 
+### Frontend — Stand display route
+| Route | Element | Description |
+|---|---|---|
+| `/events/:eventId/stands/:standId/ordersqueue` | StandDisplayPage | Postazione clienti: display fullscreen pubblico ordini in lavorazione (auto-refresh 5s) |
+
 ### Frontend — Exchange route
 | Route | Element | Description |
 |---|---|---|
@@ -99,6 +104,12 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | Route | Element | Description |
 |---|---|---|
 | Richieste API gestite da `EventDetailPage.tsx` nelle sezioni Contest POI, poi create/edit contest | | |
+
+### API routes — Orders
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/orders/stand/:standId/ordersqueue` | no | Postazione clienti: ordini confirmed/preparing/ready (minimi dati, niente prezzi/clienti) |
+| GET | `/api/orders` | auth | Lista ordini (filtri eventId, standId, status comma-separated, userId, customerId, stationId, date) |
 
 ### API routes — Reports
 | Method | Route | Auth | Description |
@@ -176,6 +187,16 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Aug 2026 — postazione clienti stand display)
+### Completed
+- Endpoint pubblico `GET /api/orders/stand/:standId/ordersqueue` (confirmed/preparing/ready, minimi dati: niente prezzi, nomi clienti o pagamenti)
+- `StandDisplayPage` fullscreen pubblico su `/events/:eventId/stands/:standId/ordersqueue` (polling 5s, avanzamento articoli per postazione, badge "Pronto")
+- `hideChrome` in AppLayout include le route `/display` (navbar e footer nascosti)
+- Link "Postazione clienti" (nuova tab) nella header di `StandOrdersPage`
+- Helper `fetchStandDisplayOrders` in `frontend/src/lib/orders.ts`
+- Test backend: filtro stati, esclusione pending/completed, 404 stand inesistente
+- I comandi display NON sono protetti: la route è registrata PRIMA di `authMiddleware` in `orders.routes.ts`
 
 ## Session state (Jul 2026 — email subscription + fix cassa ordini)
 ### Completed

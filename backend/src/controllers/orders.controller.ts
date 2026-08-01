@@ -127,6 +127,50 @@ export async function listOrders(req: Request, res: Response) {
     });
 }
 
+export async function getStandDisplayOrders(req: Request, res: Response) {
+    const standId = req.params.standId;
+
+    if (!isValidObjectId(standId)) {
+        return res.status(400).json({ message: 'Invalid stand id' });
+    }
+
+    const stand = await StandModel.findById(standId).select('name').lean();
+
+    if (!stand) {
+        return res.status(404).json({ message: 'Stand not found' });
+    }
+
+    const filter: Record<string, unknown> = {
+        standId: new Types.ObjectId(standId),
+        status: { $in: ['confirmed', 'preparing', 'ready'] }
+    };
+
+    if (req.query.eventId && isValidObjectId(req.query.eventId as string)) {
+        filter.eventId = new Types.ObjectId(req.query.eventId as string);
+    }
+
+    const orders = await OrderModel.find(filter)
+        .sort({ createdAt: 1 })
+        .limit(60);
+
+    return res.status(200).json({
+        standId: stand._id.toString(),
+        standName: stand.name,
+        items: orders.map((o) => ({
+            id: o._id.toString(),
+            orderNumber: o.orderNumber,
+            status: o.status,
+            items: o.items.map((item) => ({
+                productName: item.productName,
+                quantity: item.quantity,
+                stationId: item.stationId.toString(),
+                stationName: item.stationName,
+                ready: item.ready
+            }))
+        }))
+    });
+}
+
 export async function listMyStationOrders(req: Request, res: Response) {
     if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });

@@ -73,6 +73,87 @@ describe('Orders API', () => {
         expect(res.status).toBe(401);
     });
 
+    it('returns stand display orders publicly (confirmed/preparing/ready only)', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Display Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Display Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Griglia' });
+        const product = await ProductModel.create({ name: 'Burger', price: 10 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+
+        const createOrder = async (quantity: number, payOnCreate = true) => {
+            return request(app)
+                .post('/api/orders')
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({
+                    eventId: event._id.toString(),
+                    standId: stand._id.toString(),
+                    items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity }],
+                    paymentOnCreate: payOnCreate ? { creditAmount: 0 } : undefined
+                });
+        };
+
+        const pendingRes = await createOrder(1, false);
+        const confirmedRes = await createOrder(1);
+        const preparingRes = await createOrder(1);
+        const readyRes = await createOrder(1);
+        const completedRes = await createOrder(1);
+
+        const confirmedId = confirmedRes.body.item.id;
+        const preparingId = preparingRes.body.item.id;
+        const readyId = readyRes.body.item.id;
+        const completedId = completedRes.body.item.id;
+
+        const patch = (id: string, status: string) =>
+            request(app)
+                .patch(`/api/orders/${id}/status`)
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({ status });
+
+        await patch(preparingId, 'preparing');
+        await patch(readyId, 'preparing');
+        await patch(readyId, 'ready');
+        await patch(completedId, 'preparing');
+        await patch(completedId, 'ready');
+        await patch(completedId, 'completed');
+
+        const res = await request(app).get(`/api/orders/stand/${stand._id}/ordersqueue`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.standName).toBe('Display Stand');
+
+        const returnedIds = res.body.items.map((o: { id: string }) => o.id);
+        expect(returnedIds).not.toContain(pendingRes.body.item.id);
+        expect(returnedIds).toContain(confirmedId);
+        expect(returnedIds).toContain(preparingId);
+        expect(returnedIds).toContain(readyId);
+        expect(returnedIds).not.toContain(completedId);
+
+        const readyOrder = res.body.items.find((o: { id: string }) => o.id === readyId);
+        expect(readyOrder.status).toBe('ready');
+        expect(readyOrder.items[0].productName).toBe('Burger');
+        expect(readyOrder.items[0].ready).toBe(true);
+        expect(readyOrder.items[0].quantity).toBe(1);
+    });
+
+    it('returns 404 for stand display with unknown stand', async () => {
+        app = createTestApp();
+        const res = await request(app).get('/api/orders/stand/000000000000000000000000/ordersqueue');
+        expect(res.status).toBe(404);
+    });
+
     it('creates an order with items', async () => {
         app = createTestApp();
         const { user, sessionToken } = await createAuthSession();

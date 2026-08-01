@@ -10,6 +10,7 @@ import {
     getOrderById,
     getOrderReceipt,
     getOrderReceiptQrCode,
+    getStandDisplayOrders,
     getStandReport,
     listMyStationOrders,
     listOrders,
@@ -25,6 +26,7 @@ import { asyncHandler } from '../utils/async-handler';
 export const ordersRouter = Router();
 
 ordersRouter.get('/:orderId/receipt', asyncHandler(getOrderReceipt));
+ordersRouter.get('/stand/:standId/ordersqueue', asyncHandler(getStandDisplayOrders));
 
 ordersRouter.use(asyncHandler(authMiddleware));
 
