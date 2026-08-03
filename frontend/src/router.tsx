@@ -149,6 +149,10 @@ export const router = createBrowserRouter([
             element: <StandDetailPage />,
           },
           {
+            path: 'stands/:standId/orders',
+            element: <StandOrdersPage />,
+          },
+          {
             path: 'products',
             element: <ProductsPage />,
           },

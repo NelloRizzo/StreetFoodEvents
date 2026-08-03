@@ -150,7 +150,9 @@ export function StandOrdersPage() {
   const title = urlEventId && eventName ? `Ordini — ${eventName}` : 'Ordini dello stand'
   const newOrderLink = urlEventId
     ? `/events/${urlEventId}/stands/${standId}/order`
-    : '/dashboard'
+    : filterEventId
+      ? `/events/${filterEventId}/stands/${standId}/order`
+      : ''
 
   const currencyFor = (eventId: string) => {
     const ev = events.find((e) => e.id === eventId)
@@ -180,13 +182,19 @@ export function StandOrdersPage() {
             {standName && <span className={styles.standLabel}>{standName}</span>}
           </div>
           <div className={styles.headerActions}>
-            <Link className={styles.primaryBtn} to={newOrderLink}>
-              Nuovo ordine
-            </Link>
-            {urlEventId && (
+            {newOrderLink ? (
+              <Link className={styles.primaryBtn} to={newOrderLink}>
+                Nuovo ordine
+              </Link>
+            ) : (
+              <button className={styles.primaryBtn} disabled title="Seleziona un evento prima di creare un ordine">
+                Nuovo ordine
+              </button>
+            )}
+            {(urlEventId || filterEventId) && (
               <Link
                 className={styles.secondaryBtn}
-                to={`/events/${urlEventId}/stands/${standId}/ordersqueue`}
+                to={`/events/${urlEventId ?? filterEventId}/stands/${standId}/ordersqueue`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

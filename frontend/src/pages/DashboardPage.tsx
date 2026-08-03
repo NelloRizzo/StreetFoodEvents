@@ -261,7 +261,7 @@ export function DashboardPage() {
                   const standStations = stations.filter((st) => st.standId === s.id)
                   return (
                     <div key={s.id} className={styles.standBlock}>
-                      <Link to={s.eventIds.length > 0 ? `/events/${s.eventIds[0]}/stands/${s.id}/order` : '#'} className={styles.standBlockHeader}>
+                      <Link to={`/stands/${s.id}/orders`} className={styles.standBlockHeader}>
                         <span className={styles.manageIcon}>&#127968;</span>
                         <span className={styles.standBlockName}>{s.name}</span>
                         <span className={styles.manageHint}>Gestisci ordini</span>
@@ -343,7 +343,7 @@ export function DashboardPage() {
                     </Link>
                   ))}
                   {stands.map((s) => (
-                    <Link key={s.id} to={s.eventIds.length > 0 ? `/events/${s.eventIds[0]}/stands/${s.id}/orders` : '#'} className={styles.manageCard}>
+                    <Link key={s.id} to={`/stands/${s.id}/orders`} className={styles.manageCard}>
                       <span className={styles.manageIcon}>&#128202;</span>
                       <span className={styles.manageName}>Report {s.name}</span>
                       <span className={styles.manageHint}>Resoconto stand</span>
