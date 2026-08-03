@@ -21,7 +21,7 @@ export function CurrencyDisplay({
 }) {
   if (currencySymbol?.url) {
     return (
-      <span className={`${styles.currencyIcon} ${className ?? ''}`} title={currencyName}>
+      <span className={`${styles.currencyIcon} ${styles.currencyImage} ${className ?? ''}`} title={currencyName}>
         <img src={currencySymbol.url} alt={currencyName} className={styles.currencyImg} />
       </span>
     )
