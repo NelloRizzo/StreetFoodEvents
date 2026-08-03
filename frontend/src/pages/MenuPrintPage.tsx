@@ -54,8 +54,8 @@ function buildMenuHtml(
 
   const standsHtml = stands.map(({ stand, products }, i) => {
     const cover = stand.coverImage
-      ? `<div style="max-width:100%;max-height:70mm;margin-bottom:1.5rem;display:flex;justify-content:center;overflow:hidden;border-radius:12px">
-          <img src="${esc(stand.coverImage.url)}" alt="${esc(stand.name)}" style="display:block;width:auto;max-width:100%;height:auto;max-height:70mm;object-fit:contain;border-radius:12px" />
+      ? `<div style="max-width:100%;margin-bottom:1.5rem;text-align:center;overflow:hidden;border-radius:12px">
+          <img src="${esc(stand.coverImage.url)}" alt="${esc(stand.name)}" style="display:block;margin:0 auto;width:auto;max-width:100%;height:auto;max-height:70mm;object-fit:contain;border-radius:12px" />
         </div>`
       : ''
 
