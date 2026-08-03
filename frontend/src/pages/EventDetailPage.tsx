@@ -10,6 +10,7 @@ import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { MapPicker } from '../components/MapPicker'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { listContestPois, createContestPoi, deleteContestPoi, listContests, createContest, updateContest, deleteContest, startContest, getContestPoiQrCodes } from '../lib/contests'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import styles from './EventDetailPage.module.scss'
@@ -30,7 +31,7 @@ type Event = {
   startDate: string
   endDate: string
   currencyName: string
-  currencySymbol: string | null
+  currencySymbol: UploadedImage | null
   shortDescription: string | null
   longDescription: string | null
   coverImage: UploadedImg | null
@@ -390,11 +391,10 @@ export function EventDetailPage() {
       <div className="page-shell">
         {/* Info row */}
         <div className={styles.infoRow}>
-          {event.currencySymbol && (
-            <span className={styles.currencyBadge}>
-              {event.currencySymbol} {event.currencyName}
-            </span>
-          )}
+          <span className={styles.currencyBadge}>
+            <CurrencyDisplay currencyName={event.currencyName} currencySymbol={event.currencySymbol} />
+            {event.currencyName}
+          </span>
         </div>
 
         {/* Description */}

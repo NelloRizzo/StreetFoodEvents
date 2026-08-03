@@ -16,7 +16,7 @@ type EventProduct = {
   updatedAt: string
 }
 
-type Event = { id: string; name: string }
+type Event = { id: string; name: string; currencyName: string }
 type Stand = { id: string; name: string; eventIds: string[] }
 type Product = { id: string; name: string; price: number }
 type Station = { id: string; name: string }
@@ -75,6 +75,11 @@ export function EventProductsPage() {
     setForm({ ...emptyForm, eventId })
     setFilteredStands(stands.filter((s) => s.eventIds?.includes(eventId)))
     setStations([])
+  }
+
+  const currencyInitial = (eventId: string) => {
+    const ev = events.find((e) => e.id === eventId)
+    return ev?.currencyName ? ev.currencyName.charAt(0).toUpperCase() : '€'
   }
 
   const handleStandChange = async (standId: string) => {
@@ -175,7 +180,7 @@ export function EventProductsPage() {
               <select id="ep-product" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} required>
                 <option value="">Seleziona prodotto</option>
                 {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.price.toFixed(2)} &euro;)</option>
+                  <option key={p.id} value={p.id}>{p.name} ({p.price.toFixed(2)} {form.eventId ? currencyInitial(form.eventId) : '€'})</option>
                 ))}
               </select>
             </div>
@@ -227,7 +232,7 @@ export function EventProductsPage() {
                   Postazioni: {ep.stationIds.map((id) => stationName(id) || id).join(', ')}
                 </span>
                 {ep.priceOverride !== null && (
-                  <span className={styles.cardPrice}>Prezzo: {ep.priceOverride.toFixed(2)} &euro;</span>
+                  <span className={styles.cardPrice}>Prezzo: {ep.priceOverride.toFixed(2)} {currencyInitial(ep.eventId)}</span>
                 )}
               </div>
               <div className={styles.cardActions}>

@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import type { UploadedImage } from '../lib/upload'
 import {
   fetchOrders,
   fetchStandReport,
@@ -34,7 +36,7 @@ export function StandOrdersPage() {
   const [forbidden, setForbidden] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [filterEventId, setFilterEventId] = useState<string>(urlEventId ?? '')
-  const [events, setEvents] = useState<{ id: string; name: string }[]>([])
+  const [events, setEvents] = useState<{ id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }[]>([])
   const [standName, setStandName] = useState('')
   const [eventName, setEventName] = useState('')
   const [partialOrderId, setPartialOrderId] = useState<string | null>(null)
@@ -89,7 +91,7 @@ export function StandOrdersPage() {
 
   useEffect(() => {
     if (!urlEventId) {
-      apiRequest<{ items: { id: string; name: string }[] }>('/events')
+      apiRequest<{ items: { id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }[] }>('/events')
         .then((d) => setEvents(d.items))
         .catch(() => {})
     }
@@ -149,6 +151,24 @@ export function StandOrdersPage() {
   const newOrderLink = urlEventId
     ? `/events/${urlEventId}/stands/${standId}/order`
     : '/dashboard'
+
+  const currencyFor = (eventId: string) => {
+    const ev = events.find((e) => e.id === eventId)
+    if (ev) return ev
+    if (report && report.eventId === eventId) return report
+    return null
+  }
+
+  const CurrencyAmount = ({ eventId, value }: { eventId: string; value: number }) => {
+    const cur = currencyFor(eventId)
+    if (!cur) return <>&euro;{value.toFixed(2)}</>
+    return (
+      <>
+        <CurrencyDisplay currencyName={cur.currencyName} currencySymbol={cur.currencySymbol} />
+        &nbsp;{value.toFixed(2)}
+      </>
+    )
+  }
 
   return (
     <div className={styles.page}>
@@ -238,21 +258,21 @@ export function StandOrdersPage() {
                 <span className={styles.reportStatLabel}>Ordini</span>
               </div>
               <div className={styles.reportStat}>
-                <span className={styles.reportStatValue}>&euro;{report.summary.totalRevenue.toFixed(2)}</span>
+                <span className={styles.reportStatValue}>&euro;{(report.summary.totalRevenue / (report.exchangeRate ?? 1)).toFixed(2)}</span>
                 <span className={styles.reportStatLabel}>Ricavi</span>
               </div>
               <div className={styles.reportStat}>
-                <span className={styles.reportStatValue}>&euro;{report.summary.totalCreditRevenue.toFixed(2)}</span>
+                <span className={styles.reportStatValue}>&euro;{(report.summary.totalCreditRevenue / (report.exchangeRate ?? 1)).toFixed(2)}</span>
                 <span className={styles.reportStatLabel}>Crediti</span>
               </div>
               <div className={styles.reportStat}>
-                <span className={styles.reportStatValue}>&euro;{report.summary.totalExternalRevenue.toFixed(2)}</span>
+                <span className={styles.reportStatValue}>&euro;{(report.summary.totalExternalRevenue / (report.exchangeRate ?? 1)).toFixed(2)}</span>
                 <span className={styles.reportStatLabel}>Esterni</span>
               </div>
               {report.summary.totalRefunded > 0 && (
                 <div className={styles.reportStat}>
                   <span className={`${styles.reportStatValue} ${styles.reportRefunded}`}>
-                    &euro;{report.summary.totalRefunded.toFixed(2)}
+                    &euro;{(report.summary.totalRefunded / (report.exchangeRate ?? 1)).toFixed(2)}
                   </span>
                   <span className={styles.reportStatLabel}>Rimborsati</span>
                 </div>
@@ -272,7 +292,7 @@ export function StandOrdersPage() {
                 <div key={o.id} className={styles.pendingRow}>
                   <span className={styles.pendingNumber}>#{o.orderNumber}</span>
                   <span className={styles.pendingCustomer}>{o.customerName ?? 'Anonimo'}</span>
-                  <span className={styles.pendingTotal}>&euro;{o.total.toFixed(2)}</span>
+                  <span className={styles.pendingTotal}><CurrencyAmount eventId={o.eventId} value={o.total} /></span>
                   <span className={`${styles.statusBadge} ${styles[`status_${o.status}`]}`}>
                     {statusLabels[o.status] ?? o.status}
                   </span>
@@ -320,7 +340,7 @@ export function StandOrdersPage() {
                     <span className={`${styles.paymentBadge} ${styles[`payment_${order.paymentStatus}`]}`}>
                       {order.paymentStatus === 'paid' ? 'Pagato' : order.paymentStatus === 'refunded' ? 'Rimborsato' : 'Da pagare'}
                     </span>
-                    <span className={styles.orderTotal}>&euro;{order.total.toFixed(2)}</span>
+                    <span className={styles.orderTotal}><CurrencyAmount eventId={order.eventId} value={order.total} /></span>
                   </div>
                 </div>
 

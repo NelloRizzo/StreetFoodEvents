@@ -7,6 +7,8 @@ import { useEventTheme } from '../features/theme/useEventTheme'
 import { useAuth } from '../features/auth/auth-context'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { QRCodeDownload } from '../components/QRCodeDownload'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import type { UploadedImage } from '../lib/upload'
 import styles from './EventStandMenuPage.module.scss'
 
 type MenuItem = {
@@ -27,7 +29,8 @@ type MenuItem = {
 type Event = {
   id: string
   name: string
-  currencySymbol: string | null
+  currencyName: string
+  currencySymbol: UploadedImage | null
   themeBrand: string | null
   themeText: string | null
   themeSurface: string | null
@@ -208,7 +211,11 @@ export function EventStandMenuPage() {
                       </div>
                       <div className={styles.menuRight}>
                         <span className={styles.menuPrice}>
-                          {price.toFixed(2)} {event.currencySymbol ?? '€'}
+                          {price.toFixed(2)}
+                          <CurrencyDisplay
+                            currencyName={event.currencyName}
+                            currencySymbol={event.currencySymbol}
+                          />
                         </span>
                         {isAuthenticated && (
                           <button
@@ -249,7 +256,11 @@ export function EventStandMenuPage() {
                         <div className={styles.cartItemInfo}>
                           <strong>{c.productName}</strong>
                           <span className={styles.cartItemPrice}>
-                            {(c.unitPrice * c.quantity).toFixed(2)} {event.currencySymbol ?? '€'}
+                            {(c.unitPrice * c.quantity).toFixed(2)}
+                            <CurrencyDisplay
+                              currencyName={event.currencyName}
+                              currencySymbol={event.currencySymbol}
+                            />
                           </span>
                         </div>
                         <div className={styles.cartItemActions}>
@@ -277,7 +288,11 @@ export function EventStandMenuPage() {
                     <div className={styles.totalRow}>
                       <strong>Totale</strong>
                       <strong>
-                        {total.toFixed(2)} {event.currencySymbol ?? '€'}
+                        {total.toFixed(2)}
+                        <CurrencyDisplay
+                          currencyName={event.currencyName}
+                          currencySymbol={event.currencySymbol}
+                        />
                       </strong>
                     </div>
 

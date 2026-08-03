@@ -115,6 +115,9 @@
   font-weight: 700;
   color: var(--color-ink-strong);
   font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .cardBody {
@@ -136,6 +139,9 @@
   color: var(--color-olive);
   font-size: 0.82rem;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .cardStations {

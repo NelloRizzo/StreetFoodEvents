@@ -157,6 +157,40 @@
   align-content: start;
 }
 
+.productSections {
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.stationSection {
+  border-bottom: 1px solid #0f3460;
+}
+
+.stationSection:last-child {
+  border-bottom: none;
+}
+
+.stationSection .productGrid {
+  overflow: visible;
+  scroll-margin-top: 0.5rem;
+}
+
+.stationSectionTitle {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background: #1a1a2e;
+  border-bottom: 1px solid #0f3460;
+  color: #e94560;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 .productBtn {
   display: flex;
   flex-direction: column;
@@ -195,6 +229,9 @@
   font-size: 1.05rem;
   font-weight: 800;
   color: #e94560;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 /* ── Active orders panel ── */
@@ -250,6 +287,9 @@
   font-size: 0.9rem;
   font-weight: 700;
   color: #f0f0f0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .orderCustomer {
@@ -411,6 +451,9 @@
   font-weight: 700;
   color: #e94560;
   font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .cartTotal {
@@ -420,11 +463,15 @@
   padding: 0.75rem 1rem;
   border-top: 1px solid #0f3460;
   font-size: 1.1rem;
+  gap: 0.15em;
 }
 
 .cartTotal strong {
   color: #e94560;
   font-size: 1.3rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 /* ── Payment options ── */
@@ -533,6 +580,9 @@
   font-weight: 800;
   color: #e94560;
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .modalField {
@@ -599,6 +649,10 @@
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
 }
 
 .modalCancelBtn {
@@ -672,20 +726,27 @@
 .confirmItem {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 0.85rem;
   color: #ddd;
+  gap: 0.15em;
 }
 
 .confirmTotal {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 1.05rem;
   font-weight: 700;
   color: #f0f0f0;
+  gap: 0.15em;
 }
 
 .confirmTotal strong {
   color: #e94560;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .confirmCredits {

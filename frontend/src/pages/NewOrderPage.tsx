@@ -5,6 +5,8 @@ import { apiRequest } from '../lib/api'
 import { createOrder } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import type { UploadedImage } from '../lib/upload'
 import styles from './NewOrderPage.module.scss'
 
 type EventProduct = {
@@ -46,7 +48,9 @@ type CartItem = {
 
 export function NewOrderPage() {
   const navigate = useNavigate()
-  const [events, setEvents] = useState<{ id: string; name: string }[]>([])
+  const [events, setEvents] = useState<
+    { id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }[]
+  >([])
   const [stands, setStands] = useState<{ id: string; name: string }[]>([])
   const [selectedEventId, setSelectedEventId] = useState('')
   const [selectedStandId, setSelectedStandId] = useState('')
@@ -64,13 +68,15 @@ export function NewOrderPage() {
 
   const total = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
 
+  const selectedEvent = events.find((e) => e.id === selectedEventId)
+
   const selectedUser = users.find((u) => u.id === selectedCustomerId)
   const customerName = customerMode === 'registered' && selectedUser
     ? `${selectedUser.firstName} ${selectedUser.lastName}`
     : customCustomerName
 
   useEffect(() => {
-    apiRequest<{ items: { id: string; name: string }[] }>('/events')
+    apiRequest<{ items: { id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }[] }>('/events')
       .then((d) => {
         setEvents(d.items)
         if (d.items.length > 0) {
@@ -236,7 +242,15 @@ export function NewOrderPage() {
                   <div key={ep.id} className={styles.menuItem}>
                     <div className={styles.menuItemInfo}>
                       <strong>{ep.product?.name ?? 'Caricamento...'}</strong>
-                      <span className={styles.menuItemPrice}>&euro;{(ep.priceOverride ?? ep.product?.price ?? 0).toFixed(2)}</span>
+                      <span className={styles.menuItemPrice}>
+                        {(ep.priceOverride ?? ep.product?.price ?? 0).toFixed(2)}
+                        {selectedEvent && (
+                          <CurrencyDisplay
+                            currencyName={selectedEvent.currencyName}
+                            currencySymbol={selectedEvent.currencySymbol}
+                          />
+                        )}
+                      </span>
                     </div>
                     <div className={styles.menuItemStations}>
                       {ep.stations?.map((s) => (
@@ -315,7 +329,15 @@ export function NewOrderPage() {
                       <div className={styles.cartItemInfo}>
                         <strong>{item.productName}</strong>
                         <span className={styles.cartItemStation}>{item.stationName}</span>
-                        <span className={styles.cartItemPrice}>&euro;{item.unitPrice.toFixed(2)} x {item.quantity}</span>
+                        <span className={styles.cartItemPrice}>
+                          {item.unitPrice.toFixed(2)} x {item.quantity}
+                          {selectedEvent && (
+                            <CurrencyDisplay
+                              currencyName={selectedEvent.currencyName}
+                              currencySymbol={selectedEvent.currencySymbol}
+                            />
+                          )}
+                        </span>
                       </div>
                       <div className={styles.cartItemActions}>
                         <button className={styles.qtyBtn} onClick={() => updateQuantity(item.eventProductId, item.stationId, -1)}>-</button>
@@ -329,7 +351,15 @@ export function NewOrderPage() {
 
               <div className={styles.totalRow}>
                 <strong>Totale</strong>
-                <strong>&euro;{total.toFixed(2)}</strong>
+                <strong>
+                  {total.toFixed(2)}
+                  {selectedEvent && (
+                    <CurrencyDisplay
+                      currencyName={selectedEvent.currencyName}
+                      currencySymbol={selectedEvent.currencySymbol}
+                    />
+                  )}
+                </strong>
               </div>
 
               <div className={styles.paymentOptions}>
@@ -339,7 +369,7 @@ export function NewOrderPage() {
                 </label>
                 {payWithCredits && total > 0 && (
                   <div className={styles.creditField}>
-                    <label>Crediti da usare (&euro;)</label>
+                    <label>Crediti da usare</label>
                     <input
                       type="number"
                       min={0}
@@ -350,7 +380,7 @@ export function NewOrderPage() {
                     />
                     {creditAmount < total && (
                       <span className={styles.remainingHint}>
-                        Saldo restante: &euro;{(total - creditAmount).toFixed(2)} da pagare in altro modo
+                        Saldo restante: {(total - creditAmount).toFixed(2)} da pagare in altro modo
                       </span>
                     )}
                   </div>

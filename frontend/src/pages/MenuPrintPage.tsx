@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../lib/api'
+import { currencyBadgeHtml } from '../components/CurrencyDisplay'
 import styles from './MenuPrintPage.module.scss'
 
 type ImageData = { url: string; publicId: string; width: number; height: number; format: string; bytes: number }
 
-type EventRef = { id: string; name: string; logo: ImageData | null; coverImage: ImageData | null }
+type EventRef = { id: string; name: string; currencyName: string; logo: ImageData | null; coverImage: ImageData | null }
 
 type Stand = {
   id: string
@@ -49,6 +50,7 @@ function buildMenuHtml(
   const eventLogo = event.logo
     ? `<img src="${esc(event.logo.url)}" alt="${esc(event.name)}" style="display:block;max-height:80px;margin:0 auto 0.5rem" />`
     : ''
+  const priceBadge = currencyBadgeHtml(event.currencyName || '€')
 
   const standsHtml = stands.map(({ stand, products }, i) => {
     const cover = stand.coverImage
@@ -73,7 +75,7 @@ function buildMenuHtml(
               ${prodCover}
               <h3 style="font-size:1rem;margin:0 0 0.2rem;color:#14261f">${esc(ep.product.name)}</h3>
               ${ingredients}
-              <p style="font-size:1.05rem;font-weight:700;color:#bf5a2a;margin:0.4rem 0 0">&euro; ${price.toFixed(2)}</p>
+              <p style="font-size:1.05rem;font-weight:700;color:#bf5a2a;margin:0.4rem 0 0">${price.toFixed(2)} ${priceBadge}</p>
             </div>`
           }).join('')}
         </div>`

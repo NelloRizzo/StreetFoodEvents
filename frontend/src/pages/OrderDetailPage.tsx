@@ -3,6 +3,9 @@ import { useParams, Link } from 'react-router-dom'
 
 import { fetchOrder, updateOrderStatus, cancelOrder, payOrder, markStationReady, type Order } from '../lib/orders'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import { apiRequest } from '../lib/api'
+import type { UploadedImage } from '../lib/upload'
 import styles from './OrderDetailPage.module.scss'
 
 const statusLabels: Record<string, string> = {
@@ -26,6 +29,7 @@ const nextStatus: Record<string, { status: string; label: string } | null> = {
 export function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const [order, setOrder] = useState<Order | null>(null)
+  const [eventCurrency, setEventCurrency] = useState<{ currencyName: string; currencySymbol: UploadedImage | null } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [creditPayAmount, setCreditPayAmount] = useState(0)
   const [cancelTarget, setCancelTarget] = useState<string | null>(null)
@@ -37,6 +41,15 @@ export function OrderDetailPage() {
     const data = await fetchOrder(orderId)
     setOrder(data.item)
     setCreditPayAmount(data.item.total)
+    if (data.item.eventId) {
+      try {
+        const event = await apiRequest<{ item: { currencyName: string; currencySymbol: UploadedImage | null } }>(`/events/${data.item.eventId}`)
+        setEventCurrency({
+          currencyName: event.item.currencyName,
+          currencySymbol: event.item.currencySymbol,
+        })
+      } catch { /* ignore */ }
+    }
     setIsLoading(false)
   }
 
@@ -113,18 +126,42 @@ export function OrderDetailPage() {
           </div>
           <div className={styles.metaItem}>
             <span className={styles.metaLabel}>Totale</span>
-            <span className={styles.metaValue}>&euro;{order.total.toFixed(2)}</span>
+            <span className={styles.metaValue}>
+              {order.total.toFixed(2)}
+              {eventCurrency && (
+                <CurrencyDisplay
+                  currencyName={eventCurrency.currencyName}
+                  currencySymbol={eventCurrency.currencySymbol}
+                />
+              )}
+            </span>
           </div>
           {order.creditAmountUsed > 0 && (
             <div className={styles.metaItem}>
               <span className={styles.metaLabel}>Pagato con crediti</span>
-              <span className={styles.metaValue}>&euro;{order.creditAmountUsed.toFixed(2)}</span>
+              <span className={styles.metaValue}>
+                {order.creditAmountUsed.toFixed(2)}
+                {eventCurrency && (
+                  <CurrencyDisplay
+                    currencyName={eventCurrency.currencyName}
+                    currencySymbol={eventCurrency.currencySymbol}
+                  />
+                )}
+              </span>
             </div>
           )}
           {externalAmount > 0 && order.paymentStatus === 'paid' && (
             <div className={styles.metaItem}>
               <span className={styles.metaLabel}>Pagato in altro modo</span>
-              <span className={styles.metaValue}>&euro;{externalAmount.toFixed(2)}</span>
+              <span className={styles.metaValue}>
+                {externalAmount.toFixed(2)}
+                {eventCurrency && (
+                  <CurrencyDisplay
+                    currencyName={eventCurrency.currencyName}
+                    currencySymbol={eventCurrency.currencySymbol}
+                  />
+                )}
+              </span>
             </div>
           )}
           <div className={styles.metaItem}>
@@ -159,11 +196,19 @@ export function OrderDetailPage() {
                       <div className={styles.itemInfo}>
                         <strong>{item.productName}</strong>
                         <span className={styles.itemDetail}>
-                          &euro;{item.unitPrice.toFixed(2)} x {item.quantity}
+                          {item.unitPrice.toFixed(2)} x {item.quantity}
                         </span>
                       </div>
                       <div className={styles.itemRight}>
-                        <span className={styles.itemSubtotal}>&euro;{item.subtotal.toFixed(2)}</span>
+                        <span className={styles.itemSubtotal}>
+                          {item.subtotal.toFixed(2)}
+                          {eventCurrency && (
+                            <CurrencyDisplay
+                              currencyName={eventCurrency.currencyName}
+                              currencySymbol={eventCurrency.currencySymbol}
+                            />
+                          )}
+                        </span>
                         {item.ready && <span className={styles.readyMark}>&#10003;</span>}
                       </div>
                     </div>
@@ -208,7 +253,7 @@ export function OrderDetailPage() {
               <h3 className={styles.payTitle}>Paga ordine</h3>
               <div className={styles.payRow}>
                 <div className={styles.payField}>
-                  <label>Crediti da usare (&euro;)</label>
+                  <label>Crediti da usare</label>
                   <input
                     type="number"
                     min={0}
@@ -232,7 +277,7 @@ export function OrderDetailPage() {
               </label>
               {creditPayAmount < order.total && (
                 <p className={styles.payHint}>
-                  &euro;{creditPayAmount.toFixed(2)} con crediti + &euro;{(order.total - creditPayAmount).toFixed(2)} in altro modo
+                  {creditPayAmount.toFixed(2)} con crediti + {(order.total - creditPayAmount).toFixed(2)} in altro modo
                 </p>
               )}
               {creditPayAmount === 0 && (

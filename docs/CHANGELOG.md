@@ -8,6 +8,8 @@ Tutte le feature implementate, in ordine cronologico.
 
 ## Agosto 2026
 - Coda Ordini per stand: display pubblico fullscreen degli ordini in lavorazione (confirmed/preparing/ready) con avanzamento articoli per postazione, polling ogni 5s. Route: `/events/:eventId/stands/:standId/ordersqueue`.
+- Moneta evento personalizzata (nome + simbolo immagine): icona visibile in tutti i prezzi, saldi, menu, carrelli, ricevute (stampa inclusa) e resoconti. Componente condiviso `CurrencyDisplay`.
+- Resoconti eventi/stand: totali convertiti in euro tramite `exchangeRate` (importo ÷ rate) con badge moneta evento per i valori non convertiti.
 
 ## Feature Checklist
 

@@ -4,9 +4,11 @@ import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import type { UploadedImage } from '../lib/upload'
 import styles from './EventUsersPage.module.scss'
 
-type Event = { id: string; name: string; currencyName: string }
+type Event = { id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }
 type User = { id: string; firstName: string; lastName: string; email: string }
 
 type EventUser = {
@@ -199,7 +201,10 @@ export function EventUsersPage() {
                       <div className={styles.cardBody}>
                         <strong className={styles.cardName}>{userName(eu.userId)}</strong>
                         <span className={styles.cardBalance}>
-                          Saldo: {eu.balance} {event?.currencyName ?? 'crediti'}
+                          Saldo: {eu.balance}
+                          {event ? (
+                            <CurrencyDisplay currencyName={event.currencyName} currencySymbol={event.currencySymbol} />
+                          ) : 'crediti'}
                         </span>
                         <span className={styles.cardMeta}>
                           {eu.isActive ? 'Attivo' : 'Disattivato'} · Iscritto: {fmtDate(eu.joinedAt)}

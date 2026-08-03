@@ -180,6 +180,9 @@
   color: var(--color-brand-deep);
   font-weight: 700;
   font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .cardMeta {

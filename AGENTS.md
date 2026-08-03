@@ -188,6 +188,15 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Aug 2026 — moneta evento + resoconti in euro)
+### Completed
+- `CurrencyDisplay` condiviso (`frontend/src/components/CurrencyDisplay.tsx` + `.module.scss`): icona moneta (immagine `currencySymbol.url` o iniziale di `currencyName` in circoletto). Helper `currencyInitial(name)` e `currencyBadgeHtml(name)` per HTML inline (stampa).
+- Moneta evento visibile in: DashboardPage, EventStandMenuPage, NewOrderPage, CashierOrderPage, EventCashierPage (cassa unica), OrderDetailPage, ReceiptPage (stampa + schermo), OrdersPage, EventOrdersPage, StandOrdersPage, MenuPrintPage, EventProductsPage, StandDetailPage, EventUsersPage, EventDetailPage.
+- Resoconto in euro: `fmt(n, rate)` divide per rate in `EventReportPage`; `StandOrdersPage` report con `(value / (report.exchangeRate ?? 1))`. Backend `getEventReport` seleziona `exchangeRate`; `getStandReport` carica l'evento e restituisce `currencyName`/`currencySymbol`/`exchangeRate`.
+- `lib/orders.ts`: tipi `StandReport`/`EventReport` includono `currencyName`/`currencySymbol`/`exchangeRate`; `StandReport` ha anche `eventId`.
+- Ordini multi-evento (OrdersPage/StandOrdersPage senza filtro evento): moneta risolta dal fetch `/events` per eventId, fallback alla moneta del report se filtro attivo.
+- Backend `getOrderReceipt` seleziona `currencyName currencySymbol` e risposta include `eventId`, `currencyName`, `currencySymbol`.
+
 ## Session state (Aug 2026 — postazione clienti stand display)
 ### Completed
 - Endpoint pubblico `GET /api/orders/stand/:standId/ordersqueue` (confirmed/preparing/ready, minimi dati: niente prezzi, nomi clienti o pagamenti)

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/auth-context'
 import { apiRequest } from '../lib/api'
 import type { UploadedImage } from '../lib/upload'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import styles from './DashboardPage.module.scss'
 
 type CurrencySymbol = UploadedImage | null
@@ -45,24 +46,6 @@ type StationInfo = {
   standId: string | null
   standName: string | null
   isAssigned?: boolean
-}
-
-function CurrencyDisplay({ currencyName, currencySymbol }: { currencyName: string; currencySymbol: CurrencySymbol }) {
-  if (currencySymbol?.url) {
-    return (
-      <span className={styles.currencyIcon}>
-        <img src={currencySymbol.url} alt={currencyName} className={styles.currencyImg} />
-      </span>
-    )
-  }
-
-  const initial = currencyName.charAt(0).toUpperCase()
-
-  return (
-    <span className={`${styles.currencyIcon} ${styles.currencyInitial}`} title={currencyName}>
-      {initial}
-    </span>
-  )
 }
 
 type RoleInfo = {

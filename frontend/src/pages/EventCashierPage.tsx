@@ -5,6 +5,8 @@ import { apiRequest } from '../lib/api'
 import { createOrder, cancelOrder, updateOrderStatus, type Order } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
+import type { UploadedImage } from '../lib/upload'
 import styles from './CashierOrderPage.module.scss'
 
 type EventProduct = {
@@ -62,6 +64,7 @@ export function EventCashierPage() {
   const { eventId } = useParams<{ eventId: string }>()
 
   const [eventName, setEventName] = useState('')
+  const [eventCurrency, setEventCurrency] = useState<{ currencyName: string; currencySymbol: UploadedImage | null } | null>(null)
   const [forbidden, setForbidden] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [stands, setStands] = useState<StandInfo[]>([])
@@ -103,8 +106,12 @@ export function EventCashierPage() {
         )
         if (!hasAccess) { setForbidden(true); setIsLoading(false); return }
 
-        const eventData = await apiRequest<{ item: { name: string } }>(`/events/${eventId}`)
+        const eventData = await apiRequest<{ item: { name: string; currencyName: string; currencySymbol: UploadedImage | null } }>(`/events/${eventId}`)
         setEventName(eventData.item.name)
+        setEventCurrency({
+          currencyName: eventData.item.currencyName,
+          currencySymbol: eventData.item.currencySymbol,
+        })
 
         const standsData = await apiRequest<{ items: StandInfo[] }>(`/stands?eventId=${eventId}`)
         setStands(standsData.items)
@@ -279,11 +286,12 @@ export function EventCashierPage() {
   function printReceipt() {
     if (!createdOrder) return
     const o = createdOrder
+    const badge = eventCurrency ? currencyBadgeHtml(eventCurrency.currencyName) : '&euro;'
     const itemsHtml = o.items.map((item) =>
-      `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escHtml(item.productName)} x${item.quantity}</span><span>&euro;${item.subtotal.toFixed(2)}</span></div>`
+      `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escHtml(item.productName)} x${item.quantity}</span><span>${item.subtotal.toFixed(2)} ${badge}</span></div>`
     ).join('')
     const creditsHtml = o.creditAmountUsed > 0
-      ? `<div style="font-size:11px;color:#555;text-align:center;margin-top:0.25rem">Crediti: &euro;${o.creditAmountUsed.toFixed(2)}</div>`
+      ? `<div style="font-size:11px;color:#555;text-align:center;margin-top:0.25rem">Crediti: ${o.creditAmountUsed.toFixed(2)} ${badge}</div>`
       : ''
     const qrHtml = o.receiptQrCode
       ? `<div style="display:flex;justify-content:center;margin:0.5rem 0"><img src="${o.receiptQrCode}" alt="QR" style="width:120px;height:120px;-webkit-print-color-adjust:exact;print-color-adjust:exact" /></div>`
@@ -304,7 +312,7 @@ body{padding:2rem;max-width:320px;margin:0 auto}
 <div class="header"><strong>${escHtml(eventName)}</strong><span>${escHtml(standName)}</span></div>
 <div class="order-number">#${o.orderNumber}</div>
 <div class="items">${itemsHtml}</div>
-<div class="total"><span>Totale</span><strong>&euro;${o.total.toFixed(2)}</strong></div>
+<div class="total"><span>Totale</span><strong>${o.total.toFixed(2)} ${badge}</strong></div>
 ${creditsHtml}
 ${qrHtml}
 <div class="footer">${new Date().toLocaleString('it-IT')}</div>
@@ -323,7 +331,17 @@ ${qrHtml}
   if (forbidden) return <div className={styles.page}><div className="page-shell"><p className={styles.empty}>Accesso negato.</p></div></div>
   if (!eventId) return null
 
-  const filteredMenu = menu.filter((ep) => ep.available !== false && (!activeStationId || ep.stationIds.includes(activeStationId)))
+  const menuByStation = stations
+    .map((s) => ({
+      station: s,
+      items: menu.filter((ep) => ep.available !== false && ep.stationIds.includes(s.id)),
+    }))
+    .filter((group) => group.items.length > 0)
+
+  const scrollToStation = (stationId: string) => {
+    setActiveStationId(stationId)
+    document.getElementById(`station-section-${stationId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   return (
     <div className={styles.page}>
@@ -387,28 +405,45 @@ ${qrHtml}
                 <button
                   key={s.id}
                   className={`${styles.stationTab} ${activeStationId === s.id ? styles.stationTabActive : ''}`}
-                  onClick={() => setActiveStationId(s.id)}
+                  onClick={() => scrollToStation(s.id)}
                 >
                   {s.name}
                 </button>
               ))}
             </div>
 
-            <div className={styles.productGrid}>
-              {filteredMenu.map((ep) => (
-                <button
-                  key={ep.id}
-                  className={styles.productBtn}
-                  onClick={() => openNotesModal(ep)}
+            <div className={styles.productSections}>
+              {menuByStation.map((group) => (
+                <section
+                  key={group.station.id}
+                  id={`station-section-${group.station.id}`}
+                  className={styles.stationSection}
                 >
-                  <span className={styles.productBtnName}>{ep.product?.name ?? '...'}</span>
-                  <span className={styles.productBtnPrice}>
-                    &euro;{(ep.priceOverride ?? ep.product?.price ?? 0).toFixed(2)}
-                  </span>
-                </button>
+                  <h2 className={styles.stationSectionTitle}>{group.station.name}</h2>
+                  <div className={styles.productGrid}>
+                    {group.items.map((ep) => (
+                      <button
+                        key={ep.id}
+                        className={styles.productBtn}
+                        onClick={() => openNotesModal(ep)}
+                      >
+                        <span className={styles.productBtnName}>{ep.product?.name ?? '...'}</span>
+                        <span className={styles.productBtnPrice}>
+                          {(ep.priceOverride ?? ep.product?.price ?? 0).toFixed(2)}
+                          {eventCurrency && (
+                            <CurrencyDisplay
+                              currencyName={eventCurrency.currencyName}
+                              currencySymbol={eventCurrency.currencySymbol}
+                            />
+                          )}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
               ))}
-              {filteredMenu.length === 0 && (
-                <p className={styles.empty}>Nessun prodotto in questa sezione.</p>
+              {menuByStation.length === 0 && (
+                <p className={styles.empty}>Nessun prodotto disponibile per questo stand.</p>
               )}
             </div>
           </div>
@@ -434,7 +469,15 @@ ${qrHtml}
                         <span className={styles.qtyValue}>{item.quantity}</span>
                         <button className={styles.qtyBtn} onClick={() => handleQuantity(idx, 1)}>+</button>
                       </div>
-                      <span className={styles.cartItemTotal}>&euro;{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                      <span className={styles.cartItemTotal}>
+                        {(item.unitPrice * item.quantity).toFixed(2)}
+                        {eventCurrency && (
+                          <CurrencyDisplay
+                            currencyName={eventCurrency.currencyName}
+                            currencySymbol={eventCurrency.currencySymbol}
+                          />
+                        )}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -443,7 +486,15 @@ ${qrHtml}
 
             <div className={styles.cartTotal}>
               <span>Totale</span>
-              <strong>&euro;{total.toFixed(2)}</strong>
+              <strong>
+                {total.toFixed(2)}
+                {eventCurrency && (
+                  <CurrencyDisplay
+                    currencyName={eventCurrency.currencyName}
+                    currencySymbol={eventCurrency.currencySymbol}
+                  />
+                )}
+              </strong>
             </div>
 
             {cart.length > 0 && (
@@ -455,7 +506,7 @@ ${qrHtml}
                   </label>
                   {payWithCredits && total > 0 && (
                     <div className={styles.creditField}>
-                      <label>Crediti (&euro;)</label>
+                      <label>Crediti</label>
                       <input
                         type="number"
                         min={0}
@@ -466,7 +517,7 @@ ${qrHtml}
                       />
                       {creditAmount < total && (
                         <span className={styles.remainingHint}>
-                          Restano &euro;{(total - creditAmount).toFixed(2)}
+                          Restano {(total - creditAmount).toFixed(2)}
                         </span>
                       )}
                     </div>
@@ -481,8 +532,8 @@ ${qrHtml}
                   {isSubmitting
                     ? 'Creazione...'
                     : payWithCredits
-                      ? `Crea ordine (€${creditAmount > 0 ? `${creditAmount.toFixed(2)} crediti` : '0'})`
-                      : `Crea ordine (€${total.toFixed(2)} contanti)`}
+                      ? `Crea ordine (${creditAmount > 0 ? `${creditAmount.toFixed(2)} ${eventCurrency?.currencyName ?? 'crediti'}` : '0'})`
+                      : `Crea ordine (${total.toFixed(2)} ${eventCurrency?.currencyName ?? ''} contanti)`}
                 </button>
               </>
             )}
@@ -499,7 +550,13 @@ ${qrHtml}
           <div className={styles.notesModal} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>{notesModal.ep.product.name}</h3>
             <p className={styles.modalPrice}>
-              &euro;{(notesModal.ep.priceOverride ?? notesModal.ep.product.price).toFixed(2)}
+              {(notesModal.ep.priceOverride ?? notesModal.ep.product.price).toFixed(2)}
+              {eventCurrency && (
+                <CurrencyDisplay
+                  currencyName={eventCurrency.currencyName}
+                  currencySymbol={eventCurrency.currencySymbol}
+                />
+              )}
             </p>
 
             {notesModal.ep.stations && notesModal.ep.stations.length > 1 && (
@@ -538,7 +595,13 @@ ${qrHtml}
 
             <div className={styles.modalActions}>
               <button className={styles.modalAddBtn} onClick={addToCart}>
-                Aggiungi &euro;{((notesModal.ep.priceOverride ?? notesModal.ep.product.price) * notesModal.quantity).toFixed(2)}
+                Aggiungi {((notesModal.ep.priceOverride ?? notesModal.ep.product.price) * notesModal.quantity).toFixed(2)}
+                {eventCurrency && (
+                  <CurrencyDisplay
+                    currencyName={eventCurrency.currencyName}
+                    currencySymbol={eventCurrency.currencySymbol}
+                  />
+                )}
               </button>
               <button className={styles.modalCancelBtn} onClick={() => setNotesModal({ ...notesModal, open: false })}>
                 Annulla
@@ -558,17 +621,33 @@ ${qrHtml}
               {createdOrder.items.map((item, idx) => (
                 <div key={idx} className={styles.confirmItem}>
                   <span>{item.productName} x{item.quantity}</span>
-                  <span>&euro;{item.subtotal.toFixed(2)}</span>
+                  <span>
+                    {item.subtotal.toFixed(2)}
+                    {eventCurrency && (
+                      <CurrencyDisplay
+                        currencyName={eventCurrency.currencyName}
+                        currencySymbol={eventCurrency.currencySymbol}
+                      />
+                    )}
+                  </span>
                 </div>
               ))}
             </div>
             <div className={styles.confirmTotal}>
               <span>Totale</span>
-              <strong>&euro;{createdOrder.total.toFixed(2)}</strong>
+              <strong>
+                {createdOrder.total.toFixed(2)}
+                {eventCurrency && (
+                  <CurrencyDisplay
+                    currencyName={eventCurrency.currencyName}
+                    currencySymbol={eventCurrency.currencySymbol}
+                  />
+                )}
+              </strong>
             </div>
             <div className={styles.confirmPayment}>
               {createdOrder.creditAmountUsed > 0
-                ? <>Pagato &euro;{createdOrder.creditAmountUsed.toFixed(2)} con crediti</>
+                ? <>Pagato {createdOrder.creditAmountUsed.toFixed(2)} con crediti</>
                 : 'Pagato in contanti'}
             </div>
             {createdOrder.receiptQrCode && (

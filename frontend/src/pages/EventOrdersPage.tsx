@@ -10,6 +10,8 @@ import {
   type Order,
 } from '../lib/orders'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import type { UploadedImage } from '../lib/upload'
 import styles from './StandOrdersPage.module.scss'
 
 const statusLabels: Record<string, string> = {
@@ -34,6 +36,7 @@ export function EventOrdersPage() {
   const [stands, setStands] = useState<StandInfo[]>([])
   const [filterStandId, setFilterStandId] = useState<string>('')
   const [eventName, setEventName] = useState('')
+  const [eventCurrency, setEventCurrency] = useState<{ currencyName: string; currencySymbol: UploadedImage | null } | null>(null)
   const [partialOrderId, setPartialOrderId] = useState<string | null>(null)
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
   const [startDate, setStartDate] = useState(today())
@@ -50,8 +53,12 @@ export function EventOrdersPage() {
         )
         if (!hasAccess) { setForbidden(true); setIsLoading(false); return }
 
-        const ev = await apiRequest<{ item: { name: string } }>(`/events/${eventId}`)
+        const ev = await apiRequest<{ item: { name: string; currencyName: string; currencySymbol: UploadedImage | null } }>(`/events/${eventId}`)
         setEventName(ev.item.name)
+        setEventCurrency({
+          currencyName: ev.item.currencyName,
+          currencySymbol: ev.item.currencySymbol,
+        })
 
         const standsData = await apiRequest<{ items: StandInfo[] }>(`/stands?eventId=${eventId}`)
         setStands(standsData.items)
@@ -180,15 +187,24 @@ export function EventOrdersPage() {
           </div>
           <div className={styles.totalItem}>
             <span className={styles.totalLabel}>Importo totale</span>
-            <span className={styles.totalValue}>&euro;{orders.reduce((s, o) => s + o.total, 0).toFixed(2)}</span>
+            <span className={styles.totalValue}>
+              {orders.reduce((s, o) => s + o.total, 0).toFixed(2)}
+              {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+            </span>
           </div>
           <div className={styles.totalItem}>
             <span className={styles.totalLabel}>Pagati</span>
-            <span className={styles.totalValue}>&euro;{orders.filter((o) => o.paymentStatus === 'paid').reduce((s, o) => s + o.total, 0).toFixed(2)}</span>
+            <span className={styles.totalValue}>
+              {orders.filter((o) => o.paymentStatus === 'paid').reduce((s, o) => s + o.total, 0).toFixed(2)}
+              {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+            </span>
           </div>
           <div className={styles.totalItem}>
             <span className={styles.totalLabel}>Da pagare</span>
-            <span className={styles.totalValue}>&euro;{orders.filter((o) => o.paymentStatus !== 'paid').reduce((s, o) => s + o.total, 0).toFixed(2)}</span>
+            <span className={styles.totalValue}>
+              {orders.filter((o) => o.paymentStatus !== 'paid').reduce((s, o) => s + o.total, 0).toFixed(2)}
+              {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+            </span>
           </div>
         </div>
 
@@ -211,7 +227,10 @@ export function EventOrdersPage() {
                       {standMap.get(o.standId) || 'Stand sconosciuto'}
                     </span>
                     <span className={styles.pendingCustomer}>{o.customerName ?? 'Anonimo'}</span>
-                    <span className={styles.pendingTotal}>&euro;{o.total.toFixed(2)}</span>
+                    <span className={styles.pendingTotal}>
+                      {o.total.toFixed(2)}
+                      {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+                    </span>
                     <span className={`${styles.statusBadge} ${styles[`status_${o.status}`]}`}>
                       {statusLabels[o.status] ?? o.status}
                     </span>
@@ -263,7 +282,10 @@ export function EventOrdersPage() {
                     <span className={`${styles.paymentBadge} ${styles[`payment_${order.paymentStatus}`]}`}>
                       {order.paymentStatus === 'paid' ? 'Pagato' : order.paymentStatus === 'refunded' ? 'Rimborsato' : 'Da pagare'}
                     </span>
-                    <span className={styles.orderTotal}>&euro;{order.total.toFixed(2)}</span>
+                    <span className={styles.orderTotal}>
+                      {order.total.toFixed(2)}
+                      {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+                    </span>
                   </div>
                 </div>
 

@@ -7,6 +7,7 @@ import { useEventTheme } from '../features/theme/useEventTheme'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { ImageUploader } from '../components/ImageUploader'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import type { UploadedImage } from '../lib/upload'
 import styles from './StandDetailPage.module.scss'
 
@@ -40,7 +41,7 @@ type EventProduct = {
   updatedAt: string
 }
 
-type EventRef = { id: string; name: string }
+type EventRef = { id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }
 type ProductRef = { id: string; name: string; price: number }
 
 type ProductFormData = {
@@ -428,10 +429,13 @@ export function StandDetailPage() {
               <div className={styles.field}>
                 <label htmlFor="ep-product">Prodotto</label>
                 <select id="ep-product" value={productForm.productId} onChange={(e) => setProductForm({ ...productForm, productId: e.target.value })} required>
-                  <option value="">Seleziona prodotto</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.price.toFixed(2)} &euro;)</option>
-                  ))}
+                <option value="">Seleziona prodotto</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.price.toFixed(2)} {(() => {
+                    const ev = events.find((e) => e.id === productForm.eventId)
+                    return ev?.currencyName ? ev.currencyName.charAt(0).toUpperCase() : '€'
+                  })()})</option>
+                ))}
                 </select>
               </div>
 
@@ -480,7 +484,19 @@ export function StandDetailPage() {
                     {stations.filter((s) => ep.stationIds.includes(s.id)).map((s) => s.name).join(', ')}
                   </span>
                   {ep.priceOverride !== null && (
-                    <span className={styles.productPrice}>{ep.priceOverride.toFixed(2)} &euro;</span>
+                    <span className={styles.productPrice}>
+                      {(() => {
+                        const ev = events.find((e) => e.id === ep.eventId)
+                        return ev ? (
+                          <>
+                            <CurrencyDisplay currencyName={ev.currencyName} currencySymbol={ev.currencySymbol} />
+                            &nbsp;{ep.priceOverride.toFixed(2)}
+                          </>
+                        ) : (
+                          <>&euro;{ep.priceOverride.toFixed(2)}</>
+                        )
+                      })()}
+                    </span>
                   )}
                 </div>
                 <div className={styles.productCardActions}>

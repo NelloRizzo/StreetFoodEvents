@@ -90,6 +90,9 @@
 .metaValue {
   color: var(--color-ink-strong);
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .section {
@@ -191,6 +194,9 @@
 .itemSubtotal {
   font-weight: 700;
   color: var(--color-brand);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .itemReady {

@@ -122,6 +122,9 @@
   font-weight: 700;
   color: var(--color-brand);
   font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .progressRow {
@@ -508,6 +511,9 @@
   font-weight: 700;
   color: var(--color-brand);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .totalsBar {
@@ -538,6 +544,9 @@
   font-size: 1.3rem;
   font-weight: 700;
   color: var(--color-ink-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .empty {

@@ -1,4 +1,5 @@
 import { apiRequest } from './api'
+import type { UploadedImage } from './upload'
 
 export type OrderItem = {
   eventProductId: string
@@ -55,6 +56,9 @@ export type CreateOrderInput = {
 export type StandReport = {
   standId: string
   eventId: string | null
+  currencyName: string
+  currencySymbol: UploadedImage | null
+  exchangeRate: number
   summary: {
     totalOrders: number
     totalRevenue: number
@@ -92,6 +96,8 @@ export type EventReport = {
   unifiedCashierEnabled: boolean
   cashPaymentsEnabled: boolean
   currencyName: string
+  currencySymbol: UploadedImage | null
+  exchangeRate: number
   stands: EventReportStand[]
   totals: {
     totalOrders: number

@@ -5,6 +5,8 @@ import { apiRequest } from '../lib/api'
 import { createOrder, fetchOrders, updateOrderStatus, type Order } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import type { UploadedImage } from '../lib/upload'
 import styles from './CashierOrderPage.module.scss'
 
 type EventProduct = {
@@ -57,6 +59,7 @@ export function CashierOrderPage() {
   const { eventId, standId } = useParams<{ eventId: string; standId: string }>()
 
   const [eventName, setEventName] = useState('')
+  const [eventCurrency, setEventCurrency] = useState<{ currencyName: string; currencySymbol: UploadedImage | null } | null>(null)
   const [standName, setStandName] = useState('')
   const [forbidden, setForbidden] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -95,13 +98,17 @@ export function CashierOrderPage() {
         setStandName(stand.name)
 
         const [eventData, stationData, epData, usersData] = await Promise.all([
-          apiRequest<{ item: { name: string } }>(`/events/${eventId}`),
+          apiRequest<{ item: { name: string; currencyName: string; currencySymbol: UploadedImage | null } }>(`/events/${eventId}`),
           apiRequest<{ items: Station[] }>(`/stations?standId=${standId}`),
           apiRequest<{ items: EventProduct[] }>(`/event-products?eventId=${eventId}&standId=${standId}`),
           apiRequest<{ items: User[] }>('/users'),
         ])
 
         setEventName(eventData.item.name)
+        setEventCurrency({
+          currencyName: eventData.item.currencyName,
+          currencySymbol: eventData.item.currencySymbol,
+        })
         setStations(stationData.items)
         if (stationData.items.length > 0) setActiveStationId(stationData.items[0].id)
         setUsers(usersData.items)
@@ -332,7 +339,13 @@ export function CashierOrderPage() {
               >
                 <span className={styles.productBtnName}>{ep.product?.name ?? '...'}</span>
                 <span className={styles.productBtnPrice}>
-                  &euro;{(ep.priceOverride ?? ep.product?.price ?? 0).toFixed(2)}
+                  {(ep.priceOverride ?? ep.product?.price ?? 0).toFixed(2)}
+                  {eventCurrency && (
+                    <CurrencyDisplay
+                      currencyName={eventCurrency.currencyName}
+                      currencySymbol={eventCurrency.currencySymbol}
+                    />
+                  )}
                 </span>
               </button>
             ))}
@@ -351,7 +364,15 @@ export function CashierOrderPage() {
                   <div key={o.id} className={styles.orderCard}>
                     <div className={styles.orderCardHeader}>
                       <span className={styles.orderNumber}>#{o.orderNumber}</span>
-                      <span className={styles.orderTotal}>&euro;{o.total.toFixed(2)}</span>
+                      <span className={styles.orderTotal}>
+                        {o.total.toFixed(2)}
+                        {eventCurrency && (
+                          <CurrencyDisplay
+                            currencyName={eventCurrency.currencyName}
+                            currencySymbol={eventCurrency.currencySymbol}
+                          />
+                        )}
+                      </span>
                     </div>
                     {o.customerName && <span className={styles.orderCustomer}>{o.customerName}</span>}
                     <div className={styles.orderCardItems}>
@@ -397,7 +418,15 @@ export function CashierOrderPage() {
                       <span className={styles.qtyValue}>{item.quantity}</span>
                       <button className={styles.qtyBtn} onClick={() => handleQuantity(idx, 1)}>+</button>
                     </div>
-                    <span className={styles.cartItemTotal}>&euro;{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                    <span className={styles.cartItemTotal}>
+                      {(item.unitPrice * item.quantity).toFixed(2)}
+                      {eventCurrency && (
+                        <CurrencyDisplay
+                          currencyName={eventCurrency.currencyName}
+                          currencySymbol={eventCurrency.currencySymbol}
+                        />
+                      )}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -406,7 +435,15 @@ export function CashierOrderPage() {
 
           <div className={styles.cartTotal}>
             <span>Totale</span>
-            <strong>&euro;{total.toFixed(2)}</strong>
+            <strong>
+              {total.toFixed(2)}
+              {eventCurrency && (
+                <CurrencyDisplay
+                  currencyName={eventCurrency.currencyName}
+                  currencySymbol={eventCurrency.currencySymbol}
+                />
+              )}
+            </strong>
           </div>
 
           {cart.length > 0 && (
@@ -418,7 +455,7 @@ export function CashierOrderPage() {
                 </label>
                 {payWithCredits && total > 0 && (
                   <div className={styles.creditField}>
-                    <label>Crediti (&euro;)</label>
+                    <label>Crediti</label>
                     <input
                       type="number"
                       min={0}
@@ -429,7 +466,7 @@ export function CashierOrderPage() {
                     />
                     {creditAmount < total && (
                       <span className={styles.remainingHint}>
-                        Restano &euro;{(total - creditAmount).toFixed(2)}
+                        Restano {(total - creditAmount).toFixed(2)}
                       </span>
                     )}
                   </div>
@@ -444,7 +481,7 @@ export function CashierOrderPage() {
                 {isSubmitting
                   ? 'Creazione...'
                   : payWithCredits
-                    ? `Crea ordine (${creditAmount > 0 ? `€${creditAmount.toFixed(2)} crediti` : 'da pagare'})`
+                    ? `Crea ordine (${creditAmount > 0 ? `${creditAmount.toFixed(2)} ${eventCurrency?.currencyName ?? 'crediti'}` : 'da pagare'})`
                     : 'Crea ordine (da pagare)'}
               </button>
             </>
@@ -457,7 +494,13 @@ export function CashierOrderPage() {
           <div className={styles.notesModal} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>{notesModal.ep.product.name}</h3>
             <p className={styles.modalPrice}>
-              &euro;{(notesModal.ep.priceOverride ?? notesModal.ep.product.price).toFixed(2)}
+              {(notesModal.ep.priceOverride ?? notesModal.ep.product.price).toFixed(2)}
+              {eventCurrency && (
+                <CurrencyDisplay
+                  currencyName={eventCurrency.currencyName}
+                  currencySymbol={eventCurrency.currencySymbol}
+                />
+              )}
             </p>
 
             {notesModal.ep.stations && notesModal.ep.stations.length > 1 && (
@@ -496,7 +539,13 @@ export function CashierOrderPage() {
 
             <div className={styles.modalActions}>
               <button className={styles.modalAddBtn} onClick={addToCart}>
-                Aggiungi &euro;{((notesModal.ep.priceOverride ?? notesModal.ep.product.price) * notesModal.quantity).toFixed(2)}
+                Aggiungi {((notesModal.ep.priceOverride ?? notesModal.ep.product.price) * notesModal.quantity).toFixed(2)}
+                {eventCurrency && (
+                  <CurrencyDisplay
+                    currencyName={eventCurrency.currencyName}
+                    currencySymbol={eventCurrency.currencySymbol}
+                  />
+                )}
               </button>
               <button className={styles.modalCancelBtn} onClick={() => setNotesModal({ ...notesModal, open: false })}>
                 Annulla

@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { fetchOrders, payOrder, cancelOrder, updateOrderStatus, type Order } from '../lib/orders'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import type { UploadedImage } from '../lib/upload'
 import styles from './OrdersPage.module.scss'
 
 const statusLabels: Record<string, string> = {
@@ -22,7 +24,7 @@ export function OrdersPage() {
   const [filterStandId, setFilterStandId] = useState('')
   const [filterStationId, setFilterStationId] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
-  const [events, setEvents] = useState<{ id: string; name: string }[]>([])
+  const [events, setEvents] = useState<{ id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }[]>([])
   const [stands, setStands] = useState<{ id: string; name: string }[]>([])
   const [stations, setStations] = useState<{ id: string; name: string; standId: string }[]>([])
   const [modal, setModal] = useState<{ open: boolean; title: string; message: string }>({ open: false, title: '', message: '' })
@@ -40,7 +42,7 @@ export function OrdersPage() {
 
   useEffect(() => {
     load()
-    apiRequest<{ items: { id: string; name: string }[] }>('/events')
+    apiRequest<{ items: { id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }[] }>('/events')
       .then((d) => setEvents(d.items))
       .catch(() => {})
   }, [])
@@ -105,6 +107,15 @@ export function OrdersPage() {
     return [...new Set(items.map((i) => i.stationName).filter(Boolean))]
   }
 
+  const currencyFor = (eventId: string) => events.find((e) => e.id === eventId)
+
+  const renderCurrency = (eventId: string) => {
+    const ev = currencyFor(eventId)
+    return ev ? (
+      <CurrencyDisplay currencyName={ev.currencyName} currencySymbol={ev.currencySymbol} />
+    ) : null
+  }
+
   if (isLoading) return null
 
   return (
@@ -158,7 +169,10 @@ export function OrdersPage() {
                 <span className={`${styles.paymentBadge} ${styles[`payment_${order.paymentStatus}`]}`}>
                   {order.paymentStatus === 'paid' ? 'Pagato' : order.paymentStatus === 'refunded' ? 'Rimborsato' : 'Da pagare'}
                 </span>
-                <span className={styles.cardTotal}>&euro;{order.total.toFixed(2)}</span>
+                <span className={styles.cardTotal}>
+                  {order.total.toFixed(2)}
+                  {renderCurrency(order.eventId)}
+                </span>
               </div>
               <div className={styles.cardBody}>
                 <strong className={styles.cardName}>
@@ -174,9 +188,9 @@ export function OrdersPage() {
                 )}
                 {order.paymentStatus === 'paid' && order.creditAmountUsed > 0 && (
                   <span className={styles.cardCredit}>
-                    &euro;{order.creditAmountUsed.toFixed(2)} crediti
+                    {order.creditAmountUsed.toFixed(2)} crediti{renderCurrency(order.eventId)}
                     {order.creditAmountUsed < order.total && (
-                      <> + &euro;{(order.total - order.creditAmountUsed).toFixed(2)} altro</>
+                      <> + {(order.total - order.creditAmountUsed).toFixed(2)} altro{renderCurrency(order.eventId)}</>
                     )}
                   </span>
                 )}

@@ -250,7 +250,7 @@ export async function getOrderReceipt(req: Request, res: Response) {
     }
 
     const [event, stand] = await Promise.all([
-        EventModel.findById(order.eventId).select('name').lean(),
+        EventModel.findById(order.eventId).select('name currencyName currencySymbol').lean(),
         StandModel.findById(order.standId).select('name').lean(),
     ]);
 
@@ -276,6 +276,9 @@ export async function getOrderReceipt(req: Request, res: Response) {
             orderNumber: order.orderNumber,
             status: order.status,
             eventName: event.name,
+            eventId: order.eventId.toString(),
+            currencyName: event.currencyName ?? '€',
+            currencySymbol: event.currencySymbol ?? null,
             standName: stand.name,
             standId: order.standId.toString(),
             items: order.items.map((item) => ({
@@ -1129,7 +1132,7 @@ export async function getEventReport(req: Request, res: Response) {
         return res.status(403).json({ message: 'Access denied. Requires event-admin or event-cashier role.' });
     }
 
-    const event = await EventModel.findById(eventId).select('name unifiedCashierEnabled cashPaymentsEnabled currencyName currencySymbol');
+    const event = await EventModel.findById(eventId).select('name unifiedCashierEnabled cashPaymentsEnabled currencyName currencySymbol exchangeRate');
     if (!event) {
         return res.status(404).json({ message: 'Event not found' });
     }
@@ -1266,6 +1269,8 @@ export async function getEventReport(req: Request, res: Response) {
         unifiedCashierEnabled: event.unifiedCashierEnabled,
         cashPaymentsEnabled: event.cashPaymentsEnabled,
         currencyName: event.currencyName,
+        currencySymbol: event.currencySymbol ?? null,
+        exchangeRate: event.exchangeRate ?? 1,
         stands,
         totals
     });
@@ -1286,6 +1291,10 @@ export async function getStandReport(req: Request, res: Response) {
     if (eventId && isValidObjectId(eventId)) {
         matchFilter.eventId = new Types.ObjectId(eventId);
     }
+
+    const event = eventId && isValidObjectId(eventId)
+        ? await EventModel.findById(eventId).select('currencyName currencySymbol exchangeRate').lean()
+        : null;
 
     if (stationId && isValidObjectId(stationId)) {
         matchFilter['items.stationId'] = new Types.ObjectId(stationId);
@@ -1363,6 +1372,9 @@ export async function getStandReport(req: Request, res: Response) {
     return res.status(200).json({
         standId,
         eventId: eventId ?? null,
+        currencyName: event?.currencyName ?? '€',
+        currencySymbol: event?.currencySymbol ?? null,
+        exchangeRate: event?.exchangeRate ?? 1,
         summary: {
             totalOrders: summary?.totalOrders ?? 0,
             totalRevenue: summary?.totalRevenue ?? 0,

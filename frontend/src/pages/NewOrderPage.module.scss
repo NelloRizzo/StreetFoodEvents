@@ -98,6 +98,9 @@
 .menuItemPrice {
   color: var(--color-brand);
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .menuItemStations {
@@ -223,6 +226,9 @@
   color: var(--color-brand);
   font-weight: 600;
   font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
 }
 
 .cartItemActions {
@@ -254,9 +260,11 @@
 .totalRow {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 1.1rem;
   color: var(--color-ink-strong);
   padding-top: 0.5rem;
+  gap: 0.15em;
 }
 
 .paymentOptions {

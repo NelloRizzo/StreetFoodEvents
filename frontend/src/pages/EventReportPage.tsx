@@ -22,23 +22,23 @@ function saveCashBasis(eventId: string, basis: number) {
   localStorage.setItem(CASH_BASIS_KEY + eventId, JSON.stringify({ basis, updatedAt: new Date().toISOString() }))
 }
 
-function StandRow({ stand, isTotal, showCash, showCredits }: { stand: EventReportStand; isTotal?: boolean; showCash: boolean; showCredits: boolean }) {
+function StandRow({ stand, isTotal, showCash, showCredits, rate }: { stand: EventReportStand; isTotal?: boolean; showCash: boolean; showCredits: boolean; rate: number }) {
   return (
     <tr className={isTotal ? styles.tableTotals : undefined}>
       <td className={styles.standName}>{stand.standName}</td>
       <td className={styles.num}>{stand.paidOrders}</td>
-      <td className={styles.num}>{fmt(stand.totalRevenue)}</td>
-      {showCash && <td className={`${styles.num} ${styles.totalCash}`}>{fmt(stand.cashRevenue)}</td>}
-      {showCredits && <td className={`${styles.num} ${styles.totalCredits}`}>{fmt(stand.creditRevenue)}</td>}
+      <td className={styles.num}>{fmt(stand.totalRevenue, rate)}</td>
+      {showCash && <td className={`${styles.num} ${styles.totalCash}`}>{fmt(stand.cashRevenue, rate)}</td>}
+      {showCredits && <td className={`${styles.num} ${styles.totalCredits}`}>{fmt(stand.creditRevenue, rate)}</td>}
       <td className={styles.num}>{stand.pendingOrders}</td>
-      <td className={styles.num}>{fmt(stand.pendingAmount)}</td>
-      <td className={styles.num}>{fmt(stand.refundedAmount)}</td>
+      <td className={styles.num}>{fmt(stand.pendingAmount, rate)}</td>
+      <td className={styles.num}>{fmt(stand.refundedAmount, rate)}</td>
     </tr>
   )
 }
 
-function fmt(n: number) {
-  return `€${n.toFixed(2)}`
+function fmt(n: number, rate: number) {
+  return `€${(n / (rate || 1)).toFixed(2)}`
 }
 
 export function EventReportPage() {
@@ -93,6 +93,7 @@ export function EventReportPage() {
 
   const hasCredits = report.stands.some((s) => s.creditRevenue > 0)
   const hasCash = report.cashPaymentsEnabled
+  const rate = report.exchangeRate ?? 1
   const stands = selectedStandId
     ? report.stands.filter((s) => s.standId === selectedStandId)
     : report.stands
@@ -143,7 +144,7 @@ export function EventReportPage() {
             <div className={styles.cardTitle}>Cassa (dall'ultimo azzeramento)</div>
             <div className={styles.cashRegister}>
               <span className={styles.cashRegisterAmount}>
-                {registerVisible ? fmt((report.totals.totalRevenue - cashBasis)) : '\u2022\u2022\u2022\u2022\u2022'}
+                {registerVisible ? fmt((report.totals.totalRevenue - cashBasis), rate) : '\u2022\u2022\u2022\u2022\u2022'}
               </span>
               <button
                 type="button"
@@ -181,28 +182,28 @@ export function EventReportPage() {
               </div>
               <div className={styles.totalItem}>
                 <span className={styles.totalLabel}>Totale</span>
-                <span className={styles.totalValue}>{fmt(report.totals.totalRevenue)}</span>
+                <span className={styles.totalValue}>{fmt(report.totals.totalRevenue, rate)}</span>
               </div>
               {hasCash && (
                 <div className={styles.totalItem}>
                   <span className={styles.totalLabel}>Contanti</span>
-                  <span className={`${styles.totalValue} ${styles.totalCash}`}>{fmt(report.totals.cashRevenue)}</span>
+                  <span className={`${styles.totalValue} ${styles.totalCash}`}>{fmt(report.totals.cashRevenue, rate)}</span>
                 </div>
               )}
               {hasCredits && (
                 <div className={styles.totalItem}>
                   <span className={styles.totalLabel}>Crediti</span>
-                  <span className={`${styles.totalValue} ${styles.totalCredits}`}>{fmt(report.totals.creditRevenue)}</span>
+                  <span className={`${styles.totalValue} ${styles.totalCredits}`}>{fmt(report.totals.creditRevenue, rate)}</span>
                 </div>
               )}
               <div className={styles.totalItem}>
                 <span className={styles.totalLabel}>Pendenti</span>
-                <span className={styles.totalValue}>{fmt(report.totals.pendingAmount)}</span>
+                <span className={styles.totalValue}>{fmt(report.totals.pendingAmount, rate)}</span>
               </div>
               {report.totals.refundedAmount > 0 && (
                 <div className={styles.totalItem}>
                   <span className={styles.totalLabel}>Rimborsato</span>
-                  <span className={styles.totalValue}>{fmt(report.totals.refundedAmount)}</span>
+                  <span className={styles.totalValue}>{fmt(report.totals.refundedAmount, rate)}</span>
                 </div>
               )}
             </div>
@@ -229,7 +230,7 @@ export function EventReportPage() {
                   </thead>
                   <tbody>
                     {stands.map((stand) => (
-                      <StandRow key={stand.standId} stand={stand} showCash={hasCash} showCredits={hasCredits} />
+                      <StandRow key={stand.standId} stand={stand} showCash={hasCash} showCredits={hasCredits} rate={rate} />
                     ))}
                     <StandRow
                       stand={{
@@ -256,6 +257,7 @@ export function EventReportPage() {
                       isTotal
                       showCash={hasCash}
                       showCredits={hasCredits}
+                      rate={rate}
                     />
                   </tbody>
                 </table>

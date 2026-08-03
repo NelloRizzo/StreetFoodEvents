@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
+import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
+import type { UploadedImage } from '../lib/upload'
 import styles from './ReceiptPage.module.scss'
 
 type ReceiptData = {
@@ -10,6 +12,8 @@ type ReceiptData = {
   orderNumber: number
   status: string
   eventName: string
+  currencyName: string
+  currencySymbol: UploadedImage | null
   standName: string
   standId: string
   items: { productName: string; quantity: number; subtotal: number }[]
@@ -46,11 +50,12 @@ export function ReceiptPage() {
 
   function printReceipt() {
     if (!receipt) return
+    const badge = currencyBadgeHtml(receipt.currencyName)
     const itemsHtml = receipt.items.map((item) =>
-      `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escHtml(item.productName)} x${item.quantity}</span><span>&euro;${item.subtotal.toFixed(2)}</span></div>`
+      `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escHtml(item.productName)} x${item.quantity}</span><span>${item.subtotal.toFixed(2)} ${badge}</span></div>`
     ).join('')
     const creditsHtml = receipt.creditAmountUsed > 0
-      ? `<div style="font-size:11px;color:#555;text-align:center;margin-top:0.25rem">Crediti: &euro;${receipt.creditAmountUsed.toFixed(2)}</div>`
+      ? `<div style="font-size:11px;color:#555;text-align:center;margin-top:0.25rem">Crediti: ${receipt.creditAmountUsed.toFixed(2)} ${badge}</div>`
       : ''
     const qrHtml = receipt.receiptQrCode
       ? `<div style="display:flex;justify-content:center;margin:0.5rem 0"><img src="${receipt.receiptQrCode}" alt="QR" style="width:120px;height:120px;-webkit-print-color-adjust:exact;print-color-adjust:exact" /></div>`
@@ -71,7 +76,7 @@ body{padding:2rem;max-width:320px;margin:0 auto}
 <div class="header"><strong>${escHtml(receipt.eventName)}</strong><span>${escHtml(receipt.standName)}</span></div>
 <div class="order-number">#${receipt.orderNumber}</div>
 <div class="items">${itemsHtml}</div>
-<div class="total"><span>Totale</span><strong>&euro;${receipt.total.toFixed(2)}</strong></div>
+<div class="total"><span>Totale</span><strong>${receipt.total.toFixed(2)} ${badge}</strong></div>
 ${creditsHtml}
 ${qrHtml}
 <div class="footer">${new Date(receipt.createdAt).toLocaleString('it-IT')}</div>
@@ -133,19 +138,31 @@ ${qrHtml}
               <div key={idx} className={styles.item}>
                 <span className={styles.itemName}>{item.productName}</span>
                 <span className={styles.itemQty}>x{item.quantity}</span>
-                <span className={styles.itemPrice}>&euro;{item.subtotal.toFixed(2)}</span>
+                <span className={styles.itemPrice}>
+                  {item.subtotal.toFixed(2)}
+                  <CurrencyDisplay
+                    currencyName={receipt.currencyName}
+                    currencySymbol={receipt.currencySymbol}
+                  />
+                </span>
               </div>
             ))}
           </div>
 
           <div className={styles.total}>
             <span>Totale</span>
-            <strong>&euro;{receipt.total.toFixed(2)}</strong>
+            <strong>
+              {receipt.total.toFixed(2)}
+              <CurrencyDisplay
+                currencyName={receipt.currencyName}
+                currencySymbol={receipt.currencySymbol}
+              />
+            </strong>
           </div>
 
           {receipt.creditAmountUsed > 0 && (
             <div className={styles.credits}>
-              Pagato &euro;{receipt.creditAmountUsed.toFixed(2)} con crediti
+              Pagato {receipt.creditAmountUsed.toFixed(2)} con crediti
             </div>
           )}
 
