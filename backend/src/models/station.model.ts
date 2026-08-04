@@ -13,6 +13,10 @@ const stationSchema = new Schema(
             required: true,
             trim: true,
             maxlength: 120
+        },
+        sequenceOrder: {
+            type: Number,
+            default: 0
         }
     },
     {

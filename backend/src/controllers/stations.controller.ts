@@ -11,6 +11,7 @@ function toStationResponse(station: {
     _id: Types.ObjectId;
     standId: Types.ObjectId;
     name: string;
+    sequenceOrder?: number;
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -18,6 +19,7 @@ function toStationResponse(station: {
         id: station._id.toString(),
         standId: station.standId.toString(),
         name: station.name,
+        sequenceOrder: station.sequenceOrder ?? 0,
         createdAt: station.createdAt,
         updatedAt: station.updatedAt
     };
@@ -30,7 +32,7 @@ export async function listStations(req: Request, res: Response) {
         filter.standId = req.query.standId;
     }
 
-    const items = await StationModel.find(filter).sort({ name: 1 });
+    const items = await StationModel.find(filter).sort({ sequenceOrder: 1, name: 1 });
 
     return res.status(200).json({
         items: items.map(toStationResponse)
@@ -74,9 +76,14 @@ export async function createStation(req: Request, res: Response) {
         });
     }
 
+    const last = await StationModel.findOne({ standId })
+        .sort({ sequenceOrder: -1 })
+        .select('sequenceOrder');
+
     const station = await StationModel.create({
         standId,
-        name: name.trim()
+        name: name.trim(),
+        sequenceOrder: (last?.sequenceOrder ?? 0) + 1
     });
 
     return res.status(201).json({
@@ -101,7 +108,7 @@ export async function updateStation(req: Request, res: Response) {
         });
     }
 
-    const { name } = req.body;
+    const { name, sequenceOrder } = req.body;
 
     if (name !== undefined) {
         if (typeof name !== 'string' || !name.trim()) {
@@ -113,11 +120,75 @@ export async function updateStation(req: Request, res: Response) {
         station.name = name.trim();
     }
 
+    if (sequenceOrder !== undefined) {
+        if (typeof sequenceOrder !== 'number' || !Number.isFinite(sequenceOrder)) {
+            return res.status(400).json({
+                message: 'Invalid sequenceOrder'
+            });
+        }
+
+        station.sequenceOrder = sequenceOrder;
+    }
+
     await station.save();
 
     return res.status(200).json({
         item: toStationResponse(station)
     });
+}
+
+export async function reorderStations(req: Request, res: Response) {
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({
+            message: 'A non-empty items array is required'
+        });
+    }
+
+    const entries: { stationId: string; sequenceOrder: number }[] = [];
+
+    for (const item of items) {
+        if (typeof item !== 'object' || item === null) {
+            return res.status(400).json({
+                message: 'Invalid items payload'
+            });
+        }
+
+        const { stationId, sequenceOrder } = item as { stationId?: string; sequenceOrder?: unknown };
+
+        if (!isValidObjectId(stationId) || typeof sequenceOrder !== 'number' || !Number.isFinite(sequenceOrder)) {
+            return res.status(400).json({
+                message: 'Invalid items payload'
+            });
+        }
+
+        entries.push({ stationId, sequenceOrder });
+    }
+
+    const stationIds = entries.map((e) => e.stationId);
+
+    const found = await StationModel.find({ _id: { $in: stationIds } });
+    if (found.length !== stationIds.length) {
+        return res.status(404).json({
+            message: 'One or more stations not found'
+        });
+    }
+
+    const standIds = new Set(found.map((s) => s.standId.toString()));
+    if (standIds.size !== 1) {
+        return res.status(400).json({
+            message: 'All items must belong to the same stand'
+        });
+    }
+
+    await Promise.all(
+        entries.map((e) =>
+            StationModel.updateOne({ _id: e.stationId }, { $set: { sequenceOrder: e.sequenceOrder } })
+        )
+    );
+
+    return res.status(204).send();
 }
 
 export async function deleteStation(req: Request, res: Response) {

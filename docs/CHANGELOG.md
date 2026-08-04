@@ -7,6 +7,7 @@ Tutte le feature implementate, in ordine cronologico.
 - Contest: caccia ai POI con QR code, partecipazione anonima, ruoli contest-admin.
 
 ## Agosto 2026
+- Riordino postazioni per stand: campo `sequenceOrder` su Station, auto-increment per stand, sort lista per `sequenceOrder`, endpoint bulk `PATCH /stations/reorder`, pulsanti ▲/▼ in StandDetailPage. I tab della cassa (CashierOrderPage, EventCashierPage) e le altre liste ereditano l'ordine dall'API.
 - Riordino menu per stand: campo `sequenceOrder` su EventProduct, auto-increment per evento+stand, sort lista per `sequenceOrder`, endpoint bulk `PATCH /event-products/reorder`, pulsanti ▲/▼ in StandDetailPage (per evento selezionato).
 - Coda Ordini per stand: display pubblico fullscreen degli ordini in lavorazione (confirmed/preparing/ready) con avanzamento articoli per postazione, polling ogni 5s. Route: `/events/:eventId/stands/:standId/ordersqueue`.
 - Moneta evento personalizzata (nome + simbolo immagine): icona visibile in tutti i prezzi, saldi, menu, carrelli, ricevute (stampa inclusa) e resoconti. Componente condiviso `CurrencyDisplay`.

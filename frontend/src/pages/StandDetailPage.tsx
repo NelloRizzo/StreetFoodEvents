@@ -25,6 +25,7 @@ type Station = {
   id: string
   standId: string
   name: string
+  sequenceOrder?: number
   createdAt: string
   updatedAt: string
 }
@@ -166,6 +167,28 @@ export function StandDetailPage() {
     await fetchStations()
   }
 
+  const moveStation = async (index: number, direction: -1 | 1) => {
+    const target = index + direction
+    if (target < 0 || target >= stations.length) return
+
+    const next = [...stations]
+    const [moving] = next.splice(index, 1)
+    next.splice(target, 0, moving)
+
+    const items = next.map((s, i) => ({ stationId: s.id, sequenceOrder: i + 1 }))
+
+    setStations((prev) => {
+      const orderById = new Map(items.map((it) => [it.stationId, it.sequenceOrder]))
+      return prev.map((s) => (orderById.has(s.id) ? { ...s, sequenceOrder: orderById.get(s.id)! } : s))
+    })
+
+    try {
+      await apiRequest('/stations/reorder', { method: 'PATCH', bodyJson: { items } })
+    } catch {
+      await fetchStations()
+    }
+  }
+
   const fetchEventProducts = async () => {
     try {
       const data = await apiRequest<{ items: EventProduct[] }>(`/event-products?standId=${standId}`)
@@ -285,6 +308,8 @@ export function StandDetailPage() {
     .slice()
     .sort((a, b) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0))
 
+  const sortedStations = stations.slice().sort((a, b) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0))
+
   if (isLoading || !stand) return null
 
   return (
@@ -352,7 +377,7 @@ export function StandDetailPage() {
           </div>
 
           <div className={styles.stationList}>
-            {stations.map((station) => (
+            {sortedStations.map((station, index) => (
               <div key={station.id} className={styles.stationCard}>
                 {editingStation?.id === station.id ? (
                   <div className={styles.editRow}>
@@ -368,6 +393,26 @@ export function StandDetailPage() {
                   <>
                     <Link className={styles.stationName} to={`/orders/station/${station.id}`}>{station.name}</Link>
                     <div className={styles.stationActions}>
+                      {sortedStations.length > 1 && (
+                        <div className={styles.reorderBtns}>
+                          <button
+                            className={styles.reorderBtn}
+                            onClick={() => moveStation(index, -1)}
+                            disabled={index === 0}
+                            title="Sposta su"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            className={styles.reorderBtn}
+                            onClick={() => moveStation(index, 1)}
+                            disabled={index === sortedStations.length - 1}
+                            title="Sposta giù"
+                          >
+                            ▼
+                          </button>
+                        </div>
+                      )}
                       <button className={styles.textBtn} onClick={() => setEditingStation({ id: station.id, name: station.name })}>
                         Modifica
                       </button>

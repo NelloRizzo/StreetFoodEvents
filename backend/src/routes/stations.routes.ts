@@ -5,6 +5,7 @@ import {
     deleteStation,
     getStationById,
     listStations,
+    reorderStations,
     updateStation
 } from '../controllers/stations.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
@@ -16,5 +17,6 @@ stationsRouter.get('/', asyncHandler(listStations));
 stationsRouter.get('/:stationId', asyncHandler(getStationById));
 
 stationsRouter.post('/', asyncHandler(authMiddleware), asyncHandler(createStation));
+stationsRouter.patch('/reorder', asyncHandler(authMiddleware), asyncHandler(reorderStations));
 stationsRouter.patch('/:stationId', asyncHandler(authMiddleware), asyncHandler(updateStation));
 stationsRouter.delete('/:stationId', asyncHandler(authMiddleware), asyncHandler(deleteStation));

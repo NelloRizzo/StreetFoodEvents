@@ -107,6 +107,14 @@ Considerazioni progettuali e decisioni architetturali.
 - **Backend `registerScan`**: prima di push, verifica che `scannedCount < orderedCount` per quel POI ID. Se `scannedCount >= orderedCount`, errore "All occurrences already scanned".
 - **Frontend griglia**: mostra tutti gli `orderedPOIIds` (inclusi duplicati), con i POI trovati spostati in fondo e separati da un divider.
 
+## Station Reorder (Aug 2026)
+- **Campo `sequenceOrder`** (Number, default 0) su Station per ordinare le postazioni di uno stand. Stesso pattern di `EventProduct.sequenceOrder` e `ContestPOI.sequenceOrder`.
+- **Auto-increment** in `createStation`: `findOne({ standId }).sort({ sequenceOrder: -1 })` → `+1`. Ordine gestito per stand, non globale.
+- **Sort lista**: `listStations` ordina per `sequenceOrder: 1, name: 1` (fallback alfabetico per postazioni legacy con sequenceOrder 0). I tab della cassa e le liste ereditano l'ordine dall'API.
+- **Endpoint bulk**: `PATCH /api/stations/reorder` con `{ items: [{ stationId, sequenceOrder }] }` aggiorna più postazioni in una chiamata. Registrato PRIMA di `PATCH /:stationId` altrimenti `/reorder` verrebbe catturato come `:stationId`.
+- **Validazione reorder**: tutti gli item devono appartenere allo stesso stand (`standId` unico) e devono esistere (404 altrimenti). Return 204.
+- **Cosa NON fare**: non rinumerare con `sequenceOrder = index` senza considerare lo scope. Il frontend rinumerizza solo le postazioni dello stand corrente (1..N); i numeri possono collidere con postazioni di altri stand — accettabile perché `listStations` filtra sempre per `standId`, i pareggi sono risolti dal fallback `name`.
+
 ## EventProduct Reorder (Aug 2026)
 - **Campo `sequenceOrder`** (Number, default 0) su EventProduct per ordinare il menu per stand+evento. Pattern identico a `ContestPOI.sequenceOrder`.
 - **Auto-increment** in `createEventProduct`: `findOne({ eventId, standId }).sort({ sequenceOrder: -1 })` → `+1`. Ordine gestito per (evento, stand), non globale.
