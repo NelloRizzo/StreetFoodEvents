@@ -161,4 +161,194 @@ describe('EventProducts API', () => {
         const found = await EventProductModel.findById(ep._id);
         expect(found).toBeNull();
     });
+
+    it('assigns an incremental sequenceOrder per event/stand on create', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Stand' });
+        const station = await StationModel.create({ standId: stand._id, name: 'Cucina' });
+        const productA = await ProductModel.create({ name: 'Pizza', price: 8 });
+        const productB = await ProductModel.create({ name: 'Burger', price: 10 });
+
+        const first = await request(app)
+            .post('/api/event-products')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                standId: stand._id.toString(),
+                productId: productA._id.toString(),
+                stationIds: [station._id.toString()]
+            });
+
+        const second = await request(app)
+            .post('/api/event-products')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                standId: stand._id.toString(),
+                productId: productB._id.toString(),
+                stationIds: [station._id.toString()]
+            });
+
+        expect(first.status).toBe(201);
+        expect(first.body.item.sequenceOrder).toBe(1);
+        expect(second.status).toBe(201);
+        expect(second.body.item.sequenceOrder).toBe(2);
+    });
+
+    it('lists event-products ordered by sequenceOrder ascending', async () => {
+        app = createTestApp();
+
+        const event = await EventModel.create({
+            name: 'Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Cucina' });
+        const productA = await ProductModel.create({ name: 'Pizza', price: 8 });
+        const productB = await ProductModel.create({ name: 'Burger', price: 10 });
+        const productC = await ProductModel.create({ name: 'Drink', price: 3 });
+
+        await EventProductModel.create({
+            eventId: event._id,
+            standId: stand._id,
+            productId: productA._id,
+            stationIds: [station._id],
+            sequenceOrder: 3
+        });
+        await EventProductModel.create({
+            eventId: event._id,
+            standId: stand._id,
+            productId: productB._id,
+            stationIds: [station._id],
+            sequenceOrder: 1
+        });
+        await EventProductModel.create({
+            eventId: event._id,
+            standId: stand._id,
+            productId: productC._id,
+            stationIds: [station._id],
+            sequenceOrder: 2
+        });
+
+        const res = await request(app).get(`/api/event-products?eventId=${event._id}&standId=${stand._id}`);
+        expect(res.status).toBe(200);
+        expect(res.body.items).toHaveLength(3);
+        const order = res.body.items.map((i: { sequenceOrder: number }) => i.sequenceOrder);
+        expect(order).toEqual([1, 2, 3]);
+    });
+
+    it('reorders event-products via the bulk endpoint', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Stand' });
+        const station = await StationModel.create({ standId: stand._id, name: 'Cucina' });
+        const productA = await ProductModel.create({ name: 'Pizza', price: 8 });
+        const productB = await ProductModel.create({ name: 'Burger', price: 10 });
+
+        const epA = await EventProductModel.create({
+            eventId: event._id,
+            standId: stand._id,
+            productId: productA._id,
+            stationIds: [station._id],
+            sequenceOrder: 1
+        });
+        const epB = await EventProductModel.create({
+            eventId: event._id,
+            standId: stand._id,
+            productId: productB._id,
+            stationIds: [station._id],
+            sequenceOrder: 2
+        });
+
+        const res = await request(app)
+            .patch('/api/event-products/reorder')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                items: [
+                    { epId: epB._id.toString(), sequenceOrder: 1 },
+                    { epId: epA._id.toString(), sequenceOrder: 2 }
+                ]
+            });
+
+        expect(res.status).toBe(204);
+
+        const updatedA = await EventProductModel.findById(epA._id);
+        const updatedB = await EventProductModel.findById(epB._id);
+        expect(updatedA?.sequenceOrder).toBe(2);
+        expect(updatedB?.sequenceOrder).toBe(1);
+    });
+
+    it('rejects reorder with items from different stands', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const standA = await StandModel.create({ name: 'Stand A' });
+        const standB = await StandModel.create({ name: 'Stand B' });
+        const station = await StationModel.create({ standId: standA._id, name: 'Cucina' });
+        const product = await ProductModel.create({ name: 'Pizza', price: 8 });
+
+        const epA = await EventProductModel.create({
+            eventId: event._id,
+            standId: standA._id,
+            productId: product._id,
+            stationIds: [station._id]
+        });
+        const epB = await EventProductModel.create({
+            eventId: event._id,
+            standId: standB._id,
+            productId: product._id,
+            stationIds: [station._id]
+        });
+
+        const res = await request(app)
+            .patch('/api/event-products/reorder')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                items: [
+                    { epId: epA._id.toString(), sequenceOrder: 1 },
+                    { epId: epB._id.toString(), sequenceOrder: 2 }
+                ]
+            });
+
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 401 for reorder without auth', async () => {
+        app = createTestApp();
+        const res = await request(app)
+            .patch('/api/event-products/reorder')
+            .send({ items: [] });
+        expect(res.status).toBe(401);
+    });
 });

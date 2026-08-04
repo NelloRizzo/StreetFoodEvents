@@ -359,6 +359,36 @@
   align-items: center;
 }
 
+.reorderBtns {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.reorderBtn {
+  width: 1.6rem;
+  height: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line-soft);
+  border-radius: 4px;
+  background: var(--color-surface-soft);
+  color: var(--color-ink-strong);
+  font-size: 0.65rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.reorderBtn:hover:not(:disabled) {
+  border-color: var(--color-line-strong);
+}
+
+.reorderBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .availabilityBtn {
   padding: 0.35rem 0.75rem;
   border: 1px solid #28a745;

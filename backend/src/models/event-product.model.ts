@@ -38,6 +38,10 @@ const eventProductSchema = new Schema(
         available: {
             type: Boolean,
             default: true
+        },
+        sequenceOrder: {
+            type: Number,
+            default: 0
         }
     },
     {

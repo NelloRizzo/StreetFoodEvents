@@ -37,6 +37,7 @@ type EventProduct = {
   stationIds: string[]
   priceOverride: number | null
   available: boolean
+  sequenceOrder?: number
   createdAt: string
   updatedAt: string
 }
@@ -233,6 +234,29 @@ export function StandDetailPage() {
     await fetchEventProducts()
   }
 
+  const moveProduct = async (index: number, direction: -1 | 1) => {
+    const list = filteredEventProducts
+    const target = index + direction
+    if (target < 0 || target >= list.length) return
+
+    const next = [...list]
+    const [moving] = next.splice(index, 1)
+    next.splice(target, 0, moving)
+
+    const items = next.map((ep, i) => ({ epId: ep.id, sequenceOrder: i + 1 }))
+
+    setEventProducts((prev) => {
+      const orderById = new Map(items.map((it) => [it.epId, it.sequenceOrder]))
+      return prev.map((ep) => (orderById.has(ep.id) ? { ...ep, sequenceOrder: orderById.get(ep.id)! } : ep))
+    })
+
+    try {
+      await apiRequest('/event-products/reorder', { method: 'PATCH', bodyJson: { items } })
+    } catch {
+      await fetchEventProducts()
+    }
+  }
+
   const createNewProduct = async () => {
     const data = await apiRequest<{ item: ProductRef }>('/products', {
       method: 'POST',
@@ -254,9 +278,12 @@ export function StandDetailPage() {
   const eventName = (id: string) => events.find((e) => e.id === id)?.name ?? id
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? id
 
-  const filteredEventProducts = selectedActionEventId
+  const filteredEventProducts = (selectedActionEventId
     ? eventProducts.filter((ep) => ep.eventId === selectedActionEventId)
     : eventProducts
+  )
+    .slice()
+    .sort((a, b) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0))
 
   if (isLoading || !stand) return null
 
@@ -475,7 +502,7 @@ export function StandDetailPage() {
           )}
 
           <div className={styles.productList}>
-            {filteredEventProducts.map((ep) => (
+            {filteredEventProducts.map((ep, index) => (
               <div key={ep.id} className={styles.productCard}>
                 <div className={styles.productCardBody}>
                   <strong>{productName(ep.productId)}</strong>
@@ -500,6 +527,26 @@ export function StandDetailPage() {
                   )}
                 </div>
                 <div className={styles.productCardActions}>
+                  {selectedActionEventId && filteredEventProducts.length > 1 && (
+                    <div className={styles.reorderBtns}>
+                      <button
+                        className={styles.reorderBtn}
+                        onClick={() => moveProduct(index, -1)}
+                        disabled={index === 0}
+                        title="Sposta su nel menu"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        className={styles.reorderBtn}
+                        onClick={() => moveProduct(index, 1)}
+                        disabled={index === filteredEventProducts.length - 1}
+                        title="Sposta giù nel menu"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  )}
                   <button
                     className={`${styles.availabilityBtn} ${ep.available ? '' : styles.unavailableBtn}`}
                     onClick={async () => {

@@ -33,6 +33,7 @@ function toEventProductResponse(ep: {
     stationIds: Types.ObjectId[];
     priceOverride?: number | null;
     available?: boolean;
+    sequenceOrder?: number;
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -57,6 +58,7 @@ function toEventProductResponse(ep: {
         stationIds: ep.stationIds.map((id) => id.toString()),
         priceOverride: ep.priceOverride ?? null,
         available: ep.available ?? true,
+        sequenceOrder: ep.sequenceOrder ?? 0,
         createdAt: ep.createdAt,
         updatedAt: ep.updatedAt
     };
@@ -75,7 +77,7 @@ export async function listEventProducts(req: Request, res: Response) {
 
     const items = await EventProductModel.find(filter)
         .populate('productId')
-        .sort({ createdAt: -1 });
+        .sort({ sequenceOrder: 1, createdAt: 1 });
 
     return res.status(200).json({
         items: items.map(toEventProductResponse)
@@ -149,12 +151,17 @@ export async function createEventProduct(req: Request, res: Response) {
         });
     }
 
+    const last = await EventProductModel.findOne({ eventId, standId })
+        .sort({ sequenceOrder: -1 })
+        .select('sequenceOrder');
+
     const ep = await EventProductModel.create({
         eventId,
         standId,
         productId,
         stationIds,
-        priceOverride: priceOverride ?? null
+        priceOverride: priceOverride ?? null,
+        sequenceOrder: (last?.sequenceOrder ?? 0) + 1
     });
 
     return res.status(201).json({
@@ -182,7 +189,8 @@ export async function updateEventProduct(req: Request, res: Response) {
     const {
         stationIds,
         priceOverride,
-        available
+        available,
+        sequenceOrder
     } = req.body;
 
     if (stationIds !== undefined) {
@@ -203,11 +211,75 @@ export async function updateEventProduct(req: Request, res: Response) {
         ep.available = available;
     }
 
+    if (sequenceOrder !== undefined) {
+        if (typeof sequenceOrder !== 'number' || !Number.isFinite(sequenceOrder)) {
+            return res.status(400).json({
+                message: 'Invalid sequenceOrder'
+            });
+        }
+
+        ep.sequenceOrder = sequenceOrder;
+    }
+
     await ep.save();
 
     return res.status(200).json({
         item: toEventProductResponse(ep)
     });
+}
+
+export async function reorderEventProducts(req: Request, res: Response) {
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({
+            message: 'A non-empty items array is required'
+        });
+    }
+
+    const entries: { epId: string; sequenceOrder: number }[] = [];
+
+    for (const item of items) {
+        if (typeof item !== 'object' || item === null) {
+            return res.status(400).json({
+                message: 'Invalid items payload'
+            });
+        }
+
+        const { epId, sequenceOrder } = item as { epId?: string; sequenceOrder?: unknown };
+
+        if (!isValidObjectId(epId) || typeof sequenceOrder !== 'number' || !Number.isFinite(sequenceOrder)) {
+            return res.status(400).json({
+                message: 'Invalid items payload'
+            });
+        }
+
+        entries.push({ epId, sequenceOrder });
+    }
+
+    const epIds = entries.map((e) => e.epId);
+
+    const found = await EventProductModel.find({ _id: { $in: epIds } });
+    if (found.length !== epIds.length) {
+        return res.status(404).json({
+            message: 'One or more event products not found'
+        });
+    }
+
+    const standIds = new Set(found.map((ep) => ep.standId.toString()));
+    if (standIds.size !== 1) {
+        return res.status(400).json({
+            message: 'All items must belong to the same stand'
+        });
+    }
+
+    await Promise.all(
+        entries.map((e) =>
+            EventProductModel.updateOne({ _id: e.epId }, { $set: { sequenceOrder: e.sequenceOrder } })
+        )
+    );
+
+    return res.status(204).send();
 }
 
 export async function deleteEventProduct(req: Request, res: Response) {

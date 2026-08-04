@@ -107,6 +107,14 @@ Considerazioni progettuali e decisioni architetturali.
 - **Backend `registerScan`**: prima di push, verifica che `scannedCount < orderedCount` per quel POI ID. Se `scannedCount >= orderedCount`, errore "All occurrences already scanned".
 - **Frontend griglia**: mostra tutti gli `orderedPOIIds` (inclusi duplicati), con i POI trovati spostati in fondo e separati da un divider.
 
+## EventProduct Reorder (Aug 2026)
+- **Campo `sequenceOrder`** (Number, default 0) su EventProduct per ordinare il menu per stand+evento. Pattern identico a `ContestPOI.sequenceOrder`.
+- **Auto-increment** in `createEventProduct`: `findOne({ eventId, standId }).sort({ sequenceOrder: -1 })` → `+1`. Ordine gestito per (evento, stand), non globale.
+- **Sort lista**: `listEventProducts` ordina per `sequenceOrder: 1, createdAt: 1` (era `createdAt: -1`). Tutti i consumatori (menu, cassa, stampa, StandDetailPage) ereditano l'ordine dall'API.
+- **Endpoint bulk**: `PATCH /api/event-products/reorder` con `{ items: [{ epId, sequenceOrder }] }` aggiorna più prodotti in una chiamata. Registrato PRIMA di `PATCH /:epId` altrimenti `/reorder` verrebbe catturato come `:epId`.
+- **Validazione reorder**: tutti gli item devono appartenere allo stesso stand (`standId` unico) e devono esistere (404 altrimenti). Il frontend rinumerizza solo la lista filtrata per evento selezionato.
+- **Cosa NON fare**: non rinumerare con `sequenceOrder = index` senza considerare lo scope. Il frontend rinumerizza solo il sottoinsieme filtrato per evento (1..N), quindi i numeri possono collidere con prodotti di altri eventi dello stesso stand — è accettabile perché le query del menu filtrano sempre per `eventId`; i pareggi in ordinamento sono risolti dal fallback `createdAt`.
+
 ## Email Subscription System (Jul 2026)
 - **Modello `EmailSubscription`**: archivia email per comunicazioni future. `email` indicizzato, `eventId` opzionale. `marketingConsent` separato dal consenso all'invio foto.
 - **UPSERT per email**: `EmailSubscriptionModel.findOneAndUpdate` con `{ upsert: true }` sulla chiave email. Una sola entry per email, aggiornata a ogni nuovo consenso.
