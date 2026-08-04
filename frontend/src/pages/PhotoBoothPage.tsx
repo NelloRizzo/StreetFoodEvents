@@ -44,7 +44,8 @@ export function PhotoBoothPage() {
   const [error, setError] = useState<string | null>(null)
   const [cameraReady, setCameraReady] = useState(false)
   const [recentPhotos, setRecentPhotos] = useState<RecentPhoto[]>([])
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment')
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
   const [torchOn, setTorchOn] = useState(false)
   const [torchSupported, setTorchSupported] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
@@ -102,23 +103,57 @@ export function PhotoBoothPage() {
     }
   }
 
+  const refreshDevices = async (activeDeviceId?: string) => {
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices()
+      const vids = all.filter((d) => d.kind === 'videoinput')
+      setDevices(vids)
+      if (activeDeviceId) setSelectedDeviceId(activeDeviceId)
+    } catch {
+      // enumeration not available — ignore
+    }
+  }
+
+  const openCamera = async (deviceId?: string) => {
+    const video = deviceId
+      ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+      : { facingMode: 'environment' as const, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    const s = await navigator.mediaDevices.getUserMedia({ video, audio: false })
+    setStream(s)
+    setTorchOn(false)
+    if (videoRef.current) {
+      videoRef.current.srcObject = s
+    }
+    const track = s.getVideoTracks()[0]
+    if (track) {
+      checkCapabilities(track)
+      const activeId = track.getSettings?.().deviceId
+      if (activeId) setSelectedDeviceId(activeId)
+      await refreshDevices(activeId)
+    }
+    setCameraReady(true)
+    setError(null)
+  }
+
   const startCamera = async () => {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false,
-      })
-      setStream(s)
-      setTorchOn(false)
-      if (videoRef.current) {
-        videoRef.current.srcObject = s
-      }
-      const track = s.getVideoTracks()[0]
-      if (track) checkCapabilities(track)
-      setCameraReady(true)
-      setError(null)
+      await openCamera()
     } catch {
       setError('Fotocamera non disponibile')
+    }
+  }
+
+  const switchCamera = async (deviceId: string) => {
+    if (!deviceId) return
+    stream?.getTracks().forEach((t) => t.stop())
+    setStream(null)
+    setCameraReady(false)
+    setTorchOn(false)
+    setSelectedDeviceId(deviceId)
+    try {
+      await openCamera(deviceId)
+    } catch {
+      setError('Impossibile cambiare fotocamera')
     }
   }
 
@@ -313,29 +348,6 @@ export function PhotoBoothPage() {
     }
   }
 
-  const toggleFacingMode = async () => {
-    const next = facingMode === 'environment' ? 'user' : 'environment'
-    stream?.getTracks().forEach((t) => t.stop())
-    setStream(null)
-    setCameraReady(false)
-    setFacingMode(next)
-    setTorchOn(false)
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: next, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false,
-      })
-      setStream(s)
-      if (videoRef.current) videoRef.current.srcObject = s
-      const track = s.getVideoTracks()[0]
-      if (track) checkCapabilities(track)
-      setCameraReady(true)
-      setError(null)
-    } catch {
-      setError('Impossibile cambiare fotocamera')
-    }
-  }
-
   const toggleTorch = async () => {
     const track = stream?.getVideoTracks()[0]
     if (!track || !torchSupported) return
@@ -493,10 +505,22 @@ export function PhotoBoothPage() {
 
             {cameraReady && !captured && (
               <div className={styles.toolbar}>
-                <button className={styles.toolBtn} onClick={toggleFacingMode} title={facingMode === 'environment' ? 'Anteriore' : 'Posteriore'}>
-                  <span className={styles.toolIcon}>⟳</span>
-                  <span className={styles.toolLabel}>{facingMode === 'environment' ? 'Posteriore' : 'Anteriore'}</span>
-                </button>
+                {devices.length > 1 && (
+                  <label className={`${styles.toolBtn} ${styles.cameraPicker}`} title="Fotocamera">
+                    <span className={styles.toolIcon}>📷</span>
+                    <select
+                      className={styles.cameraSelect}
+                      value={selectedDeviceId ?? ''}
+                      onChange={(e) => switchCamera(e.target.value)}
+                    >
+                      {devices.map((d, i) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                          {d.label || `Fotocamera ${i + 1}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <button className={`${styles.toolBtn} ${torchOn ? styles.toolActive : ''}`} onClick={toggleTorch} disabled={!torchSupported} title="Torcia">
                   <span className={styles.toolIcon}>💡</span>
                   <span className={styles.toolLabel}>Torcia</span>

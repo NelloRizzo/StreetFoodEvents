@@ -293,6 +293,26 @@
   white-space: nowrap;
 }
 
+.cameraPicker {
+  padding: 0.15rem 0.45rem 0.15rem 0.7rem;
+}
+
+.cameraSelect {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 160px;
+  outline: none;
+}
+
+.cameraSelect option {
+  color: #111;
+}
+
 .zoomControl {
   display: flex;
   align-items: center;
@@ -571,6 +591,10 @@
 
   .toolLabel {
     display: none;
+  }
+
+  .cameraPicker {
+    padding: 0.25rem 0.35rem 0.25rem 0.55rem;
   }
 
   .toolActive {
