@@ -143,3 +143,15 @@ Considerazioni progettuali e decisioni architetturali.
 - **Fix**: aggiunto `updateOrderStatus(response.item.id, 'preparing')` in `CashierOrderPage.handleSubmit`.
 - **Filtro ordini**: `CashierOrderPage.loadActiveOrders` ora usa `status: 'preparing,ready'`. Backend `listOrders` supporta comma-separated per `?status=` → converte in `$in`.
 - **Cosa NON fare**: non dare per scontato che due pagine simili abbiano la stessa logica di flusso ordini. Verificare sempre lo stato dopo la creazione.
+
+## Reset completo evento (Aug 2026)
+- **Endpoint**: `POST /api/orders/event/:eventId/reset` (solo `platform-admin`). Elimina in un'unica transazione: `Order`, `EventUserTransaction` (acquisti E cambio), `StandSettlement`; azzera i saldi `EventUser` (balance: 0, NON elimina i portafogli), elimina i `Counter` degli stand e azzera `Event.cashRegisterResetAt`.
+- **Perché azzerare i saldi**: eliminando TUTTE le transazioni (inclusi i top-up), i saldi residui sarebbero inconsistenti (crediti senza top-up a supporto). Il reset riporta ogni portafoglio a 0.
+- **Cosa NON fare - Promise.all in transazione**: operazioni Mongo sulla stessa session lanciate con `Promise.all` dentro una transazione sono **flaky** (500 intermittente). Usare SEMPRE await sequenziali (vedi `resetEventOrders` in orders.controller.ts).
+- **UI**: doppia conferma in `EventDetailPage` (bottone "Azzera ordini" → modale riepilogo → modale prompt con digitazione "AZZERA"). L'endpoint DELETE `/api/orders/event/:eventId` (solo ordini) esiste ancora ed è separato.
+
+## POI form centrato sull'evento (Aug 2026)
+- **MapPicker**: quando `lat`/`lng` sono vuoti (nuova entità) e viene passato `resetCenter`, il centro iniziale della mappa, il marker e le coordinate precompilate via `onChange` usano `resetCenter`. Fallback a Roma (default) solo se mancano entrambi. Questo rende il componente "anchor-aware": aprire un form legato a un evento parte già dal punto giusto.
+- **Form "Nuovo POI"** in `EventDetailPage`: passa le coordinate dell'evento (`event.location.coordinates`, formato `[lng, lat]`) come `resetCenter` con label "Centra sull'evento". Il marker parte quindi sull'evento e il pulsante di reset riporta lì la vista.
+- **Effetto su altri usi**: `StandsPage` passava già `resetCenter` (coordinate evento) — con il nuovo fallback anche i form stand partono centrati sull'evento. `EventsPage` non passa `resetCenter`: resta su Roma.
+- **Cosa NON fare**: non chiamare `onChange` a ogni render quando le coordinate sono già valide — il prefill avviene SOLO nel mount effect quando `!hasValidCoords && hasResetCenter`.

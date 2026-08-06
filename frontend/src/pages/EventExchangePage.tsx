@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -83,6 +83,7 @@ export function EventExchangePage() {
   const [txTotalPages, setTxTotalPages] = useState(1)
 
   const [selectedUserId, setSelectedUserId] = useState('')
+  const selectedUserIdRef = useRef('')
   const [selUserBalance, setSelUserBalance] = useState(0)
   const [topUpAmount, setTopUpAmount] = useState('')
   const [topUpDesc, setTopUpDesc] = useState('')
@@ -114,6 +115,16 @@ export function EventExchangePage() {
       setUsers(usrs.items)
       setTransactions(txs.items)
       setTxTotalPages(txs.pagination.totalPages)
+      const currentId = selectedUserIdRef.current
+      const stillExists = usrs.items.some((u) => u.id === currentId)
+      if (!currentId || !stillExists) {
+        const anon = usrs.items.find((u) => u.isAnonymous)
+        if (anon) {
+          setSelectedUserId(anon.id)
+          selectedUserIdRef.current = anon.id
+          setSelUserBalance(anon.balance)
+        }
+      }
     } catch (err) {
       if ((err as { status?: number }).status === 403) {
         any403 = true
@@ -124,6 +135,8 @@ export function EventExchangePage() {
   }, [eventId, isAuthenticated, txPage])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  useEffect(() => { selectedUserIdRef.current = selectedUserId }, [selectedUserId])
 
   const handleTopUp = async () => {
     if (!eventId || !selectedUserId || !topUpAmount) return
@@ -185,11 +198,14 @@ export function EventExchangePage() {
     if (!eventId) return
     setCreatingGuest(true)
     try {
-      await apiRequest<{ item: ExchangeUser }>(`/exchange/${eventId}/guests`, {
+      const res = await apiRequest<{ item: ExchangeUser }>(`/exchange/${eventId}/guests`, {
         method: 'POST',
         bodyJson: { displayName: guestName.trim() || undefined }
       })
       setGuestName('')
+      setSelectedUserId(res.item.id)
+      selectedUserIdRef.current = res.item.id
+      setSelUserBalance(res.item.balance)
       fetchData()
     } catch (err) {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante la creazione del cliente' })
@@ -312,6 +328,7 @@ export function EventExchangePage() {
                 onChange={(e) => {
                   const uid = e.target.value
                   setSelectedUserId(uid)
+                  selectedUserIdRef.current = uid
                   const u = users.find((x) => x.id === uid)
                   setSelUserBalance(u?.balance ?? 0)
                 }}

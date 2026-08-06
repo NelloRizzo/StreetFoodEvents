@@ -5,12 +5,14 @@ import * as qrcode from 'qrcode';
 import { CounterModel } from '../models/counter.model';
 import { EventProductModel } from '../models/event-product.model';
 import { EventUserModel } from '../models/event-user.model';
+import { EventUserTransactionModel } from '../models/event-user-transaction.model';
 import { OrderModel } from '../models/order.model';
 import { StationModel } from '../models/station.model';
 import { UserStationModel } from '../models/user-station.model';
 import { createEventUserTransaction, EventUserTransactionError } from '../services/event-user-transactions.service';
 import { EventModel } from '../models/event.model';
 import { StandModel } from '../models/stand.model';
+import { StandSettlementModel } from '../models/stand-settlement.model';
 import { RoleModel } from '../models/role.model';
 import { UserRoleModel } from '../models/user-role.model';
 
@@ -1032,6 +1034,65 @@ export async function deleteEventOrders(req: Request, res: Response) {
     return res.status(200).json({
         message: `Deleted ${deleteResult.deletedCount} orders and reset counters for ${standIds.length} stands`
     });
+}
+
+export async function resetEventOrders(req: Request, res: Response) {
+    const { eventId } = req.params;
+
+    if (!isValidObjectId(eventId)) {
+        return res.status(400).json({ message: 'Invalid event id' });
+    }
+
+    const userId = req.user!.id;
+
+    const platformAdminRole = await RoleModel.findOne({ slug: 'platform-admin', scope: 'platform' });
+    if (!platformAdminRole) {
+        return res.status(500).json({ message: 'Platform admin role not found' });
+    }
+
+    const userRole = await UserRoleModel.findOne({
+        userId: new Types.ObjectId(userId),
+        roleId: platformAdminRole._id,
+        isActive: true
+    });
+
+    if (!userRole) {
+        return res.status(403).json({ message: 'Only platform administrators can reset event data' });
+    }
+
+    const eventObjectId = new Types.ObjectId(eventId);
+
+    const session = await mongoose.startSession();
+
+    try {
+        session.startTransaction();
+
+        const ordersRes = await OrderModel.deleteMany({ eventId: eventObjectId }).session(session);
+        const txnRes = await EventUserTransactionModel.deleteMany({ eventId: eventObjectId }).session(session);
+        const settlementRes = await StandSettlementModel.deleteMany({ eventId: eventObjectId }).session(session);
+        const walletRes = await EventUserModel.updateMany(
+            { eventId: eventObjectId },
+            { $set: { balance: 0 } }
+        ).session(session);
+        await EventModel.updateOne({ _id: eventObjectId }, { $set: { cashRegisterResetAt: null } }).session(session);
+
+        const stands = await StandModel.find({ eventIds: eventObjectId }).select('_id').session(session);
+        const standIds = stands.map((s) => s._id);
+        if (standIds.length > 0) {
+            await CounterModel.deleteMany({ standId: { $in: standIds } }).session(session);
+        }
+
+        await session.commitTransaction();
+
+        return res.status(200).json({
+            message: `Reset completo: ${ordersRes.deletedCount} ordini, ${txnRes.deletedCount} transazioni, ${settlementRes.deletedCount} liquidazioni eliminati, ${walletRes.modifiedCount} portafogli azzerati, contatori resettati per ${standIds.length} stand`
+        });
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    } finally {
+        await session.endSession();
+    }
 }
 
 export async function deleteStandOrders(req: Request, res: Response) {

@@ -29,7 +29,16 @@ export function MapPicker({ lat, lng, onChange, height = '240px', resetCenter, r
   const currentLat = Number(lat.replace(',', '.'))
   const currentLng = Number(lng.replace(',', '.'))
   const hasValidCoords = !isNaN(currentLat) && !isNaN(currentLng) && currentLat !== 0 && currentLng !== 0
-  const center: [number, number] = hasValidCoords ? [currentLat, currentLng] : defaultCenter
+  const hasResetCenter =
+    !!resetCenter &&
+    Number.isFinite(resetCenter.lat) &&
+    Number.isFinite(resetCenter.lng) &&
+    (resetCenter.lat !== 0 || resetCenter.lng !== 0)
+  const center: [number, number] = hasValidCoords
+    ? [currentLat, currentLng]
+    : hasResetCenter
+      ? [resetCenter!.lat, resetCenter!.lng]
+      : defaultCenter
 
   const handleReset = () => {
     if (!mapRef.current || !markerRef.current || !resetCenter) return
@@ -82,6 +91,10 @@ export function MapPicker({ lat, lng, onChange, height = '240px', resetCenter, r
 
     if (hasValidCoords) {
       map.setView(center, 16)
+    }
+
+    if (!hasValidCoords && hasResetCenter) {
+      onChange(resetCenter!.lat.toFixed(6), resetCenter!.lng.toFixed(6))
     }
 
     mapRef.current = map

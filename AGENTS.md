@@ -112,6 +112,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 |---|---|---|---|
 | GET | `/api/orders/stand/:standId/ordersqueue` | no | Coda Ordini: ordini confirmed/preparing/ready (minimi dati, niente prezzi/clienti) |
 | GET | `/api/orders` | auth | Lista ordini (filtri eventId, standId, status comma-separated, userId, customerId, stationId, date) |
+| POST | `/api/orders/event/:eventId/reset` | platform-admin | Reset completo evento: elimina ordini, TUTTE le transazioni (acquisti + cambio), liquidazioni stand, azzera saldi portafogli, contatori e `cashRegisterResetAt`. In transazione. |
 
 ### API routes — Reports
 | Method | Route | Auth | Description |
@@ -219,6 +220,13 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - Helper `fetchStandDisplayOrders` in `frontend/src/lib/orders.ts`
 - Test backend: filtro stati, esclusione pending/completed, 404 stand inesistente
 - I comandi display NON sono protetti: la route è registrata PRIMA di `authMiddleware` in `orders.routes.ts`
+
+## Session state (Aug 2026 — reset evento + cambio auto-select + POI centrato)
+### Completed
+- `POST /api/orders/event/:eventId/reset` (platform-admin): in transazione elimina ordini, TUTTE le `EventUserTransaction` (acquisti + cambio), le `StandSettlement`, azzera i saldi `EventUser`, elimina i `Counter` degli stand e azzera `Event.cashRegisterResetAt`. Implementato in `resetEventOrders` (orders.controller.ts) con await SEQUENZIALI dentro la transazione — MAI `Promise.all` su operazioni con session Mongo (flaky: 500 intermittente).
+- UI doppia conferma in `EventDetailPage`: bottone "Azzera ordini" → modale riepilogo → modale `prompt` che richiede la digitazione di "AZZERA". Test: `integration-order-reset.test.ts` (3 test).
+- `EventExchangePage`: al caricamento, se nessun utente è selezionato viene selezionato di default il Cliente Generico (`isAnonymous`); il pulsante "+ Crea" seleziona automaticamente il nuovo cliente creato (usa `res.item.id`). Ref `selectedUserIdRef` per evitare closure stantie in `fetchData`.
+- `MapPicker`: se non ci sono coordinate valide ma c'è `resetCenter`, usa `resetCenter` come centro iniziale + posizione marker e precompila le coordinate via `onChange` (fallback a Roma solo se niente `resetCenter`). Il form "Nuovo POI" di `EventDetailPage` passa le coordinate dell'evento come `resetCenter` con label "Centra sull'evento".
 
 ## Session state (Jul 2026 — email subscription + fix cassa ordini)
 ### Completed

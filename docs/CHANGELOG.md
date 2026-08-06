@@ -7,6 +7,9 @@ Tutte le feature implementate, in ordine cronologico.
 - Contest: caccia ai POI con QR code, partecipazione anonima, ruoli contest-admin.
 
 ## Agosto 2026
+- Reset completo evento: endpoint `POST /api/orders/event/:eventId/reset` (solo platform-admin) che in un'unica transazione elimina ordini, tutte le transazioni (acquisti e cambio carichi/rimborsi), le liquidazioni stand, azzera i saldi dei portafogli, i contatori ordini e la data di azzeramento cassa. UI in EventDetailPage con doppia conferma: bottone "Azzera ordini" → modale riepilogo → modale prompt con digitazione di "AZZERA".
+- Pagina Cambio: quando si crea un nuovo cliente il pulsante lo seleziona automaticamente nella combo laterale; in assenza di selezione, viene selezionato di default il Cliente Generico.
+- Form POI: quando si aggiunge un nuovo Punto di Interesse la mappa viene centrata per default sull'evento (marker preimpostato sulle coordinate dell'evento) con pulsante "Centra sull'evento".
 - Riordino postazioni per stand: campo `sequenceOrder` su Station, auto-increment per stand, sort lista per `sequenceOrder`, endpoint bulk `PATCH /stations/reorder`, pulsanti ▲/▼ in StandDetailPage. I tab della cassa (CashierOrderPage, EventCashierPage) e le altre liste ereditano l'ordine dall'API.
 - Riordino menu per stand: campo `sequenceOrder` su EventProduct, auto-increment per evento+stand, sort lista per `sequenceOrder`, endpoint bulk `PATCH /event-products/reorder`, pulsanti ▲/▼ in StandDetailPage (per evento selezionato).
 - Coda Ordini per stand: display pubblico fullscreen degli ordini in lavorazione (confirmed/preparing/ready) con avanzamento articoli per postazione, polling ogni 5s. Route: `/events/:eventId/stands/:standId/ordersqueue`.

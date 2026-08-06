@@ -17,6 +17,7 @@ import {
     markItemReady,
     markStationReady,
     payOrder,
+    resetEventOrders,
     resetOrderCounter,
     updateOrderStatus
 } from '../controllers/orders.controller';
@@ -34,6 +35,7 @@ ordersRouter.get('/:orderId/receipt-qrcode', asyncHandler(getOrderReceiptQrCode)
 
 ordersRouter.delete('/event/:eventId', asyncHandler(deleteEventOrders));
 ordersRouter.delete('/stand/:standId', asyncHandler(deleteStandOrders));
+ordersRouter.post('/event/:eventId/reset', asyncHandler(resetEventOrders));
 ordersRouter.get('/', asyncHandler(listOrders));
 ordersRouter.get('/my-station', asyncHandler(listMyStationOrders));
 ordersRouter.get('/report/stand/:standId', asyncHandler(getStandReport));

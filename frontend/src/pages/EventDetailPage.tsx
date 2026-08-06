@@ -27,7 +27,7 @@ type UploadedImg = {
 type Event = {
   id: string
   name: string
-  location: { label: string; city?: string | null; googleMapsUrl?: string | null }
+  location: { label: string; city?: string | null; googleMapsUrl?: string | null; coordinates?: { coordinates?: [number, number] } | null }
   startDate: string
   endDate: string
   currencyName: string
@@ -111,6 +111,7 @@ export function EventDetailPage() {
   const [showPoiForm, setShowPoiForm] = useState(false)
   const [editingPoiId, setEditingPoiId] = useState<string | null>(null)
   const [deleteOrdersTarget, setDeleteOrdersTarget] = useState(false)
+  const [confirmResetTarget, setConfirmResetTarget] = useState(false)
   const [deletingOrders, setDeletingOrders] = useState(false)
   const [poiForm, setPoiForm] = useState({
     name: '',
@@ -380,7 +381,7 @@ export function EventDetailPage() {
             )}
             {isPlatformAdmin && (
               <button className={styles.dangerBtn} onClick={() => setDeleteOrdersTarget(true)}>
-                Cancella ordini
+                Azzera ordini
               </button>
             )}
             <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} />
@@ -474,7 +475,19 @@ export function EventDetailPage() {
                 </label>
                 <div className={styles.poiField}>
                   <label>Posizione (clicca sulla mappa o sposta il marker)</label>
-                  <MapPicker lat={poiForm.latitude} lng={poiForm.longitude} onChange={(lat, lng) => setPoiForm((p) => ({ ...p, latitude: lat, longitude: lng }))} height="200px" />
+                  <MapPicker
+                    lat={poiForm.latitude}
+                    lng={poiForm.longitude}
+                    onChange={(lat, lng) => setPoiForm((p) => ({ ...p, latitude: lat, longitude: lng }))}
+                    height="200px"
+                    resetCenter={(() => {
+                      const coords = event?.location?.coordinates?.coordinates
+                      return coords && coords.length === 2 && (coords[0] !== 0 || coords[1] !== 0)
+                        ? { lat: coords[1], lng: coords[0] }
+                        : undefined
+                    })()}
+                    resetLabel="Centra sull'evento"
+                  />
                 </div>
                 <label className={styles.poiField}>
                   Icona
@@ -993,24 +1006,43 @@ export function EventDetailPage() {
       <ConfirmModal
         open={deleteOrdersTarget}
         variant="confirm"
-        title="Cancellare tutti gli ordini?"
-        message="Tutti gli ordini per questo evento verranno eliminati definitivamente e i contatori degli ordini verranno azzerati. Operazione irreversibile."
-        confirmLabel={deletingOrders ? 'Eliminazione...' : 'Cancella tutto'}
+        title="Azzerare l'evento?"
+        message="Verranno eliminati definitivamente per questo evento: tutti gli ordini (e i relativi resoconti), tutte le transazioni di cambio (carichi/rimborsi), le liquidazioni stand e i saldi dei portafogli verranno azzerati. I contatori ordini verranno resettati. Operazione irreversibile."
+        confirmLabel="Continua"
         danger
-        onConfirm={async () => {
-          if (!eventId || deletingOrders) return
-          setDeletingOrders(true)
-          try {
-            await apiRequest(`/orders/event/${eventId}`, { method: 'DELETE' })
-            setModal({ open: true, variant: 'alert', title: 'Ordini cancellati', message: 'Tutti gli ordini dell\'evento sono stati cancellati.' })
-          } catch {
-            setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Impossibile cancellare gli ordini.' })
-          } finally {
-            setDeletingOrders(false)
-            setDeleteOrdersTarget(false)
-          }
+        onConfirm={() => {
+          setDeleteOrdersTarget(false)
+          setConfirmResetTarget(true)
         }}
         onCancel={() => setDeleteOrdersTarget(false)}
+      />
+
+      <ConfirmModal
+        open={confirmResetTarget}
+        variant="prompt"
+        title="Conferma definitiva"
+        message="Per procedere all'azzeramento completo dell'evento digita AZZERA."
+        confirmLabel={deletingOrders ? 'Azzeramento in corso...' : 'Azzera tutto'}
+        danger
+        onConfirm={async (value) => {
+          if (!eventId || deletingOrders) return
+          if (value?.trim().toUpperCase() !== 'AZZERA') {
+            setConfirmResetTarget(false)
+            setModal({ open: true, variant: 'alert', title: 'Conferma annullata', message: 'Digitare AZZERA per procedere all\'azzeramento.' })
+            return
+          }
+          setDeletingOrders(true)
+          try {
+            const res = await apiRequest<{ message: string }>(`/orders/event/${eventId}/reset`, { method: 'POST' })
+            setModal({ open: true, variant: 'alert', title: 'Evento azzerato', message: res.message })
+          } catch (err) {
+            setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Impossibile azzerare l\'evento.' })
+          } finally {
+            setDeletingOrders(false)
+            setConfirmResetTarget(false)
+          }
+        }}
+        onCancel={() => setConfirmResetTarget(false)}
       />
     </div>
   )
