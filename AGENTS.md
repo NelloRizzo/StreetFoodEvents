@@ -194,6 +194,10 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Aug 2026 — menu pubblico stand con immagini)
+### Completed
+- `EventStandMenuPage` (`/events/:eventId/stands/:standId`): `Stand.coverImage` mostrata come banner cover in testata e come logo circolare accanto al titolo; thumbnail `product.coverImage` per ogni voce di menu. Lo Stand ha un SOLO campo immagine (`coverImage`) — niente logo separato.
+
 ## Session state (Aug 2026 — moneta evento + resoconti in euro)
 ### Completed
 - `CurrencyDisplay` condiviso (`frontend/src/components/CurrencyDisplay.tsx` + `.module.scss`): icona moneta (immagine `currencySymbol.url` o iniziale di `currencyName` in circoletto). Helper `currencyInitial(name)` e `currencyBadgeHtml(name)` per HTML inline (stampa).

@@ -21,6 +21,7 @@ type MenuItem = {
     name: string
     price: number
     ingredients: string[]
+    coverImage: UploadedImage | null
   } | null
   stationIds: string[]
   priceOverride: number | null
@@ -41,6 +42,7 @@ type Stand = {
   id: string
   name: string
   slogan: string | null
+  coverImage: UploadedImage | null
 }
 
 type CartItem = {
@@ -171,11 +173,22 @@ export function EventStandMenuPage() {
       <div className="page-shell">
         <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
 
+        {stand.coverImage && (
+          <div className={styles.coverWrap}>
+            <img src={stand.coverImage.url} alt={`${stand.name} — copertina`} className={styles.cover} />
+          </div>
+        )}
+
         <div className={styles.header}>
-          <div>
-            <span className="eyebrow">Menu</span>
-            <h1 className={styles.title}>{stand.name}</h1>
-            {stand.slogan && <p className={styles.slogan}>{stand.slogan}</p>}
+          <div className={styles.headerLeft}>
+            {stand.coverImage && (
+              <img src={stand.coverImage.url} alt={`${stand.name} — logo`} className={styles.logo} />
+            )}
+            <div>
+              <span className="eyebrow">Menu</span>
+              <h1 className={styles.title}>{stand.name}</h1>
+              {stand.slogan && <p className={styles.slogan}>{stand.slogan}</p>}
+            </div>
           </div>
           <QRCodeDownload
             apiPath={`/stands/${standId}/qrcode?eventId=${eventId}`}
@@ -199,6 +212,13 @@ export function EventStandMenuPage() {
 
                   return (
                     <div key={item.id} className={styles.menuCard}>
+                      {product?.coverImage && (
+                        <img
+                          src={product.coverImage.url}
+                          alt={product.name}
+                          className={styles.thumb}
+                        />
+                      )}
                       <div className={styles.menuInfo}>
                         <strong className={styles.menuName}>
                           {product?.name ?? 'Prodotto sconosciuto'}

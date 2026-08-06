@@ -10,11 +10,42 @@
   margin-bottom: 1rem;
 }
 
+.coverWrap {
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.cover {
+  display: block;
+  width: 100%;
+  height: clamp(10rem, 24vw, 16rem);
+  object-fit: cover;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.logo {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--color-line);
+  background: #fffaf2;
 }
 
 .title {
@@ -76,6 +107,15 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: rgba(255, 250, 242, 0.84);
+}
+
+.thumb {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: var(--radius-card);
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #fffaf2;
 }
 
 .menuInfo {
