@@ -7,8 +7,8 @@ Ai sensi del Regolamento UE 2016/679 (GDPR) e del D.Lgs. 196/2003 ss.mm.ii., il 
 | | |
 |---|---|
 | **Denominazione** | Uniamoci |
-| **Sede legale** |  |
-| **Email** |  |
+| **Sede legale** | via delle Ginestre, 8 - 84046 Ascea (SA) |
+| **Email** | notticilentane@gmail.com |
 
 ## 2. Finalità del trattamento
 
@@ -50,7 +50,7 @@ L'interessato ha diritto di:
 - **Opposizione** (Art. 21 GDPR) — opporsi al trattamento per finalità di marketing diretto
 - **Revoca del consenso** — in qualsiasi momento, senza pregiudicare la liceità del trattamento basata sul consenso prestato prima della revoca
 
-Per esercitare i diritti, contattare: **privacy@streetfoodevents.it**
+Per esercitare i diritti, contattare: **notticilentane@gmail.com**
 
 L'interessato ha altresì il diritto di proporre reclamo all'autorità di controllo (Garante per la Protezione dei Dati Personali, www.garanteprivacy.it).
 
@@ -63,9 +63,9 @@ Il conferimento dell'indirizzo email è necessario per ricevere la foto. Il conf
 ## Modulo di consenso
 
 Il/La sottoscritto/a, ricevuta l'informativa di cui sopra,
-
-| Cognome e Nome | _____________________________________________ |
+| | |
 |---|---|
+| Cognome e Nome | _____________________________________________ |
 | Email |  _____________________________________________ |
 | Evento | _____________________________________________ |
 | Data | ____ / _____ / _________|
