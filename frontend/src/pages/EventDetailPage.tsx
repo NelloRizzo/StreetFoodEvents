@@ -969,7 +969,7 @@ export function EventDetailPage() {
           <Link to={`/events/${eventId}/exchange`} className={styles.actionBtn}>
             Gestisci cambio
           </Link>
-          <Link to={`/events/${eventId}/settlements`} className={styles.actionBtnOutline} style={{ marginLeft: '0.5rem' }}>
+          <Link to={`/events/${eventId}/settlements`} className={styles.actionBtn} style={{ marginLeft: '0.5rem' }}>
             Liquidazione stand
           </Link>
         </>)}
