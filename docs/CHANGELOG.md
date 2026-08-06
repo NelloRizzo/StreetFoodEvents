@@ -12,6 +12,7 @@ Tutte le feature implementate, in ordine cronologico.
 - Coda Ordini per stand: display pubblico fullscreen degli ordini in lavorazione (confirmed/preparing/ready) con avanzamento articoli per postazione, polling ogni 5s. Route: `/events/:eventId/stands/:standId/ordersqueue`.
 - Moneta evento personalizzata (nome + simbolo immagine): icona visibile in tutti i prezzi, saldi, menu, carrelli, ricevute (stampa inclusa) e resoconti. Componente condiviso `CurrencyDisplay`.
 - Resoconti eventi/stand: totali convertiti in euro tramite `exchangeRate` (importo ÷ rate) con badge moneta evento per i valori non convertiti.
+- Liquidazione stand a fine serata: pagina `/events/:eventId/settlements` dove il gestore seleziona lo stand, inserisce i crediti presentati (valore libero, il report è solo informativo), la percentuale di trattenuta (default 0) e il sistema calcola il corrispettivo in euro (crediti ÷ cambio, meno trattenuta). Modello `StandSettlement` con snapshot di `exchangeRate`, storico liquidazioni con totali e operatore.
 
 ## Feature Checklist
 

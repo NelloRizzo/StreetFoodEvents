@@ -4,6 +4,9 @@ import { Types } from 'mongoose';
 import { EventUserModel } from '../models/event-user.model';
 import { EventUserTransactionModel } from '../models/event-user-transaction.model';
 import { EventModel } from '../models/event.model';
+import { OrderModel } from '../models/order.model';
+import { StandModel } from '../models/stand.model';
+import { StandSettlementModel } from '../models/stand-settlement.model';
 import { UserModel } from '../models/user.model';
 import { createEventUserTransaction, EventUserTransactionError } from '../services/event-user-transactions.service';
 
@@ -44,6 +47,40 @@ function toTransactionResponse(t: {
         referenceId: t.referenceId?.toString() ?? null,
         occurredAt: t.occurredAt,
         createdAt: t.createdAt
+    };
+}
+
+function toSettlementResponse(s: {
+    _id: Types.ObjectId;
+    eventId: Types.ObjectId;
+    standId: Types.ObjectId;
+    standName: string;
+    amount: number;
+    exchangeRate: number;
+    feePercent: number;
+    grossEuro: number;
+    feeEuro: number;
+    payoutEuro: number;
+    description?: string | null;
+    performedByUserId?: Types.ObjectId | null;
+    occurredAt: Date;
+    createdAt: Date;
+}) {
+    return {
+        id: s._id.toString(),
+        eventId: s.eventId.toString(),
+        standId: s.standId.toString(),
+        standName: s.standName,
+        amount: s.amount,
+        exchangeRate: s.exchangeRate,
+        feePercent: s.feePercent,
+        grossEuro: s.grossEuro,
+        feeEuro: s.feeEuro,
+        payoutEuro: s.payoutEuro,
+        description: s.description ?? null,
+        performedByUserId: s.performedByUserId?.toString() ?? null,
+        occurredAt: s.occurredAt,
+        createdAt: s.createdAt
     };
 }
 
@@ -305,6 +342,194 @@ async function refund(req: Request, res: Response) {
     }
 }
 
+async function settlementSummary(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const eventIdObj = new Types.ObjectId(eventCtx.eventId);
+    const stands = await StandModel.find({ eventIds: eventIdObj }).select('_id name').lean();
+
+    if (stands.length === 0) {
+        return res.status(200).json({
+            eventId: eventCtx.eventId,
+            exchangeRate: eventCtx.event.exchangeRate ?? 1,
+            currencyName: eventCtx.event.currencyName,
+            currencySymbol: eventCtx.event.currencySymbol ?? null,
+            stands: []
+        });
+    }
+
+    const standIdList = stands.map((s) => s._id);
+
+    const [orderAgg, settlementAgg] = await Promise.all([
+        OrderModel.aggregate([
+            {
+                $match: {
+                    eventId: eventIdObj,
+                    standId: { $in: standIdList },
+                    paymentStatus: 'paid'
+                }
+            },
+            {
+                $group: {
+                    _id: '$standId',
+                    earnedCredits: { $sum: '$creditAmountUsed' },
+                    earnedOrders: { $sum: 1 }
+                }
+            }
+        ]),
+        StandSettlementModel.aggregate([
+            { $match: { eventId: eventIdObj } },
+            {
+                $group: {
+                    _id: '$standId',
+                    settledCredits: { $sum: '$amount' },
+                    settledPayoutEuro: { $sum: '$payoutEuro' },
+                    settledCount: { $sum: 1 }
+                }
+            }
+        ])
+    ]);
+
+    const orderMap = new Map(orderAgg.map((r) => [r._id.toString(), r]));
+    const settlementMap = new Map(settlementAgg.map((r) => [r._id.toString(), r]));
+
+    const standItems = stands.map((s) => {
+        const earned = orderMap.get(s._id.toString())?.earnedCredits ?? 0;
+        const settled = settlementMap.get(s._id.toString())?.settledCredits ?? 0;
+        return {
+            standId: s._id.toString(),
+            standName: s.name,
+            earnedCredits: Math.round(earned * 100) / 100,
+            settledCredits: Math.round(settled * 100) / 100
+        };
+    });
+
+    return res.status(200).json({
+        eventId: eventCtx.eventId,
+        exchangeRate: eventCtx.event.exchangeRate ?? 1,
+        currencyName: eventCtx.event.currencyName,
+        currencySymbol: eventCtx.event.currencySymbol ?? null,
+        stands: standItems
+    });
+}
+
+async function listSettlements(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
+    const match: Record<string, unknown> = { eventId: new Types.ObjectId(eventCtx.eventId) };
+    if (req.query.standId && isValidObjectId(req.query.standId as string)) {
+        match.standId = new Types.ObjectId(req.query.standId as string);
+    }
+
+    const [settlements, total] = await Promise.all([
+        StandSettlementModel.find(match)
+            .sort({ occurredAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        StandSettlementModel.countDocuments(match)
+    ]);
+
+    const performerIds = [...new Set(settlements.map((s) => s.performedByUserId?.toString()).filter(Boolean))];
+    const performers = performerIds.length > 0
+        ? await UserModel.find({ _id: { $in: performerIds } }).select('firstName lastName').lean()
+        : [];
+    const performerMap = new Map(performers.map((p) => [p._id.toString(), `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Operatore']));
+
+    const items = settlements.map((s) => ({
+        ...toSettlementResponse(s),
+        performedByName: s.performedByUserId ? (performerMap.get(s.performedByUserId.toString()) ?? null) : null
+    }));
+
+    const totals = await StandSettlementModel.aggregate([
+        { $match: match },
+        {
+            $group: {
+                _id: null,
+                credits: { $sum: '$amount' },
+                payoutEuro: { $sum: '$payoutEuro' },
+                count: { $sum: 1 }
+            }
+        }
+    ]);
+
+    return res.status(200).json({
+        items,
+        totals: totals[0]
+            ? {
+                credits: Math.round(totals[0].credits * 100) / 100,
+                payoutEuro: Math.round(totals[0].payoutEuro * 100) / 100,
+                count: totals[0].count
+            }
+            : { credits: 0, payoutEuro: 0, count: 0 },
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    });
+}
+
+async function createSettlement(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const { standId, amount, feePercent, description } = req.body;
+
+    if (!standId || !isValidObjectId(standId)) {
+        return res.status(400).json({ message: 'Valid standId is required' });
+    }
+
+    const amountNum = Number(amount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+        return res.status(400).json({ message: 'Amount must be a positive number' });
+    }
+
+    const feeNum = Number(feePercent ?? 0);
+    if (!Number.isFinite(feeNum) || feeNum < 0 || feeNum > 100) {
+        return res.status(400).json({ message: 'Fee percentage must be between 0 and 100' });
+    }
+
+    const stand = await StandModel.findById(standId);
+    if (!stand || !stand.eventIds.some((id) => id.toString() === eventCtx.eventId)) {
+        return res.status(404).json({ message: 'Stand not found for this event' });
+    }
+
+    const exchangeRate = eventCtx.event.exchangeRate ?? 1;
+    const grossEuro = Math.round(amountNum / exchangeRate * 100) / 100;
+    const feeEuro = Math.round(grossEuro * (feeNum / 100) * 100) / 100;
+    const payoutEuro = Math.round((grossEuro - feeEuro) * 100) / 100;
+
+    try {
+        const settlement = await StandSettlementModel.create({
+            eventId: eventCtx.eventId,
+            standId: stand._id,
+            standName: stand.name,
+            amount: amountNum,
+            exchangeRate,
+            feePercent: feeNum,
+            grossEuro,
+            feeEuro,
+            payoutEuro,
+            description: description?.trim() || null,
+            performedByUserId: req.user!.id,
+            occurredAt: new Date()
+        });
+
+        return res.status(201).json({ item: toSettlementResponse(settlement) });
+    } catch (error) {
+        console.error('createSettlement error:', error);
+        return res.status(500).json({ message: (error as Error).message || 'Internal server error' });
+    }
+}
+
 async function resetCashRegister(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
@@ -364,6 +589,9 @@ export const exchangeController = {
     listTransactions,
     topUp,
     refund,
+    settlementSummary,
+    listSettlements,
+    createSettlement,
     resetCashRegister,
     getCashRegisterReset,
     createGuest

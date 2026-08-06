@@ -100,6 +100,10 @@ export function DashboardPage() {
       .catch(() => { /* not required */ })
   }, [])
 
+  const exchangeAdminEvents = eventRoleEvents.filter((ev) =>
+    eventRoles.some((r) => r.eventId === ev.id && r.slug === 'exchange-admin')
+  )
+
   const favoriteEvents = data?.favorites ?? []
   const activeEvents = data?.activeEvents ?? []
   const displayEvents = showAllEvents ? activeEvents : favoriteEvents.map((fe) => fe.event)
@@ -318,7 +322,7 @@ export function DashboardPage() {
               </section>
             )}
 
-            {(isPlatformAdmin || isEventAdmin) && (
+            {(isPlatformAdmin || isEventAdmin || exchangeAdminEvents.length > 0) && (
               <section className={styles.manageSection}>
                 <h2 className={styles.sectionTitle}>Gestione wallet</h2>
                 <div className={styles.manageGrid}>
@@ -327,6 +331,13 @@ export function DashboardPage() {
                     <span className={styles.manageName}>Portafogli eventi</span>
                     <span className={styles.manageHint}>Transazioni e depositi</span>
                   </Link>
+                  {exchangeAdminEvents.map((ev) => (
+                    <Link key={ev.id} to={`/events/${ev.id}/settlements`} className={styles.manageCard}>
+                      <span className={styles.manageIcon}>&#128181;</span>
+                      <span className={styles.manageName}>Liquidazione {ev.name}</span>
+                      <span className={styles.manageHint}>Corrispettivo stand in euro</span>
+                    </Link>
+                  ))}
                 </div>
               </section>
             )}

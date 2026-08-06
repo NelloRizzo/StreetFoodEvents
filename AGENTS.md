@@ -51,6 +51,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 - `ContestPOI.groups` is an array of strings (`[String]`), not a single string. A POI can belong to multiple groups.
 - `Contest.pickConfig` (`{ groupPicks: { group, count }[] }`) defines auto-pick rules per group. `Contest.autoPickedPOIIds` tracks which POIs were auto-selected. Manual POI additions are preserved when `pickConfig` changes.
 - `Contest.orderedPOIIds` can contain **duplicates** — the same POI ID can appear multiple times. `scannedPOIIds` also stores duplicates (one entry per scan). Completion = `scannedPOIIds.length === orderedPOIIds.length` (total slots, NOT unique count). Do NOT use `Set` or `includes()` to check if a specific occurrence has been scanned — use occurrence-based counting (see ARCHITECTURE.md).
+- `StandSettlement` stores computed euro values (`grossEuro`/`feeEuro`/`payoutEuro`) + `exchangeRate` snapshot. `amount` (crediti) è libero — il report stand è solo informativo, nessun check di saldo residuo. Le liquidazioni NON entrano in `getBalance`.
 
 ### API routes
 `GET /health` (no auth). All `/api/*` routes: GET are public except users/event-users/event-products/favorites/orders/upload. POST/PATCH/DELETE are protected.
@@ -99,6 +100,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | Route | Element | Description |
 |---|---|---|
 | `/events/:eventId/exchange` | EventExchangePage | Cambio valuta (crediti), solo exchange-admin / platform-admin |
+| `/events/:eventId/settlements` | StandSettlementsPage | Liquidazione stand (crediti → euro con percentuale trattenuta), solo exchange-admin / platform-admin |
 
 ### Frontend — Contest routes
 | Route | Element | Description |
@@ -125,6 +127,9 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | GET | `/api/exchange/:eventId/transactions` | exchange-admin / platform-admin | Storico transazioni (paginato) |
 | POST | `/api/exchange/:eventId/top-up` | exchange-admin / platform-admin | Carica crediti (reale → virtuale) |
 | POST | `/api/exchange/:eventId/refund` | exchange-admin / platform-admin | Rimborsa crediti (virtuale → reale) |
+| GET | `/api/exchange/:eventId/settlements/summary` | exchange-admin / platform-admin | Riepilogo crediti guadagnati/liquidati per stand (informativo) |
+| GET | `/api/exchange/:eventId/settlements` | exchange-admin / platform-admin | Storico liquidazioni stand (paginato, filtro standId) |
+| POST | `/api/exchange/:eventId/settlements` | exchange-admin / platform-admin | Crea liquidazione stand (standId, amount crediti libero, feePercent default 0) |
 | POST | `/api/exchange/:eventId/guests` | exchange-admin / platform-admin | Crea cliente al volo (displayName opzionale) |
 | POST | `/api/exchange/:eventId/reset-cash-register` | exchange-admin / platform-admin | Azzera cassa |
 | GET | `/api/exchange/:eventId/cash-register-reset` | exchange-admin / platform-admin | Data ultimo azzeramento |
@@ -196,6 +201,14 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - `lib/orders.ts`: tipi `StandReport`/`EventReport` includono `currencyName`/`currencySymbol`/`exchangeRate`; `StandReport` ha anche `eventId`.
 - Ordini multi-evento (OrdersPage/StandOrdersPage senza filtro evento): moneta risolta dal fetch `/events` per eventId, fallback alla moneta del report se filtro attivo.
 - Backend `getOrderReceipt` seleziona `currencyName currencySymbol` e risposta include `eventId`, `currencyName`, `currencySymbol`.
+
+## Session state (Aug 2026 — liquidazione stand)
+### Completed
+- Modello `StandSettlement` (`backend/src/models/stand-settlement.model.ts`): `eventId`, `standId`, `standName` (denormalizzato), `amount` (crediti, libero), `exchangeRate` (snapshot), `feePercent` (0-100), `grossEuro`/`feeEuro`/`payoutEuro` (calcolati e memorizzati), `description`, `performedByUserId`, `occurredAt`.
+- API: `GET /api/exchange/:eventId/settlements/summary` (crediti guadagnati dai report + già liquidati per stand — SOLO informativo), `GET /api/exchange/:eventId/settlements` (storico paginato con totali), `POST /api/exchange/:eventId/settlements` (crea liquidazione, nessun check di saldo residuo). Guard: `exchange-admin`/`platform-admin`.
+- `StandSettlementsPage` su `/events/:eventId/settlements`: selezione stand, importo presentato (default = crediti guadagnati dal report, modificabile), percentuale trattenuta (default 0), anteprima in euro (lordo ÷ cambio, trattenuta, da corrispondere), storico con totali.
+- Navigazione: link in `EventDetailPage` (sezione Cambio valuta), in `EventExchangePage` header, e in `DashboardPage` (Gestione wallet, per evento con ruolo exchange-admin).
+- Test: `backend/src/__tests__/controllers/integration-settlements.test.ts` (9 test). `exchangeRouter` montato in `createTestApp`; collezione `standsettlements` aggiunta al reset di setup.ts.
 
 ## Session state (Aug 2026 — postazione clienti stand display)
 ### Completed

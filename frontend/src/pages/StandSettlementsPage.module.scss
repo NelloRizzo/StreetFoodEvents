@@ -1,0 +1,84 @@
+.selectRow {
+  margin-bottom: 1rem;
+}
+
+.field {
+  display: block;
+
+  select {
+    margin-top: 0.25rem;
+  }
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.previewCard {
+  justify-content: flex-start;
+}
+
+.previewTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.previewRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--color-line);
+}
+
+.previewLabel {
+  font-size: 0.85rem;
+  color: var(--color-ink-weak);
+}
+
+.previewValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.previewFee {
+  color: var(--color-red);
+}
+
+.previewTotal {
+  border-bottom: none;
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+  border-top: 2px solid var(--color-line);
+}
+
+.previewPayout {
+  font-size: 1.6rem;
+  color: var(--color-green);
+}
+
+.previewNote {
+  font-size: 0.75rem;
+  color: var(--color-ink-weak);
+  margin: 0.5rem 0 0;
+}
+
+.totalsBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  background: var(--color-surface);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-line);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--color-ink-weak);
+}
+
+.totalsItem strong {
+  color: var(--color-ink);
+}

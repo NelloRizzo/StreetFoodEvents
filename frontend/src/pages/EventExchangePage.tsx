@@ -221,6 +221,11 @@ export function EventExchangePage() {
       <h1 className={styles.pageTitle}>
         <CurrencySymbol name={currencyName} /> Cambio - {eventName || 'Caricamento...'}
       </h1>
+      <p style={{ marginTop: '0.25rem' }}>
+        <Link to={`/events/${eventId}/settlements`} className={styles.actionBtnOutline} style={{ display: 'inline-block' }}>
+          Liquidazione stand
+        </Link>
+      </p>
 
       {loading ? (
         <p>Caricamento...</p>

@@ -50,6 +50,14 @@ Considerazioni progettuali e decisioni architetturali.
 - **Cassa unica**: il flag `unifiedCashierEnabled` nell'evento determina se mostrare la colonna contanti nel report.
 - **Cash disabled**: se `cashPaymentsEnabled = false`, il report mostra solo colonna crediti.
 
+## Liquidazione stand (StandSettlement)
+- **Scopo**: a fine serata il gestore (ruolo `exchange-admin`/`platform-admin`) corrisponde in euro i crediti guadagnati da uno stand, con eventuale percentuale di trattenuta (default 0).
+- **Modello `StandSettlement`**: `{ eventId, standId, standName (denormalizzato), amount (crediti), exchangeRate (snapshot al momento della liquidazione), feePercent, grossEuro, feeEuro, payoutEuro, description, performedByUserId, occurredAt }`. I valori in euro sono **calcolati e memorizzati** (non ricalcolati al volo) per evitare drift di arrotondamento.
+- **Matematica**: `grossEuro = round(amount / exchangeRate, 2)`, `feeEuro = round(grossEuro * feePercent/100, 2)`, `payoutEuro = round(grossEuro - feeEuro, 2)`.
+- **Il report è solo informativo**: `GET /api/exchange/:eventId/settlements/summary` restituisce i crediti guadagnati (somma `creditAmountUsed` degli ordini `paid`) e i già liquidati per stand, ma **NON vincola l'importo inserito**. Non tutti gli stand usano il sistema, quindi lo standista presenta l'importo e il gestore lo digita liberamente. Niente check "saldo residuo" sul backend.
+- **NON rientra nel wallet/cassa**: le liquidazioni NON vengono sommate a `getBalance` (top-up/refund). La cassa evento resta gestita dai resoconti ordini; lo storico liquidazioni ha i propri totali (crediti liquidati + erogato €).
+- **Cosa NON fare**: non creare un `EventUserTransaction` per la liquidazione — non esiste un wallet per gli stand (i crediti degli ordini sono registrati come `creditAmountUsed`, non accreditati a un EventUser). Usare sempre `referenceType`/`referenceId` NO: lo StandSettlement è un modello dedicato, con `eventUserId` non previsto.
+
 ## Navbar grouping
 - La Navbar raggruppa le voci in dropdown per ambito: **Piattaforma** (admin), **Ordini**, **Resoconti**, **Personale**.
 - Ogni dropdown ha `useRef` + `handleClickOutside` per chiusura.

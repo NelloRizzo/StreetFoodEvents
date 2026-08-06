@@ -46,6 +46,7 @@ import { ContestPage } from './pages/ContestPage'
 import { ContestPlayPage } from './pages/ContestPlayPage'
 import { ContestVerifyPage } from './pages/ContestVerifyPage'
 import { EventExchangePage } from './pages/EventExchangePage'
+import { StandSettlementsPage } from './pages/StandSettlementsPage'
 import { ContestDeliveryPage } from './pages/ContestDeliveryPage'
 
 export const router = createBrowserRouter([
@@ -195,6 +196,10 @@ export const router = createBrowserRouter([
           {
             path: 'events/:eventId/exchange',
             element: <EventExchangePage />,
+          },
+          {
+            path: 'events/:eventId/settlements',
+            element: <StandSettlementsPage />,
           },
           {
             path: 'events/:eventId/galleria',

@@ -20,6 +20,7 @@ import { eventFramesRouter } from '../../routes/event-frames.routes';
 import { poisRouter } from '../../routes/pois.routes';
 import { usageContractsRouter } from '../../routes/usage-contracts.routes';
 import { framesRouter } from '../../routes/frames.routes';
+import { exchangeRouter } from '../../routes/exchange.routes';
 
 export function createTestApp() {
     const app = express();
@@ -52,6 +53,7 @@ export function createTestApp() {
     app.use('/api/frames', framesRouter);
     app.use('/api/pois', poisRouter);
     app.use('/api/usage-contracts', usageContractsRouter);
+    app.use('/api/exchange', exchangeRouter);
 
     return app;
 }

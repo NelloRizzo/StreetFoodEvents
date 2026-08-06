@@ -20,6 +20,7 @@ const collectionsToClear = [
     'aliases',
     'eventphotos',
     'eventframes',
+    'standsettlements',
     'pois',
     'usagecontracts'
 ];
