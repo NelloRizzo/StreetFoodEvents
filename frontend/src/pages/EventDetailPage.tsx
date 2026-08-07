@@ -985,6 +985,9 @@ export function EventDetailPage() {
           <Link to={`/events/${eventId}/settlements`} className={styles.actionBtn} style={{ marginLeft: '0.5rem' }}>
             Liquidazione stand
           </Link>
+          <Link to={`/events/${eventId}/settlements/report`} className={styles.actionBtn} style={{ marginLeft: '0.5rem' }}>
+            Resoconto liquidazioni
+          </Link>
         </>)}
 
       </div>

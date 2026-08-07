@@ -1,0 +1,23 @@
+.feeValue {
+  color: var(--color-red);
+}
+
+.payoutValue {
+  color: var(--color-green);
+}
+
+.remainingValue {
+  color: var(--color-warning);
+}
+
+.note {
+  font-size: 0.78rem;
+  color: var(--color-ink-soft);
+  margin: 0.75rem 0 0;
+}
+
+@media print {
+  .note {
+    display: none;
+  }
+}

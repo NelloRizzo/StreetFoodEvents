@@ -414,6 +414,86 @@ async function settlementSummary(req: Request, res: Response) {
     });
 }
 
+async function settlementReport(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const eventIdObj = new Types.ObjectId(eventCtx.eventId);
+
+    const from = req.query.from ? new Date(req.query.from as string) : null;
+    const to = req.query.to ? new Date(req.query.to as string) : null;
+
+    const match: Record<string, unknown> = { eventId: eventIdObj };
+    const occurredAt: Record<string, Date> = {};
+    if (from && !Number.isNaN(from.getTime())) occurredAt.$gte = from;
+    if (to && !Number.isNaN(to.getTime())) occurredAt.$lte = to;
+    if (Object.keys(occurredAt).length > 0) match.occurredAt = occurredAt;
+
+    const [settlementAgg, orderAgg] = await Promise.all([
+        StandSettlementModel.aggregate([
+            { $match: match },
+            {
+                $group: {
+                    _id: '$standId',
+                    standName: { $first: '$standName' },
+                    settlementCount: { $sum: 1 },
+                    settledCredits: { $sum: '$amount' },
+                    grossEuro: { $sum: '$grossEuro' },
+                    feeEuro: { $sum: '$feeEuro' },
+                    payoutEuro: { $sum: '$payoutEuro' }
+                }
+            },
+            { $sort: { standName: 1 } }
+        ]),
+        OrderModel.aggregate([
+            { $match: { eventId: eventIdObj, paymentStatus: 'paid' } },
+            { $group: { _id: '$standId', earnedCredits: { $sum: '$creditAmountUsed' } } }
+        ])
+    ]);
+
+    const orderMap = new Map(orderAgg.map((r) => [r._id.toString(), r.earnedCredits ?? 0]));
+
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+
+    const stands = settlementAgg.map((r) => {
+        const settledCredits = round2(r.settledCredits);
+        const earnedCredits = round2(orderMap.get(r._id.toString()) ?? 0);
+        return {
+            standId: r._id.toString(),
+            standName: r.standName,
+            settlementCount: r.settlementCount,
+            settledCredits,
+            earnedCredits,
+            remainingCredits: round2(earnedCredits - settledCredits),
+            grossEuro: round2(r.grossEuro),
+            feeEuro: round2(r.feeEuro),
+            payoutEuro: round2(r.payoutEuro)
+        };
+    });
+
+    const totals = {
+        settlementCount: stands.reduce((a, s) => a + s.settlementCount, 0),
+        settledCredits: round2(stands.reduce((a, s) => a + s.settledCredits, 0)),
+        earnedCredits: round2(stands.reduce((a, s) => a + s.earnedCredits, 0)),
+        remainingCredits: round2(stands.reduce((a, s) => a + s.remainingCredits, 0)),
+        grossEuro: round2(stands.reduce((a, s) => a + s.grossEuro, 0)),
+        feeEuro: round2(stands.reduce((a, s) => a + s.feeEuro, 0)),
+        payoutEuro: round2(stands.reduce((a, s) => a + s.payoutEuro, 0))
+    };
+
+    return res.status(200).json({
+        eventId: eventCtx.eventId,
+        eventName: eventCtx.event.name,
+        exchangeRate: eventCtx.event.exchangeRate ?? 1,
+        currencyName: eventCtx.event.currencyName,
+        currencySymbol: eventCtx.event.currencySymbol ?? null,
+        from: from && !Number.isNaN(from.getTime()) ? from.toISOString() : null,
+        to: to && !Number.isNaN(to.getTime()) ? to.toISOString() : null,
+        stands,
+        totals
+    });
+}
+
 async function listSettlements(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
@@ -590,6 +670,7 @@ export const exchangeController = {
     topUp,
     refund,
     settlementSummary,
+    settlementReport,
     listSettlements,
     createSettlement,
     resetCashRegister,

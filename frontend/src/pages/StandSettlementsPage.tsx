@@ -163,9 +163,14 @@ export function StandSettlementsPage() {
   return (
     <div className={`page-shell ${styles.page}`}>
       <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
-      <h1 className={styles.pageTitle}>
-        <CurrencyDisplay currencyName={currencyName} currencySymbol={summary?.currencySymbol ?? null} /> Liquidazione stand - {eventName || 'Caricamento...'}
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <h1 className={styles.pageTitle}>
+          <CurrencyDisplay currencyName={currencyName} currencySymbol={summary?.currencySymbol ?? null} /> Liquidazione stand - {eventName || 'Caricamento...'}
+        </h1>
+        <Link to={`/events/${eventId}/settlements/report`} className={cambioStyles.btnTopUp} style={{ display: 'inline-block' }}>
+          Resoconto liquidazioni
+        </Link>
+      </div>
 
       {loading ? (
         <p>Caricamento...</p>

@@ -277,4 +277,99 @@ describe('Integration — Stand Settlements', () => {
         expect(stand1.settledCredits).toBe(30);
         expect(await StandSettlementModel.countDocuments()).toBe(1);
     });
+
+    it('report aggregates settlements per stand with euro totals', async () => {
+        const env = await setupSettlementEnvironment();
+        await env.paidOrder(env.stand1._id, 100);
+
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 100, feePercent: 10 });
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand2._id.toString(), amount: 40, feePercent: 0 });
+
+        const res = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements/report`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.eventName).toBe('Settlement Event');
+        expect(res.body.exchangeRate).toBe(2);
+        expect(res.body.currencyName).toBe('TC');
+
+        const stand1 = res.body.stands.find((s: { standId: string }) => s.standId === env.stand1._id.toString());
+        expect(stand1).toBeDefined();
+        expect(stand1.settlementCount).toBe(1);
+        expect(stand1.settledCredits).toBe(100);
+        expect(stand1.earnedCredits).toBe(100);
+        expect(stand1.grossEuro).toBe(50);
+        expect(stand1.feeEuro).toBe(5);
+        expect(stand1.payoutEuro).toBe(45);
+        expect(stand1.remainingCredits).toBe(0);
+
+        const stand2 = res.body.stands.find((s: { standId: string }) => s.standId === env.stand2._id.toString());
+        expect(stand2).toBeDefined();
+        expect(stand2.payoutEuro).toBe(20);
+
+        expect(res.body.totals.settlementCount).toBe(2);
+        expect(res.body.totals.settledCredits).toBe(140);
+        expect(res.body.totals.grossEuro).toBe(70);
+        expect(res.body.totals.feeEuro).toBe(5);
+        expect(res.body.totals.payoutEuro).toBe(65);
+    });
+
+    it('report filters settlements by date range', async () => {
+        const env = await setupSettlementEnvironment();
+
+        await StandSettlementModel.create({
+            eventId: env.event._id,
+            standId: env.stand1._id,
+            standName: 'Stand Alpha',
+            amount: 100,
+            exchangeRate: 2,
+            feePercent: 0,
+            grossEuro: 50,
+            feeEuro: 0,
+            payoutEuro: 50,
+            occurredAt: new Date('2026-06-01T10:00:00Z')
+        });
+        await StandSettlementModel.create({
+            eventId: env.event._id,
+            standId: env.stand1._id,
+            standName: 'Stand Alpha',
+            amount: 40,
+            exchangeRate: 2,
+            feePercent: 0,
+            grossEuro: 20,
+            feeEuro: 0,
+            payoutEuro: 20,
+            occurredAt: new Date('2026-06-05T10:00:00Z')
+        });
+
+        const res = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements/report?from=2026-06-01&to=2026-06-02`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.totals.settlementCount).toBe(1);
+        expect(res.body.totals.settledCredits).toBe(100);
+        expect(res.body.totals.payoutEuro).toBe(50);
+    });
+
+    it('report returns empty aggregates when no settlements exist', async () => {
+        const env = await setupSettlementEnvironment();
+
+        const res = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements/report`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.stands).toEqual([]);
+        expect(res.body.totals.settlementCount).toBe(0);
+        expect(res.body.totals.settledCredits).toBe(0);
+        expect(res.body.totals.payoutEuro).toBe(0);
+    });
 });

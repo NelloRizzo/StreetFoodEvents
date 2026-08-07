@@ -7,6 +7,7 @@ Tutte le feature implementate, in ordine cronologico.
 - Contest: caccia ai POI con QR code, partecipazione anonima, ruoli contest-admin.
 
 ## Agosto 2026
+- Resoconto liquidazioni per evento (`/events/:eventId/settlements/report`): riepilogo aggregato per stand di tutte le liquidazioni (numero, crediti liquidati, lordo €, trattenuta €, erogato €) con colonne di riferimento «crediti guadagnati» e «residuo da liquidare» dall'intero evento, totali evento, filtro per data di liquidazione e pulsante stampa. Endpoint `GET /api/exchange/:eventId/settlements/report` (exchange-admin / platform-admin).
 - Pagina menu pubblico dello stand (`/events/:eventId/stands/:standId`): mostrata la `coverImage` dello stand come banner grande in testata e come logo circolare accanto al titolo; per ogni prodotto del menu thumbnail dell'immagine cover quando presente.
 - Reset completo evento: endpoint `POST /api/orders/event/:eventId/reset` (solo platform-admin) che in un'unica transazione elimina ordini, tutte le transazioni (acquisti e cambio carichi/rimborsi), le liquidazioni stand, azzera i saldi dei portafogli, i contatori ordini e la data di azzeramento cassa. UI in EventDetailPage con doppia conferma: bottone "Azzera ordini" → modale riepilogo → modale prompt con digitazione di "AZZERA".
 - Pagina Cambio: quando si crea un nuovo cliente il pulsante lo seleziona automaticamente nella combo laterale; in assenza di selezione, viene selezionato di default il Cliente Generico.

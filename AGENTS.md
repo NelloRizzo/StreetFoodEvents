@@ -101,6 +101,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 |---|---|---|
 | `/events/:eventId/exchange` | EventExchangePage | Cambio valuta (crediti), solo exchange-admin / platform-admin |
 | `/events/:eventId/settlements` | StandSettlementsPage | Liquidazione stand (crediti → euro con percentuale trattenuta), solo exchange-admin / platform-admin |
+| `/events/:eventId/settlements/report` | SettlementsReportPage | Resoconto liquidazioni aggregato per evento (stampa + filtro date), solo exchange-admin / platform-admin |
 
 ### Frontend — Contest routes
 | Route | Element | Description |
@@ -129,6 +130,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | POST | `/api/exchange/:eventId/top-up` | exchange-admin / platform-admin | Carica crediti (reale → virtuale) |
 | POST | `/api/exchange/:eventId/refund` | exchange-admin / platform-admin | Rimborsa crediti (virtuale → reale) |
 | GET | `/api/exchange/:eventId/settlements/summary` | exchange-admin / platform-admin | Riepilogo crediti guadagnati/liquidati per stand (informativo) |
+| GET | `/api/exchange/:eventId/settlements/report` | exchange-admin / platform-admin | Resoconto aggregato liquidazioni per stand (numero, crediti, lordo/trattenuta/erogato €, residuo), filtro `from`/`to`, totali evento |
 | GET | `/api/exchange/:eventId/settlements` | exchange-admin / platform-admin | Storico liquidazioni stand (paginato, filtro standId) |
 | POST | `/api/exchange/:eventId/settlements` | exchange-admin / platform-admin | Crea liquidazione stand (standId, amount crediti libero, feePercent default 0) |
 | POST | `/api/exchange/:eventId/guests` | exchange-admin / platform-admin | Crea cliente al volo (displayName opzionale) |
@@ -197,6 +199,13 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 ## Session state (Aug 2026 — menu pubblico stand con immagini)
 ### Completed
 - `EventStandMenuPage` (`/events/:eventId/stands/:standId`): `Stand.coverImage` mostrata come banner cover in testata e come logo circolare accanto al titolo; thumbnail `product.coverImage` per ogni voce di menu. Lo Stand ha un SOLO campo immagine (`coverImage`) — niente logo separato.
+
+## Session state (Aug 2026 — resoconto liquidazioni per evento)
+### Completed
+- Endpoint `GET /api/exchange/:eventId/settlements/report` (exchange-admin / platform-admin): aggrega per stand tutte le liquidazioni (`StandSettlement`) — numero, crediti liquidati, lordo €, trattenuta €, erogato € — più colonne di riferimento `earnedCredits` (dal report ordini, intero evento) e `remainingCredits`. Supporta filtro `from`/`to` su `occurredAt` (le colonne di riferimento restano per tutto l'evento). Totali evento inclusi.
+- `SettlementsReportPage` su `/events/:eventId/settlements/report`: riepilogo con card totali, tabella per stand con riga TOTALE, filtro date e pulsante stampa (stili print in `EventReportPage.module.scss`). Riusa i moduli SCSS di `EventReportPage`.
+- Navigazione: link "Resoconto liquidazioni" nella header di `StandSettlementsPage` e nella sezione Cambio valuta di `EventDetailPage`.
+- Test: `integration-settlements.test.ts` (report aggregato con euro, filtro date, evento vuoto).
 
 ## Session state (Aug 2026 — moneta evento + resoconti in euro)
 ### Completed

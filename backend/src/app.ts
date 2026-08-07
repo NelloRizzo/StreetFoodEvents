@@ -1,3 +1,5 @@
+import { MulterError } from 'multer';
+
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -103,6 +105,18 @@ app.use((req, res) => {
 });
 
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    if (error instanceof MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({
+                message: 'File troppo grande: dimensione massima 10 MB'
+            });
+        }
+
+        return res.status(400).json({
+            message: 'Errore di caricamento file: ' + error.message
+        });
+    }
+
     console.error(error);
 
     return res.status(500).json({

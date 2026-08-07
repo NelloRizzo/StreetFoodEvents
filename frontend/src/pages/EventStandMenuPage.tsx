@@ -212,12 +212,16 @@ export function EventStandMenuPage() {
 
                   return (
                     <div key={item.id} className={styles.menuCard}>
-                      {product?.coverImage && (
+                      {product?.coverImage ? (
                         <img
                           src={product.coverImage.url}
                           alt={product.name}
                           className={styles.thumb}
                         />
+                      ) : (
+                        <span className={styles.thumbPlaceholder}>
+                          {product?.name ? product.name.charAt(0).toUpperCase() : '?'}
+                        </span>
                       )}
                       <div className={styles.menuInfo}>
                         <strong className={styles.menuName}>
