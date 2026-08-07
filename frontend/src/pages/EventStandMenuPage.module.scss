@@ -99,8 +99,8 @@
 }
 
 .menuCard {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
   align-items: center;
   gap: 1rem;
   padding: 0.85rem 1rem;
