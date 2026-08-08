@@ -18,6 +18,7 @@ Tutte le feature implementate, in ordine cronologico.
 - Moneta evento personalizzata (nome + simbolo immagine): icona visibile in tutti i prezzi, saldi, menu, carrelli, ricevute (stampa inclusa) e resoconti. Componente condiviso `CurrencyDisplay`.
 - Resoconti eventi/stand: totali convertiti in euro tramite `exchangeRate` (importo ÷ rate) con badge moneta evento per i valori non convertiti.
 - Liquidazione stand a fine serata: pagina `/events/:eventId/settlements` dove il gestore seleziona lo stand, inserisce i crediti presentati (valore libero, il report è solo informativo), la percentuale di trattenuta (default 0) e il sistema calcola il corrispettivo in euro (crediti ÷ cambio, meno trattenuta). Modello `StandSettlement` con snapshot di `exchangeRate`, storico liquidazioni con totali e operatore.
+- Dare/Avere sulla liquidazione stand: campo `direction` su `StandSettlement` (`debit` = DARE, carico crediti allo stand senza pagamento in euro, da restituire in liquidazione; `credit` = AVERE, liquidazione con pagamento in euro). Riepilogo stand con caricati/liquidati/da restituire (DARE − AVERE), resoconto per evento con colonne separate, storico filtrato per direzione e badge DARE/AVERE. Documento stampabile di ricevuta in `docs/RICEVUTA_LIQUIDAZIONE.md`.
 
 ## Feature Checklist
 

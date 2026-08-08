@@ -52,6 +52,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 - `Contest.pickConfig` (`{ groupPicks: { group, count }[] }`) defines auto-pick rules per group. `Contest.autoPickedPOIIds` tracks which POIs were auto-selected. Manual POI additions are preserved when `pickConfig` changes.
 - `Contest.orderedPOIIds` can contain **duplicates** — the same POI ID can appear multiple times. `scannedPOIIds` also stores duplicates (one entry per scan). Completion = `scannedPOIIds.length === orderedPOIIds.length` (total slots, NOT unique count). Do NOT use `Set` or `includes()` to check if a specific occurrence has been scanned — use occurrence-based counting (see ARCHITECTURE.md).
 - `StandSettlement` stores computed euro values (`grossEuro`/`feeEuro`/`payoutEuro`) + `exchangeRate` snapshot. `amount` (crediti) è libero — il report stand è solo informativo, nessun check di saldo residuo. Le liquidazioni NON entrano in `getBalance`.
+- `StandSettlement.direction` è `'debit' | 'credit'` (default `'credit'`). `'debit'` (DARE) = carico crediti allo stand, NESSUN pagamento in euro (`grossEuro`/`feeEuro`/`payoutEuro` = 0, `feePercent` ignorato e forzato a 0); `'credit'` (AVERE) = liquidazione con pagamento in euro. `toReturnCredits` (da restituire) = caricati − liquidati, mai negativo. Record esistenti senza `direction` valgono come `'credit'` (`$ifNull` negli aggregate).
 
 ### API routes
 `GET /health` (no auth). All `/api/*` routes: GET are public except users/event-users/event-products/favorites/orders/upload. POST/PATCH/DELETE are protected.

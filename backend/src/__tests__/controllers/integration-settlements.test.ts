@@ -243,7 +243,7 @@ describe('Integration — Stand Settlements', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.items).toHaveLength(2);
-        expect(res.body.totals.credits).toBe(140);
+        expect(res.body.totals.settledCredits).toBe(140);
         expect(res.body.totals.payoutEuro).toBe(65);
         expect(res.body.totals.count).toBe(2);
         expect(res.body.items[0].performedByName).toBe('Exchange Tester');
@@ -308,7 +308,7 @@ describe('Integration — Stand Settlements', () => {
         expect(stand1.grossEuro).toBe(50);
         expect(stand1.feeEuro).toBe(5);
         expect(stand1.payoutEuro).toBe(45);
-        expect(stand1.remainingCredits).toBe(0);
+        expect(stand1.toReturnCredits).toBe(0);
 
         const stand2 = res.body.stands.find((s: { standId: string }) => s.standId === env.stand2._id.toString());
         expect(stand2).toBeDefined();
@@ -371,5 +371,116 @@ describe('Integration — Stand Settlements', () => {
         expect(res.body.totals.settlementCount).toBe(0);
         expect(res.body.totals.settledCredits).toBe(0);
         expect(res.body.totals.payoutEuro).toBe(0);
+    });
+
+    it('creates debit (credit load) with no euro payout and fee ignored', async () => {
+        const env = await setupSettlementEnvironment();
+
+        const res = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 50, feePercent: 50, direction: 'debit', description: 'anticipo' });
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.direction).toBe('debit');
+        expect(res.body.item.amount).toBe(50);
+        expect(res.body.item.feePercent).toBe(0);
+        expect(res.body.item.grossEuro).toBe(0);
+        expect(res.body.item.feeEuro).toBe(0);
+        expect(res.body.item.payoutEuro).toBe(0);
+        expect(res.body.item.description).toBe('anticipo');
+    });
+
+    it('summary tracks loaded credits to return (dare - avere)', async () => {
+        const env = await setupSettlementEnvironment();
+        await env.paidOrder(env.stand1._id, 100);
+
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 50, direction: 'debit' });
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 20, feePercent: 0 });
+
+        const res = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements/summary`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        const stand1 = res.body.stands.find((s: { standId: string }) => s.standId === env.stand1._id.toString());
+        expect(stand1.earnedCredits).toBe(100);
+        expect(stand1.loadedCredits).toBe(50);
+        expect(stand1.settledCredits).toBe(20);
+        expect(stand1.toReturnCredits).toBe(30);
+    });
+
+    it('report splits loaded and settled credits per stand', async () => {
+        const env = await setupSettlementEnvironment();
+        await env.paidOrder(env.stand1._id, 100);
+
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 50, direction: 'debit' });
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 30, feePercent: 10 });
+
+        const res = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements/report`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        expect(res.status).toBe(200);
+        const stand1 = res.body.stands.find((s: { standId: string }) => s.standId === env.stand1._id.toString());
+        expect(stand1.loadedCredits).toBe(50);
+        expect(stand1.settledCredits).toBe(30);
+        expect(stand1.loadCount).toBe(1);
+        expect(stand1.settlementCount).toBe(1);
+        expect(stand1.toReturnCredits).toBe(20);
+        expect(stand1.grossEuro).toBe(15);
+        expect(stand1.feeEuro).toBe(1.5);
+        expect(stand1.payoutEuro).toBe(13.5);
+
+        expect(res.body.totals.loadedCredits).toBe(50);
+        expect(res.body.totals.settledCredits).toBe(30);
+        expect(res.body.totals.toReturnCredits).toBe(20);
+        expect(res.body.totals.loadCount).toBe(1);
+        expect(res.body.totals.settlementCount).toBe(1);
+        expect(res.body.totals.payoutEuro).toBe(13.5);
+    });
+
+    it('list filters by direction and splits totals', async () => {
+        const env = await setupSettlementEnvironment();
+
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 50, direction: 'debit' });
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 30, feePercent: 0 });
+
+        const res = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements?direction=debit`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.items).toHaveLength(1);
+        expect(res.body.items[0].direction).toBe('debit');
+        expect(res.body.totals.loadedCredits).toBe(50);
+        expect(res.body.totals.settledCredits).toBe(0);
+        expect(res.body.totals.payoutEuro).toBe(0);
+        expect(res.body.totals.count).toBe(1);
+
+        const all = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+        expect(all.body.totals.loadedCredits).toBe(50);
+        expect(all.body.totals.settledCredits).toBe(30);
+        expect(all.body.totals.payoutEuro).toBe(15);
+        expect(all.body.totals.count).toBe(2);
     });
 });

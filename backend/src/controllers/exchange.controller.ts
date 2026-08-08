@@ -55,6 +55,7 @@ function toSettlementResponse(s: {
     eventId: Types.ObjectId;
     standId: Types.ObjectId;
     standName: string;
+    direction?: string;
     amount: number;
     exchangeRate: number;
     feePercent: number;
@@ -71,6 +72,7 @@ function toSettlementResponse(s: {
         eventId: s.eventId.toString(),
         standId: s.standId.toString(),
         standName: s.standName,
+        direction: s.direction ?? 'credit',
         amount: s.amount,
         exchangeRate: s.exchangeRate,
         feePercent: s.feePercent,
@@ -382,26 +384,37 @@ async function settlementSummary(req: Request, res: Response) {
             { $match: { eventId: eventIdObj } },
             {
                 $group: {
-                    _id: '$standId',
-                    settledCredits: { $sum: '$amount' },
-                    settledPayoutEuro: { $sum: '$payoutEuro' },
-                    settledCount: { $sum: 1 }
+                    _id: { standId: '$standId', direction: { $ifNull: ['$direction', 'credit'] } },
+                    credits: { $sum: '$amount' }
                 }
             }
         ])
     ]);
 
     const orderMap = new Map(orderAgg.map((r) => [r._id.toString(), r]));
-    const settlementMap = new Map(settlementAgg.map((r) => [r._id.toString(), r]));
+
+    const loadedMap = new Map<string, number>();
+    const settledMap = new Map<string, number>();
+    for (const r of settlementAgg) {
+        const standKey = r._id.standId.toString();
+        if (r._id.direction === 'debit') {
+            loadedMap.set(standKey, (loadedMap.get(standKey) ?? 0) + r.credits);
+        } else {
+            settledMap.set(standKey, (settledMap.get(standKey) ?? 0) + r.credits);
+        }
+    }
 
     const standItems = stands.map((s) => {
         const earned = orderMap.get(s._id.toString())?.earnedCredits ?? 0;
-        const settled = settlementMap.get(s._id.toString())?.settledCredits ?? 0;
+        const loaded = loadedMap.get(s._id.toString()) ?? 0;
+        const settled = settledMap.get(s._id.toString()) ?? 0;
         return {
             standId: s._id.toString(),
             standName: s.name,
             earnedCredits: Math.round(earned * 100) / 100,
-            settledCredits: Math.round(settled * 100) / 100
+            loadedCredits: Math.round(loaded * 100) / 100,
+            settledCredits: Math.round(settled * 100) / 100,
+            toReturnCredits: Math.max(0, Math.round((loaded - settled) * 100) / 100)
         };
     });
 
@@ -434,16 +447,15 @@ async function settlementReport(req: Request, res: Response) {
             { $match: match },
             {
                 $group: {
-                    _id: '$standId',
+                    _id: { standId: '$standId', direction: { $ifNull: ['$direction', 'credit'] } },
                     standName: { $first: '$standName' },
-                    settlementCount: { $sum: 1 },
-                    settledCredits: { $sum: '$amount' },
+                    credits: { $sum: '$amount' },
                     grossEuro: { $sum: '$grossEuro' },
                     feeEuro: { $sum: '$feeEuro' },
-                    payoutEuro: { $sum: '$payoutEuro' }
+                    payoutEuro: { $sum: '$payoutEuro' },
+                    count: { $sum: 1 }
                 }
-            },
-            { $sort: { standName: 1 } }
+            }
         ]),
         OrderModel.aggregate([
             { $match: { eventId: eventIdObj, paymentStatus: 'paid' } },
@@ -453,29 +465,68 @@ async function settlementReport(req: Request, res: Response) {
 
     const orderMap = new Map(orderAgg.map((r) => [r._id.toString(), r.earnedCredits ?? 0]));
 
+    const standMap = new Map<string, {
+        standName: string;
+        loadedCredits: number;
+        settledCredits: number;
+        loadCount: number;
+        settlementCount: number;
+        grossEuro: number;
+        feeEuro: number;
+        payoutEuro: number;
+    }>();
+
+    for (const r of settlementAgg) {
+        const standKey = r._id.standId.toString();
+        const entry = standMap.get(standKey) ?? {
+            standName: r.standName,
+            loadedCredits: 0,
+            settledCredits: 0,
+            loadCount: 0,
+            settlementCount: 0,
+            grossEuro: 0,
+            feeEuro: 0,
+            payoutEuro: 0
+        };
+        if (r._id.direction === 'debit') {
+            entry.loadedCredits += r.credits;
+            entry.loadCount += r.count;
+        } else {
+            entry.settledCredits += r.credits;
+            entry.settlementCount += r.count;
+            entry.grossEuro += r.grossEuro;
+            entry.feeEuro += r.feeEuro;
+            entry.payoutEuro += r.payoutEuro;
+        }
+        standMap.set(standKey, entry);
+    }
+
     const round2 = (n: number) => Math.round(n * 100) / 100;
 
-    const stands = settlementAgg.map((r) => {
-        const settledCredits = round2(r.settledCredits);
-        const earnedCredits = round2(orderMap.get(r._id.toString()) ?? 0);
+    const stands = [...standMap.entries()].map(([standId, s]) => {
+        const earnedCredits = round2(orderMap.get(standId) ?? 0);
         return {
-            standId: r._id.toString(),
-            standName: r.standName,
-            settlementCount: r.settlementCount,
-            settledCredits,
+            standId,
+            standName: s.standName,
+            settlementCount: s.settlementCount,
+            loadCount: s.loadCount,
+            loadedCredits: round2(s.loadedCredits),
+            settledCredits: round2(s.settledCredits),
             earnedCredits,
-            remainingCredits: round2(earnedCredits - settledCredits),
-            grossEuro: round2(r.grossEuro),
-            feeEuro: round2(r.feeEuro),
-            payoutEuro: round2(r.payoutEuro)
+            toReturnCredits: Math.max(0, round2(s.loadedCredits - s.settledCredits)),
+            grossEuro: round2(s.grossEuro),
+            feeEuro: round2(s.feeEuro),
+            payoutEuro: round2(s.payoutEuro)
         };
-    });
+    }).sort((a, b) => a.standName.localeCompare(b.standName));
 
     const totals = {
         settlementCount: stands.reduce((a, s) => a + s.settlementCount, 0),
+        loadCount: stands.reduce((a, s) => a + s.loadCount, 0),
+        loadedCredits: round2(stands.reduce((a, s) => a + s.loadedCredits, 0)),
         settledCredits: round2(stands.reduce((a, s) => a + s.settledCredits, 0)),
         earnedCredits: round2(stands.reduce((a, s) => a + s.earnedCredits, 0)),
-        remainingCredits: round2(stands.reduce((a, s) => a + s.remainingCredits, 0)),
+        toReturnCredits: round2(stands.reduce((a, s) => a + s.toReturnCredits, 0)),
         grossEuro: round2(stands.reduce((a, s) => a + s.grossEuro, 0)),
         feeEuro: round2(stands.reduce((a, s) => a + s.feeEuro, 0)),
         payoutEuro: round2(stands.reduce((a, s) => a + s.payoutEuro, 0))
@@ -506,6 +557,9 @@ async function listSettlements(req: Request, res: Response) {
     if (req.query.standId && isValidObjectId(req.query.standId as string)) {
         match.standId = new Types.ObjectId(req.query.standId as string);
     }
+    if (req.query.direction === 'debit' || req.query.direction === 'credit') {
+        match.direction = req.query.direction;
+    }
 
     const [settlements, total] = await Promise.all([
         StandSettlementModel.find(match)
@@ -531,7 +585,7 @@ async function listSettlements(req: Request, res: Response) {
         { $match: match },
         {
             $group: {
-                _id: null,
+                _id: { direction: { $ifNull: ['$direction', 'credit'] } },
                 credits: { $sum: '$amount' },
                 payoutEuro: { $sum: '$payoutEuro' },
                 count: { $sum: 1 }
@@ -539,15 +593,25 @@ async function listSettlements(req: Request, res: Response) {
         }
     ]);
 
+    let loadedCredits = 0;
+    let settledCredits = 0;
+    let count = 0;
+    let payoutEuro = 0;
+    for (const row of totals) {
+        count += row.count;
+        payoutEuro += row.payoutEuro;
+        if (row._id.direction === 'debit') loadedCredits += row.credits;
+        else settledCredits += row.credits;
+    }
+
     return res.status(200).json({
         items,
-        totals: totals[0]
-            ? {
-                credits: Math.round(totals[0].credits * 100) / 100,
-                payoutEuro: Math.round(totals[0].payoutEuro * 100) / 100,
-                count: totals[0].count
-            }
-            : { credits: 0, payoutEuro: 0, count: 0 },
+        totals: {
+            loadedCredits: Math.round(loadedCredits * 100) / 100,
+            settledCredits: Math.round(settledCredits * 100) / 100,
+            payoutEuro: Math.round(payoutEuro * 100) / 100,
+            count
+        },
         pagination: {
             page,
             limit,
@@ -562,6 +626,7 @@ async function createSettlement(req: Request, res: Response) {
     if (!eventCtx) return;
 
     const { standId, amount, feePercent, description } = req.body;
+    const direction = req.body.direction === 'debit' ? 'debit' : 'credit';
 
     if (!standId || !isValidObjectId(standId)) {
         return res.status(400).json({ message: 'Valid standId is required' });
@@ -572,7 +637,7 @@ async function createSettlement(req: Request, res: Response) {
         return res.status(400).json({ message: 'Amount must be a positive number' });
     }
 
-    const feeNum = Number(feePercent ?? 0);
+    const feeNum = direction === 'credit' ? Number(feePercent ?? 0) : 0;
     if (!Number.isFinite(feeNum) || feeNum < 0 || feeNum > 100) {
         return res.status(400).json({ message: 'Fee percentage must be between 0 and 100' });
     }
@@ -583,15 +648,16 @@ async function createSettlement(req: Request, res: Response) {
     }
 
     const exchangeRate = eventCtx.event.exchangeRate ?? 1;
-    const grossEuro = Math.round(amountNum / exchangeRate * 100) / 100;
-    const feeEuro = Math.round(grossEuro * (feeNum / 100) * 100) / 100;
-    const payoutEuro = Math.round((grossEuro - feeEuro) * 100) / 100;
+    const grossEuro = direction === 'debit' ? 0 : Math.round(amountNum / exchangeRate * 100) / 100;
+    const feeEuro = direction === 'debit' ? 0 : Math.round(grossEuro * (feeNum / 100) * 100) / 100;
+    const payoutEuro = direction === 'debit' ? 0 : Math.round((grossEuro - feeEuro) * 100) / 100;
 
     try {
         const settlement = await StandSettlementModel.create({
             eventId: eventCtx.eventId,
             standId: stand._id,
             standName: stand.name,
+            direction,
             amount: amountNum,
             exchangeRate,
             feePercent: feeNum,

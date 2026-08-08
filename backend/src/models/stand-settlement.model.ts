@@ -20,6 +20,13 @@ const standSettlementSchema = new Schema(
             trim: true,
             maxlength: 160
         },
+        direction: {
+            type: String,
+            enum: ['debit', 'credit'],
+            required: true,
+            default: 'credit',
+            index: true
+        },
         amount: {
             type: Number,
             required: true,

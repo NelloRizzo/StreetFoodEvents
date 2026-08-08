@@ -10,11 +10,15 @@ import styles from './EventDetailPage.module.scss'
 import cambioStyles from './EventExchangePage.module.scss'
 import settlementStyles from './StandSettlementsPage.module.scss'
 
+type SettlementDirection = 'debit' | 'credit'
+
 type SettlementStand = {
   standId: string
   standName: string
   earnedCredits: number
+  loadedCredits: number
   settledCredits: number
+  toReturnCredits: number
 }
 
 type SettlementSummary = {
@@ -30,6 +34,7 @@ type Settlement = {
   eventId: string
   standId: string
   standName: string
+  direction: SettlementDirection
   amount: number
   exchangeRate: number
   feePercent: number
@@ -44,7 +49,7 @@ type Settlement = {
 
 type SettlementListResponse = {
   items: Settlement[]
-  totals: { credits: number; payoutEuro: number; count: number }
+  totals: { loadedCredits: number; settledCredits: number; payoutEuro: number; count: number }
   pagination: { page: number; totalPages: number; total: number; limit: number }
 }
 
@@ -58,13 +63,14 @@ export function StandSettlementsPage() {
   const [summary, setSummary] = useState<SettlementSummary | null>(null)
 
   const [selectedStandId, setSelectedStandId] = useState('')
+  const [direction, setDirection] = useState<SettlementDirection>('credit')
   const [amount, setAmount] = useState('')
   const [feePercent, setFeePercent] = useState('')
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const [settlements, setSettlements] = useState<Settlement[]>([])
-  const [totals, setTotals] = useState<{ credits: number; payoutEuro: number; count: number }>({ credits: 0, payoutEuro: 0, count: 0 })
+  const [totals, setTotals] = useState<{ loadedCredits: number; settledCredits: number; payoutEuro: number; count: number }>({ loadedCredits: 0, settledCredits: 0, payoutEuro: 0, count: 0 })
   const [txPage, setTxPage] = useState(1)
   const [txTotalPages, setTxTotalPages] = useState(1)
 
@@ -106,16 +112,17 @@ export function StandSettlementsPage() {
   const selectedStand = summary?.stands.find((s) => s.standId === selectedStandId) ?? null
   const creditsNum = parseFloat(amount)
   const validAmount = Number.isFinite(creditsNum) && creditsNum > 0
-  const feeNum = Number.isFinite(parseFloat(feePercent)) ? parseFloat(feePercent) : 0
-  const grossEuro = validAmount ? Math.round(creditsNum / rate * 100) / 100 : 0
-  const feeEuro = validAmount ? Math.round(grossEuro * (feeNum / 100) * 100) / 100 : 0
-  const payoutEuro = validAmount ? Math.round((grossEuro - feeEuro) * 100) / 100 : 0
+  const isCredit = direction === 'credit'
+  const feeNum = isCredit && Number.isFinite(parseFloat(feePercent)) ? parseFloat(feePercent) : 0
+  const grossEuro = isCredit && validAmount ? Math.round(creditsNum / rate * 100) / 100 : 0
+  const feeEuro = isCredit && validAmount ? Math.round(grossEuro * (feeNum / 100) * 100) / 100 : 0
+  const payoutEuro = isCredit && validAmount ? Math.round((grossEuro - feeEuro) * 100) / 100 : 0
 
   const handleSelectStand = (standId: string) => {
     setSelectedStandId(standId)
     const stand = summary?.stands.find((s) => s.standId === standId)
     if (stand) {
-      setAmount(String(stand.earnedCredits > 0 ? stand.earnedCredits : ''))
+      setAmount(isCredit && stand.earnedCredits > 0 ? String(stand.earnedCredits) : '')
     } else {
       setAmount('')
     }
@@ -130,6 +137,7 @@ export function StandSettlementsPage() {
         bodyJson: {
           standId: selectedStandId,
           amount: creditsNum,
+          direction,
           feePercent: feeNum,
           description: description.trim() || undefined,
         }
@@ -139,12 +147,14 @@ export function StandSettlementsPage() {
       setModal({
         open: true,
         variant: 'alert',
-        title: 'Liquidazione completata',
-        message: `${res.item.standName}: ${res.item.amount.toFixed(2)} ${currencyName} → €${res.item.payoutEuro.toFixed(2)} da corrispondere (€${res.item.grossEuro.toFixed(2)} lordi, ${res.item.feePercent}% trattenuta = €${res.item.feeEuro.toFixed(2)}).`
+        title: isCredit ? 'Liquidazione completata' : 'Carico crediti registrato',
+        message: isCredit
+          ? `${res.item.standName}: ${res.item.amount.toFixed(2)} ${currencyName} → €${res.item.payoutEuro.toFixed(2)} da corrispondere (€${res.item.grossEuro.toFixed(2)} lordi, ${res.item.feePercent}% trattenuta = €${res.item.feeEuro.toFixed(2)}).`
+          : `${res.item.standName}: caricati ${res.item.amount.toFixed(2)} ${currencyName} da restituire in fase di liquidazione (nessun pagamento in euro).`
       })
       fetchData()
     } catch (err) {
-      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante la liquidazione' })
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante l\'operazione' })
     } finally {
       setSubmitting(false)
     }
@@ -201,9 +211,19 @@ export function StandSettlementsPage() {
                   <div className={cambioStyles.statSub}>Riferimento informativo dal report ordini</div>
                 </div>
                 <div className={cambioStyles.statCard}>
-                  <div className={cambioStyles.statLabel}>Già liquidati</div>
+                  <div className={cambioStyles.statLabel}>Caricati allo stand (DARE)</div>
+                  <div className={cambioStyles.statValue}>{selectedStand.loadedCredits.toFixed(2)}</div>
+                  <div className={cambioStyles.statSub}>Crediti dati allo stand, da restituire</div>
+                </div>
+                <div className={cambioStyles.statCard}>
+                  <div className={cambioStyles.statLabel}>Liquidati (AVERE)</div>
                   <div className={cambioStyles.statValue}>{selectedStand.settledCredits.toFixed(2)}</div>
-                  <div className={cambioStyles.statSub}>Totale crediti già erogati per questo stand</div>
+                  <div className={cambioStyles.statSub}>Crediti restituiti dallo stand</div>
+                </div>
+                <div className={cambioStyles.statCard}>
+                  <div className={cambioStyles.statLabel}>Da restituire</div>
+                  <div className={cambioStyles.statValue}>{selectedStand.toReturnCredits.toFixed(2)}</div>
+                  <div className={cambioStyles.statSub}>DARE − AVERE</div>
                 </div>
               </div>
             )}
@@ -211,22 +231,42 @@ export function StandSettlementsPage() {
 
           {selectedStand && (
             <section className={cambioStyles.section}>
-              <h2 className={styles.sectionTitle}>Nuova liquidazione</h2>
+              <h2 className={styles.sectionTitle}>Nuova operazione</h2>
               <div className={settlementStyles.formGrid}>
                 <div className={cambioStyles.formCard}>
+                  <div className={settlementStyles.directionToggle}>
+                    <button
+                      type="button"
+                      className={`${settlementStyles.directionBtn} ${isCredit ? settlementStyles.directionCreditActive : ''}`}
+                      onClick={() => setDirection('credit')}
+                      disabled={submitting}
+                    >
+                      Liquidazione (AVERE)
+                    </button>
+                    <button
+                      type="button"
+                      className={`${settlementStyles.directionBtn} ${!isCredit ? settlementStyles.directionDebitActive : ''}`}
+                      onClick={() => setDirection('debit')}
+                      disabled={submitting}
+                    >
+                      Carico crediti (DARE)
+                    </button>
+                  </div>
                   <label className={cambioStyles.field}>
-                    Importo presentato ({currencyName})
+                    {isCredit ? `Importo presentato (${currencyName})` : `Crediti da caricare (${currencyName})`}
                     <input type="number" min="0.01" step="0.01" value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       disabled={submitting} />
                   </label>
-                  <label className={cambioStyles.field}>
-                    Percentuale trattenuta dal gestore (%) — default 0
-                    <input type="number" min="0" max="100" step="0.1" value={feePercent}
-                      onChange={(e) => setFeePercent(e.target.value)}
-                      placeholder="0"
-                      disabled={submitting} />
-                  </label>
+                  {isCredit && (
+                    <label className={cambioStyles.field}>
+                      Percentuale trattenuta dal gestore (%) — default 0
+                      <input type="number" min="0" max="100" step="0.1" value={feePercent}
+                        onChange={(e) => setFeePercent(e.target.value)}
+                        placeholder="0"
+                        disabled={submitting} />
+                    </label>
+                  )}
                   <label className={cambioStyles.field}>
                     Note (opzionale)
                     <input type="text" value={description}
@@ -235,30 +275,48 @@ export function StandSettlementsPage() {
                   </label>
                   <button className={cambioStyles.btnTopUp} onClick={handleSubmit}
                     disabled={!validAmount || submitting}>
-                    {submitting ? 'Liquidazione in corso...' : `Liquida ${currencyName}`}
+                    {submitting
+                      ? (isCredit ? 'Liquidazione in corso...' : 'Carico in corso...')
+                      : (isCredit ? `Liquida ${currencyName}` : `Carica ${currencyName} allo stand`)}
                   </button>
                 </div>
 
                 <div className={`${cambioStyles.formCard} ${settlementStyles.previewCard}`}>
-                  <h3 className={settlementStyles.previewTitle}>Corrispettivo in euro</h3>
-                  {!validAmount ? (
-                    <p className={cambioStyles.preview}>Inserisci l'importo presentato per calcolare il corrispettivo.</p>
+                  {isCredit ? (
+                    <>
+                      <h3 className={settlementStyles.previewTitle}>Corrispettivo in euro</h3>
+                      {!validAmount ? (
+                        <p className={cambioStyles.preview}>Inserisci l'importo presentato per calcolare il corrispettivo.</p>
+                      ) : (
+                        <>
+                          <div className={settlementStyles.previewRow}>
+                            <span className={settlementStyles.previewLabel}>Lordo</span>
+                            <span className={settlementStyles.previewValue}>€{grossEuro.toFixed(2)}</span>
+                          </div>
+                          <div className={settlementStyles.previewRow}>
+                            <span className={settlementStyles.previewLabel}>Trattenuta ({feeNum.toFixed(1)}%)</span>
+                            <span className={`${settlementStyles.previewValue} ${settlementStyles.previewFee}`}>- €{feeEuro.toFixed(2)}</span>
+                          </div>
+                          <div className={`${settlementStyles.previewRow} ${settlementStyles.previewTotal}`}>
+                            <span className={settlementStyles.previewLabel}>Da corrispondere</span>
+                            <span className={`${settlementStyles.previewValue} ${settlementStyles.previewPayout}`}>€{payoutEuro.toFixed(2)}</span>
+                          </div>
+                          <p className={settlementStyles.previewNote}>
+                            {creditsNum.toFixed(2)} {currencyName} ÷ {rate} (cambio) × ({100 - feeNum}%)
+                          </p>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <>
-                      <div className={settlementStyles.previewRow}>
-                        <span className={settlementStyles.previewLabel}>Lordo</span>
-                        <span className={settlementStyles.previewValue}>€{grossEuro.toFixed(2)}</span>
-                      </div>
-                      <div className={settlementStyles.previewRow}>
-                        <span className={settlementStyles.previewLabel}>Trattenuta ({feeNum.toFixed(1)}%)</span>
-                        <span className={`${settlementStyles.previewValue} ${settlementStyles.previewFee}`}>- €{feeEuro.toFixed(2)}</span>
-                      </div>
-                      <div className={`${settlementStyles.previewRow} ${settlementStyles.previewTotal}`}>
-                        <span className={settlementStyles.previewLabel}>Da corrispondere</span>
-                        <span className={`${settlementStyles.previewValue} ${settlementStyles.previewPayout}`}>€{payoutEuro.toFixed(2)}</span>
-                      </div>
+                      <h3 className={settlementStyles.previewTitle}>Nessun corrispettivo in euro</h3>
+                      <p className={cambioStyles.preview}>
+                        I crediti caricati allo stand vanno restituiti in fase di liquidazione (AVERE).
+                      </p>
                       <p className={settlementStyles.previewNote}>
-                        {creditsNum.toFixed(2)} {currencyName} ÷ {rate} (cambio) × ({100 - feeNum}%)
+                        {validAmount
+                          ? `${creditsNum.toFixed(2)} ${currencyName} da restituire.`
+                          : "Inserisci l'importo da caricare."}
                       </p>
                     </>
                   )}
@@ -271,8 +329,9 @@ export function StandSettlementsPage() {
             <h2 className={styles.sectionTitle}>Storico liquidazioni</h2>
             {totals.count > 0 && (
               <div className={settlementStyles.totalsBar}>
-                <span className={settlementStyles.totalsItem}>Liquidazioni: <strong>{totals.count}</strong></span>
-                <span className={settlementStyles.totalsItem}>Crediti liquidati: <strong>{totals.credits.toFixed(2)}</strong></span>
+                <span className={settlementStyles.totalsItem}>Operazioni: <strong>{totals.count}</strong></span>
+                <span className={settlementStyles.totalsItem}>Caricati (DARE): <strong>{totals.loadedCredits.toFixed(2)}</strong></span>
+                <span className={settlementStyles.totalsItem}>Liquidati (AVERE): <strong>{totals.settledCredits.toFixed(2)}</strong></span>
                 <span className={settlementStyles.totalsItem}>Totale erogato: <strong>€{totals.payoutEuro.toFixed(2)}</strong></span>
               </div>
             )}
@@ -286,6 +345,7 @@ export function StandSettlementsPage() {
                       <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
                         <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
                         <th style={{ textAlign: 'left', padding: '0.5rem' }}>Stand</th>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
                         <th style={{ textAlign: 'right', padding: '0.5rem' }}>Crediti</th>
                         <th style={{ textAlign: 'right', padding: '0.5rem' }}>Corso</th>
                         <th style={{ textAlign: 'right', padding: '0.5rem' }}>Lordo €</th>
@@ -303,12 +363,17 @@ export function StandSettlementsPage() {
                             {new Date(s.occurredAt).toLocaleString('it-IT')}
                           </td>
                           <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>{s.standName}</td>
+                          <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
+                            {s.direction === 'debit'
+                              ? <span className={settlementStyles.badgeDebit}>DARE · Carico</span>
+                              : <span className={settlementStyles.badgeCredit}>AVERE · Liquidazione</span>}
+                          </td>
                           <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600 }}>{s.amount.toFixed(2)}</td>
                           <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-text-muted)' }}>1 € = {s.exchangeRate} {currencyName}</td>
-                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>€{s.grossEuro.toFixed(2)}</td>
-                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.feePercent.toFixed(1)}%</td>
-                          <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-red)' }}>- €{s.feeEuro.toFixed(2)}</td>
-                          <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: 'var(--color-green)' }}>€{s.payoutEuro.toFixed(2)}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.direction === 'debit' ? '—' : `€${s.grossEuro.toFixed(2)}`}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.direction === 'debit' ? '—' : `${s.feePercent.toFixed(1)}%`}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-red)' }}>{s.direction === 'debit' ? '—' : `- €${s.feeEuro.toFixed(2)}`}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: 'var(--color-green)' }}>{s.direction === 'debit' ? '—' : `€${s.payoutEuro.toFixed(2)}`}</td>
                           <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>{s.performedByName || '-'}</td>
                           <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden' }}>{s.description || '-'}</td>
                         </tr>

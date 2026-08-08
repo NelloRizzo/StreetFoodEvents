@@ -12,9 +12,11 @@ type ReportStand = {
   standId: string
   standName: string
   settlementCount: number
+  loadCount: number
+  loadedCredits: number
   settledCredits: number
   earnedCredits: number
-  remainingCredits: number
+  toReturnCredits: number
   grossEuro: number
   feeEuro: number
   payoutEuro: number
@@ -31,9 +33,11 @@ type SettlementReport = {
   stands: ReportStand[]
   totals: {
     settlementCount: number
+    loadCount: number
+    loadedCredits: number
     settledCredits: number
     earnedCredits: number
-    remainingCredits: number
+    toReturnCredits: number
     grossEuro: number
     feeEuro: number
     payoutEuro: number
@@ -49,9 +53,10 @@ function StandRow({ stand, isTotal }: { stand: ReportStand; isTotal?: boolean })
     <tr className={isTotal ? reportStyles.tableTotals : undefined}>
       <td className={reportStyles.standName}>{stand.standName}</td>
       <td className={reportStyles.num}>{stand.settlementCount}</td>
+      <td className={reportStyles.num}>{stand.loadedCredits.toFixed(2)}</td>
       <td className={reportStyles.num}>{stand.settledCredits.toFixed(2)}</td>
       <td className={reportStyles.num}>{stand.earnedCredits.toFixed(2)}</td>
-      <td className={`${reportStyles.num} ${styles.remainingValue}`}>{stand.remainingCredits.toFixed(2)}</td>
+      <td className={`${reportStyles.num} ${styles.remainingValue}`}>{stand.toReturnCredits.toFixed(2)}</td>
       <td className={reportStyles.num}>{fmtEur(stand.grossEuro)}</td>
       <td className={`${reportStyles.num} ${styles.feeValue}`}>- {fmtEur(stand.feeEuro)}</td>
       <td className={`${reportStyles.num} ${styles.payoutValue}`}>{fmtEur(stand.payoutEuro)}</td>
@@ -145,6 +150,10 @@ export function SettlementsReportPage() {
                 <span className={reportStyles.totalValue}>{totals.settlementCount}</span>
               </div>
               <div className={reportStyles.totalItem}>
+                <span className={reportStyles.totalLabel}>Caricati (DARE)</span>
+                <span className={reportStyles.totalValue}>{totals.loadedCredits.toFixed(2)}</span>
+              </div>
+              <div className={reportStyles.totalItem}>
                 <span className={reportStyles.totalLabel}>Crediti liquidati</span>
                 <span className={reportStyles.totalValue}>{totals.settledCredits.toFixed(2)}</span>
               </div>
@@ -161,8 +170,8 @@ export function SettlementsReportPage() {
                 <span className={`${reportStyles.totalValue} ${styles.payoutValue}`}>{fmtEur(totals.payoutEuro)}</span>
               </div>
               <div className={reportStyles.totalItem}>
-                <span className={reportStyles.totalLabel}>Residuo da liquidare</span>
-                <span className={`${reportStyles.totalValue} ${styles.remainingValue}`}>{totals.remainingCredits.toFixed(2)}</span>
+                <span className={reportStyles.totalLabel}>Da restituire</span>
+                <span className={`${reportStyles.totalValue} ${styles.remainingValue}`}>{totals.toReturnCredits.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -178,9 +187,10 @@ export function SettlementsReportPage() {
                     <tr>
                       <th>Stand</th>
                       <th className={reportStyles.num}>N.</th>
-                      <th className={reportStyles.num}>Crediti liquidati</th>
-                      <th className={reportStyles.num}>Crediti guadagnati</th>
-                      <th className={reportStyles.num}>Residuo</th>
+                      <th className={reportStyles.num}>Caricati (DARE)</th>
+                      <th className={reportStyles.num}>Liquidati (AVERE)</th>
+                      <th className={reportStyles.num}>Guadagnati</th>
+                      <th className={reportStyles.num}>Da restituire</th>
                       <th className={reportStyles.num}>Lordo €</th>
                       <th className={reportStyles.num}>Trattenuta €</th>
                       <th className={reportStyles.num}>Erogato €</th>
@@ -196,8 +206,9 @@ export function SettlementsReportPage() {
               </div>
             )}
             <p className={styles.note}>
-              Le liquidazioni possono essere filtrate per data. «Crediti guadagnati» e «Residuo» fanno riferimento a tutto
-              l'evento (report ordini), a prescindere dal filtro.
+              Le operazioni possono essere filtrate per data. «Caricati» (DARE) sono i crediti dati allo stand da restituire
+              in liquidazione; «Liquidati» (AVERE) i crediti restituiti con pagamento in euro; «Da restituire» = caricati −
+              liquidati. «Crediti guadagnati» fa riferimento a tutto l'evento (report ordini), a prescindere dal filtro.
             </p>
           </div>
         </div>
