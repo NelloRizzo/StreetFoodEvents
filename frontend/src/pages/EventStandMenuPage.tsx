@@ -67,6 +67,7 @@ export function EventStandMenuPage() {
   const [creditAmount, setCreditAmount] = useState(0)
   const [customerName, setCustomerName] = useState('')
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
 
   const total = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
 
@@ -105,6 +106,15 @@ export function EventStandMenuPage() {
   useEffect(() => {
     if (user) setCustomerName(`${user.firstName} ${user.lastName}`)
   }, [user])
+
+  useEffect(() => {
+    if (!selectedItem) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedItem(null)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [selectedItem])
 
   const addToCart = (item: MenuItem) => {
     const product = item.product
@@ -211,7 +221,19 @@ export function EventStandMenuPage() {
                   const price = item.priceOverride ?? product?.price ?? 0
 
                   return (
-                    <div key={item.id} className={styles.menuCard}>
+                    <div
+                      key={item.id}
+                      className={styles.menuCard}
+                      onClick={() => setSelectedItem(item)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setSelectedItem(item)
+                        }
+                      }}
+                    >
                       {product?.coverImage ? (
                         <img
                           src={product.coverImage.url}
@@ -244,7 +266,10 @@ export function EventStandMenuPage() {
                         {isAuthenticated && (
                           <button
                             className={styles.addBtn}
-                            onClick={() => addToCart(item)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              addToCart(item)
+                            }}
                           >
                             Aggiungi
                           </button>
@@ -367,6 +392,60 @@ export function EventStandMenuPage() {
           )}
         </div>
       </div>
+      {selectedItem?.product && (
+        <div className={styles.overlay} onClick={() => setSelectedItem(null)}>
+          <div
+            className={styles.productModal}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={selectedItem.product.name}
+          >
+            {selectedItem.product.coverImage ? (
+              <img
+                src={selectedItem.product.coverImage.url}
+                alt={selectedItem.product.name}
+                className={styles.productImage}
+              />
+            ) : (
+              <div className={styles.productImagePlaceholder}>
+                {selectedItem.product.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className={styles.productInfo}>
+              <h2 className={styles.productName}>{selectedItem.product.name}</h2>
+              {selectedItem.product.ingredients.length > 0 && (
+                <p className={styles.productIngredients}>
+                  {selectedItem.product.ingredients.join(', ')}
+                </p>
+              )}
+              <span className={styles.productPrice}>
+                {(selectedItem.priceOverride ?? selectedItem.product.price).toFixed(2)}
+                <CurrencyDisplay
+                  currencyName={event.currencyName}
+                  currencySymbol={event.currencySymbol}
+                />
+              </span>
+            </div>
+            <div className={styles.productActions}>
+              {isAuthenticated && (
+                <button
+                  className={styles.modalAddBtn}
+                  onClick={() => addToCart(selectedItem)}
+                >
+                  Aggiungi al carrello
+                </button>
+              )}
+              <button
+                className={styles.modalCloseBtn}
+                onClick={() => setSelectedItem(null)}
+              >
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {alertMsg && (
         <ConfirmModal
           open={alertMsg !== null}
