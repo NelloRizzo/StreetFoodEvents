@@ -71,6 +71,8 @@ const POI_ICONS = [
   { value: 'stage', label: '🎵 Palco' },
   { value: 'food', label: '🍽️ Cibo' },
   { value: 'drink', label: '🍺 Bibite' },
+  { value: 'cassa', label: '💳 Cassa' },
+  { value: 'bancomat', label: '🏧 Bancomat' },
 ]
 
 export function EventDetailPage() {

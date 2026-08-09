@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -55,6 +55,8 @@ function createPoiIcon(type: string | null) {
     case 'stage': emoji = '🎵'; break
     case 'food': emoji = '🍽️'; break
     case 'drink': emoji = '🍺'; break
+    case 'cassa': emoji = '💳'; break
+    case 'bancomat': emoji = '🏧'; break
   }
   return L.divIcon({
     className: styles.poiMarker,
@@ -73,6 +75,19 @@ export function EventMapPage() {
   const [stands, setStands] = useState<StandData[]>([])
   const [pois, setPois] = useState<PoiData[]>([])
   const [selectedStandId, setSelectedStandId] = useState('')
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const isFullscreenRef = useRef(false)
+  const fullscreenBtnRef = useRef<HTMLButtonElement | null>(null)
+
+  const toggleFullscreen = useCallback(() => {
+    const el = mapContainerRef.current
+    if (!el) return
+    const next = !isFullscreenRef.current
+    isFullscreenRef.current = next
+    el.classList.toggle(styles.fullscreenMap, next)
+    setIsFullscreen(next)
+    requestAnimationFrame(() => mapRef.current?.invalidateSize())
+  }, [])
 
   useEffect(() => {
     if (!eventId) return
@@ -111,11 +126,41 @@ export function EventMapPage() {
       'Mappa': streetLayer,
     }, undefined, { position: 'bottomleft' }).addTo(map)
 
+    const fullscreenControl = new L.Control({ position: 'topright' })
+    fullscreenControl.onAdd = () => {
+      const btn = L.DomUtil.create('button', styles.fullscreenBtn) as HTMLButtonElement
+      btn.innerHTML = '⛶'
+      btn.title = 'Apri a schermo intero'
+      btn.setAttribute('aria-label', btn.title)
+      btn.addEventListener('click', toggleFullscreen)
+      fullscreenBtnRef.current = btn
+      return btn
+    }
+    fullscreenControl.addTo(map)
+
     return () => {
       map.remove()
       mapRef.current = null
+      fullscreenBtnRef.current = null
     }
-  }, [])
+  }, [toggleFullscreen])
+
+  useEffect(() => {
+    const btn = fullscreenBtnRef.current
+    if (!btn) return
+    btn.innerHTML = isFullscreen ? '✕' : '⛶'
+    btn.title = isFullscreen ? 'Esci da schermo intero' : 'Apri a schermo intero'
+    btn.setAttribute('aria-label', btn.title)
+  }, [isFullscreen])
+
+  useEffect(() => {
+    if (!isFullscreen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') toggleFullscreen()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isFullscreen, toggleFullscreen])
 
   useEffect(() => {
     const map = mapRef.current

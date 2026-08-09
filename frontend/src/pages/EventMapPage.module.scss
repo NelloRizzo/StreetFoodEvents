@@ -74,6 +74,35 @@
   margin-bottom: 1rem;
 }
 
+.fullscreenMap {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  border-radius: 0;
+}
+
+.fullscreenBtn {
+  width: 2rem;
+  height: 2rem;
+  background: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  color: #333;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+
+  &:hover {
+    background: #f4f4f4;
+  }
+}
+
 .legend {
   display: flex;
   gap: 1.5rem;
