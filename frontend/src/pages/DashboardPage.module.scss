@@ -307,6 +307,13 @@
   font-size: 1rem;
 }
 
+.standActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
 .stationList {
   display: flex;
   flex-wrap: wrap;

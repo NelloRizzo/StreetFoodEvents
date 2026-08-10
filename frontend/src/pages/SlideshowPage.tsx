@@ -6,7 +6,9 @@ import styles from './SlideshowPage.module.scss'
 
 type Photo = {
   id: string
-  image: { url: string }
+  type: 'image' | 'video'
+  image: { url: string } | null
+  video: { url: string } | null
   sequenceNumber: number
 }
 
@@ -175,7 +177,20 @@ export function SlideshowPage() {
         <div className={styles.grid} style={eventData?.coverImage?.url ? { '--cover': `url(${eventData.coverImage.url})` } as React.CSSProperties : undefined}>
           {batch.map((p) => (
             <div key={p.id} className={styles.photoWrapper} onClick={() => setSelectedPhoto(p)}>
-              <img src={p.image.url} alt="" className={styles.photo} />
+              {p.type === 'video' && p.video ? (
+                <video
+                  src={p.video.url}
+                  className={styles.photo}
+                  muted
+                  loop
+                  autoPlay
+                  playsInline
+                  preload="metadata"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : p.image ? (
+                <img src={p.image.url} alt="" className={styles.photo} />
+              ) : null}
               <span className={styles.badge}>{p.sequenceNumber}</span>
             </div>
           ))}
@@ -193,7 +208,18 @@ export function SlideshowPage() {
 
       {selectedPhoto && (
         <div className={styles.overlay} onClick={closeModal}>
-          <img src={selectedPhoto.image.url} alt="" className={styles.modalPhoto} />
+          {selectedPhoto.type === 'video' && selectedPhoto.video ? (
+            <video
+              src={selectedPhoto.video.url}
+              className={styles.modalPhoto}
+              controls
+              autoPlay
+              playsInline
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img src={selectedPhoto.image?.url ?? ''} alt="" className={styles.modalPhoto} />
+          )}
         </div>
       )}
     </div>

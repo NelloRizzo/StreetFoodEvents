@@ -72,14 +72,18 @@ Considerazioni progettuali e decisioni architetturali.
 - **Cosa NON fare**: non permettere caratteri speciali come `#`, `?`, spazi nell'alias — causerebbero problemi di parsing URL. La regex `^[a-z0-9_-]+$` è restrittiva di proposito.
 
 ## Photo Gallery
-- **Modelli separati**: `EventPhoto` (image, sequenceNumber, frameId, takenAt) e `EventFrame` (name, image overlay PNG).
-- **SequenceNumber auto-incrementale**: calcolato come `max(seq) + 1` per evento all'upload. Pattern nel controller, non usa CounterModel (dedicato agli ordini).
-- **Cloudinary folder**: `events/{eventId}/photos/` e `events/{eventId}/frames/`. Upload diretto nei controller con `uploadImageBuffer`.
+- **Modelli separati**: `EventPhoto` (type, image, video, sequenceNumber, frameId, takenAt) e `EventFrame` (name, image overlay PNG).
+- **Media type**: `EventPhoto.type` è `'image' | 'video'` (default `'image'`, backward compatible). `image` e `video` sono subdocument opzionali: le foto usano `image`, i video `video` (con `duration` in secondi). `POST /photos` accetta multipart con campo `image` OPPURE `video`.
+- **SequenceNumber auto-incrementale**: calcolato come `max(seq) + 1` per evento all'upload. Pattern nel controller, non usa CounterModel (dedicato agli ordini). La sequenza è condivisa tra foto e video (un numero unico per l'evento).
+- **Cloudinary folder**: `events/{eventId}/photos/` e `events/{eventId}/frames/`. Upload diretto nei controller con `uploadImageBuffer` (resource_type `image`, trasformazione quality/fetch_format auto) o `uploadVideoBuffer` (resource_type `video`, nessuna trasformazione).
+- **Multer**: il gallery router usa `multerMediaUpload` (accetta immagini e video, limite 100 MB per video). Le immagini continuano a usare `multerImageUpload` (10 MB) per frames e upload generici.
+- **Delete resource_type-aware**: la distruzione Cloudinary deve sapere il tipo di risorsa (`deleteImage` vs `deleteVideo`, entrambi → `destroy` con `resource_type`). `deleteAllEventPhotos` seleziona `type image.publicId video.publicId` e usa la funzione corretta per ogni item.
 - **API nidificate**: montate in `app.ts` come `app.use('/api/events/:eventId/photos', eventPhotosRouter)` con `mergeParams: true` per ereditare `eventId`.
 - **Permessi**: `POST /photos` richiede solo auth (chiunque può caricare). `DELETE /photos` (massiva) richiede `photo-admin` o `platform-admin`. `DELETE /photos/:photoId` richiede solo auth. `POST /frames` e `DELETE /frames/:frameId` richiedono `photo-admin`.
 - **Ruoli in seed**: `photo-admin` (scope event, permessi photos:read/create/delete, frames:read/create/delete). `photo-print` (scope event, solo photos:read).
-- **Stampa galleria**: finestra HTML pura via `window.open()` + `document.write()` + `window.print()`, stesso pattern del Menu Print e della ricevuta. Evita conflitti CSS SPA.
-- **Cosa NON fare**: non eliminare foto da Cloudinary senza prima cancellare il record DB — il controller fa prima `findOneAndDelete` poi `deleteImage`. Non usare `fs` per le foto — tutto su Cloudinary.
+- **Stampa galleria**: finestra HTML pura via `window.open()` + `document.write()` + `window.print()`, stesso pattern del Menu Print e della ricevuta. Evita conflitti CSS SPA. La stampa include solo foto (`type === 'image'`), i video vengono saltati; l'invio email è disabilitato per i video (400).
+- **Slideshow**: i video in griglia girano muted/loop/autoplay/playsInline (display pubblico senza audio); nel modale fullscreen i controlli sono attivi.
+- **Cosa NON fare**: non eliminare foto da Cloudinary senza prima cancellare il record DB — il controller fa prima `findOneAndDelete` poi delete (con il giusto `resource_type`). Non usare `fs` per foto/video — tutto su Cloudinary. Non usare `multerImageUpload` per i video (limite 10 MB e fileFilter solo immagini). Non fare `deleteImage()` su un video — il `destroy` di default è `resource_type: image` e fallirebbe.
 
 ## Frontend
 - React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
@@ -87,6 +91,11 @@ Considerazioni progettuali e decisioni architetturali.
 - No `@/*` alias — imports are relative.
 - SCSS uses `@use` for token imports (`_tokens.scss`), not `@import`.
 - Build runs typecheck first (`tsc -b`), so type errors block the build.
+
+## Dashboard — link cassa stand
+- La sezione "Gestione stand" mostra gli stand di `GET /auth/me/stands` (già il set autorizzato che usa `CashierOrderPage` per il suo check).
+- Il link "Cassa" → `/events/{eventId}/stands/{standId}/order` è mostrato SOLO se l'utente è autorizzato, calcolato da `GET /auth/me/roles`: platform-admin, oppure ruolo stand-scope `cashier` per quello stand, oppure ruolo evento `event-admin`/`event-cashier` per uno degli `eventIds` dello stand.
+- Il link "Coda Ordini" (pubblico) e "Cassa" (privato) stanno nella stessa riga di azioni; `eventIds[0]` è usato come evento di riferimento per lo stand.
 
 ## CSS Grid + Flex overflow — gotcha
 - **Problema**: in un layout flex column (`display: flex; flex-direction: column`), una griglia CSS interna con `grid-template-rows: repeat(N, 1fr)` può sovrapporsi al footer. Le righe CSS Grid hanno un `min-height: auto` di default che impedisce loro di restringersi sotto il contenuto intrinseco delle cella (immagini, testo). Questo "spinge" la griglia oltre il suo flex allocation, e il footer (con z-index più alto e background opaco) copre le righe inferiori.

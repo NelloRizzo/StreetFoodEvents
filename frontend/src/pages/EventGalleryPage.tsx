@@ -9,11 +9,15 @@ import styles from './EventGalleryPage.module.scss'
 
 type EventPhoto = {
   id: string
-  image: { url: string; publicId: string; width: number; height: number; format: string; bytes: number }
+  type: 'image' | 'video'
+  image: { url: string; publicId: string; width: number; height: number; format: string; bytes: number } | null
+  video: { url: string; publicId: string; width: number; height: number; format: string; bytes: number; duration: number } | null
   sequenceNumber: number
   takenAt: string
   frameId: string | null
 }
+
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
 
 export function EventGalleryPage() {
   const { eventId } = useParams<{ eventId: string }>()
@@ -25,11 +29,14 @@ export function EventGalleryPage() {
   const [hasPhotoRole, setHasPhotoRole] = useState(false)
   const [hasPrintRole, setHasPrintRole] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [filterSeq, setFilterSeq] = useState('')
   const [filterDate, setFilterDate] = useState('')
   const [filterTimeFrom, setFilterTimeFrom] = useState('')
   const [filterTimeTo, setFilterTimeTo] = useState('')
   const printRef = useRef<HTMLDivElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   const [emailModalPhoto, setEmailModalPhoto] = useState<EventPhoto | null>(null)
   const [emailSending, setEmailSending] = useState(false)
@@ -105,10 +112,12 @@ export function EventGalleryPage() {
 
   const handlePrint = () => {
     if (!printRef.current) return
-    const selected = photos.filter((p) => selectedIds.size === 0 || selectedIds.has(p.id))
+    const selected = photos
+      .filter((p) => selectedIds.size === 0 || selectedIds.has(p.id))
+      .filter((p) => p.type === 'image' && p.image)
     const pages = selected.map((p) => `
       <div class="page">
-        <img src="${p.image.url}" />
+        <img src="${p.image!.url}" />
       </div>
     `).join('')
     const html = `
@@ -204,6 +213,7 @@ export function EventGalleryPage() {
   }, [photos, filterSeq, filterDate, filterTimeFrom, filterTimeTo])
 
   const handlePrintPhoto = (photo: EventPhoto) => {
+    if (photo.type !== 'image' || !photo.image) return
     const html = `
       <html>
         <head>
@@ -231,6 +241,34 @@ export function EventGalleryPage() {
     w.close()
   }
 
+  const handleUploadVideo = async (file: File) => {
+    if (!eventId || !file || uploading) return
+    setUploading(true)
+    setUploadError('')
+    try {
+      const formData = new FormData()
+      formData.append('video', file)
+
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/photos`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null)
+        throw new Error(errData?.message ?? 'Upload fallito')
+      }
+
+      const data = await apiRequest<{ items: EventPhoto[] }>(`/events/${eventId}/photos`)
+      setPhotos(data.items)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload video fallito. Riprova.')
+    } finally {
+      setUploading(false)
+      if (videoInputRef.current) videoInputRef.current.value = ''
+    }
+  }
+
   if (isLoading) return null
 
   return (
@@ -238,12 +276,36 @@ export function EventGalleryPage() {
       <div className="page-shell">
         <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
 
-        <h1 className={styles.title}>Galleria foto</h1>
+        <h1 className={styles.title}>Galleria media</h1>
         <p className={styles.subtitle}>{eventName}</p>
 
         <div className={styles.toolbar}>
-          <span className={styles.count}>{displayPhotos.length} foto{selectedIds.size > 0 ? ` (${selectedIds.size} selezionate)` : ''}</span>
+          <span className={styles.count}>
+            {displayPhotos.length} elementi{selectedIds.size > 0 ? ` (${selectedIds.size} selezionati)` : ''}
+          </span>
           <div className={styles.actions}>
+            {hasPhotoRole && (
+              <>
+                <button
+                  className={styles.printBtn}
+                  onClick={() => videoInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? 'Caricamento...' : 'Carica video'}
+                </button>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) handleUploadVideo(f)
+                  }}
+                />
+              </>
+            )}
+            {uploadError && <span className={styles.uploadError}>{uploadError}</span>}
             {hasPrintRole && displayPhotos.length > 0 && (
               <button className={styles.printBtn} onClick={handlePrint}>
                 Stampa {selectedIds.size > 0 ? 'selezionate' : 'tutte'}
@@ -312,9 +374,22 @@ export function EventGalleryPage() {
               className={`${styles.card} ${selectedIds.has(photo.id) ? styles.selected : ''}`}
               onClick={() => hasPhotoRole && toggleSelect(photo.id)}
             >
-              <img src={photo.image.url} alt={`Foto ${photo.sequenceNumber}`} className={styles.image} loading="eager" />
+              {photo.type === 'video' && photo.video ? (
+                <video
+                  src={photo.video.url}
+                  className={styles.image}
+                  preload="metadata"
+                  controls
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : photo.image ? (
+                <img src={photo.image.url} alt={`Foto ${photo.sequenceNumber}`} className={styles.image} loading="eager" />
+              ) : null}
               <span className={styles.seq}>#{photo.sequenceNumber}</span>
-              {hasPrintRole && (
+              {photo.type === 'video' && (
+                <span className={styles.videoBadge}>&#127916;</span>
+              )}
+              {hasPrintRole && photo.type === 'image' && (
                 <>
                   <button
                     className={styles.printPhotoBtn}

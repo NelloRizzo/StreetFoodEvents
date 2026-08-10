@@ -28,7 +28,7 @@ const OUTPUT_SIZE = 1380
 
 type RecentPhoto = {
   id: string
-  image: { url: string }
+  image: { url: string } | null
   sequenceNumber: number
 }
 
@@ -564,9 +564,9 @@ export function PhotoBoothPage() {
           <h2 className={styles.sectionTitle}>Galleria</h2>
           {recentPhotos.length > 0 ? (
             <div className={styles.recentStrip}>
-              {recentPhotos.map((p) => (
+              {recentPhotos.filter((p) => p.image).map((p) => (
                 <div key={p.id} className={styles.recentCard}>
-                  <img src={p.image.url} alt={`Foto #${p.sequenceNumber}`} className={styles.recentImg} />
+                  <img src={p.image!.url} alt={`Foto #${p.sequenceNumber}`} className={styles.recentImg} />
                   <span className={styles.recentSeq}>#{p.sequenceNumber}</span>
                 </div>
               ))}

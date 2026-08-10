@@ -9,7 +9,7 @@ import {
 } from '../controllers/event-photos.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { hasRole } from '../middlewares/role.middleware';
-import { multerImageUpload } from '../middlewares/upload.middleware';
+import { multerMediaUpload } from '../middlewares/upload.middleware';
 import { asyncHandler } from '../utils/async-handler';
 
 export const eventPhotosRouter = Router({ mergeParams: true });
@@ -19,7 +19,10 @@ eventPhotosRouter.get('/', asyncHandler(listEventPhotos));
 eventPhotosRouter.post(
     '/',
     asyncHandler(authMiddleware),
-    multerImageUpload.single('image'),
+    multerMediaUpload.fields([
+        { name: 'image', maxCount: 1 },
+        { name: 'video', maxCount: 1 }
+    ]),
     asyncHandler(createEventPhoto)
 );
 

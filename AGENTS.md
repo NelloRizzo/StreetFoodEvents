@@ -69,10 +69,10 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 ### API routes — Photos
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| GET | `/api/events/:eventId/photos` | no | Lista foto evento |
-| POST | `/api/events/:eventId/photos` | auth | Carica foto (multipart image) |
-| DELETE | `/api/events/:eventId/photos` | photo-admin | Cancella tutte le foto |
-| DELETE | `/api/events/:eventId/photos/:photoId` | auth | Cancella singola foto |
+| GET | `/api/events/:eventId/photos` | no | Lista media evento (foto e video) |
+| POST | `/api/events/:eventId/photos` | auth | Carica media: multipart con campo `image` (foto, 10 MB) oppure `video` (fino a 100 MB) |
+| DELETE | `/api/events/:eventId/photos` | photo-admin | Cancella tutte le foto/video (delete Cloudinary con `resource_type` corretto) |
+| DELETE | `/api/events/:eventId/photos/:photoId` | auth | Cancella singola foto/video |
 
 ### API routes — Frames
 | Method | Route | Auth | Description |
@@ -196,6 +196,15 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Aug 2026 — video in galleria + cassa stand dalla dashboard)
+### Completed
+- `EventPhoto` supporta `type: 'image' | 'video'` (default `'image'`) con subdocument `video` (`{ url, publicId, width, height, format, bytes, duration }`); `image` e `video` sono opzionali. `POST /api/events/:eventId/photos` usa `multerMediaUpload.fields([{ name: 'image' }, { name: 'video' }])` e salva il tipo giusto.
+- Cloudinary: `uploadVideoBuffer` (resource_type `video`), `deleteVideo`/`deleteMedia` (destroy con `resource_type`); `deleteAllEventPhotos`/`deleteEventPhoto` scelgono la funzione in base a `type`.
+- `EventGalleryPage`: pulsante "Carica video" (photo-admin, input file → multipart `video`), card `<video controls>`, badge 🎬, contatore "elementi", stampa e invio email solo per foto.
+- `SlideshowPage`: i video in griglia girano muted/loop/autoplay/playsInline; nel modale fullscreen con controlli.
+- Dashboard: link "Cassa" per stand → `/events/:eventId/stands/:standId/order`, mostrato solo se autorizzato (`canAccessStandCash`: platform-admin, ruolo stand-scope `cashier` per quello stand, oppure `event-admin`/`event-cashier` per un evento dello stand). Sta nella riga `standActions` accanto a "Coda Ordini".
+- Test: `backend/src/__tests__/controllers/integration-event-photos.test.ts` (9 test: upload video/immagine, sequenza condivisa, delete singola/all con resource_type corretto, email video → 400).
 
 ## Session state (Aug 2026 — menu pubblico stand con immagini)
 ### Completed

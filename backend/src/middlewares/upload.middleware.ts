@@ -2,6 +2,15 @@ import multer from 'multer';
 
 const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 
+const allowedVideoMimeTypes = [
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/quicktime',
+    'video/x-msvideo',
+    'video/x-matroska'
+];
+
 export const multerImageUpload = multer({
     storage: multer.memoryStorage(),
     limits: {
@@ -10,6 +19,20 @@ export const multerImageUpload = multer({
     fileFilter: (_req, file, cb) => {
         if (!allowedMimeTypes.includes(file.mimetype)) {
             return cb(new Error('Invalid image format'));
+        }
+
+        cb(null, true);
+    }
+});
+
+export const multerMediaUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 100 * 1024 * 1024
+    },
+    fileFilter: (_req, file, cb) => {
+        if (!allowedMimeTypes.includes(file.mimetype) && !allowedVideoMimeTypes.includes(file.mimetype)) {
+            return cb(new Error('Invalid media format'));
         }
 
         cb(null, true);

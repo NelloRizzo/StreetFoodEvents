@@ -2,6 +2,47 @@ import { Schema, model, type InferSchemaType } from 'mongoose';
 
 import { imageSchema } from './schemas/image.schema';
 
+export const videoSchema = new Schema(
+    {
+        url: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        publicId: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        width: {
+            type: Number,
+            default: 0
+        },
+        height: {
+            type: Number,
+            default: 0
+        },
+        format: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        bytes: {
+            type: Number,
+            required: true,
+            min: 1
+        },
+        duration: {
+            type: Number,
+            default: 0
+        }
+    },
+    {
+        _id: false,
+        versionKey: false
+    }
+);
+
 const eventPhotoSchema = new Schema(
     {
         eventId: {
@@ -10,9 +51,18 @@ const eventPhotoSchema = new Schema(
             required: true,
             index: true
         },
+        type: {
+            type: String,
+            enum: ['image', 'video'],
+            default: 'image'
+        },
         image: {
             type: imageSchema,
-            required: true
+            default: null
+        },
+        video: {
+            type: videoSchema,
+            default: null
         },
         sequenceNumber: {
             type: Number,

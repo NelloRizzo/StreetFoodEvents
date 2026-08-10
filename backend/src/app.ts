@@ -108,7 +108,7 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (error instanceof MulterError) {
         if (error.code === 'LIMIT_FILE_SIZE') {
             return res.status(413).json({
-                message: 'File troppo grande: dimensione massima 10 MB'
+                message: 'File troppo grande: dimensione massima 100 MB per i video, 10 MB per le immagini'
             });
         }
 

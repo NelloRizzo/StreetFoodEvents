@@ -64,6 +64,7 @@ export function DashboardPage() {
   const [stations, setStations] = useState<StationInfo[]>([])
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [isEventAdmin, setIsEventAdmin] = useState(false)
+  const [roles, setRoles] = useState<RoleInfo[]>([])
   const [eventRoles, setEventRoles] = useState<RoleInfo[]>([])
   const [eventRoleEvents, setEventRoleEvents] = useState<{ id: string; name: string }[]>([])
 
@@ -84,6 +85,7 @@ export function DashboardPage() {
       .then((d) => {
         setIsPlatformAdmin(d.isPlatformAdmin)
         setIsEventAdmin(d.isEventAdmin)
+        setRoles(d.roles)
         const filtered = d.roles.filter((r) => r.scope === 'event' && r.eventId)
         setEventRoles(filtered)
         if (filtered.length > 0) {
@@ -103,6 +105,18 @@ export function DashboardPage() {
   const exchangeAdminEvents = eventRoleEvents.filter((ev) =>
     eventRoles.some((r) => r.eventId === ev.id && r.slug === 'exchange-admin')
   )
+
+  const canAccessStandCash = (s: StandInfo) => {
+    if (isPlatformAdmin) return true
+    if (
+      roles.some((r) => r.scope === 'stand' && r.standId === s.id && r.slug === 'cashier')
+    ) return true
+    return s.eventIds.some((eventId) =>
+      roles.some(
+        (r) => r.scope === 'event' && r.eventId === eventId && (r.slug === 'event-admin' || r.slug === 'event-cashier')
+      )
+    )
+  }
 
   const favoriteEvents = data?.favorites ?? []
   const activeEvents = data?.activeEvents ?? []
@@ -270,17 +284,28 @@ export function DashboardPage() {
                         <span className={styles.standBlockName}>{s.name}</span>
                         <span className={styles.manageHint}>Gestisci ordini</span>
                       </Link>
-                      {s.eventIds.length > 0 && (
-                        <Link
-                          to={`/events/${s.eventIds[0]}/stands/${s.id}/ordersqueue`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={styles.displayLink}
-                        >
-                          <span className={styles.stationChipIcon}>&#128065;</span>
-                          Coda Ordini
-                        </Link>
-                      )}
+                      <div className={styles.standActions}>
+                        {s.eventIds.length > 0 && canAccessStandCash(s) && (
+                          <Link
+                            to={`/events/${s.eventIds[0]}/stands/${s.id}/order`}
+                            className={styles.displayLink}
+                          >
+                            <span className={styles.stationChipIcon}>&#128176;</span>
+                            Cassa
+                          </Link>
+                        )}
+                        {s.eventIds.length > 0 && (
+                          <Link
+                            to={`/events/${s.eventIds[0]}/stands/${s.id}/ordersqueue`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.displayLink}
+                          >
+                            <span className={styles.stationChipIcon}>&#128065;</span>
+                            Coda Ordini
+                          </Link>
+                        )}
+                      </div>
                       {standStations.length > 0 && (
                         <div className={styles.stationList}>
                           {standStations.map((st) => (
