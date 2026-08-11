@@ -140,6 +140,14 @@ Considerazioni progettuali e decisioni architetturali.
 - **Validazione reorder**: tutti gli item devono appartenere allo stesso stand (`standId` unico) e devono esistere (404 altrimenti). Il frontend rinumerizza solo la lista filtrata per evento selezionato.
 - **Cosa NON fare**: non rinumerare con `sequenceOrder = index` senza considerare lo scope. Il frontend rinumerizza solo il sottoinsieme filtrato per evento (1..N), quindi i numeri possono collidere con prodotti di altri eventi dello stesso stand — è accettabile perché le query del menu filtrano sempre per `eventId`; i pareggi in ordinamento sono risolti dal fallback `createdAt`.
 
+## Stand Numbers (Aug 2026)
+- **Campo `numbers`** su Stand: array di subdocument `{ eventId, number }` — il numero è per-evento, NON un singolo valore globale. Uno stand condiviso tra più eventi ha un numero diverso per ciascuno.
+- **Auto-assign**: alla creazione dello stand e quando `updateStand` collega un nuovo evento, `number` = `count` degli stand già nell'evento (o 1). Quando un evento viene rimosso, la sua entry in `numbers` viene eliminata.
+- **Sort lista**: `listStands` con `?eventId=` ordina per `numbers.number` (fallback `name` per gli stand senza numero, es. legacy). `GET /api/stands` e `/api/stands/:standId` espongono `numbers` anche senza filtro evento.
+- **Endpoint bulk**: `PATCH /api/stands/reorder` con `{ eventId, items: [{ standId, number }] }`. Registrato PRIMA di `PATCH /:standId`. Valida che ogni stand abbia `eventId` tra i suoi `eventIds` (400 altrimenti), poi imposta `numbers` per ogni stand.
+- **Cosa NON fare**: non usare un campo `number` singolo sullo stand — il numero deve restare coerente quando lo stand appartiene a più eventi. Al riordino il frontend invia l'intera lista degli stand dell'evento rinumerata (1..N).
+- **Gotcha assegnazione `numbers`**: assegnare un array plain al campo `numbers` (DocumentArray) fallisce a compile-time in TS; usare `stand.set('numbers', array)`.
+
 ## Email Subscription System (Jul 2026)
 - **Modello `EmailSubscription`**: archivia email per comunicazioni future. `email` indicizzato, `eventId` opzionale. `marketingConsent` separato dal consenso all'invio foto.
 - **UPSERT per email**: `EmailSubscriptionModel.findOneAndUpdate` con `{ upsert: true }` sulla chiave email. Una sola entry per email, aggiornata a ogni nuovo consenso.

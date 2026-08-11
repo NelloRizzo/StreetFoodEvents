@@ -19,6 +19,7 @@ type StandData = {
   id: string
   name: string
   locations: Array<{ eventId: string; location: { type: 'Point'; coordinates: [number, number] } | null }>
+  numbers?: Array<{ eventId: string; number: number }>
 }
 
 type PoiData = {
@@ -38,12 +39,14 @@ const eventIcon = L.divIcon({
   iconAnchor: [18, 36],
 })
 
-const standIcon = L.divIcon({
-  className: styles.standMarker,
-  html: '<span>🏪</span>',
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-})
+function createStandIcon(number: number | null) {
+  return L.divIcon({
+    className: styles.standMarker,
+    html: `<span class="${styles.standMarkerNum}">${number ?? ''}</span>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  })
+}
 
 function createPoiIcon(type: string | null) {
   let emoji = '📌'
@@ -184,8 +187,9 @@ export function EventMapPage() {
       const loc = getStandLocation(s)
       if (!loc?.coordinates) return
       const [lng, lat] = loc.coordinates
-      const marker = L.marker([lat, lng], { icon: standIcon })
-        .bindPopup(`<strong>${s.name}</strong><br/><a href="/events/${eventId}/stands/${s.id}">Vai allo stand</a>`)
+      const number = s.numbers?.find((n) => n.eventId === eventId)?.number ?? null
+      const marker = L.marker([lat, lng], { icon: createStandIcon(number) })
+        .bindPopup(`<strong>${number != null ? `${number}. ` : ''}${s.name}</strong><br/><a href="/events/${eventId}/stands/${s.id}">Vai allo stand</a>`)
       markers.push(marker)
     })
 
@@ -254,9 +258,12 @@ export function EventMapPage() {
           }}
         >
           <option value="">Tutti gli stand</option>
-          {stands.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
+          {stands.map((s) => {
+            const number = s.numbers?.find((n) => n.eventId === eventId)?.number ?? null
+            return (
+              <option key={s.id} value={s.id}>{number != null ? `${number}. ` : ''}{s.name}</option>
+            )
+          })}
         </select>
 
         <button
@@ -295,7 +302,7 @@ export function EventMapPage() {
       <div className="page-shell">
         <div className={styles.legend}>
           <span className={styles.legendItem}><span className={styles.eventMarkerSmall}>📍</span> Evento</span>
-          <span className={styles.legendItem}><span className={styles.standMarkerSmall}>🏪</span> Stand</span>
+          <span className={styles.legendItem}><span className={styles.standNumBadge}>1</span> Stand numerati</span>
           <span className={styles.legendItem}><span className={styles.poiMarkerSmall}>📌</span> Punto di interesse</span>
         </div>
       </div>

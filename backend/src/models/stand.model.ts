@@ -32,6 +32,22 @@ const eventLocationSchema = new Schema(
     { _id: false }
 );
 
+const eventNumberSchema = new Schema(
+    {
+        eventId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Event',
+            required: true
+        },
+        number: {
+            type: Number,
+            required: true,
+            min: 1
+        }
+    },
+    { _id: false }
+);
+
 const standSchema = new Schema(
     {
         name: {
@@ -57,6 +73,10 @@ const standSchema = new Schema(
         },
         locations: {
             type: [eventLocationSchema],
+            default: []
+        },
+        numbers: {
+            type: [eventNumberSchema],
             default: []
         },
         coverImage: {

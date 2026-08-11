@@ -121,10 +121,6 @@
   font-size: 1.5rem;
 }
 
-.standMarkerSmall {
-  font-size: 1.3rem;
-}
-
 .poiMarkerSmall {
   font-size: 1.3rem;
 }
@@ -142,6 +138,34 @@
   border: none !important;
   font-size: 1.6rem;
   text-align: center;
+}
+
+.standMarkerNum {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: var(--color-brand);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  border: 2px solid #fff;
+}
+
+.standNumBadge {
+  display: inline-grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: var(--color-brand);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.75rem;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .poiMarker {

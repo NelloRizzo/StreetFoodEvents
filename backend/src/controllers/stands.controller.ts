@@ -12,6 +12,17 @@ function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
 }
 
+async function nextStandNumber(eventId: string): Promise<number> {
+    const eventIdObj = new Types.ObjectId(eventId);
+    const result = await StandModel.aggregate([
+        { $match: { 'numbers.eventId': eventIdObj } },
+        { $unwind: '$numbers' },
+        { $match: { 'numbers.eventId': eventIdObj } },
+        { $group: { _id: null, max: { $max: '$numbers.number' } } }
+    ]) as Array<{ max?: number }>;
+    return (result[0]?.max ?? 0) + 1;
+}
+
 function toStandResponse(stand: {
     _id: Types.ObjectId;
     name: string;
@@ -19,6 +30,7 @@ function toStandResponse(stand: {
     description?: string | null;
     eventIds: Types.ObjectId[];
     locations?: Array<{ eventId: Types.ObjectId; location?: Record<string, unknown> | null }> | null;
+    numbers?: Array<{ eventId: Types.ObjectId; number: number }> | null;
     coverImage?: unknown | null;
     gallery?: unknown[];
     createdAt: Date;
@@ -34,6 +46,10 @@ function toStandResponse(stand: {
             eventId: el.eventId.toString(),
             location: el.location ?? null,
         } as { eventId: string; location: Record<string, unknown> | null })),
+        numbers: (stand.numbers ?? []).map((el) => ({
+            eventId: el.eventId.toString(),
+            number: el.number,
+        } as { eventId: string; number: number })),
         coverImage: stand.coverImage ?? null,
         gallery: stand.gallery ?? [],
         createdAt: stand.createdAt,
@@ -88,12 +104,21 @@ export async function createStand(req: Request, res: Response) {
         gallery
     } = req.body;
 
+    const eventIdList: string[] = Array.isArray(eventIds) ? eventIds : [];
+    const numbers = (await Promise.all(
+        eventIdList.map(async (eid) => {
+            if (!isValidObjectId(eid)) return null;
+            return { eventId: eid, number: await nextStandNumber(eid) };
+        })
+    )).filter((n): n is { eventId: string; number: number } => n !== null);
+
     const stand = await StandModel.create({
         name,
         slogan: slogan ?? null,
         description: sanitizeHtmlContent(description),
-        eventIds: Array.isArray(eventIds) ? eventIds : [],
+        eventIds: eventIdList,
         locations: Array.isArray(locations) ? locations : [],
+        numbers,
         coverImage: coverImage ?? null,
         gallery: gallery ?? []
     });
@@ -158,6 +183,7 @@ export async function updateStand(req: Request, res: Response) {
         /* Find which events are being added (in new but not in old) */
         const oldEventIdStrings = (stand.eventIds || []).map((id) => id.toString());
         const addedEventIds = newEventIds.filter((id: string) => !oldEventIdStrings.includes(id));
+        const removedEventIdStrings = oldEventIdStrings.filter((id: string) => !newEventIds.includes(id));
 
         if (addedEventIds.length > 0) {
             for (const userOnStand of usersOnStand) {
@@ -197,6 +223,19 @@ export async function updateStand(req: Request, res: Response) {
         }
 
         stand.eventIds = newEventIds;
+
+        /* Assign progressive numbers for newly linked events and drop numbers for removed ones */
+        if (addedEventIds.length > 0 || removedEventIdStrings.length > 0) {
+            const removedSet = new Set(removedEventIdStrings);
+            const kept: Array<{ eventId: string; number: number }> = (stand.numbers ?? [])
+                .filter((n) => !removedSet.has(n.eventId.toString()))
+                .map((n) => ({ eventId: n.eventId.toString(), number: n.number }));
+            for (const addedEventId of addedEventIds) {
+                if (!isValidObjectId(addedEventId)) continue;
+                kept.push({ eventId: addedEventId, number: await nextStandNumber(addedEventId) });
+            }
+            stand.set('numbers', kept);
+        }
     }
 
     if (locations !== undefined) {
@@ -216,6 +255,53 @@ export async function updateStand(req: Request, res: Response) {
     return res.status(200).json({
         item: toStandResponse(stand)
     });
+}
+
+export async function reorderStands(req: Request, res: Response) {
+    const { eventId, items } = req.body;
+
+    if (!eventId || !isValidObjectId(eventId)) {
+        return res.status(400).json({ message: 'Valid eventId is required' });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: 'A non-empty items array is required' });
+    }
+
+    const eventIdObj = new Types.ObjectId(eventId);
+    const entries: { standId: string; number: number }[] = [];
+
+    for (const item of items) {
+        if (typeof item !== 'object' || item === null) {
+            return res.status(400).json({ message: 'Invalid items payload' });
+        }
+        const { standId, number } = item as { standId?: string; number?: unknown };
+        if (!isValidObjectId(standId) || typeof number !== 'number' || !Number.isFinite(number) || number < 1) {
+            return res.status(400).json({ message: 'Invalid items payload' });
+        }
+        entries.push({ standId, number });
+    }
+
+    const standIds = entries.map((e) => e.standId);
+    const found = await StandModel.find({ _id: { $in: standIds }, eventIds: eventIdObj });
+    if (found.length !== standIds.length) {
+        return res.status(404).json({ message: 'One or more stands not found or not part of this event' });
+    }
+
+    const eventIdString = eventIdObj.toString();
+    for (const entry of entries) {
+        const stand = found.find((s) => s._id.toString() === entry.standId);
+        if (!stand) continue;
+        const existing = (stand.numbers ?? []).find((n) => n.eventId.toString() === eventIdString);
+        if (existing) {
+            existing.number = entry.number;
+        } else {
+            stand.numbers.push({ eventId: eventIdObj, number: entry.number });
+        }
+    }
+
+    await Promise.all(found.map((s) => s.save()));
+
+    return res.status(204).send();
 }
 
 export async function standQrCode(req: Request, res: Response) {

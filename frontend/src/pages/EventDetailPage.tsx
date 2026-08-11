@@ -49,6 +49,7 @@ type Stand = {
   slogan: string | null
   description: string | null
   eventIds: string[]
+  numbers: Array<{ eventId: string; number: number }>
   coverImage: UploadedImg | null
 }
 
@@ -297,6 +298,40 @@ export function EventDetailPage() {
     })
   }
 
+  const standNumber = (stand: Stand) =>
+    stand.numbers?.find((n) => n.eventId === eventId)?.number ?? null
+
+  const sortedStands = [...stands].sort((a, b) => {
+    const na = standNumber(a)
+    const nb = standNumber(b)
+    if (na == null && nb == null) return a.name.localeCompare(b.name)
+    if (na == null) return 1
+    if (nb == null) return -1
+    return na - nb
+  })
+
+  const handleMoveStand = async (index: number, direction: -1 | 1) => {
+    const target = index + direction
+    if (!eventId || target < 0 || target >= sortedStands.length) return
+    const next = [...sortedStands]
+    const [moving] = next.splice(index, 1)
+    next.splice(target, 0, moving)
+    const items = next
+      .map((s, i) => ({ standId: s.id, number: i + 1 }))
+    try {
+      await apiRequest('/stands/reorder', { method: 'PATCH', bodyJson: { eventId, items } })
+      setStands((prev) => {
+        const numberByStand = new Map(items.map((it) => [it.standId, it.number]))
+        return prev.map((s) => ({
+          ...s,
+          numbers: numberByStand.has(s.id)
+            ? [{ eventId, number: numberByStand.get(s.id)! }]
+            : s.numbers,
+        }))
+      })
+    } catch { /* ignore */ }
+  }
+
 
   if (isLoading || !event) return null
 
@@ -432,26 +467,52 @@ export function EventDetailPage() {
           )}
 
           <div className={styles.standGrid}>
-            {stands.map((stand) => (
-              <Link
-                key={stand.id}
-                to={`/events/${eventId}/stands/${stand.id}`}
-                className={styles.standCard}
-              >
-                {stand.coverImage?.url ? (
-                  <div className={styles.standCover}>
-                    <img src={stand.coverImage.url} alt="" />
+            {sortedStands.map((stand, index) => (
+              <div key={stand.id} className={styles.standCardRow}>
+                <Link
+                  to={`/events/${eventId}/stands/${stand.id}`}
+                  className={styles.standCard}
+                >
+                  {stand.coverImage?.url ? (
+                    <div className={styles.standCover}>
+                      <img src={stand.coverImage.url} alt="" />
+                    </div>
+                  ) : (
+                    <div className={styles.standCoverPlaceholder}>
+                      <span>🏪</span>
+                    </div>
+                  )}
+                  <div className={styles.standBody}>
+                    <strong className={styles.standName}>
+                      {standNumber(stand) != null && (
+                        <span className={styles.standNumberBadge}>{standNumber(stand)}</span>
+                      )}
+                      {stand.name}
+                    </strong>
+                    {stand.slogan && <span className={styles.standSlogan}>{stand.slogan}</span>}
                   </div>
-                ) : (
-                  <div className={styles.standCoverPlaceholder}>
-                    <span>🏪</span>
+                </Link>
+                {hasEventRole && (
+                  <div className={styles.reorderBtns}>
+                    <button
+                      className={styles.reorderBtn}
+                      onClick={() => handleMoveStand(index, -1)}
+                      disabled={index === 0}
+                      title="Sposta su (numero più basso)"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      className={styles.reorderBtn}
+                      onClick={() => handleMoveStand(index, 1)}
+                      disabled={index === sortedStands.length - 1}
+                      title="Sposta giù (numero più alto)"
+                    >
+                      ▼
+                    </button>
                   </div>
                 )}
-                <div className={styles.standBody}>
-                  <strong className={styles.standName}>{stand.name}</strong>
-                  {stand.slogan && <span className={styles.standSlogan}>{stand.slogan}</span>}
-                </div>
-              </Link>
+              </div>
             ))}
           </div>
         </section>

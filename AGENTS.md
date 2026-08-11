@@ -197,6 +197,15 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Aug 2026 — numeri progressivi stand per evento)
+### Completed
+- `Stand.numbers`: array di `{ eventId, number }`. `number` = progressivo per-evento, auto-assign alla creazione dello stand e quando uno stand viene collegato a un evento. `GET /api/stands` include `numbers` (filter per `eventId`), `/api/stands/:standId` pure.
+- Endpoint bulk `PATCH /api/stands/reorder` (auth): body `{ eventId, items: [{ standId, number }] }`. Valida che tutti gli stand facciano parte dell'evento, poi imposta `numbers` per ogni stand. Pattern identico a `/stations/reorder` e `/event-products/reorder`.
+- Sort liste per numero: `listStands` usa `numbers` quando filtrato per evento (fallback `name` per gli stand senza numero). `EventDetailPage` ordina per numero (fallback nome).
+- `EventDetailPage`: badge col numero su ogni card stand + pulsanti ▲/▼ (solo utenti con ruolo evento/platform). `EventMapPage`: marker numerati (divIcon con badge circolare) e legenda; combo degli stand con numero.
+- `EventStandMenuPage`: prezzo nascosto quando è 0 (menu omaggio), sia nelle card che nel modale dettaglio.
+- Test: `backend/src/__tests__/controllers/stands.test.ts` (11 test: assign on create/link, reorder + rinumerazione, validazione stand non nell'evento).
+
 ## Session state (Aug 2026 — video in galleria + cassa stand dalla dashboard)
 ### Completed
 - `EventPhoto` supporta `type: 'image' | 'video'` (default `'image'`) con subdocument `video` (`{ url, publicId, width, height, format, bytes, duration }`); `image` e `video` sono opzionali. `POST /api/events/:eventId/photos` usa `multerMediaUpload.fields([{ name: 'image' }, { name: 'video' }])` e salva il tipo giusto.

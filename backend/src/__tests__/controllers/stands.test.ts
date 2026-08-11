@@ -147,6 +147,106 @@ describe('Stands API', () => {
         expect(res.status).toBe(200);
         expect(res.body.item.eventIds).toHaveLength(1);
         expect(res.body.item.eventIds[0]).toBe(event._id.toString());
+        expect(res.body.item.numbers).toEqual([
+            { eventId: event._id.toString(), number: 1 }
+        ]);
+    });
+
+    it('auto-assigns progressive stand numbers per event', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Evento',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        await request(app)
+            .post('/api/stands')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ name: 'Primo', eventIds: [event._id.toString()] });
+
+        const res2 = await request(app)
+            .post('/api/stands')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ name: 'Secondo', eventIds: [event._id.toString()] });
+
+        expect(res2.status).toBe(201);
+        expect(res2.body.item.numbers).toEqual([
+            { eventId: event._id.toString(), number: 2 }
+        ]);
+
+        const listed = await request(app).get(`/api/stands?eventId=${event._id}`);
+        const numbers = listed.body.items.map((s: { numbers: { number: number }[] }) => s.numbers[0]?.number);
+        expect([...numbers].sort((a, b) => a - b)).toEqual([1, 2]);
+    });
+
+    it('reorders stands and reassigns numbers', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Evento',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const s1 = await StandModel.create({ name: 'Uno', eventIds: [event._id], numbers: [{ eventId: event._id, number: 1 }] });
+        const s2 = await StandModel.create({ name: 'Due', eventIds: [event._id], numbers: [{ eventId: event._id, number: 2 }] });
+
+        const res = await request(app)
+            .patch('/api/stands/reorder')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                items: [
+                    { standId: s2._id.toString(), number: 1 },
+                    { standId: s1._id.toString(), number: 2 }
+                ]
+            });
+
+        expect(res.status).toBe(204);
+
+        const s1After = await StandModel.findById(s1._id);
+        const s2After = await StandModel.findById(s2._id);
+        const num = (stand: Awaited<typeof s1After>) =>
+            (stand!.numbers ?? []).find((n) => n.eventId.toString() === event._id.toString())?.number;
+        expect(num(s1After)).toBe(2);
+        expect(num(s2After)).toBe(1);
+    });
+
+    it('rejects reorder with stands not part of the event', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Evento',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const inside = await StandModel.create({ name: 'Dentro', eventIds: [event._id] });
+        const outside = await StandModel.create({ name: 'Fuori' });
+
+        const res = await request(app)
+            .patch('/api/stands/reorder')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                items: [
+                    { standId: inside._id.toString(), number: 1 },
+                    { standId: outside._id.toString(), number: 2 }
+                ]
+            });
+
+        expect(res.status).toBe(404);
     });
 
     it('deletes a stand', async () => {

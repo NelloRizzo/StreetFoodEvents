@@ -256,13 +256,15 @@ export function EventStandMenuPage() {
                         )}
                       </div>
                       <div className={styles.menuRight}>
-                        <span className={styles.menuPrice}>
-                          {price.toFixed(2)}
-                          <CurrencyDisplay
-                            currencyName={event.currencyName}
-                            currencySymbol={event.currencySymbol}
-                          />
-                        </span>
+                        {price > 0 && (
+                          <span className={styles.menuPrice}>
+                            {price.toFixed(2)}
+                            <CurrencyDisplay
+                              currencyName={event.currencyName}
+                              currencySymbol={event.currencySymbol}
+                            />
+                          </span>
+                        )}
                         {isAuthenticated && (
                           <button
                             className={styles.addBtn}
@@ -419,13 +421,15 @@ export function EventStandMenuPage() {
                   {selectedItem.product.ingredients.join(', ')}
                 </p>
               )}
-              <span className={styles.productPrice}>
-                {(selectedItem.priceOverride ?? selectedItem.product.price).toFixed(2)}
-                <CurrencyDisplay
-                  currencyName={event.currencyName}
-                  currencySymbol={event.currencySymbol}
-                />
-              </span>
+              {(selectedItem.priceOverride ?? selectedItem.product.price) > 0 && (
+                <span className={styles.productPrice}>
+                  {(selectedItem.priceOverride ?? selectedItem.product.price).toFixed(2)}
+                  <CurrencyDisplay
+                    currencyName={event.currencyName}
+                    currencySymbol={event.currencySymbol}
+                  />
+                </span>
+              )}
             </div>
             <div className={styles.productActions}>
               {isAuthenticated && (
