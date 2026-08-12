@@ -20,6 +20,7 @@ import { CounterModel } from '../../models/counter.model';
 import { EventModel } from '../../models/event.model';
 import { EventProductModel } from '../../models/event-product.model';
 import { EventUserModel } from '../../models/event-user.model';
+import { OrderModel } from '../../models/order.model';
 import { ProductModel } from '../../models/product.model';
 import { SessionModel } from '../../models/session.model';
 import { StandModel } from '../../models/stand.model';
@@ -205,6 +206,65 @@ describe('Orders API', () => {
         app = createTestApp();
         const res = await request(app).get('/api/orders/stand/000000000000000000000000/ordersqueue');
         expect(res.status).toBe(404);
+    });
+
+    it('sets readyAt on ready transition and hides stale ready orders from display queue', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Ready Timeout Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Ready Timeout Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Griglia' });
+        const product = await ProductModel.create({ name: 'Ready Item', price: 10 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+
+        const createOrder = async () => {
+            const res = await request(app)
+                .post('/api/orders')
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({
+                    eventId: event._id.toString(),
+                    standId: stand._id.toString(),
+                    items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity: 1 }],
+                    paymentOnCreate: { creditAmount: 0 }
+                });
+            return res.body.item.id as string;
+        };
+
+        const patch = (id: string, status: string) =>
+            request(app)
+                .patch(`/api/orders/${id}/status`)
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({ status });
+
+        const freshId = await createOrder();
+        const staleId = await createOrder();
+
+        await patch(freshId, 'preparing');
+        const readyRes = await patch(freshId, 'ready');
+        expect(readyRes.status).toBe(200);
+        expect(readyRes.body.item.readyAt).toBeDefined();
+
+        await patch(staleId, 'preparing');
+        await patch(staleId, 'ready');
+        await OrderModel.findByIdAndUpdate(staleId, { readyAt: new Date(Date.now() - 3 * 60 * 1000) });
+
+        const res = await request(app).get(`/api/orders/stand/${stand._id}/ordersqueue`);
+
+        expect(res.status).toBe(200);
+        const returnedIds = res.body.items.map((o: { id: string }) => o.id);
+        expect(returnedIds).toContain(freshId);
+        expect(returnedIds).not.toContain(staleId);
     });
 
     it('creates an order with items', async () => {

@@ -168,6 +168,10 @@ const orderSchema = new Schema(
             trim: true,
             default: null,
             maxlength: 500
+        },
+        readyAt: {
+            type: Date,
+            default: null
         }
     },
     {

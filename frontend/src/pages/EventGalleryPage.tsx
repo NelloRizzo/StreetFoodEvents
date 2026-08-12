@@ -39,24 +39,37 @@ export function EventGalleryPage() {
   const videoInputRef = useRef<HTMLInputElement>(null)
 
   const [emailModalPhoto, setEmailModalPhoto] = useState<EventPhoto | null>(null)
+  const [bulkEmailIds, setBulkEmailIds] = useState<string[] | null>(null)
   const [emailSending, setEmailSending] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [emailError, setEmailError] = useState('')
 
+  const [lightboxPhoto, setLightboxPhoto] = useState<EventPhoto | null>(null)
+
   const [marketingConsent, setMarketingConsent] = useState(false)
 
   const handleSendEmail = useCallback(async (to: string, consent?: boolean) => {
-    if (!eventId || !emailModalPhoto || emailSending) return
+    if (!eventId || emailSending) return
+    const isBulk = bulkEmailIds !== null
+    if (!isBulk && !emailModalPhoto) return
     setEmailSending(true)
     setEmailError('')
     const hasConsent = consent ?? marketingConsent
     setMarketingConsent(hasConsent)
     try {
-      await apiRequest(`/events/${eventId}/photos/${emailModalPhoto.id}/send-email`, {
-        method: 'POST',
-        body: JSON.stringify({ email: to, marketingConsent: hasConsent }),
-        headers: { 'Content-Type': 'application/json' },
-      })
+      if (isBulk && bulkEmailIds) {
+        await apiRequest(`/events/${eventId}/photos/send-email`, {
+          method: 'POST',
+          body: JSON.stringify({ email: to, photoIds: bulkEmailIds, marketingConsent: hasConsent }),
+          headers: { 'Content-Type': 'application/json' },
+        })
+      } else if (emailModalPhoto) {
+        await apiRequest(`/events/${eventId}/photos/${emailModalPhoto.id}/send-email`, {
+          method: 'POST',
+          body: JSON.stringify({ email: to, marketingConsent: hasConsent }),
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
       setEmailSent(true)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Invio fallito'
@@ -65,7 +78,7 @@ export function EventGalleryPage() {
     } finally {
       setEmailSending(false)
     }
-  }, [eventId, emailModalPhoto, emailSending, marketingConsent])
+  }, [eventId, emailModalPhoto, bulkEmailIds, emailSending, marketingConsent])
 
   const themeData = eventId
     ? { themeBrand: null, themeText: null, themeSurface: null, themeHighlight: null }
@@ -160,6 +173,17 @@ export function EventGalleryPage() {
     w.focus()
     w.print()
     w.close()
+  }
+
+  const handleBulkEmail = () => {
+    const imageIds = photos
+      .filter((p) => selectedIds.has(p.id) && p.type === 'image' && p.image)
+      .map((p) => p.id)
+    if (imageIds.length === 0) return
+    setEmailModalPhoto(null)
+    setEmailSent(false)
+    setEmailError('')
+    setBulkEmailIds(imageIds)
   }
 
   const handleDeleteSelected = async () => {
@@ -311,6 +335,11 @@ export function EventGalleryPage() {
                 Stampa {selectedIds.size > 0 ? 'selezionate' : 'tutte'}
               </button>
             )}
+            {hasPrintRole && selectedIds.size > 0 && (
+              <button className={styles.printBtn} onClick={handleBulkEmail}>
+                Invia selezionate via email
+              </button>
+            )}
             {hasPhotoRole && selectedIds.size > 0 && (
               <button className={styles.dangerBtn} onClick={handleDeleteSelected} disabled={deleting}>
                 Elimina selezionate
@@ -372,7 +401,7 @@ export function EventGalleryPage() {
             <div
               key={photo.id}
               className={`${styles.card} ${selectedIds.has(photo.id) ? styles.selected : ''}`}
-              onClick={() => hasPhotoRole && toggleSelect(photo.id)}
+              onClick={() => setLightboxPhoto(photo)}
             >
               {photo.type === 'video' && photo.video ? (
                 <video
@@ -380,7 +409,7 @@ export function EventGalleryPage() {
                   className={styles.image}
                   preload="metadata"
                   controls
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); setLightboxPhoto(photo) }}
                 />
               ) : photo.image ? (
                 <img src={photo.image.url} alt={`Foto ${photo.sequenceNumber}`} className={styles.image} loading="eager" />
@@ -402,6 +431,7 @@ export function EventGalleryPage() {
                     className={styles.emailPhotoBtn}
                     onClick={(e) => {
                       e.stopPropagation()
+                      setBulkEmailIds(null)
                       setEmailSent(false)
                       setEmailError('')
                       setEmailModalPhoto(photo)
@@ -413,7 +443,13 @@ export function EventGalleryPage() {
                 </>
               )}
               {hasPhotoRole && (
-                <span className={styles.check}>{selectedIds.has(photo.id) ? '\u2713' : ''}</span>
+                <button
+                  className={`${styles.check} ${selectedIds.has(photo.id) ? styles.checkOn : ''}`}
+                  onClick={(e) => { e.stopPropagation(); toggleSelect(photo.id) }}
+                  title={selectedIds.has(photo.id) ? 'Deseleziona' : 'Seleziona'}
+                >
+                  {selectedIds.has(photo.id) ? '\u2713' : ''}
+                </button>
               )}
             </div>
           ))}
@@ -426,14 +462,43 @@ export function EventGalleryPage() {
         </div>
       </div>
 
+      {lightboxPhoto && (
+        <div
+          className={styles.lightbox}
+          onClick={() => setLightboxPhoto(null)}
+        >
+          {lightboxPhoto.type === 'video' && lightboxPhoto.video ? (
+            <video
+              src={lightboxPhoto.video.url}
+              className={styles.lightboxMedia}
+              controls
+              autoPlay
+              playsInline
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={lightboxPhoto.image?.url ?? ''}
+              alt={`Foto ${lightboxPhoto.sequenceNumber}`}
+              className={styles.lightboxMedia}
+            />
+          )}
+          <span className={styles.lightboxSeq}>#{lightboxPhoto.sequenceNumber}</span>
+        </div>
+      )}
+
       <ConfirmModal
-        open={emailModalPhoto !== null}
-        title={emailSent ? 'Email inviata' : 'Invia foto via email'}
+        open={emailModalPhoto !== null || bulkEmailIds !== null}
+        title={emailSent ? 'Email inviata' : bulkEmailIds ? 'Invia foto selezionate via email' : 'Invia foto via email'}
         message={emailSent
-          ? `La foto #${emailModalPhoto?.sequenceNumber} è stata inviata.`
+          ? bulkEmailIds
+            ? `${bulkEmailIds.length} foto selezionate sono state inviate.`
+            : `La foto #${emailModalPhoto?.sequenceNumber} è stata inviata.`
           : emailError
             ? emailError
-            : 'Inserisci il tuo indirizzo email per ricevere la foto:'}
+            : bulkEmailIds
+              ? `Inserisci l'indirizzo email per ricevere le ${bulkEmailIds.length} foto selezionate:`
+              : 'Inserisci il tuo indirizzo email per ricevere la foto:'}
         variant={emailSent ? 'alert' : 'prompt'}
         confirmLabel={emailSent ? 'OK' : emailSending ? 'Invio...' : 'Invia'}
         cancelLabel="Annulla"
@@ -442,12 +507,16 @@ export function EventGalleryPage() {
         onConfirm={(to, consent) => {
           if (emailSent) {
             setEmailModalPhoto(null)
+            setBulkEmailIds(null)
           } else if (to) {
             handleSendEmail(to, consent)
           }
         }}
         onCancel={() => {
-          if (!emailSending) setEmailModalPhoto(null)
+          if (!emailSending) {
+            setEmailModalPhoto(null)
+            setBulkEmailIds(null)
+          }
         }}
       />
     </div>

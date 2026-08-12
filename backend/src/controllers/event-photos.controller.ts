@@ -4,7 +4,7 @@ import { EmailSubscriptionModel } from '../models/email-subscription.model';
 import { EventModel } from '../models/event.model';
 import { EventPhotoModel } from '../models/event-photo.model';
 import { deleteImage, deleteVideo, uploadImageBuffer, uploadVideoBuffer } from '../services/cloudinary-upload.service';
-import { isEmailConfigured, sendPhotoEmail } from '../services/email.service';
+import { isEmailConfigured, sendPhotoEmail, sendPhotosEmail } from '../services/email.service';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -187,6 +187,71 @@ export async function sendEventPhotoEmail(req: Request, res: Response) {
         return res.status(500).json({ message });
     }
 
+    await recordEmailSubscription(email, eventId, marketingConsent, req.ip ?? null);
+
+    return res.status(200).json({ message: 'Email sent' });
+}
+
+export async function sendEventPhotosEmail(req: Request, res: Response) {
+    const { eventId } = req.params;
+
+    if (!isValidObjectId(eventId)) {
+        return res.status(400).json({ message: 'Invalid event id' });
+    }
+
+    const { email, photoIds, marketingConsent } = req.body;
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return res.status(400).json({ message: 'Invalid email address' });
+    }
+
+    if (!Array.isArray(photoIds) || photoIds.length === 0 || photoIds.some((id) => !isValidObjectId(id))) {
+        return res.status(400).json({ message: 'Invalid photo ids' });
+    }
+
+    if (!isEmailConfigured()) {
+        return res.status(400).json({ message: 'Invio email non configurato. Contatta l\'amministratore.' });
+    }
+
+    const photos = await EventPhotoModel.find({ _id: { $in: photoIds }, eventId });
+
+    if (photos.length !== photoIds.length) {
+        return res.status(404).json({ message: 'One or more photos not found' });
+    }
+
+    if (photos.some((p) => p.type === 'video')) {
+        return res.status(400).json({ message: 'Invio email disponibile solo per le foto' });
+    }
+
+    const photoUrls = photos
+        .map((p) => p.image?.url ?? '')
+        .filter((url) => url.length > 0);
+
+    if (photoUrls.length === 0) {
+        return res.status(400).json({ message: 'Invio email disponibile solo per le foto' });
+    }
+
+    const event = await EventModel.findById(eventId);
+    const eventName = event?.name;
+    const eventLocation = (event?.location as { label?: string } | undefined)?.label;
+
+    try {
+        await sendPhotosEmail(email, photoUrls, eventName ?? undefined, eventLocation ?? undefined);
+    } catch (err) {
+        const message = err instanceof Error ? err.message : 'Errore sconosciuto';
+        return res.status(500).json({ message });
+    }
+
+    await recordEmailSubscription(email, eventId, marketingConsent, req.ip ?? null);
+
+    return res.status(200).json({ message: 'Email sent' });
+}
+
+async function recordEmailSubscription(
+    email: string,
+    eventId: string,
+    marketingConsent: unknown,
+    ip: string | null
+) {
     await EmailSubscriptionModel.findOneAndUpdate(
         { email: email.toLowerCase().trim() },
         {
@@ -196,15 +261,13 @@ export async function sendEventPhotoEmail(req: Request, res: Response) {
                 source: 'photo-email',
                 marketingConsent: !!marketingConsent,
                 consentTimestamp: new Date(),
-                consentIp: req.ip ?? null,
+                consentIp: ip,
                 isActive: true,
                 unsubscribedAt: null
             }
         },
         { upsert: true, new: true }
     ).catch((err) => {
-        console.error('[sendEventPhotoEmail] failed to record subscription:', err);
+        console.error('[sendEventPhotosEmail] failed to record subscription:', err);
     });
-
-    return res.status(200).json({ message: 'Email sent' });
 }

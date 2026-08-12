@@ -27,25 +27,11 @@ function buildMessage(eventName?: string, eventLocation?: string): string {
         .replace(/\{CURRENT_DATE\}/g, formatDate(new Date()));
 }
 
-export async function sendPhotoEmail(to: string, photoUrl: string, eventName?: string, eventLocation?: string): Promise<void> {
-    if (!isEmailConfigured()) {
-        throw new Error('Brevo non configurato. Imposta BREVO_API_KEY.');
-    }
-
-    const from = env.EMAIL_FROM ?? 'noreply@streetfoodevents.com';
-    const subject = eventName
-        ? `La tua foto — ${eventName}`
-        : 'La tua foto dall\'evento';
-
-    const message = buildMessage(eventName, eventLocation);
-
-    const html = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 2rem;">
-            <h1 style="color: #333;">${eventName ? `La tua foto da ${eventName}` : 'La tua foto'}</h1>
-            <p style="color: #444; font-size: 1.05rem; line-height: 1.6;">
-                ${message}
-            </p>
-            <a href="${photoUrl}" style="
+function buildPhotosHtml(photoUrls: string[]): string {
+    if (photoUrls.length === 1) {
+        const url = photoUrls[0];
+        return `
+            <a href="${url}" style="
                 display: inline-block;
                 padding: 0.75rem 1.5rem;
                 margin: 1rem 0;
@@ -56,7 +42,52 @@ export async function sendPhotoEmail(to: string, photoUrl: string, eventName?: s
                 font-weight: 600;
             ">Visualizza foto</a>
             <br />
-            <img src="${photoUrl}" alt="Foto" style="max-width: 100%; border-radius: 8px; margin-top: 1rem;" />
+            <img src="${url}" alt="Foto" style="max-width: 100%; border-radius: 8px; margin-top: 1rem;" />
+        `;
+    }
+
+    return photoUrls
+        .map(
+            (url) => `
+            <a href="${url}" target="_blank" style="display: block; margin-top: 1rem;">
+                <img src="${url}" alt="Foto" style="max-width: 100%; border-radius: 8px; display: block;" />
+            </a>`
+        )
+        .join('');
+}
+
+export async function sendPhotosEmail(
+    to: string,
+    photoUrls: string[],
+    eventName?: string,
+    eventLocation?: string
+): Promise<void> {
+    if (!isEmailConfigured()) {
+        throw new Error('Brevo non configurato. Imposta BREVO_API_KEY.');
+    }
+
+    if (photoUrls.length === 0) {
+        throw new Error('Nessuna foto da inviare');
+    }
+
+    const from = env.EMAIL_FROM ?? 'noreply@streetfoodevents.com';
+    const isPlural = photoUrls.length > 1;
+    const subject = eventName
+        ? (isPlural ? `Le tue foto — ${eventName}` : `La tua foto — ${eventName}`)
+        : (isPlural ? 'Le tue foto dall\'evento' : 'La tua foto dall\'evento');
+
+    const message = buildMessage(eventName, eventLocation);
+    const title = isPlural
+        ? (eventName ? `Le tue foto da ${eventName}` : 'Le tue foto')
+        : (eventName ? `La tua foto da ${eventName}` : 'La tua foto');
+
+    const html = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 2rem;">
+            <h1 style="color: #333;">${title}</h1>
+            <p style="color: #444; font-size: 1.05rem; line-height: 1.6;">
+                ${message}
+            </p>
+            ${buildPhotosHtml(photoUrls)}
         </div>
     `;
 
@@ -79,4 +110,8 @@ export async function sendPhotoEmail(to: string, photoUrl: string, eventName?: s
         const body = await res.text();
         throw new Error(`Brevo error ${res.status}: ${body}`);
     }
+}
+
+export async function sendPhotoEmail(to: string, photoUrl: string, eventName?: string, eventLocation?: string): Promise<void> {
+    return sendPhotosEmail(to, [photoUrl], eventName, eventLocation);
 }

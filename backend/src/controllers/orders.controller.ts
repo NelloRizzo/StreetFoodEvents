@@ -15,6 +15,7 @@ import { StandModel } from '../models/stand.model';
 import { StandSettlementModel } from '../models/stand-settlement.model';
 import { RoleModel } from '../models/role.model';
 import { UserRoleModel } from '../models/user-role.model';
+import { env } from '../config/env';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -50,6 +51,7 @@ function toOrderResponse(order: {
     notes?: string | null;
     cancelledAt?: Date | null;
     cancelReason?: string | null;
+    readyAt?: Date | null;
     createdAt: Date;
     updatedAt: Date;
 }, receiptQrCode?: string | null) {
@@ -83,6 +85,7 @@ function toOrderResponse(order: {
         notes: order.notes ?? null,
         cancelledAt: order.cancelledAt ?? null,
         cancelReason: order.cancelReason ?? null,
+        readyAt: order.readyAt ?? null,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         receiptQrCode: receiptQrCode ?? null
@@ -152,7 +155,13 @@ export async function getStandDisplayOrders(req: Request, res: Response) {
 
     const filter: Record<string, unknown> = {
         standId: new Types.ObjectId(standId),
-        status: { $in: ['confirmed', 'preparing', 'ready'] }
+        $or: [
+            { status: { $in: ['confirmed', 'preparing'] } },
+            {
+                status: 'ready',
+                readyAt: { $gte: new Date(Date.now() - env.STAND_DISPLAY_READY_TIMEOUT_MINUTES * 60 * 1000) }
+            }
+        ]
     };
 
     if (req.query.eventId && isValidObjectId(req.query.eventId as string)) {
@@ -575,6 +584,7 @@ export async function updateOrderStatus(req: Request, res: Response) {
         for (const item of order.items) {
             item.ready = true;
         }
+        order.readyAt = new Date();
     }
 
     // Skip to completed: mark all items ready and auto-pay if pending
@@ -844,6 +854,7 @@ export async function markStationReady(req: Request, res: Response) {
 
     if (allReady) {
         order.status = 'ready';
+        order.readyAt = new Date();
     }
 
     await order.save();
@@ -894,6 +905,7 @@ export async function markItemReady(req: Request, res: Response) {
 
     if (allReady) {
         order.status = 'ready';
+        order.readyAt = new Date();
     }
 
     await order.save();
@@ -983,6 +995,7 @@ export async function cancelOrderItems(req: Request, res: Response) {
 
         if (allReady && order.status !== 'ready') {
             order.status = 'ready';
+            order.readyAt = new Date();
         }
 
         await order.save({ session });

@@ -39,6 +39,15 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
     uploadVideoBuffer: (...args: unknown[]) => uploadVideoBufferMock(...args)
 }));
 
+const sendPhotoEmailMock = vi.fn().mockResolvedValue(undefined);
+const sendPhotosEmailMock = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('@/services/email.service', () => ({
+    isEmailConfigured: () => true,
+    sendPhotoEmail: (...args: unknown[]) => sendPhotoEmailMock(...args),
+    sendPhotosEmail: (...args: unknown[]) => sendPhotosEmailMock(...args)
+}));
+
 import { EventModel } from '../../models/event.model';
 import { RoleModel } from '../../models/role.model';
 import { SessionModel } from '../../models/session.model';
@@ -276,5 +285,84 @@ describe('Integration: event photos with videos', () => {
 
         expect(res.status).toBe(400);
         expect(res.body.message).toContain('email');
+    });
+
+    it('sends all selected photos to a single email address', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const { user, sessionToken } = await createAuthSession();
+        await assignRole(user._id.toString(), 'photo-print', 'event', event._id.toString());
+
+        const first = await request(app)
+            .post(`/api/events/${event._id}/photos`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .attach('image', Buffer.from('fake-image'), { filename: 'photo.jpg', contentType: 'image/jpeg' });
+        const second = await request(app)
+            .post(`/api/events/${event._id}/photos`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .attach('image', Buffer.from('fake-image'), { filename: 'photo2.jpg', contentType: 'image/jpeg' });
+
+        sendPhotosEmailMock.mockClear();
+        const res = await request(app)
+            .post(`/api/events/${event._id}/photos/send-email`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                email: 'customer@test.com',
+                photoIds: [first.body.item.id, second.body.item.id],
+                marketingConsent: true
+            });
+
+        expect(res.status).toBe(200);
+        expect(sendPhotosEmailMock).toHaveBeenCalledTimes(1);
+        expect(sendPhotosEmailMock).toHaveBeenCalledWith(
+            'customer@test.com',
+            ['https://cloudinary.test/image.jpg', 'https://cloudinary.test/image.jpg'],
+            'Photo Event',
+            'Loc'
+        );
+    });
+
+    it('rejects bulk email when a video is among the selected photos', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const { user, sessionToken } = await createAuthSession();
+        await assignRole(user._id.toString(), 'photo-print', 'event', event._id.toString());
+
+        const image = await request(app)
+            .post(`/api/events/${event._id}/photos`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .attach('image', Buffer.from('fake-image'), { filename: 'photo.jpg', contentType: 'image/jpeg' });
+        const video = await request(app)
+            .post(`/api/events/${event._id}/photos`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .attach('video', Buffer.from('fake-video'), { filename: 'clip.mp4', contentType: 'video/mp4' });
+
+        sendPhotosEmailMock.mockClear();
+        const res = await request(app)
+            .post(`/api/events/${event._id}/photos/send-email`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                email: 'customer@test.com',
+                photoIds: [image.body.item.id, video.body.item.id]
+            });
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toContain('solo per le foto');
+        expect(sendPhotosEmailMock).not.toHaveBeenCalled();
+    });
+
+    it('rejects bulk email with invalid photo ids', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const { user, sessionToken } = await createAuthSession();
+        await assignRole(user._id.toString(), 'photo-print', 'event', event._id.toString());
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/photos/send-email`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ email: 'customer@test.com', photoIds: [] });
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toContain('photo ids');
     });
 });

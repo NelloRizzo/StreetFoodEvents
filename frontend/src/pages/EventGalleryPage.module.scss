@@ -167,13 +167,33 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: var(--color-brand);
+  background: rgba(0, 0, 0, 0.55);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
   font-weight: 700;
+  cursor: pointer;
+  border: 2px solid #fff;
+  z-index: 2;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.check:hover {
+  background: var(--color-brand);
+}
+
+.check:active {
+  transform: scale(0.92);
+}
+
+.checkOn {
+  background: var(--color-brand);
+}
+
+.checkOn:hover {
+  background: var(--color-brand-deep);
 }
 
 .empty {
@@ -267,6 +287,36 @@
 
 .emailPhotoBtn:hover {
   background: #2563eb;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  cursor: zoom-out;
+}
+
+.lightboxMedia {
+  max-width: 92vw;
+  max-height: 92vh;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.lightboxSeq {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.25rem;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .boothLink {

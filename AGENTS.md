@@ -71,6 +71,8 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 |---|---|---|---|
 | GET | `/api/events/:eventId/photos` | no | Lista media evento (foto e video) |
 | POST | `/api/events/:eventId/photos` | auth | Carica media: multipart con campo `image` (foto, 10 MB) oppure `video` (fino a 100 MB) |
+| POST | `/api/events/:eventId/photos/send-email` | photo-print / photo-admin / platform-admin | Invia più foto selezionate a un unico indirizzo email (body: `email`, `photoIds[]`, `marketingConsent`) |
+| POST | `/api/events/:eventId/photos/:photoId/send-email` | photo-print / photo-admin / platform-admin | Invia una singola foto via email (body: `email`, `marketingConsent`) |
 | DELETE | `/api/events/:eventId/photos` | photo-admin | Cancella tutte le foto/video (delete Cloudinary con `resource_type` corretto) |
 | DELETE | `/api/events/:eventId/photos/:photoId` | auth | Cancella singola foto/video |
 
@@ -196,6 +198,12 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Aug 2026 — invio email bulk galleria + lightbox + timeout "Pronto" display)
+### Completed
+- Endpoint bulk `POST /api/events/:eventId/photos/send-email` (photo-print / photo-admin / platform-admin): body `{ email, photoIds[], marketingConsent }`. Invia tutte le foto a un unico indirizzo via `email.service.sendPhotosEmail` (una email con N immagini; se tra le selezionate c'è un video → 400). `sendPhotoEmail` (singola) delega a `sendPhotosEmail` con un array di 1. La registrazione della subscription è estratta in `recordEmailSubscription`.
+- `EventGalleryPage`: click su foto/video → lightbox a schermo intero (`lightboxPhoto` state, overlay + media contenuto, numero in basso a destra, click fuori chiude). La selezione multipla avviene SOLO col pallino in alto a destra (button `.check`, `e.stopPropagation()`), non col click sulla card. Pulsante toolbar "Invia selezionate via email" (photo-print+) quando `selectedIds.size > 0`; filtra solo immagini.
+- Timeout "Pronto" nel display coda: campo `Order.readyAt` (Date, default null) valorizzato in `updateOrderStatus`/`markStationReady`/`markItemReady`/`cancelOrderItems` quando l'ordine passa a `ready`. `getStandDisplayOrders` esclude i `ready` più vecchi di `STAND_DISPLAY_READY_TIMEOUT_MINUTES` (env, default 2). Test in `orders.test.ts` (17 test) e `integration-event-photos.test.ts` (12 test).
 
 ## Session state (Aug 2026 — numeri progressivi stand per evento)
 ### Completed

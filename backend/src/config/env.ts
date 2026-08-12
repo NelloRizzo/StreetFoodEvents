@@ -51,6 +51,12 @@ const envSchema = z.object({
     BREVO_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().email('EMAIL_FROM must be a valid email').optional(),
     EMAIL_MESSAGE_TEMPLATE: z.string().optional(),
+
+    STAND_DISPLAY_READY_TIMEOUT_MINUTES: z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(2),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
