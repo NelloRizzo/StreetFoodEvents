@@ -73,6 +73,59 @@ describe('Orders API', () => {
         expect(res.status).toBe(401);
     });
 
+    it('lists orders filtered by multiple comma-separated stationIds', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Multi Station Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Multi Stand', eventIds: [event._id] });
+        const stationA = await StationModel.create({ standId: stand._id, name: 'Station A' });
+        const stationB = await StationModel.create({ standId: stand._id, name: 'Station B' });
+        const productA = await ProductModel.create({ name: 'Multi Item A', price: 5 });
+        const productB = await ProductModel.create({ name: 'Multi Item B', price: 6 });
+        const epA = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: productA._id, stationIds: [stationA._id]
+        });
+        const epB = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: productB._id, stationIds: [stationB._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+
+        const createOrder = (eventProductId: string, stationId: string) =>
+            request(app)
+                .post('/api/orders')
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({
+                    eventId: event._id.toString(),
+                    standId: stand._id.toString(),
+                    items: [{ eventProductId, stationId, quantity: 1 }]
+                });
+
+        await createOrder(epA._id.toString(), stationA._id.toString());
+        await createOrder(epB._id.toString(), stationB._id.toString());
+
+        const res = await request(app)
+            .get(`/api/orders?stationId=${stationA._id.toString()},${stationB._id.toString()}`)
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.items).toHaveLength(2);
+
+        const singleRes = await request(app)
+            .get(`/api/orders?stationId=${stationA._id.toString()}`)
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(singleRes.status).toBe(200);
+        expect(singleRes.body.items).toHaveLength(1);
+    });
+
     it('returns stand display orders publicly (confirmed/preparing/ready only)', async () => {
         app = createTestApp();
         const { sessionToken } = await createAuthSession();

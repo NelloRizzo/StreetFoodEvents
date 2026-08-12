@@ -67,6 +67,9 @@ export function DashboardPage() {
   const [roles, setRoles] = useState<RoleInfo[]>([])
   const [eventRoles, setEventRoles] = useState<RoleInfo[]>([])
   const [eventRoleEvents, setEventRoleEvents] = useState<{ id: string; name: string }[]>([])
+  const [eventNames, setEventNames] = useState<Record<string, string>>({})
+  const [standEvent, setStandEvent] = useState<Record<string, string>>({})
+  const [selectedStations, setSelectedStations] = useState<Record<string, string[]>>({})
 
   useEffect(() => {
     apiRequest<HomeData>('/events/home')
@@ -79,6 +82,14 @@ export function DashboardPage() {
 
     apiRequest<{ stands: StandInfo[]; stations: StationInfo[] }>('/auth/me/stands')
       .then((d) => { setStands(d.stands); setStations(d.stations) })
+      .catch(() => { /* not required */ })
+
+    apiRequest<{ items: { id: string; name: string }[] }>('/events')
+      .then((d) => {
+        const names: Record<string, string> = {}
+        for (const ev of d.items) names[ev.id] = ev.name
+        setEventNames(names)
+      })
       .catch(() => { /* not required */ })
 
     apiRequest<{ isPlatformAdmin: boolean; isEventAdmin: boolean; roles: RoleInfo[] }>('/auth/me/roles')
@@ -116,6 +127,16 @@ export function DashboardPage() {
         (r) => r.scope === 'event' && r.eventId === eventId && (r.slug === 'event-admin' || r.slug === 'event-cashier')
       )
     )
+  }
+
+  const toggleStation = (standId: string, stationId: string) => {
+    setSelectedStations((prev) => {
+      const current = prev[standId] ?? []
+      const next = current.includes(stationId)
+        ? current.filter((id) => id !== stationId)
+        : [...current, stationId]
+      return { ...prev, [standId]: next }
+    })
   }
 
   const favoriteEvents = data?.favorites ?? []
@@ -277,6 +298,13 @@ export function DashboardPage() {
 
                 {stands.map((s) => {
                   const standStations = stations.filter((st) => st.standId === s.id)
+                  const selectedEventId = standEvent[s.id] ?? s.eventIds[0]
+                  const selected = selectedStations[s.id] ?? []
+                  const eventSuffix = s.eventIds.length > 0 ? `?eventId=${selectedEventId}` : ''
+                  const combinedQueueUrl =
+                    selected.length > 0
+                      ? `/orders/station/${selected[0]}?stations=${selected.join(',')}${s.eventIds.length > 0 ? `&eventId=${selectedEventId}` : ''}`
+                      : ''
                   return (
                     <div key={s.id} className={styles.standBlock}>
                       <Link to={`/stands/${s.id}/orders`} className={styles.standBlockHeader}>
@@ -285,9 +313,23 @@ export function DashboardPage() {
                         <span className={styles.manageHint}>Gestisci ordini</span>
                       </Link>
                       <div className={styles.standActions}>
+                        {s.eventIds.length > 1 && (
+                          <select
+                            value={selectedEventId}
+                            onChange={(e) => setStandEvent((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                            className={styles.eventSelect}
+                            title="Seleziona evento"
+                          >
+                            {s.eventIds.map((eventId) => (
+                              <option key={eventId} value={eventId}>
+                                {eventNames[eventId] ?? 'Evento'}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         {s.eventIds.length > 0 && canAccessStandCash(s) && (
                           <Link
-                            to={`/events/${s.eventIds[0]}/stands/${s.id}/order`}
+                            to={`/events/${selectedEventId}/stands/${s.id}/order`}
                             className={styles.displayLink}
                           >
                             <span className={styles.stationChipIcon}>&#128176;</span>
@@ -296,7 +338,7 @@ export function DashboardPage() {
                         )}
                         {s.eventIds.length > 0 && (
                           <Link
-                            to={`/events/${s.eventIds[0]}/stands/${s.id}/ordersqueue`}
+                            to={`/events/${selectedEventId}/stands/${s.id}/ordersqueue`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className={styles.displayLink}
@@ -305,19 +347,39 @@ export function DashboardPage() {
                             Coda Ordini
                           </Link>
                         )}
+                        {selected.length >= 2 && (
+                          <Link
+                            to={combinedQueueUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`${styles.displayLink} ${styles.combinedQueueLink}`}
+                          >
+                            <span className={styles.stationChipIcon}>&#128203;</span>
+                            Coda combinata ({selected.length})
+                          </Link>
+                        )}
                       </div>
                       {standStations.length > 0 && (
                         <div className={styles.stationList}>
                           {standStations.map((st) => (
-                            <Link
-                              key={st.id}
-                              to={`/orders/station/${st.id}`}
-                              className={styles.stationChip}
-                            >
-                              <span className={styles.stationChipIcon}>&#9881;</span>
-                              <span className={styles.stationChipName}>{st.name}</span>
-                              <span className={styles.manageHint}>Coda postazione</span>
-                            </Link>
+                            <div key={st.id} className={styles.stationChip}>
+                              <input
+                                type="checkbox"
+                                className={styles.stationCheckbox}
+                                checked={selected.includes(st.id)}
+                                onChange={() => toggleStation(s.id, st.id)}
+                              />
+                              <Link
+                                to={`/orders/station/${st.id}${eventSuffix}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.stationChipLink}
+                              >
+                                <span className={styles.stationChipIcon}>&#9881;</span>
+                                <span className={styles.stationChipName}>{st.name}</span>
+                                <span className={styles.manageHint}>Coda postazione</span>
+                              </Link>
+                            </div>
                           ))}
                         </div>
                       )}

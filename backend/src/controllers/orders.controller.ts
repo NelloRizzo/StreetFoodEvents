@@ -108,8 +108,16 @@ export async function listOrders(req: Request, res: Response) {
     }
     if (req.query.userId) filter.userId = req.query.userId;
     if (req.query.customerId) filter.customerId = req.query.customerId;
-    if (req.query.stationId && Types.ObjectId.isValid(req.query.stationId as string)) {
-        filter['items.stationId'] = new Types.ObjectId(req.query.stationId as string);
+    if (req.query.stationId) {
+        const stationIds = (req.query.stationId as string)
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0 && Types.ObjectId.isValid(s));
+        if (stationIds.length === 1) {
+            filter['items.stationId'] = new Types.ObjectId(stationIds[0]);
+        } else if (stationIds.length > 1) {
+            filter['items.stationId'] = { $in: stationIds.map((id) => new Types.ObjectId(id)) };
+        }
     }
 
     if (req.query.startDate) {
