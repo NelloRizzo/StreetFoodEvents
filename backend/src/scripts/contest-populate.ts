@@ -1,8 +1,9 @@
 import { ContestModel } from '../models/contest.model';
 import { ContestPOIModel } from '../models/contest-poi.model';
 import type { SeedEventsResult } from './events-populate';
+import type { SeedStandsResult } from './stands-populate';
 
-export async function populateContests(seedEvents: SeedEventsResult) {
+export async function populateContests(seedEvents: SeedEventsResult, seedStands: SeedStandsResult) {
     const springEventId = seedEvents.springEvent._id;
 
     const cpoi1 = await ContestPOIModel.findOneAndUpdate(
@@ -10,8 +11,9 @@ export async function populateContests(seedEvents: SeedEventsResult) {
         {
             $set: {
                 eventId: springEventId,
+                standId: seedStands.bbqStand._id,
                 name: 'Angolo della Griglia',
-                hint: 'Segui l\'odore della brace',
+                hints: ['Segui l\'odore della brace'],
                 sequenceOrder: 1
             }
         },
@@ -23,8 +25,9 @@ export async function populateContests(seedEvents: SeedEventsResult) {
         {
             $set: {
                 eventId: springEventId,
+                standId: seedStands.sweetStand._id,
                 name: 'Dolci Tentazioni',
-                hint: 'Il profumo dello zucchero filato ti guiderà',
+                hints: ['Il profumo dello zucchero filato ti guiderà'],
                 sequenceOrder: 2
             }
         },
@@ -36,8 +39,9 @@ export async function populateContests(seedEvents: SeedEventsResult) {
         {
             $set: {
                 eventId: springEventId,
+                standId: null,
                 name: 'Birra & Friends',
-                hint: 'Brindisi sotto le stelle',
+                hints: ['Brindisi sotto le stelle'],
                 sequenceOrder: 3
             }
         },
@@ -49,8 +53,9 @@ export async function populateContests(seedEvents: SeedEventsResult) {
         {
             $set: {
                 eventId: springEventId,
+                standId: null,
                 name: 'Angolo dello Chef',
-                hint: 'I segreti della cucina gourmet',
+                hints: ['I segreti della cucina gourmet'],
                 sequenceOrder: 4
             }
         },

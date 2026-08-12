@@ -22,6 +22,7 @@ type PoiBrief = {
   id: string
   name: string
   hint: string | null
+  standId?: string | null
 }
 
 type ParticipationState = {
@@ -172,15 +173,29 @@ export function ContestPlayPage() {
 
   function handleQrScan(decodedText: string) {
     setShowScanner(false)
-    // Decoded URL format: {origin}/contest/{contestId}/play?poi={poiId}
+    // Decoded URL formats:
+    //  - {origin}/contest/{contestId}/play?poi={poiId}  (POI libero)
+    //  - {origin}/events/{eventId}/stands/{standId}     (POI collegato a uno stand)
     try {
       const url = new URL(decodedText)
       const poi = url.searchParams.get('poi')
       if (poi) {
         handleScanPoi(poi)
       } else {
-        setScanMessage({ ok: false, text: 'QR code non valido' })
-        setTimeout(() => setScanMessage(null), 3000)
+        const standMatch = url.pathname.match(/^\/events\/[^/]+\/stands\/([^/]+)$/)
+        if (standMatch) {
+          const standId = standMatch[1]
+          const linkedPoi = pois.find((p) => p.standId === standId)
+          if (linkedPoi) {
+            handleScanPoi(linkedPoi.id)
+          } else {
+            setScanMessage({ ok: false, text: 'QR code non valido' })
+            setTimeout(() => setScanMessage(null), 3000)
+          }
+        } else {
+          setScanMessage({ ok: false, text: 'QR code non valido' })
+          setTimeout(() => setScanMessage(null), 3000)
+        }
       }
     } catch {
       // Maybe raw poi:id format

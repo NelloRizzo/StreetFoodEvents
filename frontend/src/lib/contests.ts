@@ -3,6 +3,7 @@ import { apiRequest } from './api'
 export type ContestPOI = {
   id: string
   eventId: string
+  standId: string | null
   name: string
   hints: string[]
   groups: string[]
@@ -43,7 +44,7 @@ export type Contest = {
 }
 
 export type ContestWithPois = Contest & {
-  pois: { id: string; name: string; hint: string | null }[]
+  pois: { id: string; name: string; hint: string | null; standId?: string | null }[]
 }
 
 export type Participation = {
@@ -63,6 +64,7 @@ export type Participation = {
 export type PoiQrCode = {
   poiId: string
   poiName: string
+  standId: string | null
   qrCode: string
 }
 
@@ -83,14 +85,14 @@ export function listContestPois(eventId: string) {
   return apiRequest<{ items: ContestPOI[] }>(`/contests/contest-pois?eventId=${eventId}`)
 }
 
-export function createContestPoi(data: { eventId: string; name: string; hints?: string[]; groups?: string[] }) {
+export function createContestPoi(data: { eventId: string; standId?: string | null; name: string; hints?: string[]; groups?: string[] }) {
   return apiRequest<{ item: ContestPOI }>('/contests/contest-pois', {
     method: 'POST',
     bodyJson: data,
   })
 }
 
-export function updateContestPoi(poiId: string, data: { name?: string; hints?: string[]; groups?: string[]; sequenceOrder?: number }) {
+export function updateContestPoi(poiId: string, data: { name?: string; hints?: string[]; groups?: string[]; sequenceOrder?: number; standId?: string | null }) {
   return apiRequest<{ item: ContestPOI }>(`/contests/contest-pois/${poiId}`, {
     method: 'PATCH',
     bodyJson: data,
@@ -111,7 +113,7 @@ export function listContests(eventId?: string) {
 }
 
 export function getContest(contestId: string) {
-  return apiRequest<{ item: Contest; pois: { id: string; name: string; hint: string | null }[] }>(`/contests/${contestId}`)
+  return apiRequest<{ item: Contest; pois: { id: string; name: string; hint: string | null; standId?: string | null }[] }>(`/contests/${contestId}`)
 }
 
 export function createContest(data: {

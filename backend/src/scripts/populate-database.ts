@@ -30,7 +30,7 @@ async function run() {
   await populateTransactions(users, events);
   await populateUserStations(users, stations);
   await populatePois(events);
-  await populateContests(events);
+  await populateContests(events, stands);
   await populateFavorites(users, events);
   await populateUsageContracts();
 

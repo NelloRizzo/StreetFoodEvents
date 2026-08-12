@@ -144,8 +144,8 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | Method | Route | Auth | Description |
 |---|---|---|---|
 | GET | `/api/contests/contest-pois?eventId=` | contest-admin / platform-admin | Lista POI contest |
-| POST | `/api/contests/contest-pois` | contest-admin / platform-admin | Crea POI contest (name, hint, groups[]) |
-| PATCH | `/api/contests/contest-pois/:poiId` | contest-admin / platform-admin | Modifica POI contest |
+| POST | `/api/contests/contest-pois` | contest-admin / platform-admin | Crea POI contest (name, hints[], groups[], standId opzionale — stand dell'evento come POI) |
+| PATCH | `/api/contests/contest-pois/:poiId` | contest-admin / platform-admin | Modifica POI contest (standId: null per scollegare) |
 | DELETE | `/api/contests/contest-pois/:poiId` | contest-admin / platform-admin | Elimina POI contest |
 
 ### API routes — Contests

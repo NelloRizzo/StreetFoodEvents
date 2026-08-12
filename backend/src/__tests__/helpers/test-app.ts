@@ -21,6 +21,7 @@ import { poisRouter } from '../../routes/pois.routes';
 import { usageContractsRouter } from '../../routes/usage-contracts.routes';
 import { framesRouter } from '../../routes/frames.routes';
 import { exchangeRouter } from '../../routes/exchange.routes';
+import { contestsRouter } from '../../routes/contests.routes';
 
 export function createTestApp() {
     const app = express();
@@ -54,6 +55,7 @@ export function createTestApp() {
     app.use('/api/pois', poisRouter);
     app.use('/api/usage-contracts', usageContractsRouter);
     app.use('/api/exchange', exchangeRouter);
+    app.use('/api/contests', contestsRouter);
 
     return app;
 }

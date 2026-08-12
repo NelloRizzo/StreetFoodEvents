@@ -87,9 +87,9 @@ export function EventDetailPage() {
   const [hasPhotoPrint, setHasPhotoPrint] = useState(false)
   const [hasContestAdmin, setHasContestAdmin] = useState(false)
   const [hasExchangeAdmin, setHasExchangeAdmin] = useState(false)
-  const [cpois, setCpois] = useState<{ id: string; name: string; hints: string[]; groups: string[] }[]>([])
+  const [cpois, setCpois] = useState<{ id: string; name: string; hints: string[]; groups: string[]; standId: string | null }[]>([])
   const [showCpoiForm, setShowCpoiForm] = useState(false)
-  const [cpoiForm, setCpoiForm] = useState({ name: '', hintsInput: '', groupsInput: '' })
+  const [cpoiForm, setCpoiForm] = useState({ name: '', hintsInput: '', groupsInput: '', standId: '' })
   const [savingCpoi, setSavingCpoi] = useState(false)
   const [contests, setContests] = useState<{ id: string; name: string; isActive: boolean; orderedPOIIds: string[]; durationMinutes: number; startsAt: string | null; prizes: { label: string; awarded: boolean }[]; awardedPrizesCount: number; requireSequence: boolean; description: string | null; pickConfig: { groupPicks: { group: string; count: number }[] } | null; autoPickedPOIIds: string[]; poiHintSelections: { poiId: string; hintIndex: number }[] }[]>([])
   const [showContestForm, setShowContestForm] = useState(false)
@@ -628,11 +628,31 @@ export function EventDetailPage() {
           {showCpoiForm && (
             <div className={styles.poiForm}>
               <label className={styles.poiField}>
+                Stand (opzionale — il POI rappresenta uno stand dell'evento)
+                <select
+                  value={cpoiForm.standId}
+                  onChange={(e) => {
+                    const standId = e.target.value
+                    const stand = stands.find((s) => s.id === standId)
+                    setCpoiForm((p) => ({
+                      ...p,
+                      standId,
+                      name: stand ? stand.name : p.name,
+                    }))
+                  }}
+                >
+                  <option value="">— Nessuno (POI libero) —</option>
+                  {stands.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.poiField}>
                 Nome
                 <input type="text" value={cpoiForm.name} onChange={(e) => setCpoiForm((p) => ({ ...p, name: e.target.value }))} />
               </label>
               <label className={styles.poiField}>
-                Indizi (uno per riga)
+                Indizi / enigmi (uno per riga)
                 <textarea rows={3} value={cpoiForm.hintsInput} onChange={(e) => setCpoiForm((p) => ({ ...p, hintsInput: e.target.value }))} style={{ width: '100%', padding: '0.5rem', fontSize: '1rem', border: '1px solid var(--color-line)', borderRadius: 'var(--radius-sm)' }} />
               </label>
               <label className={styles.poiField}>
@@ -646,17 +666,17 @@ export function EventDetailPage() {
                   try {
                     const groups = cpoiForm.groupsInput.split(',').map((g) => g.trim()).filter(Boolean)
                     const hints = cpoiForm.hintsInput.split('\n').map((h) => h.trim()).filter(Boolean)
-                    await createContestPoi({ eventId, name: cpoiForm.name.trim(), hints: hints.length > 0 ? hints : undefined, groups: groups.length > 0 ? groups : undefined })
+                    await createContestPoi({ eventId, standId: cpoiForm.standId || undefined, name: cpoiForm.name.trim(), hints: hints.length > 0 ? hints : undefined, groups: groups.length > 0 ? groups : undefined })
                     const data = await listContestPois(eventId)
                     setCpois(data.items)
-                    setCpoiForm({ name: '', hintsInput: '', groupsInput: '' })
+                    setCpoiForm({ name: '', hintsInput: '', groupsInput: '', standId: '' })
                     setShowCpoiForm(false)
                   } catch { /* ignore */ }
                   setSavingCpoi(false)
                 }} disabled={savingCpoi}>
                   {savingCpoi ? 'Salvataggio...' : 'Crea POI'}
                 </button>
-                <button className={styles.cancelBtn} onClick={() => { setShowCpoiForm(false); setCpoiForm({ name: '', hintsInput: '', groupsInput: '' }) }}>Annulla</button>
+                <button className={styles.cancelBtn} onClick={() => { setShowCpoiForm(false); setCpoiForm({ name: '', hintsInput: '', groupsInput: '', standId: '' }) }}>Annulla</button>
               </div>
             </div>
           )}
@@ -666,6 +686,11 @@ export function EventDetailPage() {
               <div key={cpoi.id} className={styles.poiCard}>
                 <div className={styles.poiCardBody}>
                   <strong className={styles.poiCardName}>{cpoi.name}</strong>
+                  {cpoi.standId && (
+                    <span className={styles.poiGroupBadge} style={{ marginTop: '0.25rem' }}>
+                      🏪 {stands.find((s) => s.id === cpoi.standId)?.name ?? 'Stand'}
+                    </span>
+                  )}
                   {cpoi.hints.length > 0 && <span className={styles.poiCardDesc} style={{ fontStyle: 'italic' }}>{cpoi.hints.join(' · ')}</span>}
                   {cpoi.groups.length > 0 && (
                     <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>

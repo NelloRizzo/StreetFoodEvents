@@ -124,6 +124,15 @@ Considerazioni progettuali e decisioni architetturali.
 - **Backend `registerScan`**: prima di push, verifica che `scannedCount < orderedCount` per quel POI ID. Se `scannedCount >= orderedCount`, errore "All occurrences already scanned".
 - **Frontend griglia**: mostra tutti gli `orderedPOIIds` (inclusi duplicati), con i POI trovati spostati in fondo e separati da un divider.
 
+## ContestPOI — Stand collegato (Aug 2026)
+- **Campo `standId`** (ObjectId ref 'Stand', `default: null`) su ContestPOI: uno stand dell'evento può essere un POI del contest, con `hints` come enigmi per individuarlo.
+- **Validazione**: in `createContestPoi`/`updateContestPoi`, se `standId` è fornito deve puntare a uno stand con `eventIds` contenente l'`eventId` del POI (400 altrimenti). `standId: null` in PATCH rimuove il collegamento.
+- **Nome derivato**: se il POI è collegato a uno stand e `name` non è fornito, il backend usa automaticamente lo `stand.name`. `toCpoiResponse` espone `standId` (string | null).
+- **Nome pubblico**: in `getContest` e `getContestPoiQrCodes` il nome mostrato ai partecipanti è `stand.name` (risolto con una sola query `StandModel.find`) quando il POI è collegato; il campo `standId` è incluso nella risposta pubblica dei POI.
+- **QR code**: il QR di un POI collegato a uno stand codifica l'URL dello stand nell'evento (`/events/{eventId}/stands/{standId}`), IDENTICO a quello generato da `GET /api/stands/:standId/qrcode?eventId=` — così il QR resta sempre quello dello stand, mai un QR di contest. Solo i POI liberi codificano `/contest/{contestId}/play?poi={poiId}`. `getContestPoiQrCodes` espone `standId` per item e usa `req.headers.origin` (come gli altri QR).
+- **Scanner**: in `ContestPlayPage.handleQrScan`, oltre all'URL `play?poi=`, il decoder riconosce il path `/events/{eventId}/stands/{standId}` e lo mappa al POI del contest corrente tramite `standId`. Il mapping serve perché il QR dello stand porta alla pagina menu, non al play del contest.
+- **Unique index**: resta `{ eventId: 1, name: 1 }` — collegare due volte lo stesso stand genererebbe un nome duplicato e fallirebbe. Non fare il workaround deduplicando i nomi.
+
 ## Station Reorder (Aug 2026)
 - **Campo `sequenceOrder`** (Number, default 0) su Station per ordinare le postazioni di uno stand. Stesso pattern di `EventProduct.sequenceOrder` e `ContestPOI.sequenceOrder`.
 - **Auto-increment** in `createStation`: `findOne({ standId }).sort({ sequenceOrder: -1 })` → `+1`. Ordine gestito per stand, non globale.

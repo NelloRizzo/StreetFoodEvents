@@ -22,7 +22,10 @@ const collectionsToClear = [
     'eventframes',
     'standsettlements',
     'pois',
-    'usagecontracts'
+    'usagecontracts',
+    'contestpois',
+    'contests',
+    'contestparticipations'
 ];
 
 beforeAll(async () => {

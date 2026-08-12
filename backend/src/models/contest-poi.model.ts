@@ -7,6 +7,12 @@ const contestPOISchema = new Schema(
             ref: 'Event',
             required: true
         },
+        standId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Stand',
+            default: null,
+            index: true
+        },
         name: {
             type: String,
             required: true,
