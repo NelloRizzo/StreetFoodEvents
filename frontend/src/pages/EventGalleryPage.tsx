@@ -442,7 +442,7 @@ export function EventGalleryPage() {
                   </button>
                 </>
               )}
-              {hasPhotoRole && (
+              {hasPrintRole && (
                 <button
                   className={`${styles.check} ${selectedIds.has(photo.id) ? styles.checkOn : ''}`}
                   onClick={(e) => { e.stopPropagation(); toggleSelect(photo.id) }}
