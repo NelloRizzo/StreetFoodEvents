@@ -149,7 +149,7 @@ describe('Aliases API', () => {
             .set('Cookie', `sid=${sessionToken}`)
             .send({ text: 'Invalid Alias!', entityType: 'event', entityRef: event._id.toString() });
 
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(400);
     });
 
     it('updates alias text', async () => {

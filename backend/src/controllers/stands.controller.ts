@@ -150,6 +150,7 @@ export async function updateStand(req: Request, res: Response) {
     }
 
     const {
+        type,
         name,
         slogan,
         description,
@@ -158,6 +159,10 @@ export async function updateStand(req: Request, res: Response) {
         coverImage,
         gallery
     } = req.body;
+
+    if (type !== undefined) {
+        stand.type = type;
+    }
 
     if (name !== undefined) {
         stand.name = name;

@@ -17,6 +17,7 @@ type EventData = {
 
 type StandData = {
   id: string
+  type?: 'food' | 'artigianato'
   name: string
   locations: Array<{ eventId: string; location: { type: 'Point'; coordinates: [number, number] } | null }>
   numbers?: Array<{ eventId: string; number: number }>
@@ -39,10 +40,12 @@ const eventIcon = L.divIcon({
   iconAnchor: [18, 36],
 })
 
-function createStandIcon(number: number | null) {
+function createStandIcon(number: number | null, type: string | null) {
+  const isCraft = type === 'artigianato'
+  const numClass = isCraft ? styles.standMarkerNumArtigianato : styles.standMarkerNum
   return L.divIcon({
     className: styles.standMarker,
-    html: `<span class="${styles.standMarkerNum}">${number ?? ''}</span>`,
+    html: `<span class="${numClass}">${number ?? ''}</span>`,
     iconSize: [30, 30],
     iconAnchor: [15, 15],
   })
@@ -188,7 +191,7 @@ export function EventMapPage() {
       if (!loc?.coordinates) return
       const [lng, lat] = loc.coordinates
       const number = s.numbers?.find((n) => n.eventId === eventId)?.number ?? null
-      const marker = L.marker([lat, lng], { icon: createStandIcon(number) })
+      const marker = L.marker([lat, lng], { icon: createStandIcon(number, s.type ?? null) })
         .bindPopup(`<strong>${number != null ? `${number}. ` : ''}${s.name}</strong><br/><a href="/events/${eventId}/stands/${s.id}">Vai allo stand</a>`)
       markers.push(marker)
     })
@@ -302,7 +305,8 @@ export function EventMapPage() {
       <div className="page-shell">
         <div className={styles.legend}>
           <span className={styles.legendItem}><span className={styles.eventMarkerSmall}>📍</span> Evento</span>
-          <span className={styles.legendItem}><span className={styles.standNumBadge}>1</span> Stand numerati</span>
+          <span className={styles.legendItem}><span className={styles.standNumBadge}>1</span> Stand Food &amp; Beverage</span>
+          <span className={styles.legendItem}><span className={styles.standNumBadgeArtigianato}>1</span> Stand Artigianato</span>
           <span className={styles.legendItem}><span className={styles.poiMarkerSmall}>📌</span> Punto di interesse</span>
         </div>
       </div>

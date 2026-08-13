@@ -42,7 +42,9 @@ type Stand = {
   id: string
   name: string
   slogan: string | null
+  description: string | null
   coverImage: UploadedImage | null
+  gallery: UploadedImage[]
 }
 
 type CartItem = {
@@ -208,83 +210,101 @@ export function EventStandMenuPage() {
 
         <div className={styles.layout}>
           <div className={styles.left}>
-            <section className={styles.menuSection}>
-              <h2 className={styles.sectionTitle}>Prodotti</h2>
+            {stand.description && (
+              <div className={styles.desc} dangerouslySetInnerHTML={{ __html: stand.description }} />
+            )}
 
-              {menuItems.length === 0 && (
-                <p className={styles.empty}>Nessun prodotto disponibile per questo stand.</p>
-              )}
+            {menuItems.length > 0 && (
+              <section className={styles.menuSection}>
+                <h2 className={styles.sectionTitle}>Prodotti</h2>
 
-              <div className={styles.menuList}>
-                {menuItems.map((item) => {
-                  const product = item.product
-                  const price = item.priceOverride ?? product?.price ?? 0
+                <div className={styles.menuList}>
+                  {menuItems.map((item) => {
+                    const product = item.product
+                    const price = item.priceOverride ?? product?.price ?? 0
 
-                  return (
-                    <div
-                      key={item.id}
-                      className={styles.menuCard}
-                      onClick={() => setSelectedItem(item)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          setSelectedItem(item)
-                        }
-                      }}
-                    >
-                      {product?.coverImage ? (
-                        <img
-                          src={product.coverImage.url}
-                          alt={product.name}
-                          className={styles.thumb}
-                        />
-                      ) : (
-                        <span className={styles.thumbPlaceholder}>
-                          {product?.name ? product.name.charAt(0).toUpperCase() : '?'}
-                        </span>
-                      )}
-                      <div className={styles.menuInfo}>
-                        <strong className={styles.menuName}>
-                          {product?.name ?? 'Prodotto sconosciuto'}
-                        </strong>
-                        {product && product.ingredients.length > 0 && (
-                          <span className={styles.menuIngredients}>
-                            {product.ingredients.join(', ')}
+                    return (
+                      <div
+                        key={item.id}
+                        className={styles.menuCard}
+                        onClick={() => setSelectedItem(item)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setSelectedItem(item)
+                          }
+                        }}
+                      >
+                        {product?.coverImage ? (
+                          <img
+                            src={product.coverImage.url}
+                            alt={product.name}
+                            className={styles.thumb}
+                          />
+                        ) : (
+                          <span className={styles.thumbPlaceholder}>
+                            {product?.name ? product.name.charAt(0).toUpperCase() : '?'}
                           </span>
                         )}
+                        <div className={styles.menuInfo}>
+                          <strong className={styles.menuName}>
+                            {product?.name ?? 'Prodotto sconosciuto'}
+                          </strong>
+                          {product && product.ingredients.length > 0 && (
+                            <span className={styles.menuIngredients}>
+                              {product.ingredients.join(', ')}
+                            </span>
+                          )}
+                        </div>
+                        <div className={styles.menuRight}>
+                          {price > 0 && (
+                            <span className={styles.menuPrice}>
+                              {price.toFixed(2)}
+                              <CurrencyDisplay
+                                currencyName={event.currencyName}
+                                currencySymbol={event.currencySymbol}
+                              />
+                            </span>
+                          )}
+                          {isAuthenticated && (
+                            <button
+                              className={styles.addBtn}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                addToCart(item)
+                              }}
+                            >
+                              Aggiungi
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className={styles.menuRight}>
-                        {price > 0 && (
-                          <span className={styles.menuPrice}>
-                            {price.toFixed(2)}
-                            <CurrencyDisplay
-                              currencyName={event.currencyName}
-                              currencySymbol={event.currencySymbol}
-                            />
-                          </span>
-                        )}
-                        {isAuthenticated && (
-                          <button
-                            className={styles.addBtn}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              addToCart(item)
-                            }}
-                          >
-                            Aggiungi
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {stand.gallery && stand.gallery.length > 0 && (
+              <section className={styles.gallerySection}>
+                <h2 className={styles.sectionTitle}>Galleria</h2>
+                <div className={styles.galleryGrid}>
+                  {stand.gallery.map((img) => (
+                    <img
+                      key={img.publicId}
+                      src={img.url}
+                      alt={`${stand.name} — galleria`}
+                      className={styles.galleryImage}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
 
-          {isAuthenticated && (
+          {isAuthenticated && menuItems.length > 0 && (
             <div className={styles.right}>
               <div className={styles.cartCard}>
                 <h2 className={styles.sectionTitle}>Carrello</h2>

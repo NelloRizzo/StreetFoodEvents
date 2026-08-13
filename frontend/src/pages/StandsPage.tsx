@@ -9,8 +9,16 @@ import { ImageUploader } from '../components/ImageUploader'
 import { MapPicker } from '../components/MapPicker'
 import styles from './StandsPage.module.scss'
 
+type StandType = 'food' | 'artigianato'
+
+const STAND_TYPE_LABELS: Record<StandType, string> = {
+  food: '🍽️ Food & Beverage',
+  artigianato: '🧶 Artigianato',
+}
+
 type Stand = {
   id: string
+  type: StandType
   name: string
   slogan: string | null
   description: string | null
@@ -25,6 +33,7 @@ type Stand = {
 type EventLocation = { eventId: string; latitude: string; longitude: string }
 
 type StandFormData = {
+  type: StandType
   name: string
   slogan: string
   description: string
@@ -34,7 +43,7 @@ type StandFormData = {
   gallery: UploadedImage[]
 }
 
-const emptyForm: StandFormData = { name: '', slogan: '', description: '', eventIds: [], locations: [], coverImage: null, gallery: [] }
+const emptyForm: StandFormData = { type: 'food', name: '', slogan: '', description: '', eventIds: [], locations: [], coverImage: null, gallery: [] }
 
 export function StandsPage() {
   const { user } = useAuth()
@@ -110,6 +119,7 @@ export function StandsPage() {
 
   const openEdit = (stand: Stand) => {
     setForm({
+      type: stand.type ?? 'food',
       name: stand.name,
       slogan: stand.slogan ?? '',
       description: stand.description ?? '',
@@ -197,6 +207,18 @@ export function StandsPage() {
 
         {showForm && (
           <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
+            <div className={styles.field}>
+              <label htmlFor="stand-type">Tipologia</label>
+              <select
+                id="stand-type"
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value as StandType })}
+              >
+                <option value="food">Food & Beverage</option>
+                <option value="artigianato">Artigianato</option>
+              </select>
+            </div>
+
             <div className={styles.field}>
               <label htmlFor="stand-name">Nome</label>
               <input id="stand-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -290,6 +312,9 @@ export function StandsPage() {
             <article key={stand.id} className={styles.card}>
               <div className={styles.cardBody}>
                 <strong className={styles.cardName}>{stand.name}</strong>
+                <span className={`${styles.cardType} ${stand.type === 'artigianato' ? styles.cardTypeArtigianato : ''}`}>
+                  {STAND_TYPE_LABELS[stand.type] ?? STAND_TYPE_LABELS.food}
+                </span>
                 {stand.slogan && <span className={styles.cardSlogan}>{stand.slogan}</span>}
                 <span className={styles.cardEvents}>
                   {stand.eventIds.length} eventi collegati

@@ -1,3 +1,4 @@
+import { Error as MongooseError } from 'mongoose';
 import { MulterError } from 'multer';
 
 import compression from 'compression';
@@ -114,6 +115,12 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
 
         return res.status(400).json({
             message: 'Errore di caricamento file: ' + error.message
+        });
+    }
+
+    if (error instanceof MongooseError.ValidationError) {
+        return res.status(400).json({
+            message: error.message
         });
     }
 

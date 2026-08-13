@@ -1,5 +1,6 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import { Error as MongooseError } from 'mongoose';
 
 import { authRouter } from '../../routes/auth.routes';
 import { eventsRouter } from '../../routes/events.routes';
@@ -56,6 +57,14 @@ export function createTestApp() {
     app.use('/api/usage-contracts', usageContractsRouter);
     app.use('/api/exchange', exchangeRouter);
     app.use('/api/contests', contestsRouter);
+
+    app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+        if (error instanceof MongooseError.ValidationError) {
+            return res.status(400).json({ message: error.message });
+        }
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    });
 
     return app;
 }

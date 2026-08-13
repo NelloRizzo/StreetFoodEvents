@@ -86,7 +86,8 @@
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-card);
@@ -149,6 +150,20 @@
 .cardSlogan {
   color: var(--color-ink-soft);
   font-size: 0.9rem;
+}
+
+.cardType {
+  justify-self: start;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--color-brand);
+}
+
+.cardTypeArtigianato {
+  background: #8b5cf6;
 }
 
 .cardEvents {

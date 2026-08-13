@@ -101,6 +101,39 @@ describe('Stands API', () => {
         expect(res.body.item.slogan).toBe('Tasty!');
     });
 
+    it('creates a stand with type artigianato and defaults to food', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const craftRes = await request(app)
+            .post('/api/stands')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ name: 'Craft Stand', type: 'artigianato' });
+
+        expect(craftRes.status).toBe(201);
+        expect(craftRes.body.item.type).toBe('artigianato');
+
+        const foodRes = await request(app)
+            .post('/api/stands')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ name: 'Food Stand' });
+
+        expect(foodRes.status).toBe(201);
+        expect(foodRes.body.item.type).toBe('food');
+    });
+
+    it('rejects an invalid stand type', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const res = await request(app)
+            .post('/api/stands')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ name: 'Bad Stand', type: 'boh' });
+
+        expect(res.status).toBe(400);
+    });
+
     it('returns 401 for create without auth', async () => {
         app = createTestApp();
         const res = await request(app)
@@ -123,6 +156,21 @@ describe('Stands API', () => {
         expect(res.status).toBe(200);
         expect(res.body.item.name).toBe('Updated');
         expect(res.body.item.slogan).toBe('New!');
+    });
+
+    it('updates a stand type', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const stand = await StandModel.create({ name: 'Misto' });
+
+        const res = await request(app)
+            .patch(`/api/stands/${stand._id}`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ type: 'artigianato' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.item.type).toBe('artigianato');
     });
 
     it('updates stand eventIds to associate with events', async () => {
