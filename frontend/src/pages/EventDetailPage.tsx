@@ -45,7 +45,7 @@ type Event = {
 
 type Stand = {
   id: string
-  type: 'food' | 'artigianato'
+  type: 'food' | 'artigianato' | 'divertimento'
   name: string
   slogan: string | null
   description: string | null
@@ -57,6 +57,13 @@ type Stand = {
 const STAND_TYPE_LABELS = {
   food: 'Food & Beverage',
   artigianato: 'Artigianato',
+  divertimento: 'Divertimento',
+} as const
+
+const STAND_TYPE_EMOJIS = {
+  food: '🍽️',
+  artigianato: '🧶',
+  divertimento: '🎡',
 } as const
 
 type PoiItem = {
@@ -463,12 +470,12 @@ export function EventDetailPage() {
         )}
 
         {/* Stands */}
-        {(['food', 'artigianato'] as const).map((standType) => {
+        {(['food', 'artigianato', 'divertimento'] as const).map((standType) => {
           const typeStands = sortedStands.filter((s) => (s.type ?? 'food') === standType)
           return (
             <section key={standType} className={styles.standsSection}>
               <h2 className={styles.sectionTitle}>
-                {standType === 'food' ? '🍽️' : '🧶'} {STAND_TYPE_LABELS[standType]}
+                {STAND_TYPE_EMOJIS[standType]} {STAND_TYPE_LABELS[standType]}
                 <span className={styles.count}>{typeStands.length}</span>
               </h2>
 

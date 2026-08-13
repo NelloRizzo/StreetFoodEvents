@@ -113,6 +113,14 @@ describe('Stands API', () => {
         expect(craftRes.status).toBe(201);
         expect(craftRes.body.item.type).toBe('artigianato');
 
+        const funRes = await request(app)
+            .post('/api/stands')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ name: 'Fun Stand', type: 'divertimento' });
+
+        expect(funRes.status).toBe(201);
+        expect(funRes.body.item.type).toBe('divertimento');
+
         const foodRes = await request(app)
             .post('/api/stands')
             .set('Cookie', `sid=${sessionToken}`)

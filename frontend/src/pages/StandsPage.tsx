@@ -9,11 +9,12 @@ import { ImageUploader } from '../components/ImageUploader'
 import { MapPicker } from '../components/MapPicker'
 import styles from './StandsPage.module.scss'
 
-type StandType = 'food' | 'artigianato'
+type StandType = 'food' | 'artigianato' | 'divertimento'
 
 const STAND_TYPE_LABELS: Record<StandType, string> = {
   food: '🍽️ Food & Beverage',
   artigianato: '🧶 Artigianato',
+  divertimento: '🎡 Divertimento',
 }
 
 type Stand = {
@@ -216,6 +217,7 @@ export function StandsPage() {
               >
                 <option value="food">Food & Beverage</option>
                 <option value="artigianato">Artigianato</option>
+                <option value="divertimento">Divertimento</option>
               </select>
             </div>
 
@@ -312,7 +314,7 @@ export function StandsPage() {
             <article key={stand.id} className={styles.card}>
               <div className={styles.cardBody}>
                 <strong className={styles.cardName}>{stand.name}</strong>
-                <span className={`${styles.cardType} ${stand.type === 'artigianato' ? styles.cardTypeArtigianato : ''}`}>
+                <span className={`${styles.cardType} ${stand.type === 'artigianato' ? styles.cardTypeArtigianato : stand.type === 'divertimento' ? styles.cardTypeDivertimento : ''}`}>
                   {STAND_TYPE_LABELS[stand.type] ?? STAND_TYPE_LABELS.food}
                 </span>
                 {stand.slogan && <span className={styles.cardSlogan}>{stand.slogan}</span>}

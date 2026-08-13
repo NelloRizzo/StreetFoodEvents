@@ -17,7 +17,7 @@ type EventData = {
 
 type StandData = {
   id: string
-  type?: 'food' | 'artigianato'
+  type?: 'food' | 'artigianato' | 'divertimento'
   name: string
   locations: Array<{ eventId: string; location: { type: 'Point'; coordinates: [number, number] } | null }>
   numbers?: Array<{ eventId: string; number: number }>
@@ -42,7 +42,8 @@ const eventIcon = L.divIcon({
 
 function createStandIcon(number: number | null, type: string | null) {
   const isCraft = type === 'artigianato'
-  const numClass = isCraft ? styles.standMarkerNumArtigianato : styles.standMarkerNum
+  const isFun = type === 'divertimento'
+  const numClass = isCraft ? styles.standMarkerNumArtigianato : isFun ? styles.standMarkerNumDivertimento : styles.standMarkerNum
   return L.divIcon({
     className: styles.standMarker,
     html: `<span class="${numClass}">${number ?? ''}</span>`,
@@ -307,6 +308,7 @@ export function EventMapPage() {
           <span className={styles.legendItem}><span className={styles.eventMarkerSmall}>📍</span> Evento</span>
           <span className={styles.legendItem}><span className={styles.standNumBadge}>1</span> Stand Food &amp; Beverage</span>
           <span className={styles.legendItem}><span className={styles.standNumBadgeArtigianato}>1</span> Stand Artigianato</span>
+          <span className={styles.legendItem}><span className={styles.standNumBadgeDivertimento}>1</span> Stand Divertimento</span>
           <span className={styles.legendItem}><span className={styles.poiMarkerSmall}>📌</span> Punto di interesse</span>
         </div>
       </div>

@@ -52,7 +52,7 @@ const standSchema = new Schema(
     {
         type: {
             type: String,
-            enum: ['food', 'artigianato'],
+            enum: ['food', 'artigianato', 'divertimento'],
             default: 'food'
         },
         name: {
