@@ -50,6 +50,11 @@ const eventNumberSchema = new Schema(
 
 const standSchema = new Schema(
     {
+        type: {
+            type: String,
+            enum: ['food', 'artigianato'],
+            default: 'food'
+        },
         name: {
             type: String,
             required: true,

@@ -97,6 +97,11 @@ export function EventReportPage() {
   const stands = selectedStandId
     ? report.stands.filter((s) => s.standId === selectedStandId)
     : report.stands
+  const products = selectedStandId
+    ? report.productQuantities.filter((p) => p.standId === selectedStandId)
+    : report.productQuantities
+  const totalQuantity = products.reduce((sum, p) => sum + p.quantity, 0)
+  const totalProductsRevenue = products.reduce((sum, p) => sum + p.revenue, 0)
 
   return (
     <div className={styles.page}>
@@ -259,6 +264,41 @@ export function EventReportPage() {
                       showCredits={hasCredits}
                       rate={rate}
                     />
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <div className={styles.card}>
+            <div className={styles.cardTitle}>Quantitativi per prodotto</div>
+            {products.length === 0 ? (
+              <p className={styles.empty}>Nessun dato disponibile.</p>
+            ) : (
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      {!selectedStandId && <th>Stand</th>}
+                      <th>Prodotto</th>
+                      <th className={styles.num}>Quantit&agrave;</th>
+                      <th className={styles.num}>Ricavi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map((p) => (
+                      <tr key={`${p.standId}-${p.productId}`}>
+                        {!selectedStandId && <td className={styles.standName}>{p.standName}</td>}
+                        <td>{p.productName}</td>
+                        <td className={styles.num}>{p.quantity}</td>
+                        <td className={styles.num}>{fmt(p.revenue, rate)}</td>
+                      </tr>
+                    ))}
+                    <tr className={styles.tableTotals}>
+                      {!selectedStandId && <td>TOTALE</td>}
+                      <td>{selectedStandId ? 'TOTALE' : ''}</td>
+                      <td className={styles.num}>{totalQuantity}</td>
+                      <td className={styles.num}>{fmt(totalProductsRevenue, rate)}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>

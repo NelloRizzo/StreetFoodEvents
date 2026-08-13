@@ -25,6 +25,7 @@ async function nextStandNumber(eventId: string): Promise<number> {
 
 function toStandResponse(stand: {
     _id: Types.ObjectId;
+    type?: string;
     name: string;
     slogan?: string | null;
     description?: string | null;
@@ -38,6 +39,7 @@ function toStandResponse(stand: {
 }) {
     return {
         id: stand._id.toString(),
+        type: stand.type ?? 'food',
         name: stand.name,
         slogan: stand.slogan ?? null,
         description: stand.description ?? null,
@@ -95,6 +97,7 @@ export async function getStandById(req: Request, res: Response) {
 
 export async function createStand(req: Request, res: Response) {
     const {
+        type,
         name,
         slogan,
         description,
@@ -113,6 +116,7 @@ export async function createStand(req: Request, res: Response) {
     )).filter((n): n is { eventId: string; number: number } => n !== null);
 
     const stand = await StandModel.create({
+        type: type ?? 'food',
         name,
         slogan: slogan ?? null,
         description: sanitizeHtmlContent(description),

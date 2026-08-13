@@ -480,6 +480,54 @@
   color: #c0392b;
 }
 
+.reportTableWrap {
+  overflow-x: auto;
+}
+
+.reportTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.reportTable th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-soft);
+  border-bottom: 2px solid var(--color-line);
+  white-space: nowrap;
+}
+
+.reportTable td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-strong);
+  white-space: nowrap;
+}
+
+.reportTable tr:last-child td {
+  border-bottom: none;
+}
+
+.reportNum {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.reportProduct {
+  font-weight: 600;
+}
+
+.reportTotalRow td {
+  font-weight: 800;
+  border-top: 2px solid var(--color-ink-strong);
+  background: var(--color-brand-soft);
+}
+
 .pendingList {
   display: grid;
   gap: 0.4rem;

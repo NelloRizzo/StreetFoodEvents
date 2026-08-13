@@ -177,6 +177,13 @@ describe('Integration — Order Reports', () => {
         expect(res.status).toBe(200);
         expect(res.body.summary.totalOrders).toBe(2);
         expect(res.body.summary.totalRevenue).toBe(50);
+
+        const burger = res.body.productQuantities.find(
+            (p: { productName: string }) => p.productName === 'Burger'
+        );
+        expect(burger).toBeDefined();
+        expect(burger.quantity).toBe(5);
+        expect(burger.revenue).toBe(50);
     });
 
     it('stand report with credit vs cash split', async () => {
@@ -267,6 +274,19 @@ describe('Integration — Order Reports', () => {
         expect(stand2Report).toBeDefined();
         expect(stand2Report.totalOrders).toBe(1);
         expect(stand2Report.totalRevenue).toBe(15);
+
+        const stand1Products = res.body.productQuantities.filter(
+            (p: { standId: string }) => p.standId === env.stand1._id.toString()
+        );
+        const stand2Products = res.body.productQuantities.filter(
+            (p: { standId: string }) => p.standId === env.stand2._id.toString()
+        );
+        expect(stand1Products).toHaveLength(1);
+        expect(stand1Products[0]!.productName).toBe('Burger');
+        expect(stand1Products[0]!.quantity).toBe(2);
+        expect(stand2Products).toHaveLength(1);
+        expect(stand2Products[0]!.productName).toBe('Fries');
+        expect(stand2Products[0]!.quantity).toBe(3);
     });
 
     it('event report totals sum all stands', async () => {
@@ -379,5 +399,16 @@ describe('Integration — Order Reports', () => {
         );
         expect(cancelledEntry).toBeDefined();
         expect(cancelledEntry.count).toBe(1);
+
+        const productQuantities = statusReport.body.productQuantities as {
+            productName: string;
+            quantity: number;
+            revenue: number;
+        }[];
+        expect(productQuantities).toHaveLength(1);
+        const burgerProduct = productQuantities.find((p) => p.productName === 'Burger');
+        expect(burgerProduct).toBeDefined();
+        expect(burgerProduct!.quantity).toBe(3);
+        expect(burgerProduct!.revenue).toBe(30);
     });
 });

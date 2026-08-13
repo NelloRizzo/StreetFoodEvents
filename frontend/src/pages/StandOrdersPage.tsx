@@ -313,6 +313,44 @@ export function StandOrdersPage() {
           </div>
         )}
 
+        {report && report.productQuantities.length > 0 && (
+          <div className={styles.reportCard}>
+            <div className={styles.reportHeader}>
+              <span className={styles.reportTitle}>Quantitativi prodotti venduti</span>
+              <span className={styles.reportPeriod}>{new Date(startDate + 'T00:00:00').toLocaleDateString('it-IT')} &rarr; {new Date(endDate + 'T00:00:00').toLocaleDateString('it-IT')}</span>
+            </div>
+            <div className={styles.reportTableWrap}>
+              <table className={styles.reportTable}>
+                <thead>
+                  <tr>
+                    <th>Prodotto</th>
+                    <th className={styles.reportNum}>Quantit&agrave;</th>
+                    <th className={styles.reportNum}>Ricavi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.productQuantities.map((p) => (
+                    <tr key={p.productId}>
+                      <td className={styles.reportProduct}>{p.productName}</td>
+                      <td className={styles.reportNum}>{p.quantity}</td>
+                      <td className={styles.reportNum}>&euro;{(p.revenue / (report.exchangeRate ?? 1)).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className={styles.reportTotalRow}>
+                    <td>TOTALE</td>
+                    <td className={styles.reportNum}>
+                      {report.productQuantities.reduce((sum, p) => sum + p.quantity, 0)}
+                    </td>
+                    <td className={styles.reportNum}>
+                      &euro;{(report.productQuantities.reduce((sum, p) => sum + p.revenue, 0) / (report.exchangeRate ?? 1)).toFixed(2)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {orders.length === 0 && (
           <p className={styles.empty}>Nessun ordine trovato.</p>
         )}
@@ -481,7 +519,7 @@ export function StandOrdersPage() {
         title="Azzerare contatore?"
         message="Gli ordini esistenti manterranno il loro numero."
         danger
-        confirmLabel="Azera"
+        confirmLabel="Azzera"
         onConfirm={async () => {
           if (!standId) return
           await resetOrderCounter(standId)

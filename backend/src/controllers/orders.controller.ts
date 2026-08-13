@@ -1234,6 +1234,19 @@ export async function getEventReport(req: Request, res: Response) {
         matchFilter.createdAt = { ...((matchFilter.createdAt as object) || {}), $lte: end };
     }
 
+    const productQuantities = await OrderModel.aggregate([
+        { $match: { ...matchFilter, status: { $ne: 'cancelled' } } },
+        { $unwind: '$items' },
+        {
+            $group: {
+                _id: { standId: '$standId', productId: '$items.eventProductId', productName: '$items.productName' },
+                quantity: { $sum: '$items.quantity' },
+                revenue: { $sum: '$items.subtotal' }
+            }
+        },
+        { $sort: { quantity: -1, '_id.productName': 1 } }
+    ]);
+
     const aggregation = await OrderModel.aggregate([
         { $match: matchFilter },
         {
@@ -1354,7 +1367,15 @@ export async function getEventReport(req: Request, res: Response) {
         currencySymbol: event.currencySymbol ?? null,
         exchangeRate: event.exchangeRate ?? 1,
         stands,
-        totals
+        totals,
+        productQuantities: productQuantities.map((row) => ({
+            standId: row._id.standId.toString(),
+            standName: standMap.get(row._id.standId.toString()) ?? 'Stand sconosciuto',
+            productId: row._id.productId.toString(),
+            productName: row._id.productName,
+            quantity: row.quantity,
+            revenue: row.revenue
+        }))
     });
 }
 
@@ -1439,6 +1460,19 @@ export async function getStandReport(req: Request, res: Response) {
         }
     ]);
 
+    const productQuantities = await OrderModel.aggregate([
+        { $match: { ...matchFilter, status: { $ne: 'cancelled' } } },
+        { $unwind: '$items' },
+        {
+            $group: {
+                _id: { productId: '$items.eventProductId', productName: '$items.productName' },
+                quantity: { $sum: '$items.quantity' },
+                revenue: { $sum: '$items.subtotal' }
+            }
+        },
+        { $sort: { quantity: -1 } }
+    ]);
+
     const orders = await OrderModel.find(matchFilter)
         .sort({ createdAt: -1 })
         .limit(200);
@@ -1468,6 +1502,12 @@ export async function getStandReport(req: Request, res: Response) {
         statusBreakdown: statusBreakdown.map((s) => ({
             status: s._id,
             count: s.count
+        })),
+        productQuantities: productQuantities.map((row) => ({
+            productId: row._id.productId.toString(),
+            productName: row._id.productName,
+            quantity: row.quantity,
+            revenue: row.revenue
         })),
         orders: orders.map((o) => toOrderResponse(o)),
         pendingOrders: pendingOrders.map((o) => toOrderResponse(o))

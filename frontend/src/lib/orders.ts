@@ -68,6 +68,7 @@ export type StandReport = {
     totalRefunded: number
   }
   statusBreakdown: Array<{ status: string; count: number }>
+  productQuantities: Array<{ productId: string; productName: string; quantity: number; revenue: number }>
   orders: Order[]
   pendingOrders: Order[]
 }
@@ -109,6 +110,14 @@ export type EventReport = {
     pendingAmount: number
     refundedAmount: number
   }
+  productQuantities: Array<{
+    standId: string
+    standName: string
+    productId: string
+    productName: string
+    quantity: number
+    revenue: number
+  }>
 }
 
 export function fetchOrders(params?: { eventId?: string; standId?: string; status?: string; userId?: string; customerId?: string; stationId?: string; startDate?: string; endDate?: string }) {
