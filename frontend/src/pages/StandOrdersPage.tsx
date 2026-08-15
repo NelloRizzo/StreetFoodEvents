@@ -285,6 +285,18 @@ export function StandOrdersPage() {
                   <span className={styles.reportStatLabel}>Rimborsati</span>
                 </div>
               )}
+              {report.summary.giftOrders > 0 && (
+                <div className={styles.reportStat}>
+                  <span className={`${styles.reportStatValue} ${styles.reportGift}`}>{report.summary.giftOrders}</span>
+                  <span className={styles.reportStatLabel}>Ordini omaggio</span>
+                </div>
+              )}
+              {report.summary.giftProducts > 0 && (
+                <div className={styles.reportStat}>
+                  <span className={`${styles.reportStatValue} ${styles.reportGift}`}>{report.summary.giftProducts}</span>
+                  <span className={styles.reportStatLabel}>Prodotti omaggio</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -298,7 +310,9 @@ export function StandOrdersPage() {
             <div className={styles.pendingList}>
               {report.pendingOrders.map((o) => (
                 <div key={o.id} className={styles.pendingRow}>
-                  <span className={styles.pendingNumber}>#{o.orderNumber}</span>
+                  <span className={styles.pendingNumber}>
+                    {o.isGift && <span className={styles.giftPrefix}>O</span>}#{o.orderNumber}
+                  </span>
                   <span className={styles.pendingCustomer}>{o.customerName ?? 'Anonimo'}</span>
                   <span className={styles.pendingTotal}><CurrencyAmount eventId={o.eventId} value={o.total} /></span>
                   <span className={`${styles.statusBadge} ${styles[`status_${o.status}`]}`}>
@@ -325,6 +339,7 @@ export function StandOrdersPage() {
                   <tr>
                     <th>Prodotto</th>
                     <th className={styles.reportNum}>Quantit&agrave;</th>
+                    <th className={styles.reportNum}>Omaggi</th>
                     <th className={styles.reportNum}>Ricavi</th>
                   </tr>
                 </thead>
@@ -333,6 +348,7 @@ export function StandOrdersPage() {
                     <tr key={p.productId}>
                       <td className={styles.reportProduct}>{p.productName}</td>
                       <td className={styles.reportNum}>{p.quantity}</td>
+                      <td className={styles.reportNum}>{p.giftQuantity}</td>
                       <td className={styles.reportNum}>&euro;{(p.revenue / (report.exchangeRate ?? 1)).toFixed(2)}</td>
                     </tr>
                   ))}
@@ -340,6 +356,9 @@ export function StandOrdersPage() {
                     <td>TOTALE</td>
                     <td className={styles.reportNum}>
                       {report.productQuantities.reduce((sum, p) => sum + p.quantity, 0)}
+                    </td>
+                    <td className={styles.reportNum}>
+                      {report.productQuantities.reduce((sum, p) => sum + p.giftQuantity, 0)}
                     </td>
                     <td className={styles.reportNum}>
                       &euro;{(report.productQuantities.reduce((sum, p) => sum + p.revenue, 0) / (report.exchangeRate ?? 1)).toFixed(2)}
@@ -375,8 +394,13 @@ export function StandOrdersPage() {
             return (
               <article key={order.id} className={`${styles.orderCard} ${allReady && order.status === 'preparing' ? styles.orderCardAllReady : ''}`}>
                 <div className={styles.orderHeader}>
-                  <div className={styles.orderNumber}>#{order.orderNumber}</div>
+                  <div className={styles.orderNumber}>
+                    {order.isGift && <span className={styles.giftPrefix}>O</span>}#{order.orderNumber}
+                  </div>
                   <div className={styles.orderBadges}>
+                    {order.isGift && (
+                      <span className={styles.giftBadge}>OMAGGIO</span>
+                    )}
                     {order.customerName && (
                       <span className={styles.customerName}>{order.customerName}</span>
                     )}

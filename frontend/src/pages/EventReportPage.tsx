@@ -33,6 +33,7 @@ function StandRow({ stand, isTotal, showCash, showCredits, rate }: { stand: Even
       <td className={styles.num}>{stand.pendingOrders}</td>
       <td className={styles.num}>{fmt(stand.pendingAmount, rate)}</td>
       <td className={styles.num}>{fmt(stand.refundedAmount, rate)}</td>
+      <td className={styles.num}>{stand.giftOrders}</td>
     </tr>
   )
 }
@@ -205,6 +206,12 @@ export function EventReportPage() {
                 <span className={styles.totalLabel}>Pendenti</span>
                 <span className={styles.totalValue}>{fmt(report.totals.pendingAmount, rate)}</span>
               </div>
+              {report.totals.giftOrders > 0 && (
+                <div className={styles.totalItem}>
+                  <span className={styles.totalLabel}>Omaggi</span>
+                  <span className={styles.totalValue}>{report.totals.giftOrders}</span>
+                </div>
+              )}
               {report.totals.refundedAmount > 0 && (
                 <div className={styles.totalItem}>
                   <span className={styles.totalLabel}>Rimborsato</span>
@@ -231,6 +238,7 @@ export function EventReportPage() {
                       <th className={styles.num}>Pendenti</th>
                       <th className={styles.num}>Da incassare</th>
                       <th className={styles.num}>Rimborsato</th>
+                      <th className={styles.num}>Omaggi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -245,6 +253,7 @@ export function EventReportPage() {
                           ? stands.reduce((acc, s) => ({
                               totalOrders: acc.totalOrders + s.totalOrders,
                               paidOrders: acc.paidOrders + s.paidOrders,
+                              giftOrders: acc.giftOrders + s.giftOrders,
                               totalRevenue: acc.totalRevenue + s.totalRevenue,
                               cashRevenue: acc.cashRevenue + s.cashRevenue,
                               creditRevenue: acc.creditRevenue + s.creditRevenue,
@@ -252,7 +261,7 @@ export function EventReportPage() {
                               pendingAmount: acc.pendingAmount + s.pendingAmount,
                               refundedAmount: acc.refundedAmount + s.refundedAmount,
                             }), {
-                              totalOrders: 0, paidOrders: 0, totalRevenue: 0,
+                              totalOrders: 0, paidOrders: 0, giftOrders: 0, totalRevenue: 0,
                               cashRevenue: 0, creditRevenue: 0, pendingOrders: 0,
                               pendingAmount: 0, refundedAmount: 0,
                             })
@@ -281,6 +290,7 @@ export function EventReportPage() {
                       {!selectedStandId && <th>Stand</th>}
                       <th>Prodotto</th>
                       <th className={styles.num}>Quantit&agrave;</th>
+                      <th className={styles.num}>Omaggi</th>
                       <th className={styles.num}>Ricavi</th>
                     </tr>
                   </thead>
@@ -290,6 +300,7 @@ export function EventReportPage() {
                         {!selectedStandId && <td className={styles.standName}>{p.standName}</td>}
                         <td>{p.productName}</td>
                         <td className={styles.num}>{p.quantity}</td>
+                        <td className={styles.num}>{p.giftQuantity}</td>
                         <td className={styles.num}>{fmt(p.revenue, rate)}</td>
                       </tr>
                     ))}
@@ -297,6 +308,7 @@ export function EventReportPage() {
                       {!selectedStandId && <td>TOTALE</td>}
                       <td>{selectedStandId ? 'TOTALE' : ''}</td>
                       <td className={styles.num}>{totalQuantity}</td>
+                      <td className={styles.num}>{products.reduce((sum, p) => sum + p.giftQuantity, 0)}</td>
                       <td className={styles.num}>{fmt(totalProductsRevenue, rate)}</td>
                     </tr>
                   </tbody>

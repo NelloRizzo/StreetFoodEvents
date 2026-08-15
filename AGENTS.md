@@ -115,7 +115,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | Method | Route | Auth | Description |
 |---|---|---|---|
 | GET | `/api/orders/stand/:standId/ordersqueue` | no | Coda Ordini: ordini confirmed/preparing/ready (minimi dati, niente prezzi/clienti) |
-| GET | `/api/orders` | auth | Lista ordini (filtri eventId, standId, status comma-separated, userId, customerId, stationId, date) |
+| GET | `/api/orders/gift-stats?eventId=&standId=` | auth | Contatore omaggi per stand/evento (totalOrders, giftOrders, giftPercentage, giftThreshold=5, thresholdExceeded). Conta solo ordini non cancellati. Registrata PRIMA di `/:orderId` |
 | POST | `/api/orders/event/:eventId/reset` | platform-admin | Reset completo evento: elimina ordini, TUTTE le transazioni (acquisti + cambio), liquidazioni stand, azzera saldi portafogli, contatori e `cashRegisterResetAt`. In transazione. |
 
 ### API routes — Reports
@@ -198,6 +198,14 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Aug 2026 — ordini omaggio + dashboard eventi terminati)
+### Completed
+- Ordini omaggio: `Order.isGift` (default `false`). `createOrder` con `isGift: true` forza `status: 'confirmed'`, `total: 0`, `creditAmountUsed: 0`, `paymentStatus: 'paid'`, `paidAt`, `paymentTransactionId: null`; la logica pagamento è saltata (`if (paymentOnCreate && !isGift)`). Gli item conservano `unitPrice`/`subtotal` reali per il conteggio prodotti. Numero ordine con prefisso "O" e badge OMAGGIO a livello UI (display coda, liste ordini, dettaglio, ricevuta, cassa).
+- `GET /api/orders/gift-stats?eventId=&standId=` (auth): conta solo ordini non cancellati; `thresholdExceeded = giftPercentage > 5` (STRETTO — al 5% esatto non scatta). Route registrata PRIMA di `get('/:orderId')`. `GiftCounter` (frontend) mostra "Omaggi: X/Y (Z%)" verde ok / rosso pulsante se superata.
+- Resoconti: `giftOrders` (non cancellati) per stand e nei totali; `giftProducts` nel summary stand; `productQuantities` split `quantity`/`giftQuantity`/`revenue` (i gift NON generano revenue). I gift sono esclusi da `paidOrders`, `cashPaymentOrders` e `mixedPaymentOrders` per costruzione, ma `creditPaymentOrders` li esclude ESPLICITAMENTE (`$ne: ['$isGift', true]`) perché `creditAmountUsed === total` (0===0) li matcha di default.
+- Dashboard operatore: eventi terminati (fine giornata `endDate` passata) → badge "Terminato — nessuna operazione", niente link Cassa/Ordini/Coda/Coda combinata né chip postazioni né Liquidazione. `isEventFinished` usa `endOfDay(end) < now` con `now` catturato una volta via `useState(() => Date.now())` (il lint React vieta `Date.now()` in render). Sezione Resoconti con dropdown per evento e dropdown per stand + "Menu stampa", invece della lista di pulsanti.
+- Test: `orders.test.ts` (creazione gift forzata, gift-stats con soglia al 5% esatto e oltre, cancellazione esclusa dal conteggio) e `integration-reports.test.ts` (report stand/evento: gift esclusi dal fatturato, quantità omaggio separate). 249 test backend, typecheck pulito sia backend che frontend. Lint frontend: nessun errore NUOVO (restano solo i pre-esistenti in AliasManager/ConfirmModal e i `no-empty`/`set-state-in-effect` già presenti).
 
 ## Session state (Aug 2026 — invio email bulk galleria + lightbox + timeout "Pronto" display)
 ### Completed

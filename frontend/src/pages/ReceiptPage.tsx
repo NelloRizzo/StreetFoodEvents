@@ -11,6 +11,7 @@ type ReceiptData = {
   id: string
   orderNumber: number
   status: string
+  isGift: boolean
   eventName: string
   currencyName: string
   currencySymbol: UploadedImage | null
@@ -60,6 +61,9 @@ export function ReceiptPage() {
     const qrHtml = receipt.receiptQrCode
       ? `<div style="display:flex;justify-content:center;margin:0.5rem 0"><img src="${receipt.receiptQrCode}" alt="QR" style="width:120px;height:120px;-webkit-print-color-adjust:exact;print-color-adjust:exact" /></div>`
       : ''
+    const giftHtml = receipt.isGift
+      ? '<div style="text-align:center;font-weight:700;letter-spacing:0.15em;margin:0.5rem 0">OMAGGIO</div>'
+      : ''
 
     const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Scontrino #${receipt.orderNumber}</title><style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -74,7 +78,8 @@ body{padding:2rem;max-width:320px;margin:0 auto}
 .footer{font-size:10px;text-align:center;color:#888;margin-top:0.75rem}
 </style></head><body>
 <div class="header"><strong>${escHtml(receipt.eventName)}</strong><span>${escHtml(receipt.standName)}</span></div>
-<div class="order-number">#${receipt.orderNumber}</div>
+<div class="order-number">${receipt.isGift ? 'O' : '#'}${receipt.orderNumber}</div>
+${giftHtml}
 <div class="items">${itemsHtml}</div>
 <div class="total"><span>Totale</span><strong>${receipt.total.toFixed(2)} ${badge}</strong></div>
 ${creditsHtml}
@@ -126,8 +131,12 @@ ${qrHtml}
           </div>
 
           <div className={styles.orderNumber}>
-            Ordine #{receipt.orderNumber}
+            Ordine {receipt.isGift ? 'O' : '#'}{receipt.orderNumber}
           </div>
+
+          {receipt.isGift && (
+            <div className={styles.giftLabel}>OMAGGIO</div>
+          )}
 
           <div className={`${styles.status} ${styles[`status${receipt.status}`]}`}>
             {statusLabel[receipt.status] ?? receipt.status}

@@ -30,6 +30,7 @@ function toOrderResponse(order: {
     customerId?: Types.ObjectId | null;
     customerName?: string | null;
     status: string;
+    isGift: boolean;
     items: Array<{
         eventProductId: Types.ObjectId;
         productId: Types.ObjectId;
@@ -64,6 +65,7 @@ function toOrderResponse(order: {
         customerId: order.customerId?.toString() ?? null,
         customerName: order.customerName ?? null,
         status: order.status,
+        isGift: order.isGift,
         items: order.items.map((item) => ({
             eventProductId: item.eventProductId.toString(),
             productId: item.productId.toString(),
@@ -179,6 +181,7 @@ export async function getStandDisplayOrders(req: Request, res: Response) {
             id: o._id.toString(),
             orderNumber: o.orderNumber,
             status: o.status,
+            isGift: o.isGift,
             items: o.items.map((item) => ({
                 productName: item.productName,
                 quantity: item.quantity,
@@ -187,6 +190,51 @@ export async function getStandDisplayOrders(req: Request, res: Response) {
                 ready: item.ready
             }))
         }))
+    });
+}
+
+export async function getGiftStats(req: Request, res: Response) {
+    if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const filter: Record<string, unknown> = {
+        status: { $ne: 'cancelled' }
+    };
+
+    if (req.query.eventId && isValidObjectId(req.query.eventId as string)) {
+        filter.eventId = new Types.ObjectId(req.query.eventId as string);
+    }
+
+    if (req.query.standId && isValidObjectId(req.query.standId as string)) {
+        filter.standId = new Types.ObjectId(req.query.standId as string);
+    }
+
+    const [result] = await OrderModel.aggregate([
+        { $match: filter },
+        {
+            $group: {
+                _id: null,
+                totalOrders: { $sum: 1 },
+                giftOrders: { $sum: { $cond: [{ $eq: ['$isGift', true] }, 1, 0] } }
+            }
+        }
+    ]);
+
+    const totalOrders = result?.totalOrders ?? 0;
+    const giftOrders = result?.giftOrders ?? 0;
+    const giftPercentage = totalOrders > 0 ? (giftOrders / totalOrders) * 100 : 0;
+    const giftThreshold = 5;
+    const thresholdExceeded = giftPercentage > giftThreshold;
+
+    return res.status(200).json({
+        eventId: req.query.eventId ?? null,
+        standId: req.query.standId ?? null,
+        totalOrders,
+        giftOrders,
+        giftPercentage: Math.round(giftPercentage * 10) / 10,
+        giftThreshold,
+        thresholdExceeded
     });
 }
 
@@ -294,6 +342,7 @@ export async function getOrderReceipt(req: Request, res: Response) {
             id: order._id.toString(),
             orderNumber: order.orderNumber,
             status: order.status,
+            isGift: order.isGift,
             eventName: event.name,
             eventId: order.eventId.toString(),
             currencyName: event.currencyName ?? '€',
@@ -347,6 +396,7 @@ export async function createOrder(req: Request, res: Response) {
     }
 
     const { eventId, standId, customerId, customerName, items, paymentOnCreate, notes } = req.body;
+    const isGift = req.body.isGift === true;
 
     if (!eventId || !isValidObjectId(eventId)) {
         return res.status(400).json({ message: 'Invalid or missing eventId' });
@@ -438,7 +488,7 @@ export async function createOrder(req: Request, res: Response) {
         let creditAmount = 0;
         let paymentTransactionId: Types.ObjectId | null = null;
 
-        if (paymentOnCreate) {
+        if (paymentOnCreate && !isGift) {
             if (typeof paymentOnCreate === 'object' && paymentOnCreate !== null) {
                 creditAmount = Math.max(0, Math.min(Number(paymentOnCreate.creditAmount) || 0, total));
             } else {
@@ -482,6 +532,7 @@ export async function createOrder(req: Request, res: Response) {
         }
 
         const orderNumber = await getNextOrderNumber(standId);
+        const isPaidOnCreate = Boolean(paymentOnCreate) || isGift;
 
         const created = await OrderModel.create(
             [
@@ -492,14 +543,15 @@ export async function createOrder(req: Request, res: Response) {
                     userId: req.user.id,
                     customerId: effectiveCustomerId,
                     customerName: effectiveCustomerName,
-                    status: paymentOnCreate ? 'confirmed' : 'pending',
+                    status: isPaidOnCreate ? 'confirmed' : 'pending',
+                    isGift,
                     items: orderItems,
-                    total,
-                    creditAmountUsed: creditAmount,
-                    paymentStatus: paymentOnCreate ? 'paid' : 'unpaid',
-                    paidAt: paymentOnCreate ? new Date() : null,
-                    paymentTransactionId,
-                    performedByUserId: paymentOnCreate ? req.user.id : null,
+                    total: isGift ? 0 : total,
+                    creditAmountUsed: isGift ? 0 : creditAmount,
+                    paymentStatus: isPaidOnCreate ? 'paid' : 'unpaid',
+                    paidAt: isPaidOnCreate ? new Date() : null,
+                    paymentTransactionId: isGift ? null : paymentTransactionId,
+                    performedByUserId: isPaidOnCreate ? req.user.id : null,
                     notes: notes ?? null,
                     cancelledAt: null,
                     cancelReason: null
@@ -1240,8 +1292,9 @@ export async function getEventReport(req: Request, res: Response) {
         {
             $group: {
                 _id: { standId: '$standId', productId: '$items.eventProductId', productName: '$items.productName' },
-                quantity: { $sum: '$items.quantity' },
-                revenue: { $sum: '$items.subtotal' }
+                quantity: { $sum: { $cond: [{ $eq: ['$isGift', true] }, 0, '$items.quantity'] } },
+                giftQuantity: { $sum: { $cond: [{ $eq: ['$isGift', true] }, '$items.quantity', 0] } },
+                revenue: { $sum: { $cond: [{ $eq: ['$isGift', true] }, 0, '$items.subtotal'] } }
             }
         },
         { $sort: { quantity: -1, '_id.productName': 1 } }
@@ -1254,7 +1307,22 @@ export async function getEventReport(req: Request, res: Response) {
                 _id: '$standId',
                 totalOrders: { $sum: 1 },
                 paidOrders: {
-                    $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, 1, 0] }
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $ne: ['$isGift', true] }] },
+                            1,
+                            0
+                        ]
+                    }
+                },
+                giftOrders: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$isGift', true] }, { $ne: ['$status', 'cancelled'] }] },
+                            1,
+                            0
+                        ]
+                    }
                 },
                 totalRevenue: {
                     $sum: {
@@ -1301,7 +1369,7 @@ export async function getEventReport(req: Request, res: Response) {
                 creditPaymentOrders: {
                     $sum: {
                         $cond: [
-                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $eq: ['$creditAmountUsed', '$total'] }] },
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $ne: ['$isGift', true] }, { $eq: ['$creditAmountUsed', '$total'] }] },
                             1,
                             0
                         ]
@@ -1325,6 +1393,7 @@ export async function getEventReport(req: Request, res: Response) {
         standName: standMap.get(row._id.toString()) ?? 'Stand sconosciuto',
         totalOrders: row.totalOrders,
         paidOrders: row.paidOrders,
+        giftOrders: row.giftOrders,
         totalRevenue: row.totalRevenue,
         cashRevenue: row.totalRevenue - row.creditRevenue,
         creditRevenue: row.creditRevenue,
@@ -1341,6 +1410,7 @@ export async function getEventReport(req: Request, res: Response) {
     const totals = stands.reduce((acc, s) => ({
         totalOrders: acc.totalOrders + s.totalOrders,
         paidOrders: acc.paidOrders + s.paidOrders,
+        giftOrders: acc.giftOrders + s.giftOrders,
         totalRevenue: acc.totalRevenue + s.totalRevenue,
         cashRevenue: acc.cashRevenue + s.cashRevenue,
         creditRevenue: acc.creditRevenue + s.creditRevenue,
@@ -1350,6 +1420,7 @@ export async function getEventReport(req: Request, res: Response) {
     }), {
         totalOrders: 0,
         paidOrders: 0,
+        giftOrders: 0,
         totalRevenue: 0,
         cashRevenue: 0,
         creditRevenue: 0,
@@ -1374,6 +1445,7 @@ export async function getEventReport(req: Request, res: Response) {
             productId: row._id.productId.toString(),
             productName: row._id.productName,
             quantity: row.quantity,
+            giftQuantity: row.giftQuantity,
             revenue: row.revenue
         }))
     });
@@ -1419,6 +1491,15 @@ export async function getStandReport(req: Request, res: Response) {
             $group: {
                 _id: null,
                 totalOrders: { $sum: 1 },
+                giftOrders: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$isGift', true] }, { $ne: ['$status', 'cancelled'] }] },
+                            1,
+                            0
+                        ]
+                    }
+                },
                 totalRevenue: {
                     $sum: {
                         $cond: [
@@ -1450,6 +1531,12 @@ export async function getStandReport(req: Request, res: Response) {
         }
     ]);
 
+    const [giftItemsAgg] = await OrderModel.aggregate([
+        { $match: { ...matchFilter, isGift: true, status: { $ne: 'cancelled' } } },
+        { $unwind: '$items' },
+        { $group: { _id: null, giftProducts: { $sum: '$items.quantity' } } }
+    ]);
+
     const statusBreakdown = await OrderModel.aggregate([
         { $match: matchFilter },
         {
@@ -1466,8 +1553,9 @@ export async function getStandReport(req: Request, res: Response) {
         {
             $group: {
                 _id: { productId: '$items.eventProductId', productName: '$items.productName' },
-                quantity: { $sum: '$items.quantity' },
-                revenue: { $sum: '$items.subtotal' }
+                quantity: { $sum: { $cond: [{ $eq: ['$isGift', true] }, 0, '$items.quantity'] } },
+                giftQuantity: { $sum: { $cond: [{ $eq: ['$isGift', true] }, '$items.quantity', 0] } },
+                revenue: { $sum: { $cond: [{ $eq: ['$isGift', true] }, 0, '$items.subtotal'] } }
             }
         },
         { $sort: { quantity: -1 } }
@@ -1493,6 +1581,8 @@ export async function getStandReport(req: Request, res: Response) {
         exchangeRate: event?.exchangeRate ?? 1,
         summary: {
             totalOrders: summary?.totalOrders ?? 0,
+            giftOrders: summary?.giftOrders ?? 0,
+            giftProducts: giftItemsAgg?.giftProducts ?? 0,
             totalRevenue: summary?.totalRevenue ?? 0,
             totalCreditRevenue: summary?.totalCreditRevenue ?? 0,
             cashRevenue: (summary?.totalRevenue ?? 0) - (summary?.totalCreditRevenue ?? 0),
@@ -1507,6 +1597,7 @@ export async function getStandReport(req: Request, res: Response) {
             productId: row._id.productId.toString(),
             productName: row._id.productName,
             quantity: row.quantity,
+            giftQuantity: row.giftQuantity,
             revenue: row.revenue
         })),
         orders: orders.map((o) => toOrderResponse(o)),

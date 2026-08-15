@@ -12,6 +12,7 @@ import {
     getOrderReceiptQrCode,
     getStandDisplayOrders,
     getStandReport,
+    getGiftStats,
     listMyStationOrders,
     listOrders,
     markItemReady,
@@ -37,6 +38,7 @@ ordersRouter.delete('/event/:eventId', asyncHandler(deleteEventOrders));
 ordersRouter.delete('/stand/:standId', asyncHandler(deleteStandOrders));
 ordersRouter.post('/event/:eventId/reset', asyncHandler(resetEventOrders));
 ordersRouter.get('/', asyncHandler(listOrders));
+ordersRouter.get('/gift-stats', asyncHandler(getGiftStats));
 ordersRouter.get('/my-station', asyncHandler(listMyStationOrders));
 ordersRouter.get('/report/stand/:standId', asyncHandler(getStandReport));
 ordersRouter.get('/report/event/:eventId', asyncHandler(getEventReport));

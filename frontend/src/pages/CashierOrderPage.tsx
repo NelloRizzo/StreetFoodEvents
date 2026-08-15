@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
-import { createOrder, fetchOrders, updateOrderStatus, type Order } from '../lib/orders'
+import { createOrder, fetchOrders, fetchGiftStats, updateOrderStatus, type GiftStats, type Order } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import { GiftCounter } from '../components/GiftCounter'
 import type { UploadedImage } from '../lib/upload'
 import styles from './CashierOrderPage.module.scss'
 
@@ -70,12 +71,14 @@ export function CashierOrderPage() {
   const [users, setUsers] = useState<User[]>([])
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
   const [isDirectOrder, setIsDirectOrder] = useState(false)
+  const [isGift, setIsGift] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [payWithCredits, setPayWithCredits] = useState(false)
   const [creditAmount, setCreditAmount] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
   const [activeOrders, setActiveOrders] = useState<Order[]>([])
+  const [giftStats, setGiftStats] = useState<GiftStats | null>(null)
 
   const [notesModal, setNotesModal] = useState<NotesModalState>({
     open: false,
@@ -86,6 +89,13 @@ export function CashierOrderPage() {
   })
 
   const total = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+
+  const loadGiftStats = useCallback(async () => {
+    if (!eventId || !standId) return
+    try {
+      setGiftStats(await fetchGiftStats({ eventId, standId }))
+    } catch { /* ignore */ }
+  }, [eventId, standId])
 
   useEffect(() => {
     if (!eventId || !standId) return
@@ -124,11 +134,12 @@ export function CashierOrderPage() {
           })
         )
         setMenu(enriched)
+        loadGiftStats()
       } catch { setForbidden(true) }
       setIsLoading(false)
     }
     init()
-  }, [eventId, standId])
+  }, [eventId, standId, loadGiftStats])
 
   const loadActiveOrders = useCallback(async () => {
     if (!eventId || !standId) return
@@ -245,6 +256,7 @@ export function CashierOrderPage() {
   const resetOrder = () => {
     setSelectedCustomerId('')
     setIsDirectOrder(false)
+    setIsGift(false)
     setPayWithCredits(false)
     setCreditAmount(0)
     setCart([])
@@ -254,7 +266,7 @@ export function CashierOrderPage() {
     if (cart.length === 0) return
     setIsSubmitting(true)
     try {
-      const effectiveCredit = payWithCredits ? Math.min(creditAmount || total, total) : 0
+      const effectiveCredit = isGift ? 0 : payWithCredits ? Math.min(creditAmount || total, total) : 0
       const response = await createOrder({
         eventId: eventId!,
         standId: standId!,
@@ -266,9 +278,11 @@ export function CashierOrderPage() {
           quantity: i.quantity,
           notes: i.notes || undefined,
         })),
-        paymentOnCreate: { creditAmount: effectiveCredit },
+        paymentOnCreate: isGift ? undefined : { creditAmount: effectiveCredit },
+        isGift,
       })
       await updateOrderStatus(response.item.id, 'preparing')
+      loadGiftStats()
       resetOrder()
     } catch (e) {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
@@ -290,6 +304,7 @@ export function CashierOrderPage() {
           <span className={styles.topEvent}>{eventName}</span>
           <span className={styles.topStand}>{standName}</span>
         </div>
+        <GiftCounter stats={giftStats} />
         <div className={styles.customerSection}>
           <label className={styles.directCheck}>
             <input type="checkbox" checked={isDirectOrder} onChange={(e) => setIsDirectOrder(e.target.checked)} />
@@ -363,16 +378,22 @@ export function CashierOrderPage() {
                 return (
                   <div key={o.id} className={styles.orderCard}>
                     <div className={styles.orderCardHeader}>
-                      <span className={styles.orderNumber}>#{o.orderNumber}</span>
-                      <span className={styles.orderTotal}>
-                        {o.total.toFixed(2)}
-                        {eventCurrency && (
-                          <CurrencyDisplay
-                            currencyName={eventCurrency.currencyName}
-                            currencySymbol={eventCurrency.currencySymbol}
-                          />
-                        )}
+                      <span className={`${styles.orderNumber} ${o.isGift ? styles.orderNumberGift : ''}`}>
+                        {o.isGift ? 'O' : '#'}{o.orderNumber}
                       </span>
+                      {o.isGift ? (
+                        <span className={styles.giftBadge}>OMAGGIO</span>
+                      ) : (
+                        <span className={styles.orderTotal}>
+                          {o.total.toFixed(2)}
+                          {eventCurrency && (
+                            <CurrencyDisplay
+                              currencyName={eventCurrency.currencyName}
+                              currencySymbol={eventCurrency.currencySymbol}
+                            />
+                          )}
+                        </span>
+                      )}
                     </div>
                     {o.customerName && <span className={styles.orderCustomer}>{o.customerName}</span>}
                     <div className={styles.orderCardItems}>
@@ -448,41 +469,50 @@ export function CashierOrderPage() {
 
           {cart.length > 0 && (
             <>
-              <div className={styles.paymentOptions}>
-                <label className={styles.checkbox}>
-                  <input type="checkbox" checked={payWithCredits} onChange={(e) => setPayWithCredits(e.target.checked)} />
-                  Paga con crediti evento
-                </label>
-                {payWithCredits && total > 0 && (
-                  <div className={styles.creditField}>
-                    <label>Crediti</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={total}
-                      step={0.01}
-                      value={creditAmount}
-                      onChange={(e) => setCreditAmount(Number(e.target.value))}
-                    />
-                    {creditAmount < total && (
-                      <span className={styles.remainingHint}>
-                        Restano {(total - creditAmount).toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+              <label className={styles.checkbox}>
+                <input type="checkbox" checked={isGift} onChange={(e) => setIsGift(e.target.checked)} />
+                Ordine omaggio (prezzo 0)
+              </label>
+
+              {!isGift && (
+                <div className={styles.paymentOptions}>
+                  <label className={styles.checkbox}>
+                    <input type="checkbox" checked={payWithCredits} onChange={(e) => setPayWithCredits(e.target.checked)} />
+                    Paga con crediti evento
+                  </label>
+                  {payWithCredits && total > 0 && (
+                    <div className={styles.creditField}>
+                      <label>Crediti</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={total}
+                        step={0.01}
+                        value={creditAmount}
+                        onChange={(e) => setCreditAmount(Number(e.target.value))}
+                      />
+                      {creditAmount < total && (
+                        <span className={styles.remainingHint}>
+                          Restano {(total - creditAmount).toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <button
-                className={styles.submitBtn}
+                className={`${styles.submitBtn} ${isGift ? styles.submitBtnGift : ''}`}
                 onClick={handleSubmit}
                 disabled={isSubmitting}
               >
                 {isSubmitting
                   ? 'Creazione...'
-                  : payWithCredits
-                    ? `Crea ordine (${creditAmount > 0 ? `${creditAmount.toFixed(2)} ${eventCurrency?.currencyName ?? 'crediti'}` : 'da pagare'})`
-                    : 'Crea ordine (da pagare)'}
+                  : isGift
+                    ? 'Crea omaggio'
+                    : payWithCredits
+                      ? `Crea ordine (${creditAmount > 0 ? `${creditAmount.toFixed(2)} ${eventCurrency?.currencyName ?? 'crediti'}` : 'da pagare'})`
+                      : 'Crea ordine (da pagare)'}
               </button>
             </>
           )}

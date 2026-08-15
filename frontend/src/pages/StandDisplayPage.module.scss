@@ -115,8 +115,24 @@
   color: #f8fafc;
 }
 
+.orderNumberGift {
+  color: #fbbf24;
+}
+
 .orderReady .orderNumber {
   color: #bbf7d0;
+}
+
+.giftBadge {
+  align-self: flex-start;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #fbbf24;
+  color: #451a03;
 }
 
 .statusBadge {

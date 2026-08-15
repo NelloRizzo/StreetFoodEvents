@@ -163,9 +163,15 @@ export function OrdersPage() {
           {orders.map((order) => (
             <article key={order.id} className={styles.card}>
               <div className={styles.cardHeader}>
+                <span className={styles.cardNumber}>
+                  {order.isGift && <span className={styles.giftPrefix}>O</span>}#{order.orderNumber}
+                </span>
                 <span className={`${styles.statusBadge} ${styles[`status_${order.status}`]}`}>
                   {statusLabels[order.status] ?? order.status}
                 </span>
+                {order.isGift && (
+                  <span className={styles.giftBadge}>OMAGGIO</span>
+                )}
                 <span className={`${styles.paymentBadge} ${styles[`payment_${order.paymentStatus}`]}`}>
                   {order.paymentStatus === 'paid' ? 'Pagato' : order.paymentStatus === 'refunded' ? 'Rimborsato' : 'Da pagare'}
                 </span>

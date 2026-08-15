@@ -68,8 +68,12 @@ export function DashboardPage() {
   const [eventRoles, setEventRoles] = useState<RoleInfo[]>([])
   const [eventRoleEvents, setEventRoleEvents] = useState<{ id: string; name: string }[]>([])
   const [eventNames, setEventNames] = useState<Record<string, string>>({})
+  const [eventEndDates, setEventEndDates] = useState<Record<string, string>>({})
+  const [selectedReportEventId, setSelectedReportEventId] = useState('')
+  const [selectedReportStandId, setSelectedReportStandId] = useState('')
   const [standEvent, setStandEvent] = useState<Record<string, string>>({})
   const [selectedStations, setSelectedStations] = useState<Record<string, string[]>>({})
+  const [now] = useState(() => Date.now())
 
   useEffect(() => {
     apiRequest<HomeData>('/events/home')
@@ -84,11 +88,16 @@ export function DashboardPage() {
       .then((d) => { setStands(d.stands); setStations(d.stations) })
       .catch(() => { /* not required */ })
 
-    apiRequest<{ items: { id: string; name: string }[] }>('/events')
+    apiRequest<{ items: { id: string; name: string; endDate?: string }[] }>('/events')
       .then((d) => {
         const names: Record<string, string> = {}
-        for (const ev of d.items) names[ev.id] = ev.name
+        const ends: Record<string, string> = {}
+        for (const ev of d.items) {
+          names[ev.id] = ev.name
+          if (ev.endDate) ends[ev.id] = ev.endDate
+        }
         setEventNames(names)
+        setEventEndDates(ends)
       })
       .catch(() => { /* not required */ })
 
@@ -127,6 +136,14 @@ export function DashboardPage() {
         (r) => r.scope === 'event' && r.eventId === eventId && (r.slug === 'event-admin' || r.slug === 'event-cashier')
       )
     )
+  }
+
+  const isEventFinished = (eventId: string) => {
+    const end = eventEndDates[eventId]
+    if (!end) return false
+    const endOfDay = new Date(end)
+    endOfDay.setHours(23, 59, 59, 999)
+    return endOfDay.getTime() < now
   }
 
   const toggleStation = (standId: string, stationId: string) => {
@@ -271,23 +288,30 @@ export function DashboardPage() {
               <section className={styles.manageSection}>
                 <h2 className={styles.sectionTitle}>Gestione eventi</h2>
                 <div className={styles.manageGrid}>
-                  {eventRoleEvents.map((ev) => (
-                    <div key={ev.id} className={styles.manageCardGroup}>
-                      <span className={styles.manageCardGroupName}>{ev.name}</span>
-                      <div className={styles.manageGrid}>
-                        <Link to={`/events/${ev.id}/cashier`} className={styles.manageCard}>
-                          <span className={styles.manageIcon}>&#128176;</span>
-                          <span className={styles.manageName}>Cassa unica</span>
-                          <span className={styles.manageHint}>Nuovo ordine</span>
-                        </Link>
-                        <Link to={`/events/${ev.id}/orders`} className={styles.manageCard}>
-                          <span className={styles.manageIcon}>&#128196;</span>
-                          <span className={styles.manageName}>Ordini evento</span>
-                          <span className={styles.manageHint}>Gestisci ordini</span>
-                        </Link>
+                  {eventRoleEvents.map((ev) => {
+                    const finished = isEventFinished(ev.id)
+                    return (
+                      <div key={ev.id} className={styles.manageCardGroup}>
+                        <span className={styles.manageCardGroupName}>{ev.name}</span>
+                        {finished ? (
+                          <span className={styles.finishedBadge}>Terminato — nessuna operazione</span>
+                        ) : (
+                          <div className={styles.manageGrid}>
+                            <Link to={`/events/${ev.id}/cashier`} className={styles.manageCard}>
+                              <span className={styles.manageIcon}>&#128176;</span>
+                              <span className={styles.manageName}>Cassa unica</span>
+                              <span className={styles.manageHint}>Nuovo ordine</span>
+                            </Link>
+                            <Link to={`/events/${ev.id}/orders`} className={styles.manageCard}>
+                              <span className={styles.manageIcon}>&#128196;</span>
+                              <span className={styles.manageName}>Ordini evento</span>
+                              <span className={styles.manageHint}>Gestisci ordini</span>
+                            </Link>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </section>
             )}
@@ -300,6 +324,7 @@ export function DashboardPage() {
                   const standStations = stations.filter((st) => st.standId === s.id)
                   const selectedEventId = standEvent[s.id] ?? s.eventIds[0]
                   const selected = selectedStations[s.id] ?? []
+                  const selectedFinished = s.eventIds.length > 0 && isEventFinished(selectedEventId)
                   const eventSuffix = s.eventIds.length > 0 ? `?eventId=${selectedEventId}` : ''
                   const combinedQueueUrl =
                     selected.length > 0
@@ -307,11 +332,18 @@ export function DashboardPage() {
                       : ''
                   return (
                     <div key={s.id} className={styles.standBlock}>
-                      <Link to={`/stands/${s.id}/orders`} className={styles.standBlockHeader}>
-                        <span className={styles.manageIcon}>&#127968;</span>
-                        <span className={styles.standBlockName}>{s.name}</span>
-                        <span className={styles.manageHint}>Gestisci ordini</span>
-                      </Link>
+                      {selectedFinished ? (
+                        <div className={styles.standBlockHeader}>
+                          <span className={styles.manageIcon}>&#127968;</span>
+                          <span className={styles.standBlockName}>{s.name}</span>
+                        </div>
+                      ) : (
+                        <Link to={`/stands/${s.id}/orders`} className={styles.standBlockHeader}>
+                          <span className={styles.manageIcon}>&#127968;</span>
+                          <span className={styles.standBlockName}>{s.name}</span>
+                          <span className={styles.manageHint}>Gestisci ordini</span>
+                        </Link>
+                      )}
                       <div className={styles.standActions}>
                         {s.eventIds.length > 1 && (
                           <select
@@ -327,39 +359,45 @@ export function DashboardPage() {
                             ))}
                           </select>
                         )}
-                        {s.eventIds.length > 0 && canAccessStandCash(s) && (
-                          <Link
-                            to={`/events/${selectedEventId}/stands/${s.id}/order`}
-                            className={styles.displayLink}
-                          >
-                            <span className={styles.stationChipIcon}>&#128176;</span>
-                            Cassa
-                          </Link>
-                        )}
-                        {s.eventIds.length > 0 && (
-                          <Link
-                            to={`/events/${selectedEventId}/stands/${s.id}/ordersqueue`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.displayLink}
-                          >
-                            <span className={styles.stationChipIcon}>&#128065;</span>
-                            Coda Ordini
-                          </Link>
-                        )}
-                        {selected.length >= 2 && (
-                          <Link
-                            to={combinedQueueUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`${styles.displayLink} ${styles.combinedQueueLink}`}
-                          >
-                            <span className={styles.stationChipIcon}>&#128203;</span>
-                            Coda combinata ({selected.length})
-                          </Link>
+                        {selectedFinished ? (
+                          <span className={styles.finishedBadge}>Evento terminato — nessuna operazione</span>
+                        ) : (
+                          <>
+                            {s.eventIds.length > 0 && canAccessStandCash(s) && (
+                              <Link
+                                to={`/events/${selectedEventId}/stands/${s.id}/order`}
+                                className={styles.displayLink}
+                              >
+                                <span className={styles.stationChipIcon}>&#128176;</span>
+                                Cassa
+                              </Link>
+                            )}
+                            {s.eventIds.length > 0 && (
+                              <Link
+                                to={`/events/${selectedEventId}/stands/${s.id}/ordersqueue`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.displayLink}
+                              >
+                                <span className={styles.stationChipIcon}>&#128065;</span>
+                                Coda Ordini
+                              </Link>
+                            )}
+                            {selected.length >= 2 && (
+                              <Link
+                                to={combinedQueueUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`${styles.displayLink} ${styles.combinedQueueLink}`}
+                              >
+                                <span className={styles.stationChipIcon}>&#128203;</span>
+                                Coda combinata ({selected.length})
+                              </Link>
+                            )}
+                          </>
                         )}
                       </div>
-                      {standStations.length > 0 && (
+                      {!selectedFinished && standStations.length > 0 && (
                         <div className={styles.stationList}>
                           {standStations.map((st) => (
                             <div key={st.id} className={styles.stationChip}>
@@ -418,7 +456,7 @@ export function DashboardPage() {
                     <span className={styles.manageName}>Portafogli eventi</span>
                     <span className={styles.manageHint}>Transazioni e depositi</span>
                   </Link>
-                  {exchangeAdminEvents.map((ev) => (
+                  {exchangeAdminEvents.filter((ev) => !isEventFinished(ev.id)).map((ev) => (
                     <Link key={ev.id} to={`/events/${ev.id}/settlements`} className={styles.manageCard}>
                       <span className={styles.manageIcon}>&#128181;</span>
                       <span className={styles.manageName}>Liquidazione {ev.name}</span>
@@ -432,27 +470,58 @@ export function DashboardPage() {
             {(eventRoles.length > 0 || stands.length > 0) && (
               <section className={styles.manageSection}>
                 <h2 className={styles.sectionTitle}>Resoconti</h2>
-                <div className={styles.manageGrid}>
-                  {eventRoleEvents.map((ev) => (
-                    <Link key={ev.id} to={`/events/${ev.id}/report`} className={styles.manageCard}>
-                      <span className={styles.manageIcon}>&#128202;</span>
-                      <span className={styles.manageName}>Report {ev.name}</span>
-                      <span className={styles.manageHint}>Resoconto finanziario</span>
-                    </Link>
-                  ))}
-                  {stands.map((s) => (
-                    <Link key={s.id} to={`/stands/${s.id}/orders`} className={styles.manageCard}>
-                      <span className={styles.manageIcon}>&#128202;</span>
-                      <span className={styles.manageName}>Report {s.name}</span>
-                      <span className={styles.manageHint}>Resoconto stand</span>
-                    </Link>
-                  ))}
-                  <Link to="/admin/menu-print" className={styles.manageCard}>
-                    <span className={styles.manageIcon}>&#128424;</span>
-                    <span className={styles.manageName}>Menu stampa</span>
-                    <span className={styles.manageHint}>Stampa menu stand</span>
-                  </Link>
+
+                <div className={styles.reportGrid}>
+                  <div className={styles.reportSelector}>
+                    <label className={styles.reportLabel} htmlFor="report-event-select">Report evento</label>
+                    <select
+                      id="report-event-select"
+                      value={selectedReportEventId}
+                      onChange={(e) => setSelectedReportEventId(e.target.value)}
+                      className={styles.eventSelect}
+                    >
+                      <option value="">Seleziona evento</option>
+                      {eventRoleEvents.map((ev) => (
+                        <option key={ev.id} value={ev.id}>{ev.name}</option>
+                      ))}
+                    </select>
+                    {selectedReportEventId && (
+                      <Link to={`/events/${selectedReportEventId}/report`} className={styles.manageCard}>
+                        <span className={styles.manageIcon}>&#128202;</span>
+                        <span className={styles.manageName}>Report {eventNames[selectedReportEventId] ?? 'evento'}</span>
+                        <span className={styles.manageHint}>Resoconto finanziario</span>
+                      </Link>
+                    )}
+                  </div>
+
+                  <div className={styles.reportSelector}>
+                    <label className={styles.reportLabel} htmlFor="report-stand-select">Report stand</label>
+                    <select
+                      id="report-stand-select"
+                      value={selectedReportStandId}
+                      onChange={(e) => setSelectedReportStandId(e.target.value)}
+                      className={styles.eventSelect}
+                    >
+                      <option value="">Seleziona stand</option>
+                      {stands.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    {selectedReportStandId && (
+                      <Link to={`/stands/${selectedReportStandId}/orders`} className={styles.manageCard}>
+                        <span className={styles.manageIcon}>&#128202;</span>
+                        <span className={styles.manageName}>Report stand</span>
+                        <span className={styles.manageHint}>Resoconto stand</span>
+                      </Link>
+                    )}
+                  </div>
                 </div>
+
+                <Link to="/admin/menu-print" className={styles.manageCard}>
+                  <span className={styles.manageIcon}>&#128424;</span>
+                  <span className={styles.manageName}>Menu stampa</span>
+                  <span className={styles.manageHint}>Stampa menu stand</span>
+                </Link>
               </section>
             )}
           </>

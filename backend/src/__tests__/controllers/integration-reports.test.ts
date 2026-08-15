@@ -411,4 +411,99 @@ describe('Integration — Order Reports', () => {
         expect(burgerProduct!.quantity).toBe(3);
         expect(burgerProduct!.revenue).toBe(30);
     });
+
+    it('stand report counts gifts separately without revenue', async () => {
+        const env = await setupReportEnvironment();
+
+        const paid = await createOrder(
+            env.sessionToken,
+            env.event._id.toString(),
+            env.stand1._id.toString(),
+            env.eventProduct1._id.toString(),
+            env.station1._id.toString(),
+            2,
+            { creditAmount: 0 }
+        );
+        expect(paid.status).toBe(201);
+
+        const gift = await request(app)
+            .post('/api/orders')
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({
+                eventId: env.event._id.toString(),
+                standId: env.stand1._id.toString(),
+                items: [{ eventProductId: env.eventProduct1._id.toString(), stationId: env.station1._id.toString(), quantity: 3 }],
+                isGift: true
+            });
+        expect(gift.status).toBe(201);
+
+        const res = await request(app)
+            .get(`/api/orders/report/stand/${env.stand1._id}`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.summary.totalOrders).toBe(2);
+        expect(res.body.summary.giftOrders).toBe(1);
+        expect(res.body.summary.giftProducts).toBe(3);
+        expect(res.body.summary.totalRevenue).toBe(20);
+
+        const burger = res.body.productQuantities.find(
+            (p: { productName: string }) => p.productName === 'Burger'
+        );
+        expect(burger.quantity).toBe(2);
+        expect(burger.giftQuantity).toBe(3);
+        expect(burger.revenue).toBe(20);
+    });
+
+    it('event report counts gifts per stand and excludes them from paid revenue', async () => {
+        const env = await setupReportEnvironment();
+
+        const paid = await createOrder(
+            env.sessionToken,
+            env.event._id.toString(),
+            env.stand1._id.toString(),
+            env.eventProduct1._id.toString(),
+            env.station1._id.toString(),
+            1,
+            { creditAmount: 0 }
+        );
+        expect(paid.status).toBe(201);
+
+        const gift = await request(app)
+            .post('/api/orders')
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({
+                eventId: env.event._id.toString(),
+                standId: env.stand1._id.toString(),
+                items: [{ eventProductId: env.eventProduct1._id.toString(), stationId: env.station1._id.toString(), quantity: 4 }],
+                isGift: true
+            });
+        expect(gift.status).toBe(201);
+
+        const res = await request(app)
+            .get(`/api/orders/report/event/${env.event._id}`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        expect(res.status).toBe(200);
+
+        const standReport = res.body.stands.find(
+            (s: { standId: string }) => s.standId === env.stand1._id.toString()
+        );
+        expect(standReport.totalOrders).toBe(2);
+        expect(standReport.giftOrders).toBe(1);
+        expect(standReport.paidOrders).toBe(1);
+        expect(standReport.totalRevenue).toBe(10);
+
+        expect(res.body.totals.totalOrders).toBe(2);
+        expect(res.body.totals.giftOrders).toBe(1);
+        expect(res.body.totals.totalRevenue).toBe(10);
+
+        const burger = res.body.productQuantities.find(
+            (p: { productName: string; standId: string }) =>
+                p.productName === 'Burger' && p.standId === env.stand1._id.toString()
+        );
+        expect(burger.quantity).toBe(1);
+        expect(burger.giftQuantity).toBe(4);
+        expect(burger.revenue).toBe(10);
+    });
 });

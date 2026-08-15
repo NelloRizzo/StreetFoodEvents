@@ -283,6 +283,20 @@
   color: #e94560;
 }
 
+.orderNumberGift {
+  color: #ffb300;
+}
+
+.giftBadge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: #ffb300;
+  color: #1a1a2e;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
 .orderTotal {
   font-size: 0.9rem;
   font-weight: 700;
@@ -542,6 +556,11 @@
   opacity: 0.9;
 }
 
+.submitBtnGift {
+  background: #ffb300;
+  color: #1a1a2e;
+}
+
 .submitBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -707,6 +726,10 @@
   color: #e94560;
   line-height: 1;
   margin: 0.25rem 0;
+}
+
+.confirmOrderNumberGift {
+  color: #ffb300;
 }
 
 .confirmStand {

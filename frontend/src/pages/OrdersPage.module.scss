@@ -82,6 +82,28 @@
   flex-wrap: wrap;
 }
 
+.cardNumber {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-ink-strong);
+  margin-right: auto;
+}
+
+.giftPrefix {
+  color: #b8860b;
+  margin-right: 0.15rem;
+}
+
+.giftBadge {
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background: #f59e0b;
+  color: #451a03;
+}
+
 .statusBadge {
   display: inline-flex;
   padding: 0.2rem 0.6rem;

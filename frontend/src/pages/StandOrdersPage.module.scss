@@ -72,6 +72,21 @@
   color: var(--color-ink-strong);
 }
 
+.giftPrefix {
+  color: #b8860b;
+  margin-right: 0.15rem;
+}
+
+.giftBadge {
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background: #f59e0b;
+  color: #451a03;
+}
+
 .orderBadges {
   display: flex;
   gap: 0.5rem;
@@ -466,6 +481,10 @@
   font-size: 1.3rem;
   font-weight: 800;
   color: var(--color-ink-strong);
+}
+
+.reportGift {
+  color: #b8860b;
 }
 
 .reportStatLabel {

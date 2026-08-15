@@ -222,7 +222,9 @@ export function EventOrdersPage() {
               <div className={styles.pendingList}>
                 {pendingOrders.map((o) => (
                   <div key={o.id} className={styles.pendingRow}>
-                    <span className={styles.pendingNumber}>#{o.orderNumber}</span>
+                    <span className={styles.pendingNumber}>
+                      {o.isGift && <span className={styles.giftPrefix}>O</span>}#{o.orderNumber}
+                    </span>
                     <span className={styles.standLabel}>
                       {standMap.get(o.standId) || 'Stand sconosciuto'}
                     </span>
@@ -268,8 +270,13 @@ export function EventOrdersPage() {
             return (
               <article key={order.id} className={`${styles.orderCard} ${allReady && order.status === 'preparing' ? styles.orderCardAllReady : ''}`}>
                 <div className={styles.orderHeader}>
-                  <div className={styles.orderNumber}>#{order.orderNumber}</div>
+                  <div className={styles.orderNumber}>
+                    {order.isGift && <span className={styles.giftPrefix}>O</span>}#{order.orderNumber}
+                  </div>
                   <div className={styles.orderBadges}>
+                    {order.isGift && (
+                      <span className={styles.giftBadge}>OMAGGIO</span>
+                    )}
                     <span className={styles.standLabel}>
                       {standMap.get(order.standId) || 'Stand sconosciuto'}
                     </span>

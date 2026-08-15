@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
-import { createOrder, cancelOrder, updateOrderStatus, type Order } from '../lib/orders'
+import { createOrder, cancelOrder, updateOrderStatus, fetchGiftStats, type GiftStats, type Order } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
+import { GiftCounter } from '../components/GiftCounter'
 import type { UploadedImage } from '../lib/upload'
 import styles from './CashierOrderPage.module.scss'
 
@@ -77,6 +78,7 @@ export function EventCashierPage() {
   const [users, setUsers] = useState<User[]>([])
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
   const [isDirectOrder, setIsDirectOrder] = useState(false)
+  const [isGift, setIsGift] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [payWithCredits, setPayWithCredits] = useState(false)
   const [creditAmount, setCreditAmount] = useState(0)
@@ -84,6 +86,7 @@ export function EventCashierPage() {
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null)
   const [showVoidPrompt, setShowVoidPrompt] = useState(false)
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
+  const [giftStats, setGiftStats] = useState<GiftStats | null>(null)
 
   const [notesModal, setNotesModal] = useState<NotesModalState>({
     open: false,
@@ -121,6 +124,13 @@ export function EventCashierPage() {
     void init()
   }, [eventId])
 
+  const loadGiftStats = useCallback(async () => {
+    if (!eventId || !selectedStandId) return
+    try {
+      setGiftStats(await fetchGiftStats({ eventId, standId: selectedStandId }))
+    } catch { /* ignore */ }
+  }, [eventId, selectedStandId])
+
   useEffect(() => {
     if (!eventId || !selectedStandId) return
 
@@ -154,12 +164,14 @@ export function EventCashierPage() {
         setCart([])
         setSelectedCustomerId('')
         setIsDirectOrder(false)
+        setIsGift(false)
         setPayWithCredits(false)
         setCreditAmount(0)
+        loadGiftStats()
       } catch { /* ignore */ }
     }
     void loadStandData()
-  }, [eventId, selectedStandId])
+  }, [eventId, selectedStandId, loadGiftStats])
 
   const openNotesModal = (ep: EventProduct & { product?: Product; stations?: Station[] }) => {
     if (!ep.product) return
@@ -239,6 +251,7 @@ export function EventCashierPage() {
   const resetOrder = () => {
     setSelectedCustomerId('')
     setIsDirectOrder(false)
+    setIsGift(false)
     setPayWithCredits(false)
     setCreditAmount(0)
     setCart([])
@@ -248,7 +261,7 @@ export function EventCashierPage() {
     if (cart.length === 0 || !eventId || !selectedStandId) return
     setIsSubmitting(true)
     try {
-      const effectiveCredit = payWithCredits ? Math.min(creditAmount || total, total) : 0
+      const effectiveCredit = isGift ? 0 : payWithCredits ? Math.min(creditAmount || total, total) : 0
       const response = await createOrder({
         eventId,
         standId: selectedStandId,
@@ -260,11 +273,13 @@ export function EventCashierPage() {
           quantity: i.quantity,
           notes: i.notes || undefined,
         })),
-        paymentOnCreate: { creditAmount: effectiveCredit },
+        paymentOnCreate: isGift ? undefined : { creditAmount: effectiveCredit },
+        isGift,
       })
 
       await updateOrderStatus(response.item.id, 'preparing')
       setCreatedOrder({ ...response.item, status: 'preparing' })
+      loadGiftStats()
       resetOrder()
     } catch (e) {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
@@ -296,6 +311,9 @@ export function EventCashierPage() {
     const qrHtml = o.receiptQrCode
       ? `<div style="display:flex;justify-content:center;margin:0.5rem 0"><img src="${o.receiptQrCode}" alt="QR" style="width:120px;height:120px;-webkit-print-color-adjust:exact;print-color-adjust:exact" /></div>`
       : ''
+    const giftHtml = o.isGift
+      ? '<div style="text-align:center;font-weight:700;letter-spacing:0.15em;margin:0.5rem 0">OMAGGIO</div>'
+      : ''
 
     const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Scontrino #${o.orderNumber}</title><style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -310,7 +328,8 @@ body{padding:2rem;max-width:320px;margin:0 auto}
 .footer{font-size:10px;text-align:center;color:#888;margin-top:0.75rem}
 </style></head><body>
 <div class="header"><strong>${escHtml(eventName)}</strong><span>${escHtml(standName)}</span></div>
-<div class="order-number">#${o.orderNumber}</div>
+<div class="order-number">${o.isGift ? 'O' : '#'}${o.orderNumber}</div>
+${giftHtml}
 <div class="items">${itemsHtml}</div>
 <div class="total"><span>Totale</span><strong>${o.total.toFixed(2)} ${badge}</strong></div>
 ${creditsHtml}
@@ -351,6 +370,8 @@ ${qrHtml}
           <span className={styles.topEvent}>{eventName}</span>
           {standName && <span className={styles.topStand}>{standName}</span>}
         </div>
+
+        <GiftCounter stats={giftStats} />
 
         <select
           value={selectedStandId}
@@ -499,41 +520,50 @@ ${qrHtml}
 
             {cart.length > 0 && (
               <>
-                <div className={styles.paymentOptions}>
-                  <label className={styles.checkbox}>
-                    <input type="checkbox" checked={payWithCredits} onChange={(e) => setPayWithCredits(e.target.checked)} />
-                    Paga con crediti evento
-                  </label>
-                  {payWithCredits && total > 0 && (
-                    <div className={styles.creditField}>
-                      <label>Crediti</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={total}
-                        step={0.01}
-                        value={creditAmount}
-                        onChange={(e) => setCreditAmount(Number(e.target.value))}
-                      />
-                      {creditAmount < total && (
-                        <span className={styles.remainingHint}>
-                          Restano {(total - creditAmount).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <label className={styles.checkbox}>
+                  <input type="checkbox" checked={isGift} onChange={(e) => setIsGift(e.target.checked)} />
+                  Ordine omaggio (prezzo 0)
+                </label>
+
+                {!isGift && (
+                  <div className={styles.paymentOptions}>
+                    <label className={styles.checkbox}>
+                      <input type="checkbox" checked={payWithCredits} onChange={(e) => setPayWithCredits(e.target.checked)} />
+                      Paga con crediti evento
+                    </label>
+                    {payWithCredits && total > 0 && (
+                      <div className={styles.creditField}>
+                        <label>Crediti</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={total}
+                          step={0.01}
+                          value={creditAmount}
+                          onChange={(e) => setCreditAmount(Number(e.target.value))}
+                        />
+                        {creditAmount < total && (
+                          <span className={styles.remainingHint}>
+                            Restano {(total - creditAmount).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <button
-                  className={styles.submitBtn}
+                  className={`${styles.submitBtn} ${isGift ? styles.submitBtnGift : ''}`}
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                 >
                   {isSubmitting
                     ? 'Creazione...'
-                    : payWithCredits
-                      ? `Crea ordine (${creditAmount > 0 ? `${creditAmount.toFixed(2)} ${eventCurrency?.currencyName ?? 'crediti'}` : '0'})`
-                      : `Crea ordine (${total.toFixed(2)} ${eventCurrency?.currencyName ?? ''} contanti)`}
+                    : isGift
+                      ? 'Crea omaggio'
+                      : payWithCredits
+                        ? `Crea ordine (${creditAmount > 0 ? `${creditAmount.toFixed(2)} ${eventCurrency?.currencyName ?? 'crediti'}` : '0'})`
+                        : `Crea ordine (${total.toFixed(2)} ${eventCurrency?.currencyName ?? ''} contanti)`}
                 </button>
               </>
             )}
@@ -615,7 +645,10 @@ ${qrHtml}
         <div className={styles.overlay} onClick={() => setCreatedOrder(null)}>
           <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
             <h2 className={styles.confirmTitle}>Ordine creato</h2>
-            <div className={styles.confirmOrderNumber}>#{createdOrder.orderNumber}</div>
+            <div className={`${styles.confirmOrderNumber} ${createdOrder.isGift ? styles.confirmOrderNumberGift : ''}`}>
+              {createdOrder.isGift ? 'O' : '#'}{createdOrder.orderNumber}
+            </div>
+            {createdOrder.isGift && <span className={styles.giftBadge}>OMAGGIO</span>}
             <div className={styles.confirmStand}>{standName}</div>
             <div className={styles.confirmItems}>
               {createdOrder.items.map((item, idx) => (

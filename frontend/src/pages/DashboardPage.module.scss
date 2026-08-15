@@ -244,6 +244,20 @@
   font-size: 0.95rem;
 }
 
+.finishedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-pill);
+  background: rgba(211, 47, 47, 0.1);
+  border: 1px solid rgba(211, 47, 47, 0.35);
+  color: #b71c1c;
+  font-size: 0.78rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
 .manageCard {
   display: inline-flex;
   align-items: center;
@@ -412,6 +426,32 @@
   font-size: 0.9rem;
   padding: 2rem 0;
   text-align: center;
+}
+
+.reportGrid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 48rem) {
+  .reportGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.reportSelector {
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+}
+
+.reportLabel {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 @media (min-width: 48rem) {

@@ -71,11 +71,14 @@ export function StandDisplayPage() {
                 className={`${styles.orderCard} ${isReady ? styles.orderReady : ''} ${isPreparing ? styles.orderPreparing : ''}`}
               >
                 <div className={styles.orderHeader}>
-                  <span className={styles.orderNumber}>#{order.orderNumber}</span>
+                  <span className={`${styles.orderNumber} ${order.isGift ? styles.orderNumberGift : ''}`}>
+                    {order.isGift ? 'O' : '#'}{order.orderNumber}
+                  </span>
                   <span className={`${styles.statusBadge} ${isReady ? styles.statusReady : ''}`}>
                     {isReady ? 'Pronto' : statusLabels[order.status]}
                   </span>
                 </div>
+                {order.isGift && <span className={styles.giftBadge}>OMAGGIO</span>}
 
                 <div className={styles.items}>
                   {order.items.map((item, idx) => (

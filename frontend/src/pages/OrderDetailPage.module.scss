@@ -36,6 +36,17 @@
   flex-wrap: wrap;
 }
 
+.giftBadge {
+  display: inline-flex;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background: #f59e0b;
+  color: #451a03;
+}
+
 .statusBadge {
   display: inline-flex;
   padding: 0.3rem 0.75rem;

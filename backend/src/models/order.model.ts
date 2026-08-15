@@ -111,6 +111,11 @@ const orderSchema = new Schema(
             default: 'pending',
             index: true
         },
+        isGift: {
+            type: Boolean,
+            default: false,
+            index: true
+        },
         items: {
             type: [orderItemSchema],
             required: true,

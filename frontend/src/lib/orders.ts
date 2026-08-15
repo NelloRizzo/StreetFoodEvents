@@ -23,6 +23,7 @@ export type Order = {
   customerId: string | null
   customerName: string | null
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
+  isGift: boolean
   items: OrderItem[]
   total: number
   creditAmountUsed: number
@@ -50,6 +51,7 @@ export type CreateOrderInput = {
     notes?: string
   }>
   paymentOnCreate?: boolean | { creditAmount: number }
+  isGift?: boolean
   notes?: string
 }
 
@@ -61,6 +63,8 @@ export type StandReport = {
   exchangeRate: number
   summary: {
     totalOrders: number
+    giftOrders: number
+    giftProducts: number
     totalRevenue: number
     totalCreditRevenue: number
     cashRevenue: number
@@ -68,7 +72,7 @@ export type StandReport = {
     totalRefunded: number
   }
   statusBreakdown: Array<{ status: string; count: number }>
-  productQuantities: Array<{ productId: string; productName: string; quantity: number; revenue: number }>
+  productQuantities: Array<{ productId: string; productName: string; quantity: number; giftQuantity: number; revenue: number }>
   orders: Order[]
   pendingOrders: Order[]
 }
@@ -78,6 +82,7 @@ export type EventReportStand = {
   standName: string
   totalOrders: number
   paidOrders: number
+  giftOrders: number
   totalRevenue: number
   cashRevenue: number
   creditRevenue: number
@@ -103,6 +108,7 @@ export type EventReport = {
   totals: {
     totalOrders: number
     paidOrders: number
+    giftOrders: number
     totalRevenue: number
     cashRevenue: number
     creditRevenue: number
@@ -116,8 +122,29 @@ export type EventReport = {
     productId: string
     productName: string
     quantity: number
+    giftQuantity: number
     revenue: number
   }>
+}
+
+export const GIFT_PERCENTAGE_THRESHOLD = 5
+
+export type GiftStats = {
+  eventId: string | null
+  standId: string | null
+  totalOrders: number
+  giftOrders: number
+  giftPercentage: number
+  giftThreshold: number
+  thresholdExceeded: boolean
+}
+
+export function fetchGiftStats(params?: { eventId?: string; standId?: string }) {
+  const query = new URLSearchParams()
+  if (params?.eventId) query.set('eventId', params.eventId)
+  if (params?.standId) query.set('standId', params.standId)
+  const qs = query.toString()
+  return apiRequest<GiftStats>(`/orders/gift-stats${qs ? `?${qs}` : ''}`)
 }
 
 export function fetchOrders(params?: { eventId?: string; standId?: string; status?: string; userId?: string; customerId?: string; stationId?: string; startDate?: string; endDate?: string }) {
@@ -230,6 +257,7 @@ export type StandDisplayOrder = {
   id: string
   orderNumber: number
   status: string
+  isGift: boolean
   items: StandDisplayOrderItem[]
 }
 

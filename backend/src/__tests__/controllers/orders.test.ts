@@ -403,6 +403,183 @@ describe('Orders API', () => {
         expect(eu!.balance).toBe(35);
     });
 
+    it('creates a gift order with forced confirmed/paid state and zero total', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Gift Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Gift Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Gift Station' });
+        const product = await ProductModel.create({ name: 'Omaggio Burger', price: 12 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+
+        const res = await request(app)
+            .post('/api/orders')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                standId: stand._id.toString(),
+                items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity: 2 }],
+                isGift: true
+            });
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.isGift).toBe(true);
+        expect(res.body.item.status).toBe('confirmed');
+        expect(res.body.item.paymentStatus).toBe('paid');
+        expect(res.body.item.total).toBe(0);
+        expect(res.body.item.creditAmountUsed).toBe(0);
+        expect(res.body.item.paidAt).toBeDefined();
+        expect(res.body.item.paymentTransactionId).toBeNull();
+        expect(res.body.item.items[0].productName).toBe('Omaggio Burger');
+        expect(res.body.item.items[0].quantity).toBe(2);
+        expect(res.body.item.items[0].subtotal).toBe(24);
+    });
+
+    it('returns gift stats with counts and threshold', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Gift Stats Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Gift Stats Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Gift Stats Station' });
+        const product = await ProductModel.create({ name: 'Stats Item', price: 10 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+
+        const createOrder = async (isGift: boolean) => {
+            const res = await request(app)
+                .post('/api/orders')
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({
+                    eventId: event._id.toString(),
+                    standId: stand._id.toString(),
+                    items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity: 1 }],
+                    paymentOnCreate: isGift ? undefined : { creditAmount: 0 },
+                    isGift
+                });
+            return res.body.item;
+        };
+
+        const orderA = await createOrder(false);
+        const orderB = await createOrder(false);
+        const gift1 = await createOrder(true);
+        const gift2 = await createOrder(true);
+
+        const res = await request(app)
+            .get(`/api/orders/gift-stats?eventId=${event._id}&standId=${stand._id}`)
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.totalOrders).toBe(4);
+        expect(res.body.giftOrders).toBe(2);
+        expect(res.body.giftPercentage).toBe(50);
+        expect(res.body.giftThreshold).toBe(5);
+        expect(res.body.thresholdExceeded).toBe(true);
+
+        await request(app)
+            .post(`/api/orders/${gift2.id}/cancel`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ reason: 'Gift cancelled' });
+
+        const afterCancel = await request(app)
+            .get(`/api/orders/gift-stats?eventId=${event._id}&standId=${stand._id}`)
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(afterCancel.body.totalOrders).toBe(3);
+        expect(afterCancel.body.giftOrders).toBe(1);
+
+        const otherStand = await StandModel.create({ name: 'Other Stand', eventIds: [event._id] });
+        const otherRes = await request(app)
+            .get(`/api/orders/gift-stats?standId=${otherStand._id}`)
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(otherRes.status).toBe(200);
+        expect(otherRes.body.totalOrders).toBe(0);
+        expect(otherRes.body.giftOrders).toBe(0);
+        expect(otherRes.body.giftPercentage).toBe(0);
+        expect(otherRes.body.thresholdExceeded).toBe(false);
+    });
+
+    it('returns gift stats threshold not exceeded at exactly 5 percent', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Gift Boundary Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({ name: 'Gift Boundary Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Boundary Station' });
+        const product = await ProductModel.create({ name: 'Boundary Item', price: 10 });
+        const eventProduct = await EventProductModel.create({
+            eventId: event._id, standId: stand._id, productId: product._id, stationIds: [station._id]
+        });
+        await CounterModel.create({ standId: stand._id, seq: 0 });
+
+        const createOrder = async (isGift: boolean) => {
+            const res = await request(app)
+                .post('/api/orders')
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({
+                    eventId: event._id.toString(),
+                    standId: stand._id.toString(),
+                    items: [{ eventProductId: eventProduct._id.toString(), stationId: station._id.toString(), quantity: 1 }],
+                    paymentOnCreate: isGift ? undefined : { creditAmount: 0 },
+                    isGift
+                });
+            return res.body.item;
+        };
+
+        for (let i = 0; i < 19; i++) {
+            await createOrder(false);
+        }
+        await createOrder(true);
+
+        const boundary = await request(app)
+            .get(`/api/orders/gift-stats?eventId=${event._id}&standId=${stand._id}`)
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(boundary.body.totalOrders).toBe(20);
+        expect(boundary.body.giftOrders).toBe(1);
+        expect(boundary.body.giftPercentage).toBe(5);
+        expect(boundary.body.thresholdExceeded).toBe(false);
+
+        await createOrder(true);
+
+        const above = await request(app)
+            .get(`/api/orders/gift-stats?eventId=${event._id}&standId=${stand._id}`)
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(above.body.totalOrders).toBe(21);
+        expect(above.body.giftOrders).toBe(2);
+        expect(above.body.giftPercentage).toBe(9.5);
+        expect(above.body.thresholdExceeded).toBe(true);
+    });
+
     it('cancels an unpaid order', async () => {
         app = createTestApp();
         const { user, sessionToken } = await createAuthSession();
