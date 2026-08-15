@@ -87,6 +87,9 @@ const POI_ICONS = [
   { value: 'drink', label: '🍺 Bibite' },
   { value: 'cassa', label: '💳 Cassa' },
   { value: 'bancomat', label: '🏧 Bancomat' },
+  { value: 'cinema', label: '🎬 Cinema' },
+  { value: 'relax', label: '🧘 Relax' },
+  { value: 'divertimento', label: '🎢 Divertimento' },
 ]
 
 export function EventDetailPage() {

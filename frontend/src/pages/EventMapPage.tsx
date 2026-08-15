@@ -41,9 +41,12 @@ const eventIcon = L.divIcon({
 })
 
 function createStandIcon(number: number | null, type: string | null) {
-  const isCraft = type === 'artigianato'
-  const isFun = type === 'divertimento'
-  const numClass = isCraft ? styles.standMarkerNumArtigianato : isFun ? styles.standMarkerNumDivertimento : styles.standMarkerNum
+  const typeClass = type === 'artigianato'
+    ? styles.standMarkerNumArtigianato
+    : type === 'divertimento'
+      ? styles.standMarkerNumDivertimento
+      : null
+  const numClass = [styles.standMarkerNum, typeClass].filter(Boolean).join(' ')
   return L.divIcon({
     className: styles.standMarker,
     html: `<span class="${numClass}">${number ?? ''}</span>`,
@@ -64,6 +67,9 @@ function createPoiIcon(type: string | null) {
     case 'drink': emoji = '🍺'; break
     case 'cassa': emoji = '💳'; break
     case 'bancomat': emoji = '🏧'; break
+    case 'cinema': emoji = '🎬'; break
+    case 'relax': emoji = '🧘'; break
+    case 'divertimento': emoji = '🎢'; break
   }
   return L.divIcon({
     className: styles.poiMarker,
@@ -307,8 +313,8 @@ export function EventMapPage() {
         <div className={styles.legend}>
           <span className={styles.legendItem}><span className={styles.eventMarkerSmall}>📍</span> Evento</span>
           <span className={styles.legendItem}><span className={styles.standNumBadge}>1</span> Stand Food &amp; Beverage</span>
-          <span className={styles.legendItem}><span className={styles.standNumBadgeArtigianato}>1</span> Stand Artigianato</span>
-          <span className={styles.legendItem}><span className={styles.standNumBadgeDivertimento}>1</span> Stand Divertimento</span>
+          <span className={styles.legendItem}><span className={`${styles.standNumBadge} ${styles.standNumBadgeArtigianato}`}>1</span> Stand Artigianato</span>
+          <span className={styles.legendItem}><span className={`${styles.standNumBadge} ${styles.standNumBadgeDivertimento}`}>1</span> Stand Divertimento</span>
           <span className={styles.legendItem}><span className={styles.poiMarkerSmall}>📌</span> Punto di interesse</span>
         </div>
       </div>
