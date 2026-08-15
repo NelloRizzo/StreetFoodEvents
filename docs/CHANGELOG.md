@@ -35,6 +35,7 @@ Tutte le feature implementate, in ordine cronologico.
 - Dashboard operatore: gli eventi terminati (fine giornata passata) non offrono più nessuna operazione — badge "Terminato — nessuna operazione" al posto di Cassa/Ordini/Coda/Coda combinata/chip postazioni/Liquidazione. Sezione Resoconti riscritta con dropdown per evento e dropdown per stand + "Menu stampa", al posto della lista crescente di pulsanti.
 - Nuove tipologie POI: l'`iconType` di `POI` ammette ora anche `cinema`, `relax`, `ristoro` e `divertimento`. Aggiunte al selettore Icona del form POI in `EventDetailPage` (🎬 Cinema, 🧘 Relax, 🧺 Ristoro, 🎢 Divertimento) e alla resa dei marker in `EventMapPage`. Icona Ingresso cambiata da 🚪 porta a 🪧 cartello.
 - Marker mappa stand: i segnaposto degli stand `artigianato` e `divertimento` applicano ora anche la classe base del numero (forma rotonda, dimensione e bordo come gli stand food) oltre al colore dedicato (viola/arancio); stessa correzione per i badge di legenda in `EventMapPage`.
+- Numerazione stand globale: i pulsanti ▲/▼ vengono rimossi dalle card delle sezioni per categoria (dove spostavano uno stand dentro la lista globale, mescolando i numeri tra categorie) e sostituiti da una sezione admin dedicata "Numerazione stand" in `EventDetailPage` — un'unica lista di TUTTI gli stand (misti, con badge categoria) ordinata per numero, con ▲/▼. La sequenza resta 1..N globale per evento, senza distinzione di categoria.
 
 ## Feature Checklist
 

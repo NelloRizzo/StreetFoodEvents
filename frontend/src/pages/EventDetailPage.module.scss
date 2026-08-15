@@ -320,6 +320,25 @@
   vertical-align: middle;
 }
 
+.standTypeBadge {
+  justify-self: start;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--color-brand);
+  width: fit-content;
+}
+
+.standTypeBadgeArtigianato {
+  background: #8b5cf6;
+}
+
+.standTypeBadgeDivertimento {
+  background: #f59e0b;
+}
+
 .reorderBtns {
   display: flex;
   flex-direction: column;

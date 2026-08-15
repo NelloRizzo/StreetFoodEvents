@@ -488,60 +488,89 @@ export function EventDetailPage() {
               )}
 
               <div className={styles.standGrid}>
-                {typeStands.map((stand) => {
-                  const index = sortedStands.indexOf(stand)
-                  return (
-                    <div key={stand.id} className={styles.standCardRow}>
-                      <Link
-                        to={`/events/${eventId}/stands/${stand.id}`}
-                        className={styles.standCard}
-                      >
-                        {stand.coverImage?.url ? (
-                          <div className={styles.standCover}>
-                            <img src={stand.coverImage.url} alt="" />
-                          </div>
-                        ) : (
-                          <div className={styles.standCoverPlaceholder}>
-                            <span>🏪</span>
-                          </div>
+                {typeStands.map((stand) => (
+                  <Link
+                    key={stand.id}
+                    to={`/events/${eventId}/stands/${stand.id}`}
+                    className={styles.standCard}
+                  >
+                    {stand.coverImage?.url ? (
+                      <div className={styles.standCover}>
+                        <img src={stand.coverImage.url} alt="" />
+                      </div>
+                    ) : (
+                      <div className={styles.standCoverPlaceholder}>
+                        <span>🏪</span>
+                      </div>
+                    )}
+                    <div className={styles.standBody}>
+                      <strong className={styles.standName}>
+                        {standNumber(stand) != null && (
+                          <span className={styles.standNumberBadge}>{standNumber(stand)}</span>
                         )}
-                        <div className={styles.standBody}>
-                          <strong className={styles.standName}>
-                            {standNumber(stand) != null && (
-                              <span className={styles.standNumberBadge}>{standNumber(stand)}</span>
-                            )}
-                            {stand.name}
-                          </strong>
-                          {stand.slogan && <span className={styles.standSlogan}>{stand.slogan}</span>}
-                        </div>
-                      </Link>
-                      {hasEventRole && (
-                        <div className={styles.reorderBtns}>
-                          <button
-                            className={styles.reorderBtn}
-                            onClick={() => handleMoveStand(index, -1)}
-                            disabled={index === 0}
-                            title="Sposta su (numero più basso)"
-                          >
-                            ▲
-                          </button>
-                          <button
-                            className={styles.reorderBtn}
-                            onClick={() => handleMoveStand(index, 1)}
-                            disabled={index === sortedStands.length - 1}
-                            title="Sposta giù (numero più alto)"
-                          >
-                            ▼
-                          </button>
-                        </div>
-                      )}
+                        {stand.name}
+                      </strong>
+                      {stand.slogan && <span className={styles.standSlogan}>{stand.slogan}</span>}
                     </div>
-                  )
-                })}
+                  </Link>
+                ))}
               </div>
             </section>
           )
         })}
+
+        {/* Stand numbering (admin) */}
+        {hasEventRole && (
+          <section className={styles.standsSection}>
+            <h2 className={styles.sectionTitle}>
+              Numerazione stand <span className={styles.count}>{sortedStands.length}</span>
+            </h2>
+            <p className={styles.empty}>
+              I numeri sono globali per evento, senza distinzione di categoria. Usa le frecce per riordinare tutti gli stand in un&apos;unica sequenza.
+            </p>
+            <div className={styles.standGrid}>
+              {sortedStands.map((stand) => {
+                const index = sortedStands.indexOf(stand)
+                return (
+                  <div key={stand.id} className={styles.standCardRow}>
+                    <Link
+                      to={`/events/${eventId}/stands/${stand.id}`}
+                      className={styles.standCard}
+                    >
+                      <div className={styles.standBody}>
+                        <strong className={styles.standName}>
+                          <span className={styles.standNumberBadge}>{standNumber(stand) ?? '?'}</span>
+                          {stand.name}
+                        </strong>
+                        <span className={`${styles.standTypeBadge} ${stand.type === 'artigianato' ? styles.standTypeBadgeArtigianato : stand.type === 'divertimento' ? styles.standTypeBadgeDivertimento : ''}`}>
+                          {STAND_TYPE_EMOJIS[stand.type ?? 'food']} {STAND_TYPE_LABELS[stand.type ?? 'food']}
+                        </span>
+                      </div>
+                    </Link>
+                    <div className={styles.reorderBtns}>
+                      <button
+                        className={styles.reorderBtn}
+                        onClick={() => handleMoveStand(index, -1)}
+                        disabled={index === 0}
+                        title="Sposta su (numero più basso)"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        className={styles.reorderBtn}
+                        onClick={() => handleMoveStand(index, 1)}
+                        disabled={index === sortedStands.length - 1}
+                        title="Sposta giù (numero più alto)"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
 
         {/* POI management (admin) */}
         {hasEventRole && (<>
