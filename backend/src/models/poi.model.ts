@@ -41,7 +41,7 @@ const poiSchema = new Schema(
         },
         iconType: {
             type: String,
-            enum: ['toilet', 'info', 'entrance', 'parking', 'stage', 'food', 'drink', 'cassa', 'bancomat', 'cinema', 'relax', 'divertimento', 'other'],
+            enum: ['toilet', 'info', 'entrance', 'parking', 'stage', 'food', 'drink', 'cassa', 'bancomat', 'cinema', 'relax', 'ristoro', 'divertimento', 'other'],
             default: null
         },
         iconImage: {

@@ -80,7 +80,7 @@ const POI_ICONS = [
   { value: '', label: '📍 Predefinito' },
   { value: 'toilet', label: '🚻 Bagni' },
   { value: 'info', label: 'ℹ️ Info' },
-  { value: 'entrance', label: '🚪 Ingresso' },
+  { value: 'entrance', label: '🪧 Ingresso' },
   { value: 'parking', label: '🅿️ Parcheggio' },
   { value: 'stage', label: '🎵 Palco' },
   { value: 'food', label: '🍽️ Cibo' },
@@ -89,6 +89,7 @@ const POI_ICONS = [
   { value: 'bancomat', label: '🏧 Bancomat' },
   { value: 'cinema', label: '🎬 Cinema' },
   { value: 'relax', label: '🧘 Relax' },
+  { value: 'ristoro', label: '🧺 Ristoro' },
   { value: 'divertimento', label: '🎢 Divertimento' },
 ]
 

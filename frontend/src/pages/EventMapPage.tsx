@@ -60,7 +60,7 @@ function createPoiIcon(type: string | null) {
   switch (type) {
     case 'toilet': emoji = '🚻'; break
     case 'info': emoji = 'ℹ️'; break
-    case 'entrance': emoji = '🚪'; break
+    case 'entrance': emoji = '🪧'; break
     case 'parking': emoji = '🅿️'; break
     case 'stage': emoji = '🎵'; break
     case 'food': emoji = '🍽️'; break
@@ -69,6 +69,7 @@ function createPoiIcon(type: string | null) {
     case 'bancomat': emoji = '🏧'; break
     case 'cinema': emoji = '🎬'; break
     case 'relax': emoji = '🧘'; break
+    case 'ristoro': emoji = '🧺'; break
     case 'divertimento': emoji = '🎢'; break
   }
   return L.divIcon({
