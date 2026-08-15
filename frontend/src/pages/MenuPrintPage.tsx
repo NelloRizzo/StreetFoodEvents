@@ -13,6 +13,7 @@ type Stand = {
   slogan: string | null
   description: string | null
   coverImage: ImageData | null
+  gallery: ImageData[]
   eventIds: string[]
 }
 
@@ -63,6 +64,10 @@ function buildMenuHtml(
       ? `<p style="font-size:0.85rem;color:#587065;margin:0.25rem 0 0;font-style:italic">${esc(stand.slogan)}</p>`
       : ''
 
+    const description = stand.description
+      ? `<div style="font-size:0.95rem;color:#264137;line-height:1.6;margin-top:1.25rem">${stand.description}</div>`
+      : ''
+
     const productsHtml = products.length > 0
       ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem">
           ${products.map((ep) => {
@@ -83,6 +88,15 @@ function buildMenuHtml(
         </div>`
       : '<p style="color:#587065;font-size:0.9rem;font-style:italic;margin-top:1rem">Nessun prodotto disponibile per questo stand.</p>'
 
+    const galleryHtml = stand.gallery && stand.gallery.length > 0
+      ? `<div style="margin-top:2rem">
+          <h3 style="font-size:1.15rem;color:#14261f;margin:0 0 0.75rem;border-bottom:2px solid rgba(191,90,42,0.15);padding-bottom:0.4rem">Galleria</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem">
+            ${stand.gallery.map((img) => imgHtml(img, `${stand.name} — galleria`)).join('')}
+          </div>
+        </div>`
+      : ''
+
     const pageBreak = i > 0 ? 'page-break-before:always;' : ''
 
     return `<div style="${pageBreak}padding:2rem 2.5rem">
@@ -91,7 +105,9 @@ function buildMenuHtml(
         ${slogan}
       </div>
       ${cover}
+      ${description}
       ${productsHtml}
+      ${galleryHtml}
     </div>`
   }).join('')
 
