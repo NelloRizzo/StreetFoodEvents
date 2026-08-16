@@ -13,6 +13,12 @@ const contestPOISchema = new Schema(
             default: null,
             index: true
         },
+        poiId: {
+            type: Schema.Types.ObjectId,
+            ref: 'POI',
+            default: null,
+            index: true
+        },
         name: {
             type: String,
             required: true,

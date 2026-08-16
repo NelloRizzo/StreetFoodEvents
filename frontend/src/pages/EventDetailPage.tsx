@@ -104,9 +104,9 @@ export function EventDetailPage() {
   const [hasPhotoPrint, setHasPhotoPrint] = useState(false)
   const [hasContestAdmin, setHasContestAdmin] = useState(false)
   const [hasExchangeAdmin, setHasExchangeAdmin] = useState(false)
-  const [cpois, setCpois] = useState<{ id: string; name: string; hints: string[]; groups: string[]; standId: string | null }[]>([])
+  const [cpois, setCpois] = useState<{ id: string; name: string; hints: string[]; groups: string[]; standId: string | null; poiId: string | null }[]>([])
   const [showCpoiForm, setShowCpoiForm] = useState(false)
-  const [cpoiForm, setCpoiForm] = useState({ name: '', hintsInput: '', groupsInput: '', standId: '' })
+  const [cpoiForm, setCpoiForm] = useState({ name: '', hintsInput: '', groupsInput: '', standId: '', poiId: '' })
   const [savingCpoi, setSavingCpoi] = useState(false)
   const [contests, setContests] = useState<{ id: string; name: string; isActive: boolean; orderedPOIIds: string[]; durationMinutes: number; startsAt: string | null; prizes: { label: string; awarded: boolean }[]; awardedPrizesCount: number; requireSequence: boolean; description: string | null; pickConfig: { groupPicks: { group: string; count: number }[] } | null; autoPickedPOIIds: string[]; poiHintSelections: { poiId: string; hintIndex: number }[] }[]>([])
   const [showContestForm, setShowContestForm] = useState(false)
@@ -712,7 +712,7 @@ export function EventDetailPage() {
           {showCpoiForm && (
             <div className={styles.poiForm}>
               <label className={styles.poiField}>
-                Stand (opzionale — il POI rappresenta uno stand dell'evento)
+                Stand (opzionale — il POI rappresenta uno stand dell'evento, il QR porta al menu dello stand)
                 <select
                   value={cpoiForm.standId}
                   onChange={(e) => {
@@ -721,13 +721,35 @@ export function EventDetailPage() {
                     setCpoiForm((p) => ({
                       ...p,
                       standId,
+                      poiId: standId ? '' : p.poiId,
                       name: stand ? stand.name : p.name,
                     }))
                   }}
                 >
-                  <option value="">— Nessuno (POI libero) —</option>
+                  <option value="">— Nessuno —</option>
                   {stands.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.poiField}>
+                POI dell'evento (opzionale — il POI rappresenta un punto d'interesse della mappa)
+                <select
+                  value={cpoiForm.poiId}
+                  onChange={(e) => {
+                    const poiId = e.target.value
+                    const poi = pois.find((p) => p.id === poiId)
+                    setCpoiForm((p) => ({
+                      ...p,
+                      poiId,
+                      standId: poiId ? '' : p.standId,
+                      name: poi ? poi.name : p.name,
+                    }))
+                  }}
+                >
+                  <option value="">— Nessuno —</option>
+                  {pois.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
               </label>
@@ -750,17 +772,24 @@ export function EventDetailPage() {
                   try {
                     const groups = cpoiForm.groupsInput.split(',').map((g) => g.trim()).filter(Boolean)
                     const hints = cpoiForm.hintsInput.split('\n').map((h) => h.trim()).filter(Boolean)
-                    await createContestPoi({ eventId, standId: cpoiForm.standId || undefined, name: cpoiForm.name.trim(), hints: hints.length > 0 ? hints : undefined, groups: groups.length > 0 ? groups : undefined })
+                    await createContestPoi({
+                      eventId,
+                      standId: cpoiForm.standId || undefined,
+                      poiId: cpoiForm.poiId || undefined,
+                      name: cpoiForm.name.trim(),
+                      hints: hints.length > 0 ? hints : undefined,
+                      groups: groups.length > 0 ? groups : undefined,
+                    })
                     const data = await listContestPois(eventId)
                     setCpois(data.items)
-                    setCpoiForm({ name: '', hintsInput: '', groupsInput: '', standId: '' })
+                    setCpoiForm({ name: '', hintsInput: '', groupsInput: '', standId: '', poiId: '' })
                     setShowCpoiForm(false)
                   } catch { /* ignore */ }
                   setSavingCpoi(false)
                 }} disabled={savingCpoi}>
                   {savingCpoi ? 'Salvataggio...' : 'Crea POI'}
                 </button>
-                <button className={styles.cancelBtn} onClick={() => { setShowCpoiForm(false); setCpoiForm({ name: '', hintsInput: '', groupsInput: '', standId: '' }) }}>Annulla</button>
+                <button className={styles.cancelBtn} onClick={() => { setShowCpoiForm(false); setCpoiForm({ name: '', hintsInput: '', groupsInput: '', standId: '', poiId: '' }) }}>Annulla</button>
               </div>
             </div>
           )}
@@ -773,6 +802,11 @@ export function EventDetailPage() {
                   {cpoi.standId && (
                     <span className={styles.poiGroupBadge} style={{ marginTop: '0.25rem' }}>
                       🏪 {stands.find((s) => s.id === cpoi.standId)?.name ?? 'Stand'}
+                    </span>
+                  )}
+                  {!cpoi.standId && cpoi.poiId && (
+                    <span className={styles.poiGroupBadge} style={{ marginTop: '0.25rem' }}>
+                      📍 {pois.find((p) => p.id === cpoi.poiId)?.name ?? 'POI evento'}
                     </span>
                   )}
                   {cpoi.hints.length > 0 && <span className={styles.poiCardDesc} style={{ fontStyle: 'italic' }}>{cpoi.hints.join(' · ')}</span>}

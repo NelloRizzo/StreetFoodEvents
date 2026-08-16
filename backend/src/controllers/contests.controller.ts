@@ -5,6 +5,7 @@ import * as qrcode from 'qrcode';
 import { ContestModel } from '../models/contest.model';
 import { ContestPOIModel } from '../models/contest-poi.model';
 import { ContestParticipationModel } from '../models/contest-participation.model';
+import { POIModel } from '../models/poi.model';
 import { StandModel } from '../models/stand.model';
 
 const QR_OPTIONS = {
@@ -39,6 +40,82 @@ async function generateUniqueClaimCode(contestId: string): Promise<string> {
 
 // ── ContestPOI CRUD ──
 
+// Sincronizza il pool dei POI del contest con tutti gli stand e tutti i POI dell'evento:
+// garantisce che nel set di POI disponibili ci siano sempre TUTTI gli stand e i POI dell'evento.
+// Non elimina mai nulla: aggiunge (o collega) i ContestPOI mancanti.
+async function syncContestPoisForEvent(eventId: string) {
+    const [stands, eventPois] = await Promise.all([
+        StandModel.find({ eventIds: eventId }).select('name'),
+        POIModel.find({ eventId }).select('name')
+    ]);
+
+    const existing = await ContestPOIModel.find({ eventId });
+    const byStandId = new Map<string, (typeof existing)[number]>();
+    const byPoiId = new Map<string, (typeof existing)[number]>();
+    const byName = new Map<string, (typeof existing)[number]>();
+    let maxOrder = 0;
+    for (const cp of existing) {
+        if (cp.standId) byStandId.set(cp.standId.toString(), cp);
+        if (cp.poiId) byPoiId.set(cp.poiId.toString(), cp);
+        byName.set(cp.name.toLowerCase(), cp);
+        maxOrder = Math.max(maxOrder, cp.sequenceOrder ?? 0);
+    }
+
+    const linkFree = (cp: (typeof existing)[number], patch: { standId?: Types.ObjectId | null; poiId?: Types.ObjectId | null }) => {
+        if (cp.standId || cp.poiId) return Promise.resolve();
+        Object.assign(cp, patch);
+        return cp.save();
+    };
+
+    const safeCreate = (data: Record<string, unknown>) =>
+        ContestPOIModel.create(data).catch((err: unknown) => {
+            if (typeof err === 'object' && err !== null && (err as { code?: number }).code === 11000) return null;
+            throw err;
+        });
+
+    const operations: Promise<unknown>[] = [];
+
+    for (const stand of stands) {
+        if (byStandId.has(stand._id.toString())) continue;
+        const nameConflict = byName.get(stand.name.toLowerCase());
+        if (nameConflict) {
+            operations.push(linkFree(nameConflict, { standId: stand._id }));
+            continue;
+        }
+        maxOrder += 1;
+        operations.push(safeCreate({
+            eventId,
+            standId: stand._id,
+            poiId: null,
+            name: stand.name,
+            hints: [],
+            groups: [],
+            sequenceOrder: maxOrder
+        }));
+    }
+
+    for (const poi of eventPois) {
+        if (byPoiId.has(poi._id.toString())) continue;
+        const nameConflict = byName.get(poi.name.toLowerCase());
+        if (nameConflict) {
+            operations.push(linkFree(nameConflict, { poiId: poi._id }));
+            continue;
+        }
+        maxOrder += 1;
+        operations.push(safeCreate({
+            eventId,
+            standId: null,
+            poiId: poi._id,
+            name: poi.name,
+            hints: [],
+            groups: [],
+            sequenceOrder: maxOrder
+        }));
+    }
+
+    await Promise.all(operations);
+}
+
 async function listContestPois(req: Request, res: Response) {
     const filter: Record<string, unknown> = {};
     if (req.query.eventId) {
@@ -46,6 +123,10 @@ async function listContestPois(req: Request, res: Response) {
             return res.status(400).json({ message: 'Invalid eventId' });
         }
         filter.eventId = req.query.eventId;
+        // Il pool dei POI disponibili deve contenere TUTTI gli stand e i POI dell'evento.
+        try {
+            await syncContestPoisForEvent(req.query.eventId as string);
+        } catch { /* un errore di sync non deve rompere la lista */ }
     }
     const items = await ContestPOIModel.find(filter).sort({ sequenceOrder: 1, name: 1 });
     return res.status(200).json({ items: items.map(toCpoiResponse) });
@@ -55,6 +136,7 @@ function toCpoiResponse(cpoi: {
     _id: Types.ObjectId;
     eventId: Types.ObjectId;
     standId?: Types.ObjectId | null;
+    poiId?: Types.ObjectId | null;
     name: string;
     hints?: string[];
     groups?: string[];
@@ -66,6 +148,7 @@ function toCpoiResponse(cpoi: {
         id: cpoi._id.toString(),
         eventId: cpoi.eventId.toString(),
         standId: cpoi.standId ? cpoi.standId.toString() : null,
+        poiId: cpoi.poiId ? cpoi.poiId.toString() : null,
         name: cpoi.name,
         hints: cpoi.hints ?? [],
         groups: cpoi.groups ?? [],
@@ -88,13 +171,17 @@ async function getContestPoi(req: Request, res: Response) {
 }
 
 async function createContestPoi(req: Request, res: Response) {
-    const { eventId, standId, name, hints, groups } = req.body;
+    const { eventId, standId, poiId, name, hints, groups } = req.body;
     if (!eventId || !isValidObjectId(eventId)) {
         return res.status(400).json({ message: 'Valid eventId is required' });
     }
+    if (standId !== undefined && standId !== null && poiId !== undefined && poiId !== null) {
+        return res.status(400).json({ message: 'Cannot link a contest POI to both a stand and a POI' });
+    }
 
     let standObjectId: Types.ObjectId | null = null;
-    let poiName: string | null = null;
+    let poiObjectId: Types.ObjectId | null = null;
+    let autoName: string | null = null;
     if (standId !== undefined && standId !== null) {
         if (!isValidObjectId(standId)) {
             return res.status(400).json({ message: 'Valid standId is required' });
@@ -104,10 +191,20 @@ async function createContestPoi(req: Request, res: Response) {
             return res.status(400).json({ message: 'Stand not found for this event' });
         }
         standObjectId = new Types.ObjectId(standId);
-        poiName = stand.name;
+        autoName = stand.name;
+    } else if (poiId !== undefined && poiId !== null) {
+        if (!isValidObjectId(poiId)) {
+            return res.status(400).json({ message: 'Valid poiId is required' });
+        }
+        const eventPoi = await POIModel.findOne({ _id: poiId, eventId });
+        if (!eventPoi) {
+            return res.status(400).json({ message: 'POI not found for this event' });
+        }
+        poiObjectId = new Types.ObjectId(poiId);
+        autoName = eventPoi.name;
     }
 
-    const finalName = name && typeof name === 'string' && name.trim() ? name.trim() : poiName;
+    const finalName = name && typeof name === 'string' && name.trim() ? name.trim() : autoName;
     if (!finalName) {
         return res.status(400).json({ message: 'Name is required' });
     }
@@ -116,6 +213,7 @@ async function createContestPoi(req: Request, res: Response) {
     const poi = await ContestPOIModel.create({
         eventId,
         standId: standObjectId,
+        poiId: poiObjectId,
         name: finalName,
         hints: Array.isArray(hints) ? hints.filter((h: string) => typeof h === 'string' && h.trim()).map((h: string) => h.trim()) : [],
         groups: Array.isArray(groups) ? groups.filter((g: string) => typeof g === 'string' && g.trim()) : [],
@@ -134,23 +232,55 @@ async function updateContestPoi(req: Request, res: Response) {
     if (!poi) {
         return res.status(404).json({ message: 'Contest POI not found' });
     }
-    const { name, hints, groups, sequenceOrder, standId } = req.body;
+    const { name, hints, groups, sequenceOrder, standId, poiId: eventPoiId } = req.body;
     if (name !== undefined) poi.name = name.trim();
     if (hints !== undefined) poi.hints = Array.isArray(hints) ? hints.filter((h: string) => typeof h === 'string' && h.trim()).map((h: string) => h.trim()) : [];
     if (groups !== undefined) poi.groups = Array.isArray(groups) ? groups.filter((g: string) => typeof g === 'string' && g.trim()) : [];
     if (sequenceOrder !== undefined) poi.sequenceOrder = sequenceOrder;
+
+    const linkStand = async (value: string) => {
+        if (!isValidObjectId(value)) {
+            return { error: 'Valid standId is required' };
+        }
+        const stand = await StandModel.findOne({ _id: value, eventIds: poi.eventId });
+        if (!stand) {
+            return { error: 'Stand not found for this event' };
+        }
+        poi.standId = new Types.ObjectId(value);
+        if (name === undefined) poi.name = stand.name;
+        return {};
+    };
+
+    const linkPoi = async (value: string) => {
+        if (!isValidObjectId(value)) {
+            return { error: 'Valid poiId is required' };
+        }
+        const eventPoi = await POIModel.findOne({ _id: value, eventId: poi.eventId });
+        if (!eventPoi) {
+            return { error: 'POI not found for this event' };
+        }
+        poi.poiId = new Types.ObjectId(value);
+        if (name === undefined) poi.name = eventPoi.name;
+        return {};
+    };
+
     if (standId !== undefined) {
         if (standId === null) {
             poi.standId = null;
-        } else if (isValidObjectId(standId)) {
-            const stand = await StandModel.findOne({ _id: standId, eventIds: poi.eventId });
-            if (!stand) {
-                return res.status(400).json({ message: 'Stand not found for this event' });
-            }
-            poi.standId = new Types.ObjectId(standId);
-            if (name === undefined) poi.name = stand.name;
         } else {
-            return res.status(400).json({ message: 'Valid standId is required' });
+            const resLink = await linkStand(standId);
+            if (resLink.error) return res.status(400).json({ message: resLink.error });
+        }
+    }
+    if (eventPoiId !== undefined) {
+        if (eventPoiId === null) {
+            poi.poiId = null;
+        } else {
+            if (poi.standId && !(standId === null)) {
+                return res.status(400).json({ message: 'Cannot link a contest POI to both a stand and a POI' });
+            }
+            const resLink = await linkPoi(eventPoiId);
+            if (resLink.error) return res.status(400).json({ message: resLink.error });
         }
     }
     await poi.save();
@@ -242,6 +372,9 @@ async function getContest(req: Request, res: Response) {
     const standIds = [...new Set(pois.filter((p) => p.standId).map((p) => (p.standId as Types.ObjectId).toString()))];
     const stands = standIds.length > 0 ? await StandModel.find({ _id: { $in: standIds } }).select('name') : [];
     const standNameMap = new Map(stands.map((s) => [s._id.toString(), s.name]));
+    const eventPoiIds = [...new Set(pois.filter((p) => p.poiId).map((p) => (p.poiId as Types.ObjectId).toString()))];
+    const eventPois = eventPoiIds.length > 0 ? await POIModel.find({ _id: { $in: eventPoiIds } }).select('name') : [];
+    const eventPoiNameMap = new Map(eventPois.map((s) => [s._id.toString(), s.name]));
     const hintSelectionMap = new Map(
         (contest.poiHintSelections ?? []).map((s) => [s.poiId.toString(), s.hintIndex])
     );
@@ -250,11 +383,13 @@ async function getContest(req: Request, res: Response) {
         if (!p) return null;
         const idx = hintSelectionMap.get(p._id.toString()) ?? 0;
         const standId = p.standId ? p.standId.toString() : null;
+        const poiRef = p.poiId ? (eventPoiNameMap.get(p.poiId.toString()) ?? p.name) : p.name;
         return {
             id: p._id.toString(),
-            name: standId ? (standNameMap.get(standId) ?? p.name) : p.name,
+            name: standId ? (standNameMap.get(standId) ?? p.name) : poiRef,
             hint: (p.hints && p.hints.length > 0 && idx < p.hints.length) ? p.hints[idx] : null,
-            standId
+            standId,
+            poiId: p.poiId ? p.poiId.toString() : null
         };
     }).filter(Boolean);
 
@@ -751,6 +886,9 @@ async function getContestPoiQrCodes(req: Request, res: Response) {
     const standIds = [...new Set(pois.filter((p) => p.standId).map((p) => (p.standId as Types.ObjectId).toString()))];
     const stands = standIds.length > 0 ? await StandModel.find({ _id: { $in: standIds } }).select('name') : [];
     const standNameMap = new Map(stands.map((s) => [s._id.toString(), s.name]));
+    const eventPoiIds = [...new Set(pois.filter((p) => p.poiId).map((p) => (p.poiId as Types.ObjectId).toString()))];
+    const eventPois = eventPoiIds.length > 0 ? await POIModel.find({ _id: { $in: eventPoiIds } }).select('name') : [];
+    const eventPoiNameMap = new Map(eventPois.map((s) => [s._id.toString(), s.name]));
     const origin = req.headers.origin ?? `${req.protocol}://${req.get('host')}`;
 
     const items = await Promise.all(uniquePoiIds.map(async (id) => {
@@ -764,8 +902,11 @@ async function getContestPoiQrCodes(req: Request, res: Response) {
         const qrCode = await qrcode.toDataURL(scanUrl, QR_OPTIONS);
         return {
             poiId: poi._id.toString(),
-            poiName: standId ? (standNameMap.get(standId) ?? poi.name) : poi.name,
+            poiName: standId
+                ? (standNameMap.get(standId) ?? poi.name)
+                : (poi.poiId ? (eventPoiNameMap.get(poi.poiId.toString()) ?? poi.name) : poi.name),
             standId,
+            eventPoiId: poi.poiId ? poi.poiId.toString() : null,
             qrCode
         };
     }));
