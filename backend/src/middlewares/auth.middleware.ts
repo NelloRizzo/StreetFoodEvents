@@ -4,17 +4,11 @@ import { SessionModel } from '../models/session.model';
 import { UserModel } from '../models/user.model';
 import { hashSessionToken } from '../utils/session';
 
-export async function authMiddleware(
-    req: Request,
-    res: Response,
-    next: NextFunction
-) {
+async function resolveAuthenticatedUser(req: Request) {
     const sessionToken = req.cookies?.[env.AUTH_SESSION_COOKIE_NAME];
 
     if (typeof sessionToken !== 'string' || !sessionToken) {
-        return res.status(401).json({
-            message: 'Authentication required'
-        });
+        return null;
     }
 
     const session = await SessionModel.findOne({
@@ -24,9 +18,7 @@ export async function authMiddleware(
     }).select('_id userId expiresAt');
 
     if (!session) {
-        return res.status(401).json({
-            message: 'Authentication required'
-        });
+        return null;
     }
 
     const user = await UserModel.findOne({
@@ -35,19 +27,45 @@ export async function authMiddleware(
     }).select('_id email');
 
     if (!user) {
-        return res.status(401).json({
-            message: 'Authentication required'
-        });
+        return null;
     }
 
     session.lastActivityAt = new Date();
     await session.save();
 
-    req.user = {
+    return {
         id: user._id.toString(),
         email: user.email,
         sessionId: session._id.toString()
     };
+}
 
+export async function authMiddleware(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    const user = await resolveAuthenticatedUser(req);
+
+    if (!user) {
+        return res.status(401).json({
+            message: 'Authentication required'
+        });
+    }
+
+    req.user = user;
+
+    return next();
+}
+
+export async function optionalAuthMiddleware(
+    req: Request,
+    _res: Response,
+    next: NextFunction
+) {
+    const user = await resolveAuthenticatedUser(req);
+    if (user) {
+        req.user = user;
+    }
     return next();
 }

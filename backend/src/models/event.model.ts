@@ -120,6 +120,10 @@ const eventSchema = new Schema(
             trim: true,
             default: null,
             maxlength: 300
+        },
+        isPublic: {
+            type: Boolean,
+            default: true
         }
     },
     {

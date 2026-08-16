@@ -44,6 +44,7 @@ type EventItem = {
   themeHighlight: string | null
   cashPaymentsEnabled: boolean
   unifiedCashierEnabled: boolean
+  isPublic: boolean
   createdAt: string
   updatedAt: string
 }
@@ -77,6 +78,7 @@ type EventFormData = {
   themeHighlight: string
   cashPaymentsEnabled: boolean
   unifiedCashierEnabled: boolean
+  isPublic: boolean
 }
 
 const emptyForm: EventFormData = {
@@ -108,6 +110,7 @@ const emptyForm: EventFormData = {
   themeHighlight: '',
   cashPaymentsEnabled: true,
   unifiedCashierEnabled: false,
+  isPublic: true,
 }
 
 type StandItem = {
@@ -396,6 +399,7 @@ export function EventsPage() {
       themeHighlight: ev.themeHighlight ?? '',
       cashPaymentsEnabled: ev.cashPaymentsEnabled,
       unifiedCashierEnabled: ev.unifiedCashierEnabled,
+      isPublic: ev.isPublic,
     })
     setEditingId(ev.id)
     setShowForm(true)
@@ -448,6 +452,7 @@ export function EventsPage() {
       themeHighlight: form.themeHighlight || null,
       cashPaymentsEnabled: form.cashPaymentsEnabled,
       unifiedCashierEnabled: form.unifiedCashierEnabled,
+      isPublic: form.isPublic,
     }
 
     if (editingId) {
@@ -604,6 +609,20 @@ export function EventsPage() {
                 </label>
                 <p className={styles.fieldHint}>
                   Se abilitato, gli stand non avranno cassa propria: tutti gli ordini passano dalla cassa unica dell'evento.
+                </p>
+              </div>
+              <div className={styles.checkField}>
+                <label className={styles.checkLabel}>
+                  <input
+                    type="checkbox"
+                    checked={form.isPublic}
+                    onChange={(e) => setForm({ ...form, isPublic: e.target.checked })}
+                  />
+                  <span>Visibile nella parte pubblica</span>
+                </label>
+                <p className={styles.fieldHint}>
+                  Se disabilitato, l'evento non apparirà nella home, nel menu Eventi e nel dashboard utente,
+                  ma resterà gestibile dagli operatori autorizzati.
                 </p>
               </div>
             </fieldset>
@@ -839,6 +858,7 @@ export function EventsPage() {
             <article key={ev.id} className={styles.card}>
               <div className={styles.cardBody}>
                 <strong className={styles.cardName}>{ev.name}</strong>
+                {!ev.isPublic && <span className={styles.hiddenBadge}>Non visibile nella parte pubblica</span>}
                 <span className={styles.cardDate}>{fmtDate(ev.startDate)} &ndash; {fmtDate(ev.endDate)}</span>
                 <span className={styles.cardLocation}>{ev.location.label}</span>
                 {ev.shortDescription && <span className={styles.cardDesc} dangerouslySetInnerHTML={{ __html: ev.shortDescription }} />}

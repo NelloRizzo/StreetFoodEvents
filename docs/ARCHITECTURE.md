@@ -36,6 +36,12 @@ Considerazioni progettuali e decisioni architetturali.
 - `auth.middleware` validates on every protected route.
 - Frontend: `AuthContext` wraps the app, calls `GET /api/auth/me` on mount.
 
+## Visibilità pubblica evento (isPublic)
+- Campo `Event.isPublic` (default `true`): se `false` l'evento è nascosto dalla parte pubblica ma resta gestibile dagli operatori.
+- **Pattern `optionalAuthMiddleware`**: gli endpoint di listing pubblici che devono filtrare in base all'utente usano `optionalAuthMiddleware` (imposta `req.user` se la sessione è valida, NON blocca mai) e fanno il check nel controller. Esempio: `GET /api/events` — se l'utente ha un ruolo platform-scope o event-scope (`isEventManager`) vede TUTTI gli eventi, altrimenti solo `isPublic: true`.
+- `GET /api/events/home` (`homeEvents`) esclude sempre gli eventi non pubblici da `activeEvents` (il dashboard "utente" è una superficie pubblica).
+- **Cosa NON fare**: NON nascondere l'evento da `GET /events/:eventId` — molte pagine pubbliche/operative (ricevute ordine, contest, galleria, menu stand) risolvono l'evento per ID e verrebbero rotte. La visibilità si controlla solo nei listing. Non confondere il filtro client-side di `EventsPage` (`adminEventIds`) con quello server-side: il backend filtra già per gestore, il client filtra ulteriormente per mostrare solo gli eventi assegnati.
+
 ## Backend
 - Express + Mongoose + argon2 session auth. ESM, TypeScript, Node ≥22.
 - MongoDB requires a replica set (`replicaSet=rs0`) because Mongoose transactions are used.

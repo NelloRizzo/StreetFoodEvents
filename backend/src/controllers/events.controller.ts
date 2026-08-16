@@ -5,10 +5,40 @@ import * as qrcode from 'qrcode';
 import { EventModel } from '../models/event.model';
 import { EventUserModel } from '../models/event-user.model';
 import { FavoriteModel } from '../models/favorite.model';
+import { RoleModel } from '../models/role.model';
+import { UserRoleModel } from '../models/user-role.model';
 import { sanitizeHtmlContent } from '../utils/html-sanitizer';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
+}
+
+async function isEventManager(userId: string) {
+    const platformRoleIds = await RoleModel.find({ scope: 'platform' }).distinct('_id');
+    if (platformRoleIds.length > 0) {
+        const platformRole = await UserRoleModel.findOne({
+            userId,
+            roleId: { $in: platformRoleIds },
+            isActive: true
+        });
+        if (platformRole) {
+            return true;
+        }
+    }
+
+    const eventRoleIds = await RoleModel.find({ scope: 'event' }).distinct('_id');
+    if (eventRoleIds.length > 0) {
+        const eventRole = await UserRoleModel.findOne({
+            userId,
+            roleId: { $in: eventRoleIds },
+            isActive: true
+        });
+        if (eventRole) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function generateGoogleMapsUrl(location: {
@@ -56,6 +86,7 @@ function toEventResponse(event: {
     cashPaymentsEnabled?: boolean | null;
     unifiedCashierEnabled?: boolean | null;
     slideshowTitle?: string | null;
+    isPublic?: boolean | null;
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -81,13 +112,17 @@ function toEventResponse(event: {
         cashPaymentsEnabled: event.cashPaymentsEnabled ?? true,
         unifiedCashierEnabled: event.unifiedCashierEnabled ?? false,
         slideshowTitle: event.slideshowTitle ?? null,
+        isPublic: event.isPublic ?? true,
         createdAt: event.createdAt,
         updatedAt: event.updatedAt
     };
 }
 
-export async function listEvents(_req: Request, res: Response) {
-    const items = await EventModel.find().sort({ startDate: 1, createdAt: -1 });
+export async function listEvents(req: Request, res: Response) {
+    const canManage = req.user ? await isEventManager(req.user.id) : false;
+    const filter = canManage ? {} : { isPublic: true };
+
+    const items = await EventModel.find(filter).sort({ startDate: 1, createdAt: -1 });
 
     return res.status(200).json({
         items: items.map(toEventResponse)
@@ -126,7 +161,7 @@ export async function homeEvents(req: Request, res: Response) {
         })
     );
 
-    const activeEvents = await EventModel.find({ endDate: { $gte: new Date() } })
+    const activeEvents = await EventModel.find({ isPublic: true, endDate: { $gte: new Date() } })
         .sort({ startDate: 1 });
 
     return res.status(200).json({
@@ -178,7 +213,8 @@ export async function createEvent(req: Request, res: Response) {
         gallery,
         cashPaymentsEnabled,
         unifiedCashierEnabled,
-        slideshowTitle
+        slideshowTitle,
+        isPublic
     } = req.body;
 
     if (location && !location.googleMapsUrl) {
@@ -205,7 +241,8 @@ export async function createEvent(req: Request, res: Response) {
         gallery: gallery ?? [],
         cashPaymentsEnabled: cashPaymentsEnabled ?? true,
         unifiedCashierEnabled: unifiedCashierEnabled ?? false,
-        slideshowTitle: slideshowTitle ?? null
+        slideshowTitle: slideshowTitle ?? null,
+        isPublic: isPublic ?? true
     });
 
     return res.status(201).json({
@@ -250,7 +287,8 @@ export async function updateEvent(req: Request, res: Response) {
         gallery,
         cashPaymentsEnabled,
         unifiedCashierEnabled,
-        slideshowTitle
+        slideshowTitle,
+        isPublic
     } = req.body;
 
     if (name !== undefined) {
@@ -334,6 +372,10 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (slideshowTitle !== undefined) {
         event.slideshowTitle = slideshowTitle;
+    }
+
+    if (isPublic !== undefined) {
+        event.isPublic = isPublic;
     }
 
     await event.save();
