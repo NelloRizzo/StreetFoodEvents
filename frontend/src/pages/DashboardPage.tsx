@@ -55,6 +55,26 @@ type RoleInfo = {
   standId: string | null
 }
 
+function fetchEventMeta(eventIds: string[]) {
+  const uniqueIds = [...new Set(eventIds.filter(Boolean))]
+  if (uniqueIds.length === 0) return Promise.resolve({ names: {} as Record<string, string>, ends: {} as Record<string, string> })
+  return Promise.all(
+    uniqueIds.map((eid) =>
+      apiRequest<{ item: { name: string; endDate?: string } }>(`/events/${eid}`)
+        .then((ev) => ({ id: eid, name: ev.item.name, endDate: ev.item.endDate ?? null }))
+        .catch(() => ({ id: eid, name: null as string | null, endDate: null as string | null }))
+    )
+  ).then((resolved) => {
+    const names: Record<string, string> = {}
+    const ends: Record<string, string> = {}
+    for (const r of resolved) {
+      if (r.name) names[r.id] = r.name
+      if (r.endDate) ends[r.id] = r.endDate
+    }
+    return { names, ends }
+  })
+}
+
 export function DashboardPage() {
   const { user, viewMode, setViewMode } = useAuth()
   const [data, setData] = useState<HomeData | null>(null)
@@ -85,19 +105,13 @@ export function DashboardPage() {
       .catch(() => { /* not required */ })
 
     apiRequest<{ stands: StandInfo[]; stations: StationInfo[] }>('/auth/me/stands')
-      .then((d) => { setStands(d.stands); setStations(d.stations) })
-      .catch(() => { /* not required */ })
-
-    apiRequest<{ items: { id: string; name: string; endDate?: string }[] }>('/events')
       .then((d) => {
-        const names: Record<string, string> = {}
-        const ends: Record<string, string> = {}
-        for (const ev of d.items) {
-          names[ev.id] = ev.name
-          if (ev.endDate) ends[ev.id] = ev.endDate
-        }
-        setEventNames(names)
-        setEventEndDates(ends)
+        setStands(d.stands)
+        setStations(d.stations)
+        fetchEventMeta(d.stands.flatMap((s) => s.eventIds)).then(({ names, ends }) => {
+          setEventNames((prev) => ({ ...prev, ...names }))
+          setEventEndDates((prev) => ({ ...prev, ...ends }))
+        })
       })
       .catch(() => { /* not required */ })
 
@@ -108,16 +122,16 @@ export function DashboardPage() {
         setRoles(d.roles)
         const filtered = d.roles.filter((r) => r.scope === 'event' && r.eventId)
         setEventRoles(filtered)
-        if (filtered.length > 0) {
-          const eventIds = [...new Set(filtered.map((r) => r.eventId!))]
-          Promise.all(
-            eventIds.map((eid) =>
-              apiRequest<{ item: { name: string } }>(`/events/${eid}`)
-                .then((ev) => ({ id: eid, name: ev.item.name }))
-                .catch(() => ({ id: eid, name: 'Evento' }))
-            )
-          ).then(setEventRoleEvents)
-        }
+        fetchEventMeta(filtered.map((r) => r.eventId!)).then(({ names, ends }) => {
+          setEventNames((prev) => ({ ...prev, ...names }))
+          setEventEndDates((prev) => ({ ...prev, ...ends }))
+          setEventRoleEvents(
+            [...new Set(filtered.map((r) => r.eventId!))].map((eid) => ({
+              id: eid,
+              name: names[eid] ?? 'Evento',
+            }))
+          )
+        })
       })
       .catch(() => { /* not required */ })
   }, [])
@@ -322,7 +336,11 @@ export function DashboardPage() {
 
                 {stands.map((s) => {
                   const standStations = stations.filter((st) => st.standId === s.id)
-                  const selectedEventId = standEvent[s.id] ?? s.eventIds[0]
+                  const ongoingEventIds = s.eventIds.filter((eventId) => !isEventFinished(eventId))
+                  const storedEventId = standEvent[s.id]
+                  const selectedEventId =
+                    (storedEventId && ongoingEventIds.includes(storedEventId) ? storedEventId : undefined)
+                    ?? (ongoingEventIds.length > 0 ? ongoingEventIds[0] : s.eventIds[0])
                   const selected = selectedStations[s.id] ?? []
                   const selectedFinished = s.eventIds.length > 0 && isEventFinished(selectedEventId)
                   const eventSuffix = s.eventIds.length > 0 ? `?eventId=${selectedEventId}` : ''
@@ -345,14 +363,14 @@ export function DashboardPage() {
                         </Link>
                       )}
                       <div className={styles.standActions}>
-                        {s.eventIds.length > 1 && (
+                        {ongoingEventIds.length > 1 && (
                           <select
                             value={selectedEventId}
                             onChange={(e) => setStandEvent((prev) => ({ ...prev, [s.id]: e.target.value }))}
                             className={styles.eventSelect}
                             title="Seleziona evento"
                           >
-                            {s.eventIds.map((eventId) => (
+                            {ongoingEventIds.map((eventId) => (
                               <option key={eventId} value={eventId}>
                                 {eventNames[eventId] ?? 'Evento'}
                               </option>
