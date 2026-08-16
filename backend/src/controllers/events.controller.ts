@@ -119,8 +119,11 @@ function toEventResponse(event: {
 }
 
 export async function listEvents(req: Request, res: Response) {
+    // `?public=true`: surface pubbliche (home, menu Eventi navbar) — mostra SOLO eventi visibili,
+    // anche se l'utente è un gestore (che altrove vede anche gli eventi nascosti).
+    const forcePublic = req.query.public === 'true';
     const canManage = req.user ? await isEventManager(req.user.id) : false;
-    const filter = canManage ? {} : { isPublic: true };
+    const filter = !forcePublic && canManage ? {} : { isPublic: true };
 
     const items = await EventModel.find(filter).sort({ startDate: 1, createdAt: -1 });
 

@@ -77,7 +77,7 @@ export function Navbar({
   useEffect(() => {
     if (isEventsOpen && events.length === 0 && !eventsLoading) {
       setEventsLoading(true)
-      apiRequest<{ items: EventItem[] }>('/events')
+      apiRequest<{ items: EventItem[] }>('/events?public=true')
         .then((data) => {
           setEvents(data.items)
           setEventsLoading(false)
@@ -89,20 +89,17 @@ export function Navbar({
   useEffect(() => {
     if (isReportsOpen && !reportsLoading && reportEvents.length === 0) {
       setReportsLoading(true)
-      const eventsLoaded = events.length > 0
-        ? Promise.resolve(events)
-        : apiRequest<{ items: EventItem[] }>('/events').then((d) => { setEvents(d.items); return d.items })
       Promise.all([
         apiRequest<{ roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles'),
-        eventsLoaded,
-      ]).then(([rolesData, allEvents]) => {
+        apiRequest<{ items: EventItem[] }>('/events'),
+      ]).then(([rolesData, eventsData]) => {
         const eventIds = [...new Set(rolesData.roles
           .filter((r) => r.scope === 'event' && r.eventId && (r.slug === 'event-admin' || r.slug === 'event-cashier'))
           .map((r) => r.eventId!))]
         setReportEvents(
           eventIds
             .map((eid) => {
-              const found = allEvents.find((e) => e.id === eid)
+              const found = eventsData.items.find((e) => e.id === eid)
               return found ? { id: eid, name: found.name } : null
             })
             .filter((e): e is { id: string; name: string } => e !== null)

@@ -29,7 +29,7 @@ export function HomePage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    apiRequest<{ items: EventItem[] }>('/events')
+    apiRequest<{ items: EventItem[] }>('/events?public=true')
       .then((data) => {
         const upcoming = data.items.filter(
           (e) => new Date(e.endDate) >= new Date(),

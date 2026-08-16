@@ -313,6 +313,64 @@ describe('Events API', () => {
         expect(res.body.items[0].name).toBe('Hidden Event');
     });
 
+    it('excludes non-public events even for admins when public=true', async () => {
+        app = createTestApp();
+
+        const user = await UserModel.create({
+            firstName: 'Admin',
+            lastName: 'User',
+            email: `admin-${Date.now()}@test.com`,
+            passwordHash: await argon2.hash('Password123!'),
+            isActive: true
+        });
+
+        const sessionToken = generateSessionToken();
+        await SessionModel.create({
+            userId: user._id,
+            tokenHash: hashSessionToken(sessionToken),
+            expiresAt: getSessionExpiryDate(),
+            lastActivityAt: new Date()
+        });
+
+        const platformAdminRole = await RoleModel.create({
+            name: 'Platform Admin',
+            scope: 'platform',
+            slug: 'platform-admin',
+            permissions: [],
+            isSystem: true,
+            isActive: true
+        });
+        await UserRoleModel.create({
+            userId: user._id,
+            roleId: platformAdminRole._id,
+            isActive: true
+        });
+
+        await EventModel.create({
+            name: 'Hidden Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-10'),
+            endDate: new Date('2026-06-15'),
+            currencyName: 'TC',
+            isPublic: false
+        });
+        await EventModel.create({
+            name: 'Visible Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-10'),
+            endDate: new Date('2026-06-15'),
+            currencyName: 'TC'
+        });
+
+        const res = await request(app)
+            .get('/api/events?public=true')
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.items).toHaveLength(1);
+        expect(res.body.items[0].name).toBe('Visible Event');
+    });
+
     it('excludes non-public events from activeEvents in home endpoint', async () => {
         app = createTestApp();
 
