@@ -346,6 +346,21 @@
   flex-shrink: 0;
 }
 
+.standMapToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  user-select: none;
+
+  input {
+    accent-color: var(--color-brand);
+    cursor: pointer;
+  }
+}
+
 .reorderBtn {
   width: 1.9rem;
   height: 1.6rem;

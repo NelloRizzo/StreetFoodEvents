@@ -204,7 +204,7 @@ describe('Stands API', () => {
         expect(res.body.item.eventIds).toHaveLength(1);
         expect(res.body.item.eventIds[0]).toBe(event._id.toString());
         expect(res.body.item.numbers).toEqual([
-            { eventId: event._id.toString(), number: 1 }
+            { eventId: event._id.toString(), number: 1, showOnMap: true }
         ]);
     });
 
@@ -232,7 +232,7 @@ describe('Stands API', () => {
 
         expect(res2.status).toBe(201);
         expect(res2.body.item.numbers).toEqual([
-            { eventId: event._id.toString(), number: 2 }
+            { eventId: event._id.toString(), number: 2, showOnMap: true }
         ]);
 
         const listed = await request(app).get(`/api/stands?eventId=${event._id}`);
@@ -274,6 +274,65 @@ describe('Stands API', () => {
             (stand!.numbers ?? []).find((n) => n.eventId.toString() === event._id.toString())?.number;
         expect(num(s1After)).toBe(2);
         expect(num(s2After)).toBe(1);
+    });
+
+    it('toggles showOnMap for a stand via reorder', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Evento',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const s1 = await StandModel.create({ name: 'Uno', eventIds: [event._id], numbers: [{ eventId: event._id, number: 1 }] });
+
+        const res = await request(app)
+            .patch('/api/stands/reorder')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                items: [
+                    { standId: s1._id.toString(), number: 1, showOnMap: false }
+                ]
+            });
+
+        expect(res.status).toBe(204);
+
+        const listed = await request(app).get(`/api/stands?eventId=${event._id}`);
+        expect(listed.body.items[0]!.numbers).toEqual([
+            { eventId: event._id.toString(), number: 1, showOnMap: false }
+        ]);
+    });
+
+    it('rejects reorder with invalid showOnMap type', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Evento',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const s1 = await StandModel.create({ name: 'Uno', eventIds: [event._id], numbers: [{ eventId: event._id, number: 1 }] });
+
+        const res = await request(app)
+            .patch('/api/stands/reorder')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                eventId: event._id.toString(),
+                items: [
+                    { standId: s1._id.toString(), number: 1, showOnMap: 'yes' }
+                ]
+            });
+
+        expect(res.status).toBe(400);
     });
 
     it('rejects reorder with stands not part of the event', async () => {

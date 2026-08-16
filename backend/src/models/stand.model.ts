@@ -43,6 +43,10 @@ const eventNumberSchema = new Schema(
             type: Number,
             required: true,
             min: 1
+        },
+        showOnMap: {
+            type: Boolean,
+            default: true
         }
     },
     { _id: false }

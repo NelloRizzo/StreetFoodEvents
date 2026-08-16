@@ -50,7 +50,7 @@ type Stand = {
   slogan: string | null
   description: string | null
   eventIds: string[]
-  numbers: Array<{ eventId: string; number: number }>
+  numbers: Array<{ eventId: string; number: number; showOnMap?: boolean }>
   coverImage: UploadedImg | null
 }
 
@@ -318,6 +318,9 @@ export function EventDetailPage() {
   const standNumber = (stand: Stand) =>
     stand.numbers?.find((n) => n.eventId === eventId)?.number ?? null
 
+  const standShowOnMap = (stand: Stand) =>
+    stand.numbers?.find((n) => n.eventId === eventId)?.showOnMap ?? true
+
   const sortedStands = [...stands].sort((a, b) => {
     const na = standNumber(a)
     const nb = standNumber(b)
@@ -334,7 +337,7 @@ export function EventDetailPage() {
     const [moving] = next.splice(index, 1)
     next.splice(target, 0, moving)
     const items = next
-      .map((s, i) => ({ standId: s.id, number: i + 1 }))
+      .map((s, i) => ({ standId: s.id, number: i + 1, showOnMap: standShowOnMap(s) }))
     try {
       await apiRequest('/stands/reorder', { method: 'PATCH', bodyJson: { eventId, items } })
       setStands((prev) => {
@@ -342,10 +345,28 @@ export function EventDetailPage() {
         return prev.map((s) => ({
           ...s,
           numbers: numberByStand.has(s.id)
-            ? [{ eventId, number: numberByStand.get(s.id)! }]
+            ? [{ eventId, number: numberByStand.get(s.id)!, showOnMap: standShowOnMap(s) }]
             : s.numbers,
         }))
       })
+    } catch { /* ignore */ }
+  }
+
+  const handleToggleStandMap = async (stand: Stand) => {
+    if (!eventId) return
+    const next = !standShowOnMap(stand)
+    const number = standNumber(stand)
+    if (number == null) return
+    try {
+      await apiRequest('/stands/reorder', {
+        method: 'PATCH',
+        bodyJson: { eventId, items: [{ standId: stand.id, number, showOnMap: next }] },
+      })
+      setStands((prev) => prev.map((s) =>
+        s.id === stand.id
+          ? { ...s, numbers: s.numbers.map((n) => n.eventId === eventId ? { ...n, showOnMap: next } : n) }
+          : s,
+      ))
     } catch { /* ignore */ }
   }
 
@@ -548,6 +569,14 @@ export function EventDetailPage() {
                       </div>
                     </Link>
                     <div className={styles.reorderBtns}>
+                      <label className={styles.standMapToggle} title="Mostra/nascondi lo stand nella mappa dell'evento">
+                        <input
+                          type="checkbox"
+                          checked={standShowOnMap(stand)}
+                          onChange={() => handleToggleStandMap(stand)}
+                        />
+                        <span>Mappa</span>
+                      </label>
                       <button
                         className={styles.reorderBtn}
                         onClick={() => handleMoveStand(index, -1)}

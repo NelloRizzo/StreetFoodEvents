@@ -31,7 +31,7 @@ function toStandResponse(stand: {
     description?: string | null;
     eventIds: Types.ObjectId[];
     locations?: Array<{ eventId: Types.ObjectId; location?: Record<string, unknown> | null }> | null;
-    numbers?: Array<{ eventId: Types.ObjectId; number: number }> | null;
+    numbers?: Array<{ eventId: Types.ObjectId; number: number; showOnMap?: boolean }> | null;
     coverImage?: unknown | null;
     gallery?: unknown[];
     createdAt: Date;
@@ -51,7 +51,8 @@ function toStandResponse(stand: {
         numbers: (stand.numbers ?? []).map((el) => ({
             eventId: el.eventId.toString(),
             number: el.number,
-        } as { eventId: string; number: number })),
+            showOnMap: el.showOnMap ?? true,
+        } as { eventId: string; number: number; showOnMap: boolean })),
         coverImage: stand.coverImage ?? null,
         gallery: stand.gallery ?? [],
         createdAt: stand.createdAt,
@@ -277,17 +278,20 @@ export async function reorderStands(req: Request, res: Response) {
     }
 
     const eventIdObj = new Types.ObjectId(eventId);
-    const entries: { standId: string; number: number }[] = [];
+    const entries: { standId: string; number: number; showOnMap?: boolean }[] = [];
 
     for (const item of items) {
         if (typeof item !== 'object' || item === null) {
             return res.status(400).json({ message: 'Invalid items payload' });
         }
-        const { standId, number } = item as { standId?: string; number?: unknown };
+        const { standId, number, showOnMap } = item as { standId?: string; number?: unknown; showOnMap?: unknown };
         if (!isValidObjectId(standId) || typeof number !== 'number' || !Number.isFinite(number) || number < 1) {
             return res.status(400).json({ message: 'Invalid items payload' });
         }
-        entries.push({ standId, number });
+        if (showOnMap !== undefined && typeof showOnMap !== 'boolean') {
+            return res.status(400).json({ message: 'Invalid items payload' });
+        }
+        entries.push(showOnMap !== undefined ? { standId, number, showOnMap } : { standId, number });
     }
 
     const standIds = entries.map((e) => e.standId);
@@ -303,8 +307,11 @@ export async function reorderStands(req: Request, res: Response) {
         const existing = (stand.numbers ?? []).find((n) => n.eventId.toString() === eventIdString);
         if (existing) {
             existing.number = entry.number;
+            if (entry.showOnMap !== undefined) {
+                existing.showOnMap = entry.showOnMap;
+            }
         } else {
-            stand.numbers.push({ eventId: eventIdObj, number: entry.number });
+            stand.numbers.push({ eventId: eventIdObj, number: entry.number, showOnMap: entry.showOnMap ?? true });
         }
     }
 

@@ -20,7 +20,7 @@ type StandData = {
   type?: 'food' | 'artigianato' | 'divertimento'
   name: string
   locations: Array<{ eventId: string; location: { type: 'Point'; coordinates: [number, number] } | null }>
-  numbers?: Array<{ eventId: string; number: number }>
+  numbers?: Array<{ eventId: string; number: number; showOnMap?: boolean }>
 }
 
 type PoiData = {
@@ -195,6 +195,8 @@ export function EventMapPage() {
     }
 
     stands.forEach((s) => {
+      const shown = s.numbers?.find((n) => n.eventId === eventId)?.showOnMap ?? true
+      if (!shown) return
       const loc = getStandLocation(s)
       if (!loc?.coordinates) return
       const [lng, lat] = loc.coordinates
@@ -269,12 +271,14 @@ export function EventMapPage() {
           }}
         >
           <option value="">Tutti gli stand</option>
-          {stands.map((s) => {
-            const number = s.numbers?.find((n) => n.eventId === eventId)?.number ?? null
-            return (
-              <option key={s.id} value={s.id}>{number != null ? `${number}. ` : ''}{s.name}</option>
-            )
-          })}
+          {stands
+            .filter((s) => (s.numbers?.find((n) => n.eventId === eventId)?.showOnMap ?? true))
+            .map((s) => {
+              const number = s.numbers?.find((n) => n.eventId === eventId)?.number ?? null
+              return (
+                <option key={s.id} value={s.id}>{number != null ? `${number}. ` : ''}{s.name}</option>
+              )
+            })}
         </select>
 
         <button

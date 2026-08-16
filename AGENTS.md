@@ -216,6 +216,7 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 ## Session state (Aug 2026 — numeri progressivi stand per evento)
 ### Completed
 - `Stand.numbers`: array di `{ eventId, number }`. `number` = progressivo per-evento, auto-assign alla creazione dello stand e quando uno stand viene collegato a un evento. `GET /api/stands` include `numbers` (filter per `eventId`), `/api/stands/:standId` pure.
+- `Stand.numbers[].showOnMap` (default `true`): se `false` lo stand non viene mostrato in mappa (marker + combo `EventMapPage`) ma conserva il numero. Gestito da `PATCH /stands/reorder` con `showOnMap` opzionale per item.
 - Endpoint bulk `PATCH /api/stands/reorder` (auth): body `{ eventId, items: [{ standId, number }] }`. Valida che tutti gli stand facciano parte dell'evento, poi imposta `numbers` per ogni stand. Pattern identico a `/stations/reorder` e `/event-products/reorder`.
 - Sort liste per numero: `listStands` usa `numbers` quando filtrato per evento (fallback `name` per gli stand senza numero). `EventDetailPage` ordina per numero (fallback nome).
 - `EventDetailPage`: badge col numero su ogni card stand; la numerazione è GLOBALE per evento (senza distinzione di categoria) e si gestisce nella sezione admin "Numerazione stand" — lista unica di tutti gli stand ordinata per numero (mista, con badge categoria) con pulsanti ▲/▼. `EventMapPage`: marker numerati (divIcon con badge circolare) e legenda; combo degli stand con numero.

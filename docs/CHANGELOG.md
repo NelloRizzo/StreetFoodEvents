@@ -36,6 +36,7 @@ Tutte le feature implementate, in ordine cronologico.
 - Nuove tipologie POI: l'`iconType` di `POI` ammette ora anche `cinema`, `relax`, `ristoro` e `divertimento`. Aggiunte al selettore Icona del form POI in `EventDetailPage` (🎬 Cinema, 🧘 Relax, 🧺 Ristoro, 🎢 Divertimento) e alla resa dei marker in `EventMapPage`. Icona Ingresso cambiata da 🚪 porta a 🪧 cartello.
 - Marker mappa stand: i segnaposto degli stand `artigianato` e `divertimento` applicano ora anche la classe base del numero (forma rotonda, dimensione e bordo come gli stand food) oltre al colore dedicato (viola/arancio); stessa correzione per i badge di legenda in `EventMapPage`.
 - Numerazione stand globale: i pulsanti ▲/▼ vengono rimossi dalle card delle sezioni per categoria (dove spostavano uno stand dentro la lista globale, mescolando i numeri tra categorie) e sostituiti da una sezione admin dedicata "Numerazione stand" in `EventDetailPage` — un'unica lista di TUTTI gli stand (misti, con badge categoria) ordinata per numero, con ▲/▼. La sequenza resta 1..N globale per evento, senza distinzione di categoria.
+- Visualizzazione stand in mappa: ogni voce della sezione "Numerazione stand" ha un toggle "Mappa" che imposta `showOnMap` sul numero dello stand per quell'evento (campo su `Stand.numbers`, default `true`, gestito da `PATCH /stands/reorder`). Uno stand con `showOnMap: false` non appare più come marker né nella combo di `EventMapPage`, ma conserva il suo numero e resta nella numerazione/riordino.
 
 ## Feature Checklist
 
