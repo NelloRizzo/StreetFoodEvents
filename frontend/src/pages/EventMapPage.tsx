@@ -50,8 +50,8 @@ function createStandIcon(number: number | null, type: string | null) {
   return L.divIcon({
     className: styles.standMarker,
     html: `<span class="${numClass}">${number ?? ''}</span>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   })
 }
 
