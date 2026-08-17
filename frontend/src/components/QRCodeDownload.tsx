@@ -7,9 +7,10 @@ import styles from './QRCodeDownload.module.scss'
 type Props = {
   apiPath: string
   fileName: string
+  label?: string
 }
 
-export function QRCodeDownload({ apiPath, fileName }: Props) {
+export function QRCodeDownload({ apiPath, fileName, label }: Props) {
   const [open, setOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -51,7 +52,7 @@ export function QRCodeDownload({ apiPath, fileName }: Props) {
   return (
     <>
       <button className={styles.qrBtn} onClick={handleOpen} disabled={loading}>
-        {loading ? '...' : '\u2318'} QR
+        {loading ? '...' : '\u2318'} {label ?? 'QR'}
       </button>
 
       {open && qrDataUrl && createPortal(
@@ -61,7 +62,7 @@ export function QRCodeDownload({ apiPath, fileName }: Props) {
               &times;
             </button>
 
-            <h2 className={styles.title}>QR Code</h2>
+            <h2 className={styles.title}>{label ?? 'QR Code'}</h2>
             <p className={styles.hint}>Inquadra per aprire la pagina</p>
 
             <img src={qrDataUrl} alt={`QR ${fileName}`} className={styles.qrImage} />
