@@ -31,7 +31,7 @@ export function HomePage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    apiRequest<{ items: EventItem[] }>('/events?public=true')
+      apiRequest<{ items: EventItem[] }>('/events')
       .then((data) => {
         setEvents(data.items)
         setIsLoading(false)
