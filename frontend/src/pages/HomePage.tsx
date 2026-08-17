@@ -31,10 +31,7 @@ export function HomePage() {
   useEffect(() => {
     apiRequest<{ items: EventItem[] }>('/events?public=true')
       .then((data) => {
-        const upcoming = data.items.filter(
-          (e) => new Date(e.endDate) >= new Date(),
-        )
-        setEvents(upcoming)
+        setEvents(data.items)
         setIsLoading(false)
       })
       .catch(() => setIsLoading(false))

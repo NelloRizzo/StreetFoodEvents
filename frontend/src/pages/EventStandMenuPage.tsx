@@ -45,6 +45,7 @@ type Stand = {
   description: string | null
   coverImage: UploadedImage | null
   gallery: UploadedImage[]
+  numbers: { eventId: string; number: number; showOnMap: boolean }[]
 }
 
 type CartItem = {
@@ -61,6 +62,7 @@ export function EventStandMenuPage() {
   const { isAuthenticated, user } = useAuth()
   const [event, setEvent] = useState<Event | null>(null)
   const [stand, setStand] = useState<Stand | null>(null)
+  const [allStands, setAllStands] = useState<Stand[]>([])
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -95,11 +97,21 @@ export function EventStandMenuPage() {
       apiRequest<{ item: Event }>(`/events/${eventId}`),
       apiRequest<{ item: Stand }>(`/stands/${standId}`),
       apiRequest<{ items: MenuItem[] }>(`/event-products?eventId=${eventId}&standId=${standId}`),
+      apiRequest<{ items: Stand[] }>(`/stands?eventId=${eventId}`),
     ])
-      .then(([eventData, standData, menuData]) => {
+      .then(([eventData, standData, menuData, standsData]) => {
         setEvent(eventData.item)
         setStand(standData.item)
         setMenuItems(menuData.items)
+        setAllStands(
+          standsData.items
+            .slice()
+            .sort((a, b) => {
+              const numA = a.numbers?.find((n) => n.eventId === eventId)?.number ?? Infinity
+              const numB = b.numbers?.find((n) => n.eventId === eventId)?.number ?? Infinity
+              return numA - numB
+            })
+        )
         setIsLoading(false)
       })
       .catch(() => setIsLoading(false))
@@ -184,6 +196,29 @@ export function EventStandMenuPage() {
     <div className={styles.page}>
       <div className="page-shell">
         <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
+
+        {allStands.length > 1 && (
+          <nav className={styles.standBar} aria-label="Stand dell'evento">
+            {allStands.map((s) => {
+              const num = s.numbers?.find((n) => n.eventId === eventId)
+              const isActive = s.id === standId
+              return (
+                <Link
+                  key={s.id}
+                  to={`/events/${eventId}/stands/${s.id}`}
+                  className={`${styles.standChip} ${isActive ? styles.standChipActive : ''}`}
+                  onClick={() => { if (!isActive) setCart([]) }}
+                >
+                  {s.coverImage && (
+                    <img src={s.coverImage.url} alt="" className={styles.standChipImg} />
+                  )}
+                  {num && <span className={styles.standChipNum}>{num.number}</span>}
+                  <span className={styles.standChipName}>{s.name}</span>
+                </Link>
+              )
+            })}
+          </nav>
+        )}
 
         {stand.coverImage && (
           <div className={styles.coverWrap}>

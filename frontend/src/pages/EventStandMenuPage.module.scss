@@ -10,6 +10,93 @@
   margin-bottom: 1rem;
 }
 
+/* ── Stand bar ── */
+.standBar {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding: 0.1rem 0 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.standBar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.standBar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.standBar::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 2px;
+}
+
+.standChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 250, 242, 0.84);
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.standChip:hover {
+  border-color: var(--color-brand);
+  color: var(--color-ink-strong);
+}
+
+.standChipActive {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: #fffaf2;
+}
+
+.standChipActive:hover {
+  color: #fffaf2;
+}
+
+.standChipImg {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.standChipNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+  font-size: 0.7rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.standChipActive .standChipNum {
+  background: rgba(255, 250, 242, 0.25);
+  color: #fffaf2;
+}
+
+.standChipName {
+  line-height: 1;
+}
+
 .coverWrap {
   border-radius: var(--radius-card);
   overflow: hidden;
