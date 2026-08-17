@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
@@ -72,9 +72,6 @@ export function EventStandMenuPage() {
   const [customerName, setCustomerName] = useState('')
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
 
   const total = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
 
@@ -140,31 +137,6 @@ export function EventStandMenuPage() {
       return num && num.showOnMap !== false
     })
   }, [allStands, eventId])
-
-  const updateArrows = () => {
-    const el = scrollRef.current
-    if (!el) return
-    setCanScrollLeft(el.scrollLeft > 2)
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2)
-  }
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    updateArrows()
-    el.addEventListener('scroll', updateArrows, { passive: true })
-    window.addEventListener('resize', updateArrows)
-    return () => {
-      el.removeEventListener('scroll', updateArrows)
-      window.removeEventListener('resize', updateArrows)
-    }
-  }, [visibleStands.length])
-
-  const scrollBy = (dir: -1 | 1) => {
-    const el = scrollRef.current
-    if (!el) return
-    el.scrollBy({ left: dir * 200, behavior: 'smooth' })
-  }
 
   const addToCart = (item: MenuItem) => {
     const product = item.product
@@ -235,10 +207,8 @@ export function EventStandMenuPage() {
 
         {visibleStands.length > 1 && (
           <div className={styles.standBarWrap}>
-            {canScrollLeft && (
-              <button className={styles.arrowBtn} onClick={() => scrollBy(-1)} aria-label="Scrolla a sinistra">&lsaquo;</button>
-            )}
-            <nav ref={scrollRef} className={styles.standBar} aria-label="Stand dell'evento">
+            <span className={styles.standBarLabel}>Scegli lo stand:</span>
+            <nav className={styles.standBar} aria-label="Stand dell'evento">
               {visibleStands.map((s) => {
                 const num = s.numbers?.find((n) => n.eventId === eventId)
                 const isActive = s.id === standId
@@ -258,9 +228,6 @@ export function EventStandMenuPage() {
                 )
               })}
             </nav>
-            {canScrollRight && (
-              <button className={styles.arrowBtn} onClick={() => scrollBy(1)} aria-label="Scrolla a destra">&rsaquo;</button>
-            )}
           </div>
         )}
 
@@ -276,7 +243,7 @@ export function EventStandMenuPage() {
               <img src={stand.coverImage.url} alt={`${stand.name} — logo`} className={styles.logo} />
             )}
             <div>
-              <span className="eyebrow">Menu</span>
+              <span className="eyebrow">Menu — {event.name}</span>
               <h1 className={styles.title}>{stand.name}</h1>
               {stand.slogan && <p className={styles.slogan}>{stand.slogan}</p>}
             </div>
