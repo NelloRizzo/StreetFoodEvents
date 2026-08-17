@@ -123,7 +123,7 @@ export async function listEvents(req: Request, res: Response) {
     // anche se l'utente è un gestore (che altrove vede anche gli eventi nascosti).
     const forcePublic = req.query.public === 'true';
     const canManage = req.user ? await isEventManager(req.user.id) : false;
-    const filter = !forcePublic && canManage ? {} : { isPublic: true };
+    const filter = !forcePublic && canManage ? {} : { isPublic: { $ne: false } };
 
     const items = await EventModel.find(filter).sort({ startDate: 1, createdAt: -1 });
 
@@ -164,7 +164,7 @@ export async function homeEvents(req: Request, res: Response) {
         })
     );
 
-    const activeEvents = await EventModel.find({ isPublic: true, endDate: { $gte: new Date() } })
+    const activeEvents = await EventModel.find({ isPublic: { $ne: false }, endDate: { $gte: new Date() } })
         .sort({ startDate: 1 });
 
     return res.status(200).json({

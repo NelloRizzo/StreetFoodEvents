@@ -48,8 +48,10 @@ export function Navbar({
   const [isReportsOpen, setIsReportsOpen] = useState(false)
   const [events, setEvents] = useState<EventItem[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventsLoaded, setEventsLoaded] = useState(false)
   const [reportEvents, setReportEvents] = useState<{ id: string; name: string }[]>([])
   const [reportsLoading, setReportsLoading] = useState(false)
+  const [reportsLoaded, setReportsLoaded] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const eventsMenuRef = useRef<HTMLDivElement>(null)
   const platformMenuRef = useRef<HTMLDivElement>(null)
@@ -75,19 +77,20 @@ export function Navbar({
   }, [])
 
   useEffect(() => {
-    if (isEventsOpen && events.length === 0 && !eventsLoading) {
+    if (isEventsOpen && !eventsLoading && !eventsLoaded) {
       setEventsLoading(true)
       apiRequest<{ items: EventItem[] }>('/events?public=true')
         .then((data) => {
           setEvents(data.items)
           setEventsLoading(false)
+          setEventsLoaded(true)
         })
-        .catch(() => setEventsLoading(false))
+        .catch(() => { setEventsLoading(false); setEventsLoaded(true) })
     }
-  }, [isEventsOpen, events.length, eventsLoading])
+  }, [isEventsOpen, eventsLoading, eventsLoaded])
 
   useEffect(() => {
-    if (isReportsOpen && !reportsLoading && reportEvents.length === 0) {
+    if (isReportsOpen && !reportsLoading && !reportsLoaded) {
       setReportsLoading(true)
       Promise.all([
         apiRequest<{ roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles'),
@@ -105,9 +108,10 @@ export function Navbar({
             .filter((e): e is { id: string; name: string } => e !== null)
         )
         setReportsLoading(false)
-      }).catch(() => setReportsLoading(false))
+        setReportsLoaded(true)
+      }).catch(() => { setReportsLoading(false); setReportsLoaded(true) })
     }
-  }, [isReportsOpen, reportsLoading, reportEvents.length, events])
+  }, [isReportsOpen, reportsLoading, reportsLoaded])
 
   function closeAll() {
     setIsMenuOpen(false)
