@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+import { useAuth } from '../features/auth/auth-context'
 import homeStyles from './HomePage.module.scss'
 
 type UploadedImage = {
@@ -25,6 +26,7 @@ type EventItem = {
 }
 
 export function HomePage() {
+  const { isAuthenticated } = useAuth()
   const [events, setEvents] = useState<EventItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -97,10 +99,12 @@ export function HomePage() {
             ))}
           </div>
 
-          <div className={homeStyles.ctaSection}>
-            <Link to="/login" className={homeStyles.ctaPrimary}>Accedi</Link>
-            <Link to="/register" className={homeStyles.ctaSecondary}>Registrati</Link>
-          </div>
+          {!isAuthenticated && (
+            <div className={homeStyles.ctaSection}>
+              <Link to="/login" className={homeStyles.ctaPrimary}>Accedi</Link>
+              <Link to="/register" className={homeStyles.ctaSecondary}>Registrati</Link>
+            </div>
+          )}
         </div>
       </section>
     </main>

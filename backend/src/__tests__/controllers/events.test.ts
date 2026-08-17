@@ -350,7 +350,7 @@ describe('Events API', () => {
             name: 'Hidden Event',
             location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
             startDate: new Date('2026-06-10'),
-            endDate: new Date('2026-06-15'),
+            endDate: new Date('2027-06-15'),
             currencyName: 'TC',
             isPublic: false
         });
@@ -358,7 +358,7 @@ describe('Events API', () => {
             name: 'Visible Event',
             location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
             startDate: new Date('2026-06-10'),
-            endDate: new Date('2026-06-15'),
+            endDate: new Date('2027-06-15'),
             currencyName: 'TC'
         });
 

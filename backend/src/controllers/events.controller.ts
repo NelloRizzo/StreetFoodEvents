@@ -119,11 +119,20 @@ function toEventResponse(event: {
 }
 
 export async function listEvents(req: Request, res: Response) {
-    // `?public=true`: surface pubbliche (home, menu Eventi navbar) — mostra SOLO eventi visibili,
-    // anche se l'utente è un gestore (che altrove vede anche gli eventi nascosti).
+    // `?public=true`: surface pubbliche (home, menu Eventi navbar) — mostra SOLO eventi visibili
+    // e non ancora terminati, anche se l'utente è un gestore.
     const forcePublic = req.query.public === 'true';
     const canManage = req.user ? await isEventManager(req.user.id) : false;
-    const filter = !forcePublic && canManage ? {} : { isPublic: { $ne: false } };
+
+    let filter: Record<string, unknown>;
+    if (!forcePublic && canManage) {
+        filter = {};
+    } else {
+        filter = { isPublic: { $ne: false } };
+        if (forcePublic) {
+            filter.endDate = { $gte: new Date() };
+        }
+    }
 
     const items = await EventModel.find(filter).sort({ startDate: 1, createdAt: -1 });
 
@@ -403,6 +412,52 @@ export async function eventQrCode(req: Request, res: Response) {
 
   const origin = req.headers.origin ?? `${req.protocol}://${req.headers.host}`;
   const url = `${origin}/events/${eventId}`;
+
+  const qrDataUrl = await qrcode.toDataURL(url, {
+    width: 400,
+    margin: 2,
+    color: {
+      dark: '#264137',
+      light: '#ffffff'
+    }
+  });
+
+  return res.status(200).json({ qrCode: qrDataUrl });
+}
+
+export async function eventMenuQrCode(req: Request, res: Response) {
+  const eventId = req.params.eventId;
+
+  if (!isValidObjectId(eventId)) {
+    return res.status(400).json({ message: 'Invalid event id' });
+  }
+
+  const event = await EventModel.findById(eventId);
+
+  if (!event) {
+    return res.status(404).json({ message: 'Event not found' });
+  }
+
+  const { StandModel } = await import('../models/stand.model');
+
+  const stands = await StandModel.find({ eventIds: new Types.ObjectId(eventId) })
+    .select('name numbers');
+
+  const eventIdObj = new Types.ObjectId(eventId);
+  const firstStand = stands
+    .filter((s) => s.numbers?.some((n) => n.eventId.equals(eventIdObj) && n.showOnMap !== false))
+    .sort((a, b) => {
+      const numA = a.numbers?.find((n) => n.eventId.equals(eventIdObj))?.number ?? Infinity;
+      const numB = b.numbers?.find((n) => n.eventId.equals(eventIdObj))?.number ?? Infinity;
+      return numA - numB;
+    })[0];
+
+  if (!firstStand) {
+    return res.status(404).json({ message: 'No visible stands for this event' });
+  }
+
+  const origin = req.headers.origin ?? `${req.protocol}://${req.headers.host}`;
+  const url = `${origin}/events/${eventId}/stands/${firstStand._id.toString()}`;
 
   const qrDataUrl = await qrcode.toDataURL(url, {
     width: 400,

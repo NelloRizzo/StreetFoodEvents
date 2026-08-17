@@ -460,6 +460,7 @@ export function EventDetailPage() {
               </button>
             )}
             <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} />
+            <QRCodeDownload apiPath={`/events/${eventId}/menu-qrcode`} fileName={`menu-${event.name}`} />
           </div>
         </div>
       </section>
