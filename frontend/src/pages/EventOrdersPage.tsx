@@ -132,10 +132,10 @@ export function EventOrdersPage() {
             <h1 className={styles.title}>Ordini — {eventName}</h1>
           </div>
           <div className={styles.headerActions}>
-            <Link className={styles.primaryBtn} to={`/events/${eventId}/cashier`}>
+            <Link className={styles.primaryBtn} to={`/admin/events/${eventId}/cashier`}>
               Cassa unica
             </Link>
-            <Link className={styles.secondaryBtn} to={`/events/${eventId}/report`}>
+            <Link className={styles.secondaryBtn} to={`/admin/events/${eventId}/report`}>
               Report
             </Link>
             <div className={styles.dateGroup}>

@@ -145,13 +145,13 @@ export function StandOrdersPage() {
   if (!standId) return null
 
   const eventFilterDisabled = Boolean(urlEventId)
-  const backLink = urlEventId ? `/events/${urlEventId}` : '/dashboard'
+  const backLink = urlEventId ? `/events/${urlEventId}` : '/admin/dashboard'
   const backLabel = urlEventId ? 'Torna all\'evento' : 'Dashboard'
   const title = urlEventId && eventName ? `Ordini — ${eventName}` : 'Ordini dello stand'
   const newOrderLink = urlEventId
-    ? `/events/${urlEventId}/stands/${standId}/order`
+    ? `/admin/events/${urlEventId}/stands/${standId}/order`
     : filterEventId
-      ? `/events/${filterEventId}/stands/${standId}/order`
+      ? `/admin/events/${filterEventId}/stands/${standId}/order`
       : ''
 
   const currencyFor = (eventId: string) => {

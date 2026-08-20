@@ -113,7 +113,7 @@ export function SettlementsReportPage() {
       <div className="page-shell">
         <div className={reportStyles.header}>
           <div>
-            <Link to={`/events/${eventId}/settlements`} className={reportStyles.backLink}>&larr; Torna alle liquidazioni</Link>
+            <Link to={`/admin/events/${eventId}/settlements`} className={reportStyles.backLink}>&larr; Torna alle liquidazioni</Link>
             <h1 className={reportStyles.title}>
               <CurrencyDisplay currencyName={report.currencyName} currencySymbol={report.currencySymbol} /> Resoconto liquidazioni — {report.eventName}
             </h1>

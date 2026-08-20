@@ -156,7 +156,7 @@ export function Navbar({
               <div className={styles.topNav}>
                 <NavLink
                   className={styles.navLink}
-                  to="/dashboard"
+                  to="/admin/dashboard"
                   onClick={closeAll}
                 >
                   Dashboard
@@ -321,14 +321,14 @@ export function Navbar({
                     <div className={styles.userDropdownActions}>
                       <Link
                         className={styles.dropdownAction}
-                        to="/dashboard"
+                        to="/admin/dashboard"
                         onClick={closeAll}
                       >
                         Il mio profilo
                       </Link>
                       <Link
                         className={styles.dropdownAction}
-                        to="/favorites"
+                        to="/admin/favorites"
                         onClick={closeAll}
                       >
                         Preferiti

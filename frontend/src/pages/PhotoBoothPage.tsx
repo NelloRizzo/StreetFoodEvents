@@ -574,7 +574,7 @@ export function PhotoBoothPage() {
           ) : (
             <p className={styles.emptyGallery}>Nessuna foto ancora. Scatta la prima!</p>
           )}
-          <Link to={`/events/${eventId}/galleria`} className={styles.galleryLink}>
+          <Link to={`/admin/events/${eventId}/galleria`} className={styles.galleryLink}>
             Vai alla galleria completa &rarr;
           </Link>
         </section>

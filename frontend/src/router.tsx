@@ -1,7 +1,7 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 
-import { AppLayout } from './AppLayout'
-import { RequireAuth } from './features/auth/require-auth'
+import { PublicLayout } from './layouts/PublicLayout'
+import { AdminLayout } from './layouts/AdminLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { EventProductsPage } from './pages/EventProductsPage'
 import { EventUsersPage } from './pages/EventUsersPage'
@@ -51,207 +51,93 @@ import { SettlementsReportPage } from './pages/SettlementsReportPage'
 import { ContestDeliveryPage } from './pages/ContestDeliveryPage'
 
 export const router = createBrowserRouter([
+  /* ── Public routes ── */
   {
     path: '/',
-    element: <AppLayout />,
+    element: <PublicLayout />,
     children: [
-      {
-        index: true,
-        element: <HomePage />,
-      },
-      {
-        path: 'platform',
-        element: <PlatformPage />,
-      },
-      {
-        path: 'login',
-        element: <LoginPage />,
-      },
-      {
-        path: 'register',
-        element: <RegisterPage />,
-      },
-      {
-        path: 'events/:eventId',
-        element: <EventDetailPage />,
-      },
-      {
-        path: 'events/:eventId/mappa',
-        element: <EventMapPage />,
-      },
-      {
-        path: 'events/:eventId/pois/:poiId',
-        element: <PoiDetailPage />,
-      },
-      {
-        path: 'events/:eventId/stands/:standId',
-        element: <EventStandMenuPage />,
-      },
-      {
-        path: 'events/:eventId/stands/:standId/ordersqueue',
-        element: <StandDisplayPage />,
-      },
-      {
-        path: 'theme-preview',
-        element: <ThemePreviewPage />,
-      },
-      {
-        path: 'privacy',
-        element: <PrivacyPage />,
-      },
-      {
-        path: 'guide/:role',
-        element: <GuidePage />,
-      },
-      {
-        path: 'receipt/:orderId',
-        element: <ReceiptPage />,
-      },
-      {
-        path: 'events/:eventId/contests',
-        element: <EventContestsPage />,
-      },
-      {
-        path: 'contest/:contestId',
-        element: <ContestPage />,
-      },
-      {
-        path: 'contest/:contestId/play',
-        element: <ContestPlayPage />,
-      },
-      {
-        path: 'contest/:contestId/verify/:participantId',
-        element: <ContestVerifyPage />,
-      },
-      {
-        path: 'contest/:contestId/consegna',
-        element: <ContestDeliveryPage />,
-      },
-      {
-        path: 'events/:eventId/slideshow',
-        element: <SlideshowPage />,
-      },
-      {
-        element: <RequireAuth />,
-        children: [
-          {
-            path: 'dashboard',
-            element: <DashboardPage />,
-          },
-          {
-            path: 'events',
-            element: <EventsPage />,
-          },
-          {
-            path: 'stands',
-            element: <StandsPage />,
-          },
-          {
-            path: 'stands/:standId',
-            element: <StandDetailPage />,
-          },
-          {
-            path: 'stands/:standId/orders',
-            element: <StandOrdersPage />,
-          },
-          {
-            path: 'products',
-            element: <ProductsPage />,
-          },
-          {
-            path: 'event-products',
-            element: <EventProductsPage />,
-          },
-          {
-            path: 'event-users',
-            element: <EventUsersPage />,
-          },
-          {
-            path: 'favorites',
-            element: <FavoritesPage />,
-          },
-          {
-            path: 'orders/:orderId',
-            element: <OrderDetailPage />,
-          },
-          {
-            path: 'events/:eventId/stands/:standId/orders',
-            element: <StandOrdersPage />,
-          },
-          {
-            path: 'events/:eventId/stands/:standId/order',
-            element: <CashierOrderPage />,
-          },
-          {
-            path: 'events/:eventId/orders',
-            element: <EventOrdersPage />,
-          },
-          {
-            path: 'events/:eventId/report',
-            element: <EventReportPage />,
-          },
-          {
-            path: 'events/:eventId/cashier',
-            element: <EventCashierPage />,
-          },
-          {
-            path: 'events/:eventId/exchange',
-            element: <EventExchangePage />,
-          },
-          {
-            path: 'events/:eventId/settlements',
-            element: <StandSettlementsPage />,
-          },
-          {
-            path: 'events/:eventId/settlements/report',
-            element: <SettlementsReportPage />,
-          },
-          {
-            path: 'events/:eventId/galleria',
-            element: <EventGalleryPage />,
-          },
-          {
-            path: 'events/:eventId/photo-booth',
-            element: <PhotoBoothPage />,
-          },
-          {
-            path: 'staff',
-            element: <StaffPage />,
-          },
-          {
-            path: 'users',
-            element: <UsersPage />,
-          },
-          {
-            path: 'user-roles',
-            element: <UserRolesPage />,
-          },
-          {
-            path: 'frames',
-            element: <FramesPage />,
-          },
-          {
-            path: 'admin/usage-contracts',
-            element: <UsageContractsPage />,
-          },
-          {
-            path: 'admin/menu-print',
-            element: <MenuPrintPage />,
-          },
-        ],
-      },
+      { index: true, element: <HomePage /> },
+      { path: 'platform', element: <PlatformPage /> },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'register', element: <RegisterPage /> },
+      { path: 'events/:eventId', element: <EventDetailPage /> },
+      { path: 'events/:eventId/mappa', element: <EventMapPage /> },
+      { path: 'events/:eventId/pois/:poiId', element: <PoiDetailPage /> },
+      { path: 'events/:eventId/stands/:standId', element: <EventStandMenuPage /> },
+      { path: 'events/:eventId/stands/:standId/ordersqueue', element: <StandDisplayPage /> },
+      { path: 'events/:eventId/contests', element: <EventContestsPage /> },
+      { path: 'events/:eventId/slideshow', element: <SlideshowPage /> },
+      { path: 'contest/:contestId', element: <ContestPage /> },
+      { path: 'contest/:contestId/play', element: <ContestPlayPage /> },
+      { path: 'contest/:contestId/verify/:participantId', element: <ContestVerifyPage /> },
+      { path: 'contest/:contestId/consegna', element: <ContestDeliveryPage /> },
+      { path: 'receipt/:orderId', element: <ReceiptPage /> },
+      { path: 'privacy', element: <PrivacyPage /> },
+      { path: 'guide/:role', element: <GuidePage /> },
+      { path: 'theme-preview', element: <ThemePreviewPage /> },
+
+      /* Legacy admin redirects (old URLs → /admin/*) */
+      { path: 'dashboard', element: <Navigate to="/admin/dashboard" replace /> },
+      { path: 'events', element: <Navigate to="/admin/events" replace /> },
+      { path: 'stands', element: <Navigate to="/admin/stands" replace /> },
+      { path: 'stands/:standId', element: <Navigate to="/admin/stands/:standId" replace /> },
+      { path: 'stands/:standId/orders', element: <Navigate to="/admin/stands/:standId/orders" replace /> },
+      { path: 'products', element: <Navigate to="/admin/products" replace /> },
+      { path: 'event-products', element: <Navigate to="/admin/event-products" replace /> },
+      { path: 'event-users', element: <Navigate to="/admin/event-users" replace /> },
+      { path: 'favorites', element: <Navigate to="/admin/favorites" replace /> },
+      { path: 'orders/:orderId', element: <Navigate to="/admin/orders/:orderId" replace /> },
+      { path: 'staff', element: <Navigate to="/admin/staff" replace /> },
+      { path: 'users', element: <Navigate to="/admin/users" replace /> },
+      { path: 'user-roles', element: <Navigate to="/admin/user-roles" replace /> },
+      { path: 'frames', element: <Navigate to="/admin/frames" replace /> },
     ],
   },
+
+  /* ── Admin routes (protected) ── */
   {
-    path: 'orders/station/:stationId',
-    element: <StationQueuePage />,
+    path: '/admin',
+    element: <AdminLayout />,
+    children: [
+      { index: true, element: <Navigate to="/admin/dashboard" replace /> },
+      { path: 'dashboard', element: <DashboardPage /> },
+
+      /* Event-scoped admin */
+      { path: 'events/:eventId/cashier', element: <EventCashierPage /> },
+      { path: 'events/:eventId/orders', element: <EventOrdersPage /> },
+      { path: 'events/:eventId/report', element: <EventReportPage /> },
+      { path: 'events/:eventId/exchange', element: <EventExchangePage /> },
+      { path: 'events/:eventId/settlements', element: <StandSettlementsPage /> },
+      { path: 'events/:eventId/settlements/report', element: <SettlementsReportPage /> },
+      { path: 'events/:eventId/galleria', element: <EventGalleryPage /> },
+      { path: 'events/:eventId/photo-booth', element: <PhotoBoothPage /> },
+      { path: 'events/:eventId/stands/:standId/orders', element: <StandOrdersPage /> },
+      { path: 'events/:eventId/stands/:standId/order', element: <CashierOrderPage /> },
+
+      /* Platform-wide admin */
+      { path: 'events', element: <EventsPage /> },
+      { path: 'stands', element: <StandsPage /> },
+      { path: 'stands/:standId', element: <StandDetailPage /> },
+      { path: 'stands/:standId/orders', element: <StandOrdersPage /> },
+      { path: 'products', element: <ProductsPage /> },
+      { path: 'event-products', element: <EventProductsPage /> },
+      { path: 'event-users', element: <EventUsersPage /> },
+      { path: 'favorites', element: <FavoritesPage /> },
+      { path: 'orders/:orderId', element: <OrderDetailPage /> },
+      { path: 'staff', element: <StaffPage /> },
+      { path: 'users', element: <UsersPage /> },
+      { path: 'user-roles', element: <UserRolesPage /> },
+      { path: 'frames', element: <FramesPage /> },
+      { path: 'usage-contracts', element: <UsageContractsPage /> },
+      { path: 'menu-print', element: <MenuPrintPage /> },
+
+      /* Legacy admin sub-paths */
+      { path: 'usage-contracts-legacy', element: <Navigate to="/admin/usage-contracts" replace /> },
+    ],
   },
-  {
-    path: 'flyer',
-    element: <FlyerPage />,
-  },
-  {
-    path: 'show/:entityType/:alias',
-    element: <AliasRedirectPage />,
-  },
+
+  /* ── Standalone routes (no layout) ── */
+  { path: 'orders/station/:stationId', element: <StationQueuePage /> },
+  { path: 'flyer', element: <FlyerPage /> },
+  { path: 'show/:entityType/:alias', element: <AliasRedirectPage /> },
 ])

@@ -456,7 +456,7 @@ export function EventGalleryPage() {
         </div>
 
         <div className={styles.boothLink}>
-          <Link to={`/events/${eventId}/photo-booth`} className={styles.boothLinkBtn}>
+          <Link to={`/admin/events/${eventId}/photo-booth`} className={styles.boothLinkBtn}>
             Scatta una foto
           </Link>
         </div>

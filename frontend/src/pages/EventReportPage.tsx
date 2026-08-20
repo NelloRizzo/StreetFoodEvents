@@ -109,7 +109,7 @@ export function EventReportPage() {
       <div className="page-shell">
         <div className={styles.header}>
           <div>
-            <Link to={`/events/${eventId}/orders`} className={styles.backLink}>&larr; Torna agli ordini</Link>
+            <Link to={`/admin/events/${eventId}/orders`} className={styles.backLink}>&larr; Torna agli ordini</Link>
             <h1 className={styles.title}>Report — {report.eventName}</h1>
           </div>
           <div className={styles.headerActions}>

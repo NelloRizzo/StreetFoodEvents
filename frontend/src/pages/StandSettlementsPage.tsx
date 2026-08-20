@@ -177,7 +177,7 @@ export function StandSettlementsPage() {
         <h1 className={styles.pageTitle}>
           <CurrencyDisplay currencyName={currencyName} currencySymbol={summary?.currencySymbol ?? null} /> Liquidazione stand - {eventName || 'Caricamento...'}
         </h1>
-        <Link to={`/events/${eventId}/settlements/report`} className={cambioStyles.btnTopUp} style={{ display: 'inline-block' }}>
+        <Link to={`/admin/events/${eventId}/settlements/report`} className={cambioStyles.btnTopUp} style={{ display: 'inline-block' }}>
           Resoconto liquidazioni
         </Link>
       </div>

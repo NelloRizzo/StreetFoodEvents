@@ -162,6 +162,8 @@ export function EventDetailPage() {
   useEffect(() => {
     if (!eventId) return
 
+    localStorage.setItem('lastEventId', eventId)
+
     Promise.all([
       apiRequest<{ item: Event }>(`/events/${eventId}`),
       apiRequest<{ items: Stand[] }>(`/stands?eventId=${eventId}`),
@@ -431,17 +433,17 @@ export function EventDetailPage() {
             </Link>
             {hasEventRole && (
               <>
-                <Link to={`/events/${eventId}/cashier`} className={styles.actionBtn}>
+                <Link to={`/admin/events/${eventId}/cashier`} className={styles.actionBtn}>
                   Cassa unica
                 </Link>
-                <Link to={`/events/${eventId}/orders`} className={styles.actionBtnOutline}>
+                <Link to={`/admin/events/${eventId}/orders`} className={styles.actionBtnOutline}>
                   Gestisci ordini
                 </Link>
               </>
             )}
             {hasPhotoPrint && (
               <>
-                <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
+                <Link to={`/admin/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
                   Galleria
                 </Link>
                 <Link to={`/events/${eventId}/slideshow`} className={styles.actionBtnOutline}>
@@ -450,7 +452,7 @@ export function EventDetailPage() {
               </>
             )}
             {isAuthenticated && (
-              <Link to={`/events/${eventId}/photo-booth`} className={styles.actionBtnOutline}>
+              <Link to={`/admin/events/${eventId}/photo-booth`} className={styles.actionBtnOutline}>
                 Photo Booth
               </Link>
             )}
@@ -686,7 +688,7 @@ export function EventDetailPage() {
 
           {isPlatformAdmin && (<>
             <h2 className={styles.sectionTitle}>Cornici</h2>
-            <Link to="/frames" className={styles.actionBtn}>
+            <Link to="/admin/frames" className={styles.actionBtn}>
               Gestisci cornici
             </Link>
           </>)}
@@ -1186,13 +1188,13 @@ export function EventDetailPage() {
 
         {hasExchangeAdmin && (<>
           <h2 className={styles.sectionTitle}>Cambio valuta</h2>
-          <Link to={`/events/${eventId}/exchange`} className={styles.actionBtn}>
+          <Link to={`/admin/events/${eventId}/exchange`} className={styles.actionBtn}>
             Gestisci cambio
           </Link>
-          <Link to={`/events/${eventId}/settlements`} className={styles.actionBtn} style={{ marginLeft: '0.5rem' }}>
+          <Link to={`/admin/events/${eventId}/settlements`} className={styles.actionBtn} style={{ marginLeft: '0.5rem' }}>
             Liquidazione stand
           </Link>
-          <Link to={`/events/${eventId}/settlements/report`} className={styles.actionBtn} style={{ marginLeft: '0.5rem' }}>
+          <Link to={`/admin/events/${eventId}/settlements/report`} className={styles.actionBtn} style={{ marginLeft: '0.5rem' }}>
             Resoconto liquidazioni
           </Link>
         </>)}

@@ -238,7 +238,7 @@ export function EventExchangePage() {
         <CurrencySymbol name={currencyName} /> Cambio - {eventName || 'Caricamento...'}
       </h1>
       <p style={{ marginTop: '0.25rem' }}>
-        <Link to={`/events/${eventId}/settlements`} className={cambioStyles.btnTopUp} style={{ display: 'inline-block' }}>
+        <Link to={`/admin/events/${eventId}/settlements`} className={cambioStyles.btnTopUp} style={{ display: 'inline-block' }}>
           Liquidazione stand
         </Link>
       </p>

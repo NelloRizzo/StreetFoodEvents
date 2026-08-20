@@ -311,12 +311,12 @@ export function DashboardPage() {
                           <span className={styles.finishedBadge}>Terminato — nessuna operazione</span>
                         ) : (
                           <div className={styles.manageGrid}>
-                            <Link to={`/events/${ev.id}/cashier`} className={styles.manageCard}>
+                            <Link to={`/admin/events/${ev.id}/cashier`} className={styles.manageCard}>
                               <span className={styles.manageIcon}>&#128176;</span>
                               <span className={styles.manageName}>Cassa unica</span>
                               <span className={styles.manageHint}>Nuovo ordine</span>
                             </Link>
-                            <Link to={`/events/${ev.id}/orders`} className={styles.manageCard}>
+                            <Link to={`/admin/events/${ev.id}/orders`} className={styles.manageCard}>
                               <span className={styles.manageIcon}>&#128196;</span>
                               <span className={styles.manageName}>Ordini evento</span>
                               <span className={styles.manageHint}>Gestisci ordini</span>
@@ -383,7 +383,7 @@ export function DashboardPage() {
                           <>
                             {s.eventIds.length > 0 && canAccessStandCash(s) && (
                               <Link
-                                to={`/events/${selectedEventId}/stands/${s.id}/order`}
+                                to={`/admin/events/${selectedEventId}/stands/${s.id}/order`}
                                 className={styles.displayLink}
                               >
                                 <span className={styles.stationChipIcon}>&#128176;</span>
@@ -469,13 +469,13 @@ export function DashboardPage() {
               <section className={styles.manageSection}>
                 <h2 className={styles.sectionTitle}>Gestione wallet</h2>
                 <div className={styles.manageGrid}>
-                  <Link to="/event-users" className={styles.manageCard}>
+                  <Link to="/admin/event-users" className={styles.manageCard}>
                     <span className={styles.manageIcon}>&#128176;</span>
                     <span className={styles.manageName}>Portafogli eventi</span>
                     <span className={styles.manageHint}>Transazioni e depositi</span>
                   </Link>
                   {exchangeAdminEvents.filter((ev) => !isEventFinished(ev.id)).map((ev) => (
-                    <Link key={ev.id} to={`/events/${ev.id}/settlements`} className={styles.manageCard}>
+                    <Link key={ev.id} to={`/admin/events/${ev.id}/settlements`} className={styles.manageCard}>
                       <span className={styles.manageIcon}>&#128181;</span>
                       <span className={styles.manageName}>Liquidazione {ev.name}</span>
                       <span className={styles.manageHint}>Corrispettivo stand in euro</span>
@@ -504,7 +504,7 @@ export function DashboardPage() {
                       ))}
                     </select>
                     {selectedReportEventId && (
-                      <Link to={`/events/${selectedReportEventId}/report`} className={styles.manageCard}>
+                      <Link to={`/admin/events/${selectedReportEventId}/report`} className={styles.manageCard}>
                         <span className={styles.manageIcon}>&#128202;</span>
                         <span className={styles.manageName}>Report {eventNames[selectedReportEventId] ?? 'evento'}</span>
                         <span className={styles.manageHint}>Resoconto finanziario</span>
