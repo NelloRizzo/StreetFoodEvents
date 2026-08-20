@@ -2,6 +2,8 @@
 
 Considerazioni progettuali e decisioni architetturali.
 
+> **Per una descrizione completa dell'applicazione vedere `APPLICAZIONE.md`**
+
 ## Theming System
 - **Seasonal themes**: 6 palettes (spring, summer, autumn, winter, christmas, easter) auto-applied via date detection (Easter via Computus, Christmas 15 Dec–6 Jan, meteorological seasons).
 - **Per-event colors**: 4 custom fields (themeBrand, themeText, themeSurface, themeHighlight) on Event model + color pickers in EventsPage form. CSS `color-mix()` derives soft/deep/line/glow from these 4.
@@ -49,6 +51,23 @@ Considerazioni progettuali e decisioni architetturali.
 - Path alias: `@/*` maps to `./src/*`.
 - Env vars validated at startup via Zod. Missing vars cause immediate `process.exit(1)`.
 - Cloudinary for all image uploads.
+
+## Pattern Architetturali Fondamentali
+- **Controller Pattern**: ogni entità ha un controller (`*.controller.ts`) con funzioni esportate
+- **Routes Pattern**: ogni entità ha routes (`*.routes.ts`) che usano i controller
+- **Model Pattern**: ogni entità ha un modello Mongoose (`*.model.ts`) con Schema e tipo
+- **Response Pattern**: funzioni `toXxxResponse()` per trasformare i documenti Mongoose in risposte API
+- **Error Pattern**: `AppError` per errori custom, status code nel constructor
+- **Auth Pattern**: `authMiddleware` per route protette, `optionalAuthMiddleware` per route pubbliche con filtro utente
+- **Pagination Pattern**: `page`/`limit` query params, risposta con `{ items, total, page, limit }`
+- **Sort Pattern**: `sortBy`/`sortOrder` query params con default per ogni entità
+- **Filter Pattern**: query params per filtrare (`?status=`, `?eventId=`, ecc.)
+- **Bulk Pattern**: endpoint `PATCH /reorder` per aggiornamenti multipli (POST/DELETE multipli)
+- **Nested Route Pattern**: route annidate con `mergeParams: true` (es. `/api/events/:eventId/photos`)
+- **Transaction Pattern**: `mongoose.startSession()` + `session.withTransaction()` per operazioni atomiche
+- **Image Upload Pattern**: multer middleware → Cloudinary upload → salva solo metadata in DB
+- **QR Code Pattern**: `qrcode` npm package → data URL → HTML puro per stampa
+- **Print Pattern**: `window.open()` + `document.write()` + `window.print()` per stampa senza conflitti CSS
 
 ## Reports & aggregations
 - **Stand report** (`GET /orders/report/stand/:standId`): aggregazione per singolo stand, usata in StandOrdersPage.
