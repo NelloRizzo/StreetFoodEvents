@@ -34,6 +34,7 @@ function toEventProductResponse(ep: {
     priceOverride?: number | null;
     available?: boolean;
     sequenceOrder?: number;
+    categoryId?: string | null;
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -59,6 +60,7 @@ function toEventProductResponse(ep: {
         priceOverride: ep.priceOverride ?? null,
         available: ep.available ?? true,
         sequenceOrder: ep.sequenceOrder ?? 0,
+        categoryId: ep.categoryId ?? null,
         createdAt: ep.createdAt,
         updatedAt: ep.updatedAt
     };
@@ -112,7 +114,8 @@ export async function createEventProduct(req: Request, res: Response) {
         standId,
         productId,
         stationIds,
-        priceOverride
+        priceOverride,
+        categoryId
     } = req.body;
 
     if (!eventId || !isValidObjectId(eventId)) {
@@ -161,6 +164,7 @@ export async function createEventProduct(req: Request, res: Response) {
         productId,
         stationIds,
         priceOverride: priceOverride ?? null,
+        categoryId: categoryId ?? null,
         sequenceOrder: (last?.sequenceOrder ?? 0) + 1
     });
 
@@ -190,7 +194,8 @@ export async function updateEventProduct(req: Request, res: Response) {
         stationIds,
         priceOverride,
         available,
-        sequenceOrder
+        sequenceOrder,
+        categoryId
     } = req.body;
 
     if (stationIds !== undefined) {
@@ -219,6 +224,10 @@ export async function updateEventProduct(req: Request, res: Response) {
         }
 
         ep.sequenceOrder = sequenceOrder;
+    }
+
+    if (categoryId !== undefined) {
+        ep.categoryId = categoryId ?? null;
     }
 
     await ep.save();

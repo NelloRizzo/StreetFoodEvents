@@ -57,6 +57,7 @@ function toSettlementResponse(s: {
     standName: string;
     direction?: string;
     amount: number;
+    denominations?: Array<{ label: string; value: number; count: number; euroAmount: number }>;
     exchangeRate: number;
     feePercent: number;
     grossEuro: number;
@@ -74,6 +75,7 @@ function toSettlementResponse(s: {
         standName: s.standName,
         direction: s.direction ?? 'credit',
         amount: s.amount,
+        denominations: s.denominations ?? [],
         exchangeRate: s.exchangeRate,
         feePercent: s.feePercent,
         grossEuro: s.grossEuro,
@@ -625,21 +627,11 @@ async function createSettlement(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
 
-    const { standId, amount, feePercent, description } = req.body;
+    const { standId, amount, feePercent, description, denominations: inputDenoms } = req.body;
     const direction = req.body.direction === 'debit' ? 'debit' : 'credit';
 
     if (!standId || !isValidObjectId(standId)) {
         return res.status(400).json({ message: 'Valid standId is required' });
-    }
-
-    const amountNum = Number(amount);
-    if (!Number.isFinite(amountNum) || amountNum <= 0) {
-        return res.status(400).json({ message: 'Amount must be a positive number' });
-    }
-
-    const feeNum = direction === 'credit' ? Number(feePercent ?? 0) : 0;
-    if (!Number.isFinite(feeNum) || feeNum < 0 || feeNum > 100) {
-        return res.status(400).json({ message: 'Fee percentage must be between 0 and 100' });
     }
 
     const stand = await StandModel.findById(standId);
@@ -648,6 +640,69 @@ async function createSettlement(req: Request, res: Response) {
     }
 
     const exchangeRate = eventCtx.event.exchangeRate ?? 1;
+    let amountNum: number;
+    let processedDenoms: Array<{ label: string; value: number; count: number; euroAmount: number }> = [];
+
+    if (direction === 'credit' && Array.isArray(inputDenoms) && inputDenoms.length > 0) {
+        /* Liquidazione con conteggio tagli token */
+        const eventDenoms = eventCtx.event.denominations ?? [];
+        const eventDenomMap = new Map(eventDenoms.map((d) => [d.label, d]));
+
+        /* Aggrega i conteggi per label (il front-end potrebbe inviare più righe per lo stesso taglio) */
+        const countByLabel = new Map<string, number>();
+        for (const d of inputDenoms) {
+            const count = Number(d.count);
+            if (!Number.isFinite(count) || count <= 0) continue;
+            countByLabel.set(d.label, (countByLabel.get(d.label) ?? 0) + count);
+        }
+
+        /* Calcola totali e valida */
+        let totalCredits = 0;
+        const processed: Array<{ label: string; value: number; count: number; euroAmount: number }> = [];
+
+        for (const [label, count] of countByLabel) {
+            const eventDef = eventDenomMap.get(label);
+            if (!eventDef) {
+                return res.status(400).json({ message: `Taglio "${label}" non definito per questo evento` });
+            }
+            const value = eventDef.value;
+            const euroAmount = Math.round(count * value / exchangeRate * 100) / 100;
+            totalCredits += count * value;
+            processed.push({ label, value, count, euroAmount });
+        }
+
+        /* Verifica che le quantità restituite non superino quelle emesse */
+        for (const p of processed) {
+            const eventDef = eventDenomMap.get(p.label)!;
+            const alreadyReturned = await StandSettlementModel.aggregate([
+                { $match: { eventId: new Types.ObjectId(eventCtx.eventId), direction: 'credit', 'denominations.label': p.label } },
+                { $unwind: '$denominations' },
+                { $match: { 'denominations.label': p.label } },
+                { $group: { _id: null, total: { $sum: '$denominations.count' } } }
+            ]) as Array<{ total?: number }>;
+            const prevReturned = alreadyReturned[0]?.total ?? 0;
+            if (prevReturned + p.count > eventDef.quantity) {
+                return res.status(400).json({
+                    message: `Taglio "${p.label}": restituiti ${prevReturned + p.count} su ${eventDef.quantity} emessi (${eventDef.quantity - prevReturned} rimasti disponibili)`
+                });
+            }
+        }
+
+        amountNum = totalCredits;
+        processedDenoms = processed;
+    } else {
+        /* Carico crediti (debit) o liquidazione senza tagli */
+        amountNum = Number(amount);
+        if (!Number.isFinite(amountNum) || amountNum <= 0) {
+            return res.status(400).json({ message: 'Amount must be a positive number' });
+        }
+    }
+
+    const feeNum = direction === 'credit' ? Number(feePercent ?? 0) : 0;
+    if (!Number.isFinite(feeNum) || feeNum < 0 || feeNum > 100) {
+        return res.status(400).json({ message: 'Fee percentage must be between 0 and 100' });
+    }
+
     const grossEuro = direction === 'debit' ? 0 : Math.round(amountNum / exchangeRate * 100) / 100;
     const feeEuro = direction === 'debit' ? 0 : Math.round(grossEuro * (feeNum / 100) * 100) / 100;
     const payoutEuro = direction === 'debit' ? 0 : Math.round((grossEuro - feeEuro) * 100) / 100;
@@ -659,6 +714,7 @@ async function createSettlement(req: Request, res: Response) {
             standName: stand.name,
             direction,
             amount: amountNum,
+            denominations: processedDenoms,
             exchangeRate,
             feePercent: feeNum,
             grossEuro,
@@ -729,6 +785,49 @@ async function createGuest(req: Request, res: Response) {
     });
 }
 
+async function denominationReport(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const eventDenoms = eventCtx.event.denominations ?? [];
+    if (eventDenoms.length === 0) {
+        return res.status(200).json({ items: [] });
+    }
+
+    /* Aggregate returned counts per label from all credit settlements */
+    const returnedAgg = await StandSettlementModel.aggregate([
+        { $match: { eventId: new Types.ObjectId(eventCtx.eventId), direction: 'credit', 'denominations.0': { $exists: true } } },
+        { $unwind: '$denominations' },
+        { $group: {
+            _id: '$denominations.label',
+            totalCount: { $sum: '$denominations.count' },
+            totalEuro: { $sum: '$denominations.euroAmount' }
+        } }
+    ]) as Array<{ _id: string; totalCount: number; totalEuro: number }>;
+
+    const returnedMap = new Map(returnedAgg.map((r) => [r._id, r]));
+
+    const items = eventDenoms.map((d) => {
+        const returned = returnedMap.get(d.label);
+        const returnedCount = returned?.totalCount ?? 0;
+        const returnedEuro = returned?.totalEuro ?? 0;
+        const lostCount = d.quantity - returnedCount;
+        const anomaly = returnedCount > d.quantity;
+
+        return {
+            label: d.label,
+            value: d.value,
+            issued: d.quantity,
+            returned: returnedCount,
+            returnedEuro: Math.round(returnedEuro * 100) / 100,
+            lost: lostCount,
+            anomaly
+        };
+    });
+
+    return res.status(200).json({ items });
+}
+
 export const exchangeController = {
     listUsers,
     getBalance,
@@ -741,5 +840,6 @@ export const exchangeController = {
     createSettlement,
     resetCashRegister,
     getCashRegisterReset,
-    createGuest
+    createGuest,
+    denominationReport
 };

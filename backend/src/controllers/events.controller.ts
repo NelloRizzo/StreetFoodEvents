@@ -87,6 +87,9 @@ function toEventResponse(event: {
     unifiedCashierEnabled?: boolean | null;
     slideshowTitle?: string | null;
     isPublic?: boolean | null;
+    feeBands?: unknown[];
+    denominations?: unknown[];
+    categories?: unknown[];
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -113,6 +116,9 @@ function toEventResponse(event: {
         unifiedCashierEnabled: event.unifiedCashierEnabled ?? false,
         slideshowTitle: event.slideshowTitle ?? null,
         isPublic: event.isPublic ?? true,
+        feeBands: event.feeBands ?? [],
+        denominations: event.denominations ?? [],
+        categories: event.categories ?? [],
         createdAt: event.createdAt,
         updatedAt: event.updatedAt
     };
@@ -217,7 +223,10 @@ export async function createEvent(req: Request, res: Response) {
         cashPaymentsEnabled,
         unifiedCashierEnabled,
         slideshowTitle,
-        isPublic
+        isPublic,
+        feeBands,
+        denominations,
+        categories
     } = req.body;
 
     if (location && !location.googleMapsUrl) {
@@ -245,7 +254,10 @@ export async function createEvent(req: Request, res: Response) {
         cashPaymentsEnabled: cashPaymentsEnabled ?? true,
         unifiedCashierEnabled: unifiedCashierEnabled ?? false,
         slideshowTitle: slideshowTitle ?? null,
-        isPublic: isPublic ?? true
+        isPublic: isPublic ?? true,
+        feeBands: Array.isArray(feeBands) ? feeBands : [],
+        denominations: Array.isArray(denominations) ? denominations : [],
+        categories: Array.isArray(categories) ? categories : []
     });
 
     return res.status(201).json({
@@ -291,7 +303,10 @@ export async function updateEvent(req: Request, res: Response) {
         cashPaymentsEnabled,
         unifiedCashierEnabled,
         slideshowTitle,
-        isPublic
+        isPublic,
+        feeBands,
+        denominations,
+        categories
     } = req.body;
 
     if (name !== undefined) {
@@ -379,6 +394,18 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (isPublic !== undefined) {
         event.isPublic = isPublic;
+    }
+
+    if (feeBands !== undefined) {
+        event.set('feeBands', Array.isArray(feeBands) ? feeBands : []);
+    }
+
+    if (denominations !== undefined) {
+        event.set('denominations', Array.isArray(denominations) ? denominations : []);
+    }
+
+    if (categories !== undefined) {
+        event.set('categories', Array.isArray(categories) ? categories : []);
     }
 
     await event.save();
@@ -508,4 +535,95 @@ export async function deleteEvent(req: Request, res: Response) {
     }
 
     return res.status(204).send();
+}
+
+export async function eventMenu(req: Request, res: Response) {
+    const eventId = req.params.eventId;
+
+    if (!isValidObjectId(eventId)) {
+        return res.status(400).json({ message: 'Invalid event id' });
+    }
+
+    const event = await EventModel.findById(eventId);
+    if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+    }
+
+    const { EventProductModel } = await import('../models/event-product.model');
+    const { StandModel } = await import('../models/stand.model');
+
+    const eventIdObj = new Types.ObjectId(eventId);
+
+    const [eventProducts, stands] = await Promise.all([
+        EventProductModel.find({ eventId: eventIdObj, available: true })
+            .populate('productId')
+            .sort({ sequenceOrder: 1, createdAt: 1 })
+            .lean(),
+        StandModel.find({ eventIds: eventIdObj })
+            .select('name numbers coverImage logo')
+            .lean()
+    ]);
+
+    const standMap = new Map(stands.map((s) => [s._id.toString(), s]));
+
+    const standItems = eventProducts
+        .filter((ep) => ep.productId)
+        .map((ep) => {
+            const stand = standMap.get(ep.standId.toString());
+            const product = ep.productId as unknown as { _id: Types.ObjectId; name: string; price: number; ingredients: string[]; coverImage: unknown; gallery: unknown[] };
+            const standNumber = stand?.numbers?.find((n) => n.eventId.equals(eventIdObj));
+
+            return {
+                standId: ep.standId.toString(),
+                standName: stand?.name ?? '',
+                standNumber: standNumber?.number ?? null,
+                standCoverImage: stand?.coverImage ?? null,
+                standLogo: stand?.logo ?? null,
+                productId: product._id.toString(),
+                eventProductId: ep._id.toString(),
+                name: product.name,
+                price: ep.priceOverride ?? product.price,
+                ingredients: product.ingredients,
+                coverImage: product.coverImage ?? null,
+                gallery: product.gallery ?? [],
+                categoryId: ep.categoryId ?? null,
+                stationIds: ep.stationIds.map((id) => id.toString()),
+                sequenceOrder: ep.sequenceOrder ?? 0,
+            };
+        });
+
+    const categories = (event.categories ?? []) as Array<{ label: string; sortOrder?: number }>;
+    const categoryLabels = categories
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .map((c) => c.label);
+
+    const byCategory: Record<string, typeof standItems> = {};
+    for (const label of categoryLabels) {
+        byCategory[label] = [];
+    }
+    byCategory['Senza categoria'] = [];
+
+    for (const item of standItems) {
+        const cat = item.categoryId;
+        if (cat && byCategory[cat]) {
+            byCategory[cat].push(item);
+        } else if (cat) {
+            byCategory[cat] = [item];
+        } else {
+            byCategory['Senza categoria'].push(item);
+        }
+    }
+
+    return res.status(200).json({
+        event: {
+            id: event._id.toString(),
+            name: event.name,
+            currencyName: event.currencyName,
+            currencySymbol: event.currencySymbol ?? null,
+            exchangeRate: event.exchangeRate ?? 1,
+        },
+        categories: categoryLabels,
+        items: standItems,
+        byCategory,
+    });
 }

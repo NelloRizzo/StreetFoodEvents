@@ -4,6 +4,7 @@ import {
     createEvent,
     deleteEvent,
     eventContestsQrCode,
+    eventMenu,
     eventMenuQrCode,
     eventQrCode,
     getEventById,
@@ -22,6 +23,7 @@ eventsRouter.get('/home', asyncHandler(authMiddleware), asyncHandler(homeEvents)
 eventsRouter.get('/:eventId', asyncHandler(getEventById));
 eventsRouter.get('/:eventId/qrcode', asyncHandler(eventQrCode));
 eventsRouter.get('/:eventId/menu-qrcode', asyncHandler(eventMenuQrCode));
+eventsRouter.get('/:eventId/menu', asyncHandler(eventMenu));
 eventsRouter.get('/:eventId/contests-qrcode', asyncHandler(eventContestsQrCode));
 
 eventsRouter.post('/', asyncHandler(authMiddleware), asyncHandler(createEvent));

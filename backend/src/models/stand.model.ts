@@ -47,6 +47,17 @@ const eventNumberSchema = new Schema(
         showOnMap: {
             type: Boolean,
             default: true
+        },
+        feePercent: {
+            type: Number,
+            default: null,
+            min: 0,
+            max: 100
+        },
+        feeFlat: {
+            type: Number,
+            default: null,
+            min: 0
         }
     },
     { _id: false }
@@ -89,6 +100,10 @@ const standSchema = new Schema(
             default: []
         },
         coverImage: {
+            type: imageSchema,
+            default: null
+        },
+        logo: {
             type: imageSchema,
             default: null
         },

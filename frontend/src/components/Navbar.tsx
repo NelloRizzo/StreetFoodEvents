@@ -79,7 +79,7 @@ export function Navbar({
   useEffect(() => {
     if (isEventsOpen && !eventsLoading && !eventsLoaded) {
       setEventsLoading(true)
-      apiRequest<{ items: EventItem[] }>('/events')
+      apiRequest<{ items: EventItem[] }>('/events?public=true')
         .then((data) => {
           setEvents(data.items)
           setEventsLoading(false)

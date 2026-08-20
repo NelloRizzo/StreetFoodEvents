@@ -204,7 +204,7 @@ describe('Stands API', () => {
         expect(res.body.item.eventIds).toHaveLength(1);
         expect(res.body.item.eventIds[0]).toBe(event._id.toString());
         expect(res.body.item.numbers).toEqual([
-            { eventId: event._id.toString(), number: 1, showOnMap: true }
+            { eventId: event._id.toString(), number: 1, showOnMap: true, feePercent: null, feeFlat: null }
         ]);
     });
 
@@ -232,7 +232,7 @@ describe('Stands API', () => {
 
         expect(res2.status).toBe(201);
         expect(res2.body.item.numbers).toEqual([
-            { eventId: event._id.toString(), number: 2, showOnMap: true }
+            { eventId: event._id.toString(), number: 2, showOnMap: true, feePercent: null, feeFlat: null }
         ]);
 
         const listed = await request(app).get(`/api/stands?eventId=${event._id}`);
@@ -304,7 +304,7 @@ describe('Stands API', () => {
 
         const listed = await request(app).get(`/api/stands?eventId=${event._id}`);
         expect(listed.body.items[0]!.numbers).toEqual([
-            { eventId: event._id.toString(), number: 1, showOnMap: false }
+            { eventId: event._id.toString(), number: 1, showOnMap: false, feePercent: null, feeFlat: null }
         ]);
     });
 

@@ -12,6 +12,9 @@ import settlementStyles from './StandSettlementsPage.module.scss'
 
 type SettlementDirection = 'debit' | 'credit'
 
+type EventDenomination = { label: string; value: number; quantity: number }
+type EventFeeBand = { maxAmount: number; feePercent: number; feeFlat: number }
+
 type SettlementStand = {
   standId: string
   standName: string
@@ -53,6 +56,16 @@ type SettlementListResponse = {
   pagination: { page: number; totalPages: number; total: number; limit: number }
 }
 
+type DenominationReportItem = {
+  label: string
+  value: number
+  issued: number
+  returned: number
+  returnedEuro: number
+  lost: number
+  anomaly: boolean
+}
+
 export function StandSettlementsPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const { isAuthenticated } = useAuth()
@@ -69,6 +82,14 @@ export function StandSettlementsPage() {
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  const [eventDenoms, setEventDenoms] = useState<EventDenomination[]>([])
+  const [eventFeeBands, setEventFeeBands] = useState<EventFeeBand[]>([])
+  const [standFeeOverride, setStandFeeOverride] = useState<{ feePercent: number | null; feeFlat: number | null } | null>(null)
+  const [denomCounts, setDenomCounts] = useState<Record<string, string>>({})
+  const [denomReport, setDenomReport] = useState<DenominationReportItem[]>([])
+  const [showDenomReport, setShowDenomReport] = useState(false)
+  const [feePrefilled, setFeePrefilled] = useState(false)
+
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [totals, setTotals] = useState<{ loadedCredits: number; settledCredits: number; payoutEuro: number; count: number }>({ loadedCredits: 0, settledCredits: 0, payoutEuro: 0, count: 0 })
   const [txPage, setTxPage] = useState(1)
@@ -83,7 +104,9 @@ export function StandSettlementsPage() {
     setLoading(true)
     let any403 = false
     try {
-      const ev = await apiRequest<{ item: { name: string } }>(`/events/${eventId}`)
+      const ev = await apiRequest<{ item: { name: string; denominations?: EventDenomination[]; feeBands?: EventFeeBand[] } }>(`/events/${eventId}`)
+      setEventDenoms(ev.item.denominations ?? [])
+      setEventFeeBands(ev.item.feeBands ?? [])
       setEventName(ev.item.name)
     } catch { /* event name non essenziale */}
     try {
@@ -110,21 +133,59 @@ export function StandSettlementsPage() {
   const currencyName = summary?.currencyName ?? 'crediti'
 
   const selectedStand = summary?.stands.find((s) => s.standId === selectedStandId) ?? null
-  const creditsNum = parseFloat(amount)
+
+  const hasDenoms = eventDenoms.length > 0
+  const denomTotalCredits = hasDenoms
+    ? eventDenoms.reduce((sum, d) => {
+        const count = parseFloat(denomCounts[d.label] ?? '0')
+        return sum + (Number.isFinite(count) ? count : 0) * d.value
+      }, 0)
+    : 0
+
+  const creditsNum = hasDenoms && direction === 'credit' ? denomTotalCredits : parseFloat(amount)
   const validAmount = Number.isFinite(creditsNum) && creditsNum > 0
   const isCredit = direction === 'credit'
-  const feeNum = isCredit && Number.isFinite(parseFloat(feePercent)) ? parseFloat(feePercent) : 0
   const grossEuro = isCredit && validAmount ? Math.round(creditsNum / rate * 100) / 100 : 0
+
+  const resolveFee = (ge: number): string => {
+    if (standFeeOverride?.feePercent != null) return String(standFeeOverride.feePercent)
+    const matchingBand = [...eventFeeBands].sort((a, b) => a.maxAmount - b.maxAmount).find((b) => ge <= b.maxAmount)
+    if (matchingBand) return String(matchingBand.feePercent)
+    return ''
+  }
+
+  const feeNum = isCredit && Number.isFinite(parseFloat(feePercent)) ? parseFloat(feePercent) : 0
   const feeEuro = isCredit && validAmount ? Math.round(grossEuro * (feeNum / 100) * 100) / 100 : 0
   const payoutEuro = isCredit && validAmount ? Math.round((grossEuro - feeEuro) * 100) / 100 : 0
 
-  const handleSelectStand = (standId: string) => {
+  useEffect(() => {
+    if (!hasDenoms || !isCredit || denomTotalCredits <= 0) return
+    const ge = Math.round(denomTotalCredits / rate * 100) / 100
+    const resolved = resolveFee(ge)
+    if (resolved !== feePercent) {
+      setFeePercent(resolved)
+      setFeePrefilled(resolved !== '')
+    }
+  }, [denomCounts, hasDenoms, isCredit, denomTotalCredits, rate])
+
+  const handleSelectStand = async (standId: string) => {
     setSelectedStandId(standId)
+    setDenomCounts({})
+    setFeePrefilled(false)
     const stand = summary?.stands.find((s) => s.standId === standId)
     if (stand) {
       setAmount(isCredit && stand.earnedCredits > 0 ? String(stand.earnedCredits) : '')
     } else {
       setAmount('')
+    }
+    if (eventId && standId) {
+      try {
+        const standData = await apiRequest<{ item: { numbers?: Array<{ eventId: string; feePercent: number | null; feeFlat: number | null }> } }>(`/stands/${standId}`)
+        const num = standData.item.numbers?.find((n) => n.eventId === eventId)
+        setStandFeeOverride(num ? { feePercent: num.feePercent, feeFlat: num.feeFlat } : null)
+      } catch {
+        setStandFeeOverride(null)
+      }
     }
   }
 
@@ -132,6 +193,19 @@ export function StandSettlementsPage() {
     if (!eventId || !selectedStandId || !validAmount) return
     setSubmitting(true)
     try {
+      const denominationsPayload = (isCredit && hasDenoms)
+        ? eventDenoms
+            .filter((d) => {
+              const count = parseFloat(denomCounts[d.label] ?? '0')
+              return Number.isFinite(count) && count > 0
+            })
+            .map((d) => ({
+              label: d.label,
+              value: d.value,
+              count: parseFloat(denomCounts[d.label] ?? '0'),
+            }))
+        : undefined
+
       const res = await apiRequest<{ item: Settlement }>(`/exchange/${eventId}/settlements`, {
         method: 'POST',
         bodyJson: {
@@ -140,6 +214,7 @@ export function StandSettlementsPage() {
           direction,
           feePercent: feeNum,
           description: description.trim() || undefined,
+          denominations: denominationsPayload,
         }
       })
       setAmount('')
@@ -252,12 +327,48 @@ export function StandSettlementsPage() {
                       Carico crediti (DARE)
                     </button>
                   </div>
-                  <label className={cambioStyles.field}>
-                    {isCredit ? `Importo presentato (${currencyName})` : `Crediti da caricare (${currencyName})`}
-                    <input type="number" min="0.01" step="0.01" value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      disabled={submitting} />
-                  </label>
+                  {hasDenoms && isCredit ? (
+                    <div className={cambioStyles.field}>
+                      <span style={{ fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Tagli restituiti dallo stand</span>
+                      {eventDenoms.map((d) => {
+                        const count = parseFloat(denomCounts[d.label] ?? '0')
+                        const countNum = Number.isFinite(count) ? count : 0
+                        const sub = countNum * d.value
+                        return (
+                          <div key={d.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                            <span style={{ flex: 2, fontSize: '0.85rem' }}>{d.label}</span>
+                            <span style={{ flex: 1, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>€{d.value.toFixed(2)} cad.</span>
+                            <span style={{ width: 60 }}>
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={denomCounts[d.label] ?? ''}
+                                onChange={(e) => setDenomCounts((prev) => ({ ...prev, [d.label]: e.target.value }))}
+                                placeholder="0"
+                                disabled={submitting}
+                                style={{ width: '100%', textAlign: 'right' }}
+                              />
+                            </span>
+                            <span style={{ flex: 1, textAlign: 'right', fontSize: '0.85rem', fontWeight: 500 }}>
+                              {countNum > 0 ? `${countNum} × ${d.value.toFixed(2)} = ${sub.toFixed(2)} ${currencyName}` : '—'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                      <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
+                        Totale: <strong>{denomTotalCredits.toFixed(2)} {currencyName}</strong> = €{grossEuro.toFixed(2)} lordo
+                        {feePrefilled && <span> — Fee pre-compilata dal sistema ({feePercent}%)</span>}
+                      </p>
+                    </div>
+                  ) : (
+                    <label className={cambioStyles.field}>
+                      {isCredit ? `Importo presentato (${currencyName})` : `Crediti da caricare (${currencyName})`}
+                      <input type="number" min="0.01" step="0.01" value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        disabled={submitting} />
+                    </label>
+                  )}
                   {isCredit && (
                     <label className={cambioStyles.field}>
                       Percentuale trattenuta dal gestore (%) — default 0
@@ -396,6 +507,64 @@ export function StandSettlementsPage() {
               </>
             )}
           </section>
+
+          {eventDenoms.length > 0 && (
+            <section style={{ marginTop: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <h2 className={styles.sectionTitle} style={{ margin: 0 }}>Riepilogo tagli valuta</h2>
+                <button
+                  className={styles.textBtn}
+                  onClick={async () => {
+                    if (!showDenomReport && eventId) {
+                      try {
+                        const data = await apiRequest<{ items: DenominationReportItem[] }>(`/exchange/${eventId}/denomination-report`)
+                        setDenomReport(data.items)
+                      } catch { /* ignore */ }
+                    }
+                    setShowDenomReport(!showDenomReport)
+                  }}
+                >
+                  {showDenomReport ? 'Nascondi' : 'Mostra riepilogo'}
+                </button>
+              </div>
+              {showDenomReport && (
+                <div style={{ overflowX: 'auto', marginTop: '0.5rem' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Taglio</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Valore (EUR)</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Emessi</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Resi</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Resi (EUR)</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Persi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {denomReport.map((d) => (
+                        <tr key={d.label} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                          <td style={{ padding: '0.5rem', fontWeight: 500 }}>{d.label}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>€{d.value.toFixed(2)}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{d.issued}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right', color: d.anomaly ? 'var(--color-red)' : undefined, fontWeight: d.anomaly ? 700 : undefined }}>
+                            {d.returned}
+                            {d.anomaly && ' ⚠️'}
+                          </td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>€{d.returnedEuro.toFixed(2)}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right', color: d.lost > 0 ? 'var(--color-red)' : undefined }}>
+                            {d.lost}
+                          </td>
+                        </tr>
+                      ))}
+                      {denomReport.length === 0 && (
+                        <tr><td colSpan={6} style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Nessun dato tagli disponibile</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
         </>
       )}
 

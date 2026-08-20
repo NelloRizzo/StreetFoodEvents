@@ -3,6 +3,66 @@ import { Schema, model, type InferSchemaType } from 'mongoose';
 import { imageSchema } from './schemas/image.schema';
 import { locationSchema } from './schemas/location.schema';
 
+const feeBandSchema = new Schema(
+    {
+        maxAmount: {
+            type: Number,
+            required: true,
+            min: 0
+        },
+        feePercent: {
+            type: Number,
+            default: 0,
+            min: 0,
+            max: 100
+        },
+        feeFlat: {
+            type: Number,
+            default: 0,
+            min: 0
+        }
+    },
+    { _id: false }
+);
+
+const denominationSchema = new Schema(
+    {
+        label: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 60
+        },
+        value: {
+            type: Number,
+            required: true,
+            min: 0.01
+        },
+        quantity: {
+            type: Number,
+            required: true,
+            min: 0
+        }
+    },
+    { _id: false }
+);
+
+const categorySchema = new Schema(
+    {
+        label: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 80
+        },
+        sortOrder: {
+            type: Number,
+            default: 0
+        }
+    },
+    { _id: false }
+);
+
 const eventSchema = new Schema(
     {
         name: {
@@ -124,6 +184,18 @@ const eventSchema = new Schema(
         isPublic: {
             type: Boolean,
             default: true
+        },
+        feeBands: {
+            type: [feeBandSchema],
+            default: []
+        },
+        denominations: {
+            type: [denominationSchema],
+            default: []
+        },
+        categories: {
+            type: [categorySchema],
+            default: []
         }
     },
     {

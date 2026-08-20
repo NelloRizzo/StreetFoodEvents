@@ -42,6 +42,12 @@ const eventProductSchema = new Schema(
         sequenceOrder: {
             type: Number,
             default: 0
+        },
+        categoryId: {
+            type: String,
+            trim: true,
+            default: null,
+            maxlength: 80
         }
     },
     {

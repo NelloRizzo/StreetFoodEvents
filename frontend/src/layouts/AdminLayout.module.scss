@@ -13,6 +13,10 @@
   transition: margin-left var(--ease-standard);
 }
 
+.main[data-hide-chrome] {
+  margin-left: 0;
+}
+
 .content {
   flex: 1;
   padding: 1.5rem 0 3rem;

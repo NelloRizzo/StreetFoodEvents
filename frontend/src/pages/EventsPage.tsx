@@ -45,6 +45,10 @@ type EventItem = {
   cashPaymentsEnabled: boolean
   unifiedCashierEnabled: boolean
   isPublic: boolean
+  currencySymbol: UploadedImage | null
+  feeBands: Array<{ maxAmount: number; feePercent: number; feeFlat: number }>
+  denominations: Array<{ label: string; value: number; quantity: number }>
+  categories: Array<{ label: string; sortOrder: number }>
   createdAt: string
   updatedAt: string
 }
@@ -79,6 +83,10 @@ type EventFormData = {
   cashPaymentsEnabled: boolean
   unifiedCashierEnabled: boolean
   isPublic: boolean
+  currencySymbol: UploadedImage | null
+  feeBands: Array<{ maxAmount: string; feePercent: string; feeFlat: string }>
+  denominations: Array<{ label: string; value: string; quantity: string }>
+  categories: Array<{ label: string }>
 }
 
 const emptyForm: EventFormData = {
@@ -111,6 +119,10 @@ const emptyForm: EventFormData = {
   cashPaymentsEnabled: true,
   unifiedCashierEnabled: false,
   isPublic: true,
+  currencySymbol: null,
+  feeBands: [],
+  denominations: [],
+  categories: [],
 }
 
 type StandItem = {
@@ -400,6 +412,18 @@ export function EventsPage() {
       cashPaymentsEnabled: ev.cashPaymentsEnabled,
       unifiedCashierEnabled: ev.unifiedCashierEnabled,
       isPublic: ev.isPublic,
+      currencySymbol: ev.currencySymbol ?? null,
+      feeBands: (ev.feeBands ?? []).map((fb) => ({
+        maxAmount: String(fb.maxAmount),
+        feePercent: String(fb.feePercent),
+        feeFlat: String(fb.feeFlat),
+      })),
+      denominations: (ev.denominations ?? []).map((d) => ({
+        label: d.label,
+        value: String(d.value),
+        quantity: String(d.quantity),
+      })),
+      categories: (ev.categories ?? []).map((c) => ({ label: c.label })),
     })
     setEditingId(ev.id)
     setShowForm(true)
@@ -453,6 +477,21 @@ export function EventsPage() {
       cashPaymentsEnabled: form.cashPaymentsEnabled,
       unifiedCashierEnabled: form.unifiedCashierEnabled,
       isPublic: form.isPublic,
+      currencySymbol: form.currencySymbol,
+      feeBands: form.feeBands.map((fb) => ({
+        maxAmount: fb.maxAmount ? Number(fb.maxAmount) : 0,
+        feePercent: fb.feePercent ? Number(fb.feePercent) : 0,
+        feeFlat: fb.feeFlat ? Number(fb.feeFlat) : 0,
+      })),
+      denominations: form.denominations.map((d) => ({
+        label: d.label,
+        value: d.value ? Number(d.value) : 0,
+        quantity: d.quantity ? Number(d.quantity) : 0,
+      })),
+      categories: form.categories.map((c, i) => ({
+        label: c.label,
+        sortOrder: i,
+      })),
     }
 
     if (editingId) {
@@ -840,6 +879,183 @@ export function EventsPage() {
                 onChange={(data) => setForm({ ...form, gallery: data as UploadedImage[] })}
                 label="Galleria"
               />
+            </fieldset>
+
+            <fieldset className={styles.fieldset}>
+              <legend className={styles.legend}>Simbolo valuta</legend>
+              <ImageUploader
+                mode="single"
+                type="event"
+                value={form.currencySymbol}
+                onChange={(data) => setForm({ ...form, currencySymbol: data as UploadedImage | null })}
+                label="Icona moneta (opzionale)"
+              />
+            </fieldset>
+
+            <fieldset className={styles.fieldset}>
+              <legend className={styles.legend}>Fasce commissione</legend>
+              <p className={styles.fieldHint}>Commissioni percentuali e fisse applicate alle liquidazioni stand in base all'importo lordo. Lascia vuoto per non applicare commissioni.</p>
+              {form.feeBands.map((fb, idx) => (
+                <div key={idx} className={styles.fieldRow}>
+                  <div className={styles.field} style={{ flex: 1 }}>
+                    <label>Importo massimo (EUR)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={fb.maxAmount}
+                      onChange={(e) => {
+                        const bands = [...form.feeBands]
+                        bands[idx] = { ...bands[idx], maxAmount: e.target.value }
+                        setForm({ ...form, feeBands: bands })
+                      }}
+                    />
+                  </div>
+                  <div className={styles.field} style={{ flex: 1 }}>
+                    <label>Fee %</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={fb.feePercent}
+                      onChange={(e) => {
+                        const bands = [...form.feeBands]
+                        bands[idx] = { ...bands[idx], feePercent: e.target.value }
+                        setForm({ ...form, feeBands: bands })
+                      }}
+                    />
+                  </div>
+                  <div className={styles.field} style={{ flex: 1 }}>
+                    <label>Fee fissa (EUR)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={fb.feeFlat}
+                      onChange={(e) => {
+                        const bands = [...form.feeBands]
+                        bands[idx] = { ...bands[idx], feeFlat: e.target.value }
+                        setForm({ ...form, feeBands: bands })
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.textBtn}
+                    style={{ alignSelf: 'flex-end', marginBottom: '0.25rem' }}
+                    onClick={() => setForm({ ...form, feeBands: form.feeBands.filter((_, i) => i !== idx) })}
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className={styles.secondaryBtn}
+                onClick={() => setForm({ ...form, feeBands: [...form.feeBands, { maxAmount: '', feePercent: '', feeFlat: '' }] })}
+              >
+                + Aggiungi fascia
+              </button>
+            </fieldset>
+
+            <fieldset className={styles.fieldset}>
+              <legend className={styles.legend}>Tagli valuta</legend>
+              <p className={styles.fieldHint}>Definisci i tagli di moneta fisica emessi per l'evento. Quantità fissa per taglio, usata per il riepilogo tagli in fase di liquidazione.</p>
+              {form.denominations.map((d, idx) => (
+                <div key={idx} className={styles.fieldRow}>
+                  <div className={styles.field} style={{ flex: 2 }}>
+                    <label>Etichetta</label>
+                    <input
+                      value={d.label}
+                      onChange={(e) => {
+                        const denoms = [...form.denominations]
+                        denoms[idx] = { ...denoms[idx], label: e.target.value }
+                        setForm({ ...form, denominations: denoms })
+                      }}
+                      placeholder="es. Fiches 10"
+                    />
+                  </div>
+                  <div className={styles.field} style={{ flex: 1 }}>
+                    <label>Valore (EUR)</label>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={d.value}
+                      onChange={(e) => {
+                        const denoms = [...form.denominations]
+                        denoms[idx] = { ...denoms[idx], value: e.target.value }
+                        setForm({ ...form, denominations: denoms })
+                      }}
+                    />
+                  </div>
+                  <div className={styles.field} style={{ flex: 1 }}>
+                    <label>Quantità emessa</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={d.quantity}
+                      onChange={(e) => {
+                        const denoms = [...form.denominations]
+                        denoms[idx] = { ...denoms[idx], quantity: e.target.value }
+                        setForm({ ...form, denominations: denoms })
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.textBtn}
+                    style={{ alignSelf: 'flex-end', marginBottom: '0.25rem' }}
+                    onClick={() => setForm({ ...form, denominations: form.denominations.filter((_, i) => i !== idx) })}
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className={styles.secondaryBtn}
+                onClick={() => setForm({ ...form, denominations: [...form.denominations, { label: '', value: '', quantity: '' }] })}
+              >
+                + Aggiungi taglio
+              </button>
+            </fieldset>
+
+            <fieldset className={styles.fieldset}>
+              <legend className={styles.legend}>Categorie prodotti</legend>
+              <p className={styles.fieldHint}>Categorie per organizzare il menu pubblico per categoria (es. "Street Food", "Dolci", "Bevande").</p>
+              {form.categories.map((c, idx) => (
+                <div key={idx} className={styles.fieldRow}>
+                  <div className={styles.field} style={{ flex: 1 }}>
+                    <label>Nome categoria</label>
+                    <input
+                      value={c.label}
+                      onChange={(e) => {
+                        const cats = [...form.categories]
+                        cats[idx] = { ...cats[idx], label: e.target.value }
+                        setForm({ ...form, categories: cats })
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.textBtn}
+                    style={{ alignSelf: 'flex-end', marginBottom: '0.25rem' }}
+                    onClick={() => setForm({ ...form, categories: form.categories.filter((_, i) => i !== idx) })}
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className={styles.secondaryBtn}
+                onClick={() => setForm({ ...form, categories: [...form.categories, { label: '' }] })}
+              >
+                + Aggiungi categoria
+              </button>
             </fieldset>
 
             <div className={styles.formActions}>

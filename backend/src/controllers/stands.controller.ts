@@ -31,8 +31,9 @@ function toStandResponse(stand: {
     description?: string | null;
     eventIds: Types.ObjectId[];
     locations?: Array<{ eventId: Types.ObjectId; location?: Record<string, unknown> | null }> | null;
-    numbers?: Array<{ eventId: Types.ObjectId; number: number; showOnMap?: boolean }> | null;
+    numbers?: Array<{ eventId: Types.ObjectId; number: number; showOnMap?: boolean; feePercent?: number | null; feeFlat?: number | null }> | null;
     coverImage?: unknown | null;
+    logo?: unknown | null;
     gallery?: unknown[];
     createdAt: Date;
     updatedAt: Date;
@@ -52,8 +53,11 @@ function toStandResponse(stand: {
             eventId: el.eventId.toString(),
             number: el.number,
             showOnMap: el.showOnMap ?? true,
-        } as { eventId: string; number: number; showOnMap: boolean })),
+            feePercent: el.feePercent ?? null,
+            feeFlat: el.feeFlat ?? null,
+        } as { eventId: string; number: number; showOnMap: boolean; feePercent: number | null; feeFlat: number | null })),
         coverImage: stand.coverImage ?? null,
+        logo: stand.logo ?? null,
         gallery: stand.gallery ?? [],
         createdAt: stand.createdAt,
         updatedAt: stand.updatedAt
@@ -104,17 +108,25 @@ export async function createStand(req: Request, res: Response) {
         description,
         eventIds,
         locations,
+        eventFees,
         coverImage,
+        logo,
         gallery
     } = req.body;
 
     const eventIdList: string[] = Array.isArray(eventIds) ? eventIds : [];
+    const feesMap: Record<string, { feePercent?: number | null; feeFlat?: number | null }> = eventFees && typeof eventFees === 'object' ? eventFees : {};
     const numbers = (await Promise.all(
         eventIdList.map(async (eid) => {
             if (!isValidObjectId(eid)) return null;
-            return { eventId: eid, number: await nextStandNumber(eid) };
+            const fee = feesMap[eid];
+            return {
+                eventId: eid,
+                number: await nextStandNumber(eid),
+                ...(fee ? { feePercent: fee.feePercent ?? null, feeFlat: fee.feeFlat ?? null } : {})
+            };
         })
-    )).filter((n): n is { eventId: string; number: number } => n !== null);
+    )).filter((n): n is { eventId: string; number: number; feePercent?: number | null; feeFlat?: number | null } => n !== null);
 
     const stand = await StandModel.create({
         type: type ?? 'food',
@@ -125,6 +137,7 @@ export async function createStand(req: Request, res: Response) {
         locations: Array.isArray(locations) ? locations : [],
         numbers,
         coverImage: coverImage ?? null,
+        logo: logo ?? null,
         gallery: gallery ?? []
     });
 
@@ -157,7 +170,9 @@ export async function updateStand(req: Request, res: Response) {
         description,
         eventIds,
         locations,
+        eventFees,
         coverImage,
+        logo,
         gallery
     } = req.body;
 
@@ -237,15 +252,48 @@ export async function updateStand(req: Request, res: Response) {
         /* Assign progressive numbers for newly linked events and drop numbers for removed ones */
         if (addedEventIds.length > 0 || removedEventIdStrings.length > 0) {
             const removedSet = new Set(removedEventIdStrings);
-            const kept: Array<{ eventId: string; number: number }> = (stand.numbers ?? [])
+            const feesMap: Record<string, { feePercent?: number | null; feeFlat?: number | null }> = eventFees && typeof eventFees === 'object' ? eventFees : {};
+            const kept: Array<{ eventId: string; number: number; feePercent?: number | null; feeFlat?: number | null }> = (stand.numbers ?? [])
                 .filter((n) => !removedSet.has(n.eventId.toString()))
-                .map((n) => ({ eventId: n.eventId.toString(), number: n.number }));
+                .map((n) => {
+                    const eid = n.eventId.toString();
+                    const fee = feesMap[eid];
+                    return {
+                        eventId: eid,
+                        number: n.number,
+                        feePercent: fee?.feePercent ?? n.feePercent ?? null,
+                        feeFlat: fee?.feeFlat ?? n.feeFlat ?? null,
+                    };
+                });
             for (const addedEventId of addedEventIds) {
                 if (!isValidObjectId(addedEventId)) continue;
-                kept.push({ eventId: addedEventId, number: await nextStandNumber(addedEventId) });
+                const fee = feesMap[addedEventId];
+                kept.push({
+                    eventId: addedEventId,
+                    number: await nextStandNumber(addedEventId),
+                    ...(fee ? { feePercent: fee.feePercent ?? null, feeFlat: fee.feeFlat ?? null } : {})
+                });
             }
             stand.set('numbers', kept);
         }
+    }
+
+    /* Update fee overrides for existing events without changing eventIds */
+    if (eventIds === undefined && eventFees && typeof eventFees === 'object') {
+        const feesMap: Record<string, { feePercent?: number | null; feeFlat?: number | null }> = eventFees;
+        const updatedNumbers = (stand.numbers ?? []).map((n) => {
+            const eid = n.eventId.toString();
+            const fee = feesMap[eid];
+            if (!fee) return { eventId: eid, number: n.number, showOnMap: n.showOnMap ?? true, feePercent: n.feePercent ?? null, feeFlat: n.feeFlat ?? null };
+            return {
+                eventId: eid,
+                number: n.number,
+                showOnMap: n.showOnMap ?? true,
+                feePercent: fee.feePercent !== undefined ? fee.feePercent : n.feePercent ?? null,
+                feeFlat: fee.feeFlat !== undefined ? fee.feeFlat : n.feeFlat ?? null,
+            };
+        });
+        stand.set('numbers', updatedNumbers);
     }
 
     if (locations !== undefined) {
@@ -254,6 +302,10 @@ export async function updateStand(req: Request, res: Response) {
 
     if (coverImage !== undefined) {
         stand.coverImage = coverImage;
+    }
+
+    if (logo !== undefined) {
+        stand.logo = logo;
     }
 
     if (gallery !== undefined) {

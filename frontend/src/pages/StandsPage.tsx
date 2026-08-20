@@ -26,12 +26,20 @@ type Stand = {
   eventIds: string[]
   locations: Array<{ eventId: string; location: { type: 'Point'; coordinates: [number, number] } | null }>
   coverImage: unknown | null
+  logo: UploadedImage | null
   gallery: unknown[]
+  numbers?: Array<{ eventId: string; number: number; showOnMap: boolean; feePercent: number | null; feeFlat: number | null }>
   createdAt: string
   updatedAt: string
 }
 
 type EventLocation = { eventId: string; latitude: string; longitude: string }
+
+type EventFeeOverride = {
+  eventId: string
+  feePercent: string
+  feeFlat: string
+}
 
 type StandFormData = {
   type: StandType
@@ -41,10 +49,12 @@ type StandFormData = {
   eventIds: string[]
   locations: EventLocation[]
   coverImage: UploadedImage | null
+  logo: UploadedImage | null
   gallery: UploadedImage[]
+  eventFees: EventFeeOverride[]
 }
 
-const emptyForm: StandFormData = { type: 'food', name: '', slogan: '', description: '', eventIds: [], locations: [], coverImage: null, gallery: [] }
+const emptyForm: StandFormData = { type: 'food', name: '', slogan: '', description: '', eventIds: [], locations: [], coverImage: null, logo: null, gallery: [], eventFees: [] }
 
 export function StandsPage() {
   const { user } = useAuth()
@@ -134,7 +144,13 @@ export function StandsPage() {
         }
       }),
       coverImage: stand.coverImage as UploadedImage | null,
+      logo: (stand as Stand).logo ?? null,
       gallery: stand.gallery as UploadedImage[],
+      eventFees: (stand as Stand).numbers?.map((n) => ({
+        eventId: n.eventId,
+        feePercent: n.feePercent != null ? String(n.feePercent) : '',
+        feeFlat: n.feeFlat != null ? String(n.feeFlat) : '',
+      })) ?? [],
     })
     setEditingId(stand.id)
     setShowForm(true)
@@ -152,6 +168,14 @@ export function StandsPage() {
           location: hasCoords ? { type: 'Point' as const, coordinates: [lng, lat] } : null,
         }
       }),
+      eventFees: Object.fromEntries(
+        form.eventFees
+          .filter((fe) => form.eventIds.includes(fe.eventId))
+          .map((fe) => [fe.eventId, {
+            feePercent: fe.feePercent !== '' ? Number(fe.feePercent) : null,
+            feeFlat: fe.feeFlat !== '' ? Number(fe.feeFlat) : null,
+          }])
+      ),
     }
     if (editingId) {
       await apiRequest(`/stands/${editingId}`, {
@@ -187,6 +211,9 @@ export function StandsPage() {
         locations: isLinked
           ? prev.locations.filter((l) => l.eventId !== eventId)
           : [...prev.locations, { eventId, latitude: '', longitude: '' }],
+        eventFees: isLinked
+          ? prev.eventFees.filter((fe) => fe.eventId !== eventId)
+          : [...prev.eventFees, { eventId, feePercent: '', feeFlat: '' }],
       }
     })
   }
@@ -291,12 +318,73 @@ export function StandsPage() {
               />
 
             <ImageUploader
+                mode="single"
+                type="stand"
+                value={form.logo}
+                onChange={(data) => setForm({ ...form, logo: data as UploadedImage | null })}
+                label="Logo stand"
+              />
+
+            <ImageUploader
                 mode="multiple"
                 type="stand"
                 value={form.gallery}
                 onChange={(data) => setForm({ ...form, gallery: data as UploadedImage[] })}
                 label="Galleria"
               />
+
+            {form.eventIds.length > 0 && (
+              <fieldset style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '1rem', marginTop: '0.5rem' }}>
+                <legend style={{ fontWeight: 600, padding: '0 0.5rem' }}>Commissioni per evento</legend>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 0.5rem' }}>
+                  Override delle fasce commissione globali dell'evento. Lascia vuoto per usare la fascia standard.
+                </p>
+                {form.eventIds.map((eid) => {
+                  const ev = events.find((e) => e.id === eid)
+                  const evFee = form.eventFees.find((fe) => fe.eventId === eid)
+                  return (
+                    <div key={eid} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
+                      <span style={{ fontWeight: 500, minWidth: 120, paddingBottom: '0.4rem' }}>{ev?.name ?? eid}</span>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.75rem' }}>Fee %</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={evFee?.feePercent ?? ''}
+                          onChange={(e) => {
+                            const fees = [...form.eventFees]
+                            const idx = fees.findIndex((f) => f.eventId === eid)
+                            if (idx >= 0) fees[idx] = { ...fees[idx], feePercent: e.target.value }
+                            else fees.push({ eventId: eid, feePercent: e.target.value, feeFlat: '' })
+                            setForm({ ...form, eventFees: fees })
+                          }}
+                          placeholder="—"
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.75rem' }}>Fee fissa (EUR)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={evFee?.feeFlat ?? ''}
+                          onChange={(e) => {
+                            const fees = [...form.eventFees]
+                            const idx = fees.findIndex((f) => f.eventId === eid)
+                            if (idx >= 0) fees[idx] = { ...fees[idx], feeFlat: e.target.value }
+                            else fees.push({ eventId: eid, feePercent: '', feeFlat: e.target.value })
+                            setForm({ ...form, eventFees: fees })
+                          }}
+                          placeholder="—"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </fieldset>
+            )}
 
             <div className={styles.formActions}>
               <button type="submit" className={styles.primaryBtn}>

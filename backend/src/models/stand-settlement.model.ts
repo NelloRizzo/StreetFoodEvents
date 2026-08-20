@@ -32,6 +32,15 @@ const standSettlementSchema = new Schema(
             required: true,
             min: 0.01
         },
+        denominations: {
+            type: [{
+                label: { type: String, required: true, trim: true, maxlength: 60 },
+                value: { type: Number, required: true, min: 0.01 },
+                count: { type: Number, required: true, min: 1 },
+                euroAmount: { type: Number, required: true, min: 0 }
+            }],
+            default: []
+        },
         exchangeRate: {
             type: Number,
             required: true,

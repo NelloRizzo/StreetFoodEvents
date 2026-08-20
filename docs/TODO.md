@@ -6,6 +6,72 @@
 - Richiede: chiave API Google Cloud (Maps JavaScript API) configurata come `VITE_GOOGLE_MAPS_KEY`, vista/mappa dedicata con marker custom per evento, stand e POI (popup come l'attuale pagina Leaflet).
 - Stato attuale: EventMapPage usa Leaflet con tile Esri (Satellite + Mappa); marker già renderizzati come overlay, ma nessuna base layer Google.
 
+## Cover e Logo per Eventi e Stand
+- **Eventi**: presentare sia un **cover** (banner orizzontale, già `coverImage` esistente) che un **logo** (icona rotonda, già `logo` esistente) in tutte le superfici: HomePage, EventDetailPage, dropdown Eventi navbar/sidebar, dashboard.
+- **Stand**: aggiungere un campo **logo** (icona rotonda) oltre alla `coverImage` già esistente. Mostrare logo in mappa (marker), menu pubblico, coda ordini, lista stand in EventDetailPage.
+- **Stato attuale**: Event ha `coverImage` + `logo` ma non sempre entrambi vengono mostrati ovunque; Stand ha solo `coverImage`, manca il logo.
+- **Obiettivo**: coerenza visiva — ogni entità (evento e stand) ha sempre cover + logo visibili nelle card, marker, dropdown e pagine di dettaglio.
+
+---
+
+## Backend completato ma frontend pending
+
+### CurrencySymbol upload in EventsPage
+- Il backend accetta e salva `currencySymbol` (imageSchema) su Event, ma **EventsPage non ha il campo** nel form.
+- `EventFormData` non include `currencySymbol`, `handleSubmit` non lo manda.
+- **Da fare**: aggiungere `ImageUploader` per currencySymbol nel form evento (campo sezione Moneta), aggiungere al tipo `EventFormData` e a `handleSubmit`.
+
+### Fee bands (fasce trattenuta) — editor in EventsPage
+- Backend: `Event.feeBands: [{ maxAmount, feePercent, feeFlat }]` implementato (model + controller create/update/response).
+- **Da fare frontend**: editor dinamico nella form evento per gestire le fasce. Ogni fascia ha: soglia EUR, percentuale, importo forfait (uno dei due). Ordinate per maxAmount crescente. L'ultima fascia con maxAmount very high = catch-all.
+
+### Fee override per stand-evento — input in StandsPage
+- Backend: `stand.numbers[].feePercent` e `stand.numbers[].feeFlat` implementati (model + controller `eventFees`).
+- **Da fare frontend**: nella form StandsPage, quando un evento è collegato, mostrare campi opzionali "Fee % stand" e "Fee forfait €" per quell'evento. Se compilati, hanno la precedenza sulle fasce dell'evento in fase di liquidazione.
+
+### Denominations (tagli token) — editor in EventsPage
+- Backend: `Event.denominations: [{ label, value, quantity }]` implementato (model + controller).
+- **Da fare frontend**: editor dinamico nella form evento per gestire i tagli. Ogni taglio ha: etichetta (es. "1 Token"), valore in moneta evento, quantità totale emessa. Ordinati per valore crescente.
+
+### Liquidazione con conteggio tagli — StandSettlementsPage
+- Backend: `createSettlement` accetta `denominations[]`, calcola amount da tagli, valida che resi ≤ emessi.
+- Backend: `StandSettlement.denominations: [{ label, value, count, euroAmount }]` nel modello.
+- **Da fare frontend**: sostituire il campo singolo "Importo presentato" con una **griglia tagli** dove il cassiere inserisce la quantità per ogni taglio. Per ogni taglio → euro = (quantità × valore / cambio). Sommatoria totale in euro, poi fee e payout.
+
+### Riepilogo tagli (emessi / resi / persi)
+- **Da fare backend**: endpoint `GET /api/exchange/:eventId/denomination-report` che aggrega per ogni taglio: quantità emessa (dal evento), quantità restituita (somma da tutti i settlement credit), persa (emessi - resi), anomalia (resi > emessi).
+- **Da fare frontend**: sezione riepilogo tagli in StandSettlementsPage o pagina dedicata. Tabella con: taglio, valore, emessi, resi, persi, stato (ok/anomalia con evidenziazione rossa).
+
+### Categorie prodotti
+- **Da fare backend**: `Event.categories: [{ label, icon? }]` (model + controller). `Product.categoryId` opzionale (ref a category label). Endpoint menu raggruppato per categoria.
+- **Da fare frontend**: editor categorie nella form evento (EventsPage). Campo "Categoria" nel form prodotto (EventProductsPage). Toggle "Per stand" / "Per categoria" nel menu pubblico (EventStandMenuPage).
+
+### Fix: eventi pubblici — visibilità corretta
+- `isPublic: true` → l'evento è visibile nella parte **pubblica** del sito (home, mappa, menu, dropdown eventi navbar).
+- Tutti gli eventi (indipendentemente da `isPublic`) sono visualizzabili nella parte **admin** (sidebar, pagine gestionali, dropdown eventi admin).
+- **Da fare**: verificare che la parte pubblica mostri solo eventi `isPublic: true` e che la parte admin mostri tutti gli eventi. Correggere eventuali filtri errati.
+
+### Fix: HomePage mostra prossimi eventi + ultimi 3 terminati
+- **Da fare**: HomePage mostra in alto gli eventi prossimi/in corso, in basso una sezione compatta "Eventi terminati" con gli ultimi 3 eventi conclusi.
+
+### Fase 5: Splitting DashboardPage (utente vs operatore)
+- La DashboardPage attuale mescola viste utente (wallet, ordini, preferiti) e viste operatore (gestione stand, eventi, cassa).
+- **Da fare**: separare in due layout/pagine: DashboardPage (utente) e OperatorDashboardPage (operatore con ruoli).
+
+### Admin sidebar: contesto evento unico
+- La sidebar admin attuale moltiplica le voci per ogni evento (Cassa Evento1, Cassa Evento2, Ordini Evento1, Ordini Evento2, Liquidazione Evento1, Liquidazione Evento2, Galleria Evento1, Galleria Evento2, Photo booth Evento1, Photo booth Evento2, Menu stampa). Con N eventi la sidebar è ingovernabile.
+- **Da fare**: introdurre un **selettore evento** in cima alla sidebar. Una volta selezionato l'evento, le voci event-scopate (Cassa, Ordini, Liquidazione, Galleria, Photo booth, Menu stampa, Resoconto liquidazioni, etc.) mostrano SOLO quella relativa all'evento selezionato. Le voci globali (Eventi, Stand, Prodotti, Staff, Utenti, Ruoli, etc.) restano invariate.
+- La selezione evento persiste in `localStorage` (chiave `adminSelectedEventId`) e viene letta all'avvio della sidebar.
+- L'URL delle voci event-scopate NON cambia (restano `/admin/events/:eventId/cashier` etc.) — il selettore simply reindirizza quando cambia.
+- **Voci che dipendono dall'evento selezionato**: Cassa, Ordini, Liquidazione, Resoconto liquidazioni, Galleria, Photo booth, Menu stampa, Portafogli eventi (filtra per evento), Numerazione stand (in EventDetailPage).
+- **Voci globali (non dipendono dall'evento)**: Dashboard, Eventi, Stand, Prodotti, Prodotti per evento, Staff, Utenti, Ruoli, Contratti d'uso, Guide, Volantino, Cornici.
+
+### Fase 6: Cleanup AppLayout + Navbar legacy
+- `AppLayout.tsx` e `Navbar.tsx` sono legacy (router ora usa AdminLayout + PublicLayout).
+- **Da fare**: verificare che non siano più referenziati, rimuoverli se inutilizzati.
+
+---
+
 ## Feature Implementabili (AI-ready)
 
 ### 1. Notifiche Push in Tempo Reale

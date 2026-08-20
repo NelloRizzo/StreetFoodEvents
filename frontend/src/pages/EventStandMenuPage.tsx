@@ -27,6 +27,20 @@ type MenuItem = {
   priceOverride: number | null
 }
 
+type CategoryMenuItem = {
+  standId: string
+  standName: string
+  standNumber: number | null
+  productId: string
+  eventProductId: string
+  name: string
+  price: number
+  ingredients: string[]
+  coverImage: UploadedImage | null
+  categoryId: string | null
+  stationIds: string[]
+}
+
 type Event = {
   id: string
   name: string
@@ -72,6 +86,9 @@ export function EventStandMenuPage() {
   const [customerName, setCustomerName] = useState('')
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
+  const [viewMode, setViewMode] = useState<'stand' | 'category'>('stand')
+  const [categoryItems, setCategoryItems] = useState<CategoryMenuItem[]>([])
+  const [categoryLabels, setCategoryLabels] = useState<string[]>([])
 
   const total = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
 
@@ -120,6 +137,16 @@ export function EventStandMenuPage() {
   useEffect(() => {
     if (user) setCustomerName(`${user.firstName} ${user.lastName}`)
   }, [user])
+
+  useEffect(() => {
+    if (viewMode !== 'category' || !eventId) return
+    apiRequest<{ items: CategoryMenuItem[]; categories: string[] }>(`/events/${eventId}/menu`)
+      .then((data) => {
+        setCategoryItems(data.items)
+        setCategoryLabels(data.categories)
+      })
+      .catch(() => {})
+  }, [viewMode, eventId])
 
   useEffect(() => {
     if (!selectedItem) return
@@ -211,13 +238,13 @@ export function EventStandMenuPage() {
             <nav className={styles.standBar} aria-label="Stand dell'evento">
               {visibleStands.map((s) => {
                 const num = s.numbers?.find((n) => n.eventId === eventId)
-                const isActive = s.id === standId
+                const isActive = s.id === standId && viewMode === 'stand'
                 return (
                   <Link
                     key={s.id}
                     to={`/events/${eventId}/stands/${s.id}`}
                     className={`${styles.standChip} ${isActive ? styles.standChipActive : ''}`}
-                    onClick={() => { if (!isActive) setCart([]) }}
+                    onClick={() => { if (!isActive) { setCart([]); setViewMode('stand') } }}
                   >
                     {s.coverImage && (
                       <img src={s.coverImage.url} alt="" className={styles.standChipImg} />
@@ -227,11 +254,18 @@ export function EventStandMenuPage() {
                   </Link>
                 )
               })}
+              <button
+                type="button"
+                className={`${styles.standChip} ${viewMode === 'category' ? styles.standChipActive : ''}`}
+                onClick={() => { setViewMode('category'); setCart([]) }}
+              >
+                <span className={styles.standChipName}>Per categoria</span>
+              </button>
             </nav>
           </div>
         )}
 
-        {stand.coverImage && (
+        {stand.coverImage && viewMode === 'stand' && (
           <div className={styles.coverWrap}>
             <img src={stand.coverImage.url} alt={`${stand.name} — copertina`} className={styles.cover} />
           </div>
@@ -239,32 +273,44 @@ export function EventStandMenuPage() {
 
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            {stand.coverImage && (
-              <img src={stand.coverImage.url} alt={`${stand.name} — logo`} className={styles.logo} />
+            {viewMode === 'stand' ? (
+              <>
+                {stand.coverImage && (
+                  <img src={stand.coverImage.url} alt={`${stand.name} — logo`} className={styles.logo} />
+                )}
+                <div>
+                  <span className="eyebrow">Menu — {event.name}</span>
+                  <h1 className={styles.title}>{stand.name}</h1>
+                  {stand.slogan && <p className={styles.slogan}>{stand.slogan}</p>}
+                </div>
+              </>
+            ) : (
+              <div>
+                <span className="eyebrow">Menu — {event.name}</span>
+                <h1 className={styles.title}>Tutti i prodotti per categoria</h1>
+              </div>
             )}
-            <div>
-              <span className="eyebrow">Menu — {event.name}</span>
-              <h1 className={styles.title}>{stand.name}</h1>
-              {stand.slogan && <p className={styles.slogan}>{stand.slogan}</p>}
-            </div>
           </div>
-          <QRCodeDownload
-            apiPath={`/stands/${standId}/qrcode?eventId=${eventId}`}
-            fileName={`menu-${stand.name}`}
-          />
+          {viewMode === 'stand' && (
+            <QRCodeDownload
+              apiPath={`/stands/${standId}/qrcode?eventId=${eventId}`}
+              fileName={`menu-${stand.name}`}
+            />
+          )}
         </div>
 
-        <div className={styles.layout}>
-          <div className={styles.left}>
-            {stand.description && (
-              <div className={styles.desc} dangerouslySetInnerHTML={{ __html: stand.description }} />
-            )}
+        {viewMode === 'stand' ? (
+          <div className={styles.layout}>
+            <div className={styles.left}>
+              {stand.description && (
+                <div className={styles.desc} dangerouslySetInnerHTML={{ __html: stand.description }} />
+              )}
 
-            {menuItems.length > 0 && (
-              <section className={styles.menuSection}>
-                <h2 className={styles.sectionTitle}>Prodotti</h2>
+              {menuItems.length > 0 && (
+                <section className={styles.menuSection}>
+                  <h2 className={styles.sectionTitle}>Prodotti</h2>
 
-                <div className={styles.menuList}>
+                  <div className={styles.menuList}>
                   {menuItems.map((item) => {
                     const product = item.product
                     const price = item.priceOverride ?? product?.price ?? 0
@@ -459,6 +505,87 @@ export function EventStandMenuPage() {
             </div>
           )}
         </div>
+        ) : (
+          <div className={styles.layout}>
+            <div className={styles.left}>
+              {categoryLabels.length > 0 ? (
+                categoryLabels.map((cat) => {
+                  const items = categoryItems.filter((ci) => ci.categoryId === cat)
+                  if (items.length === 0) return null
+                  return (
+                    <section key={cat} className={styles.menuSection}>
+                      <h2 className={styles.sectionTitle}>{cat}</h2>
+                      <div className={styles.menuList}>
+                        {items.map((item) => (
+                          <div key={item.eventProductId} className={styles.menuCard}>
+                            {item.coverImage ? (
+                              <img src={item.coverImage.url} alt={item.name} className={styles.thumb} />
+                            ) : (
+                              <span className={styles.thumbPlaceholder}>{item.name.charAt(0).toUpperCase()}</span>
+                            )}
+                            <div className={styles.menuInfo}>
+                              <strong className={styles.menuName}>{item.name}</strong>
+                              {item.standName && (
+                                <span className={styles.menuIngredients}>Stand: {item.standName}</span>
+                              )}
+                              {item.ingredients.length > 0 && (
+                                <span className={styles.menuIngredients}>{item.ingredients.join(', ')}</span>
+                              )}
+                            </div>
+                            <div className={styles.menuRight}>
+                              {item.price > 0 && (
+                                <span className={styles.menuPrice}>
+                                  {item.price.toFixed(2)}
+                                  <CurrencyDisplay currencyName={event.currencyName} currencySymbol={event.currencySymbol} />
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )
+                })
+              ) : (
+                <p className={styles.emptyCart}>Nessun prodotto disponibile.</p>
+              )}
+
+              {categoryItems.some((ci) => !ci.categoryId) && (
+                <section className={styles.menuSection}>
+                  <h2 className={styles.sectionTitle}>Senza categoria</h2>
+                  <div className={styles.menuList}>
+                    {categoryItems.filter((ci) => !ci.categoryId).map((item) => (
+                      <div key={item.eventProductId} className={styles.menuCard}>
+                        {item.coverImage ? (
+                          <img src={item.coverImage.url} alt={item.name} className={styles.thumb} />
+                        ) : (
+                          <span className={styles.thumbPlaceholder}>{item.name.charAt(0).toUpperCase()}</span>
+                        )}
+                        <div className={styles.menuInfo}>
+                          <strong className={styles.menuName}>{item.name}</strong>
+                          {item.standName && (
+                            <span className={styles.menuIngredients}>Stand: {item.standName}</span>
+                          )}
+                          {item.ingredients.length > 0 && (
+                            <span className={styles.menuIngredients}>{item.ingredients.join(', ')}</span>
+                          )}
+                        </div>
+                        <div className={styles.menuRight}>
+                          {item.price > 0 && (
+                            <span className={styles.menuPrice}>
+                              {item.price.toFixed(2)}
+                              <CurrencyDisplay currencyName={event.currencyName} currencySymbol={event.currencySymbol} />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       {selectedItem?.product && (
         <div className={styles.overlay} onClick={() => setSelectedItem(null)}>
