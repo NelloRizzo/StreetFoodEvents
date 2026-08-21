@@ -36,7 +36,8 @@ function toUserResponse(user: {
 
 export async function listUsers(_req: Request, res: Response) {
   const users = await UserModel.find()
-    .sort({ createdAt: -1 })
+    .collation({ locale: 'it', strength: 2 })
+    .sort({ lastName: 1, firstName: 1 })
     .select('-passwordHash');
 
   return res.status(200).json({

@@ -1,12 +1,14 @@
-import { useState, useEffect, useRef } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
 import { Avatar } from '../components/Avatar'
 import styles from './AdminSidebar.module.scss'
 
-type EventItem = { id: string; name: string }
+const EVENT_STORAGE_KEY = 'adminSelectedEventId'
+
+type EventItem = { id: string; name: string; endDate?: string | null }
 
 type MyStand = { id: string; name: string; eventIds: string[] }
 type MyStation = { id: string; name: string; standId: string | null; standName: string | null }
@@ -27,6 +29,7 @@ type SidebarSection = {
 export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps) {
   const { user, logout } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [events, setEvents] = useState<EventItem[]>([])
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
@@ -36,6 +39,13 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
   const [roles, setRoles] = useState<RoleInfo[]>([])
   const [eventEnds, setEventEnds] = useState<Record<string, string>>({})
   const [now] = useState(() => Date.now())
+  const [manuallySelectedEventId, setManuallySelectedEventId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(EVENT_STORAGE_KEY)
+    } catch {
+      return null
+    }
+  })
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -88,10 +98,42 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const eventOptions = events.map((ev) => ({
-    label: ev.name,
-    basePath: `/admin/events/${ev.id}`,
-  }))
+  // Evento attivo: 1) evento nell'URL (pagine event-scoped), 2) selezione manuale
+  // persistente, 3) default = primo evento in corso, altrimenti il primo della lista.
+  const urlEventId = location.pathname.match(/^\/admin\/events\/([a-f0-9]{24})(?:\/|$)/)?.[1] ?? null
+  const storedEventId =
+    manuallySelectedEventId && events.some((ev) => ev.id === manuallySelectedEventId)
+      ? manuallySelectedEventId
+      : null
+  const defaultEventId = useMemo(() => {
+    if (events.length === 0) return null
+    const ongoing = events.find((ev) => {
+      if (!ev.endDate) return false
+      const endOfDay = new Date(ev.endDate)
+      endOfDay.setHours(23, 59, 59, 999)
+      return endOfDay.getTime() >= now
+    })
+    return (ongoing ?? events[0]).id
+  }, [events, now])
+  const selectedEventId = urlEventId ?? storedEventId ?? defaultEventId
+
+  const selectedEvent = events.find((ev) => ev.id === selectedEventId) ?? null
+  const basePath = selectedEvent ? `/admin/events/${selectedEvent.id}` : null
+
+  const handleSelectEvent = (eventId: string) => {
+    if (!eventId) return
+    setManuallySelectedEventId(eventId)
+    try {
+      localStorage.setItem(EVENT_STORAGE_KEY, eventId)
+    } catch { /* storage non disponibile */ }
+    if (
+      selectedEventId &&
+      eventId !== selectedEventId &&
+      location.pathname.startsWith(`/admin/events/${selectedEventId}/`)
+    ) {
+      navigate(location.pathname.replace(`/admin/events/${selectedEventId}/`, `/admin/events/${eventId}/`))
+    }
+  }
 
   const isEventFinished = (eventId: string) => {
     const end = eventEnds[eventId]
@@ -111,31 +153,47 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
     )
   }
 
+  const nameCollator = new Intl.Collator('it', { sensitivity: 'base' })
+  const scopedStands = selectedEventId
+    ? myStands
+        .filter((s) => s.eventIds.includes(selectedEventId))
+        .sort((a, b) => nameCollator.compare(a.name, b.name))
+    : []
+  const scopedStations = selectedEventId
+    ? myStations
+        .filter((st) => {
+          if (!st.standId) return true
+          const stand = myStands.find((s) => s.id === st.standId)
+          return !stand || stand.eventIds.includes(selectedEventId)
+        })
+        .sort((a, b) => nameCollator.compare(a.name, b.name))
+    : []
+
   const operativoItems: SidebarItem[] = []
-  for (const s of myStands) {
+  const selectedOngoing = selectedEventId ? !isEventFinished(selectedEventId) : false
+  for (const s of scopedStands) {
     operativoItems.push({
       label: `Ordini ${s.name}`,
       to: `/admin/stands/${s.id}/orders`,
       icon: '\u{1F4CB}',
     })
-    const ongoingEventId = s.eventIds.find((eventId) => !isEventFinished(eventId))
-    if (ongoingEventId && canAccessStandCash(s)) {
+    if (selectedOngoing && basePath && canAccessStandCash(s)) {
       operativoItems.push({
         label: `Cassa ${s.name}`,
-        to: `/admin/events/${ongoingEventId}/stands/${s.id}/order`,
+        to: `${basePath}/stands/${s.id}/order`,
         icon: '\u{1F4B0}',
       })
     }
-    if (ongoingEventId) {
+    if (selectedOngoing && selectedEventId) {
       operativoItems.push({
         label: `Coda ${s.name}`,
-        to: `/events/${ongoingEventId}/stands/${s.id}/ordersqueue`,
+        to: `/events/${selectedEventId}/stands/${s.id}/ordersqueue`,
         icon: '\u{1F441}',
         external: true,
       })
     }
   }
-  for (const st of myStations) {
+  for (const st of scopedStations) {
     operativoItems.push({
       label: `Coda ${st.name}`,
       to: `/orders/station/${st.id}`,
@@ -145,21 +203,15 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
   }
 
   const sections: SidebarSection[] = [
-    {
-      label: 'Ordini',
-      items: [
-        ...eventOptions.map((ev) => ({
-          label: `Cassa ${ev.label}`,
-          to: `${ev.basePath}/cashier`,
-          icon: '\u{1F4B0}',
-        })),
-        ...eventOptions.map((ev) => ({
-          label: `Ordini ${ev.label}`,
-          to: `${ev.basePath}/orders`,
-          icon: '\u{1F4C4}',
-        })),
-      ],
-    },
+    ...(basePath
+      ? [{
+          label: 'Ordini',
+          items: [
+            { label: 'Cassa evento', to: `${basePath}/cashier`, icon: '\u{1F4B0}' },
+            { label: 'Ordini evento', to: `${basePath}/orders`, icon: '\u{1F4C4}' },
+          ],
+        } as SidebarSection]
+      : []),
     ...(operativoItems.length > 0
       ? [{ label: 'Operativo', items: operativoItems } as SidebarSection]
       : []),
@@ -177,26 +229,20 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
       label: 'Finanziario',
       items: [
         { label: 'Portafogli eventi', to: '/admin/event-users', icon: '\u{1F4B3}' },
-        ...eventOptions.map((ev) => ({
-          label: `Liquidazione ${ev.label}`,
-          to: `${ev.basePath}/settlements`,
-          icon: '\u{1F4B8}',
-        })),
+        ...(basePath
+          ? [{ label: 'Liquidazione', to: `${basePath}/settlements`, icon: '\u{1F4B8}' } as SidebarItem]
+          : []),
       ],
     },
     {
       label: 'Foto',
       items: [
-        ...eventOptions.map((ev) => ({
-          label: `Galleria ${ev.label}`,
-          to: `${ev.basePath}/galleria`,
-          icon: '\u{1F5BC}',
-        })),
-        ...eventOptions.map((ev) => ({
-          label: `Photo booth ${ev.label}`,
-          to: `${ev.basePath}/photo-booth`,
-          icon: '\u{1F4F7}',
-        })),
+        ...(basePath
+          ? [
+              { label: 'Galleria foto', to: `${basePath}/galleria`, icon: '\u{1F5BC}' } as SidebarItem,
+              { label: 'Photo booth', to: `${basePath}/photo-booth`, icon: '\u{1F4F7}' } as SidebarItem,
+            ]
+          : []),
         { label: 'Cornici', to: '/admin/frames', icon: '\u{1F5BC}' },
       ],
     },
@@ -249,6 +295,25 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
             {!isCollapsed && <span className={styles.navLabel}>Dashboard</span>}
           </NavLink>
 
+          {!isCollapsed && (
+            <div className={styles.eventPicker}>
+              <label className={styles.eventPickerLabel} htmlFor="admin-event-picker">
+                Evento attivo
+              </label>
+              <select
+                id="admin-event-picker"
+                className={styles.eventPickerSelect}
+                value={selectedEventId ?? ''}
+                onChange={(e) => handleSelectEvent(e.target.value)}
+              >
+                {events.length === 0 && <option value="">Nessun evento</option>}
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>{ev.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {sections.map((section) => (
             <div key={section.label} className={styles.section}>
               {!isCollapsed && (
@@ -296,7 +361,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
               </span>
               <span className={styles.userDropdownEmail}>{user?.email}</span>
               <NavLink className={styles.userDropdownAction} to="/" onClick={onMobileClose}>
-                Modalit\u00E0 pubblica
+                Modalità pubblica
               </NavLink>
               <button
                 type="button"

@@ -15,14 +15,6 @@
 ## Fix: HomePage mostra prossimi eventi + ultimi 3 terminati
 - **Da fare**: HomePage mostra in alto gli eventi prossimi/in corso, in basso una sezione compatta "Eventi terminati" con gli ultimi 3 eventi conclusi.
 
-## Admin sidebar: contesto evento unico
-- La sidebar admin attuale moltiplica le voci per ogni evento (Cassa Evento1, Cassa Evento2, Ordini Evento1, Ordini Evento2, Liquidazione Evento1, Liquidazione Evento2, Galleria Evento1, Galleria Evento2, Photo booth Evento1, Photo booth Evento2, Menu stampa). Con N eventi la sidebar è ingovernabile.
-- **Da fare**: introdurre un **selettore evento** in cima alla sidebar. Una volta selezionato l'evento, le voci event-scopate (Cassa, Ordini, Liquidazione, Galleria, Photo booth, Menu stampa, Resoconto liquidazioni, etc.) mostrano SOLO quella relativa all'evento selezionato. Le voci globali (Eventi, Stand, Prodotti, Staff, Utenti, Ruoli, etc.) restano invariate.
-- La selezione evento persiste in `localStorage` (chiave `adminSelectedEventId`) e viene letta all'avvio della sidebar.
-- L'URL delle voci event-scopate NON cambia (restano `/admin/events/:eventId/cashier` etc.) — il selettore simply reindirizza quando cambia.
-- **Voci che dipendono dall'evento selezionato**: Cassa, Ordini, Liquidazione, Resoconto liquidazioni, Galleria, Photo booth, Menu stampa, Portafogli eventi (filtra per evento), Numerazione stand (in EventDetailPage).
-- **Voci globali (non dipendono dall'evento)**: Dashboard, Eventi, Stand, Prodotti, Prodotti per evento, Staff, Utenti, Ruoli, Contratti d'uso, Guide, Volantino, Cornici.
-
 ## Fase 6: Cleanup AppLayout + Navbar legacy
 - `AppLayout.tsx` e `Navbar.tsx` sono legacy (router ora usa AdminLayout + PublicLayout).
 - **Da fare**: verificare che non siano più referenziati, rimuoverli se inutilizzati.
