@@ -62,6 +62,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 |---|---|---|---|
 | GET | `/api/events?public=true` | optional | Lista eventi pubblici e non terminati (`endDate >= now`). Senza `public=true`: tutti gli eventi (solo gestori/platform). |
 | GET | `/api/events/:eventId/menu-qrcode` | no | QR code (data URL) che linka al menu del primo stand visibile (`showOnMap !== false`) dell'evento. 404 se nessuno stand visibile. |
+| POST | `/api/events/:eventId/duplicate` | auth | Duplica l'evento come base operativa per la prossima edizione: copia configurazione (moneta, tema, fasce, tagli, categorie), collega gli stand con rinumerazione progressiva, copia EventProduct e POI. NON copia wallet/ordini/transazioni/foto/contest. Body opzionale `{ name, startDate, endDate, isPublic }` (default: nome+" (copia)", date +1 anno). |
 
 ### API routes — Alias
 | Method | Route | Auth | Description |

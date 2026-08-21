@@ -537,6 +537,151 @@ export async function deleteEvent(req: Request, res: Response) {
     return res.status(204).send();
 }
 
+function addOneYear(date: Date): Date {
+    const d = new Date(date);
+    d.setFullYear(d.getFullYear() + 1);
+    return d;
+}
+
+export async function duplicateEvent(req: Request, res: Response) {
+    const eventId = req.params.eventId;
+
+    if (!isValidObjectId(eventId)) {
+        return res.status(400).json({ message: 'Invalid event id' });
+    }
+
+    const source = await EventModel.findById(eventId);
+    if (!source) {
+        return res.status(404).json({ message: 'Event not found' });
+    }
+
+    const { name, startDate, endDate, isPublic } = req.body ?? {};
+
+    const newName = typeof name === 'string' && name.trim() ? name.trim() : `${source.name} (copia)`;
+    const newStartDate = startDate ? new Date(startDate) : addOneYear(source.startDate);
+    const newEndDate = endDate ? new Date(endDate) : addOneYear(source.endDate);
+
+    if (isNaN(newStartDate.getTime()) || isNaN(newEndDate.getTime())) {
+        return res.status(400).json({ message: 'Invalid startDate or endDate' });
+    }
+
+    if (newEndDate < newStartDate) {
+        return res.status(400).json({ message: 'endDate must be greater than or equal to startDate' });
+    }
+
+    // Duplica SOLO la configurazione dell'evento (base operativa per la prossima edizione).
+    // NON vengono copiati: wallet/utenti evento, transazioni, ordini, liquidazioni,
+    // foto/video, cornici, contest, preferiti, alias. cashRegisterResetAt riparte da null.
+    const duplicate = await EventModel.create({
+        name: newName,
+        location: source.location,
+        startDate: newStartDate,
+        endDate: newEndDate,
+        currencyName: source.currencyName,
+        currencySymbol: source.currencySymbol ?? null,
+        exchangeRate: source.exchangeRate ?? 1,
+        themeBrand: source.themeBrand ?? null,
+        themeText: source.themeText ?? null,
+        themeSurface: source.themeSurface ?? null,
+        themeHighlight: source.themeHighlight ?? null,
+        url: null,
+        shortDescription: source.shortDescription ?? null,
+        longDescription: source.longDescription ?? null,
+        coverImage: source.coverImage ?? null,
+        logo: source.logo ?? null,
+        gallery: source.gallery ?? [],
+        cashPaymentsEnabled: source.cashPaymentsEnabled ?? true,
+        unifiedCashierEnabled: source.unifiedCashierEnabled ?? false,
+        slideshowTitle: source.slideshowTitle ?? null,
+        isPublic: typeof isPublic === 'boolean' ? isPublic : (source.isPublic ?? true),
+        feeBands: source.feeBands ?? [],
+        denominations: source.denominations ?? [],
+        categories: source.categories ?? []
+    });
+
+    const { StandModel } = await import('../models/stand.model');
+    const { EventProductModel } = await import('../models/event-product.model');
+    const { POIModel } = await import('../models/poi.model');
+
+    const sourceId = source._id as Types.ObjectId;
+    const duplicateId = duplicate._id as Types.ObjectId;
+
+    // Collega gli stand dell'evento sorgente alla nuova edizione, preservando
+    // l'ordine di ingresso (numero progressivo) e le impostazioni per-evento.
+    const linkedStands = await StandModel.find({ eventIds: sourceId }).lean();
+    const sourceNumber = (stand: { numbers?: Array<{ eventId: Types.ObjectId; number: number; showOnMap?: boolean; feePercent?: number | null; feeFlat?: number | null }> }) =>
+        stand.numbers?.find((n) => n.eventId.equals(sourceId)) ?? null;
+
+    linkedStands.sort((a, b) => {
+        const na = sourceNumber(a)?.number ?? Number.MAX_SAFE_INTEGER;
+        const nb = sourceNumber(b)?.number ?? Number.MAX_SAFE_INTEGER;
+        return na - nb;
+    });
+
+    let nextNumber = 1;
+    for (const stand of linkedStands) {
+        const srcNum = sourceNumber(stand);
+        await StandModel.updateOne(
+            { _id: stand._id },
+            {
+                $addToSet: { eventIds: duplicateId },
+                $push: {
+                    numbers: {
+                        eventId: duplicateId,
+                        number: nextNumber++,
+                        showOnMap: srcNum?.showOnMap ?? true,
+                        feePercent: srcNum?.feePercent ?? null,
+                        feeFlat: srcNum?.feeFlat ?? null
+                    }
+                }
+            }
+        );
+    }
+
+    // Copia le associazioni prodotto→evento (prezzi personalizzati, categorie, postazioni, ordine).
+    const sourceProducts = await EventProductModel.find({ eventId: sourceId }).lean();
+    if (sourceProducts.length > 0) {
+        await EventProductModel.insertMany(
+            sourceProducts.map((ep) => ({
+                eventId: duplicateId,
+                standId: ep.standId,
+                productId: ep.productId,
+                stationIds: ep.stationIds,
+                priceOverride: ep.priceOverride ?? null,
+                available: ep.available ?? true,
+                sequenceOrder: ep.sequenceOrder ?? 0,
+                categoryId: ep.categoryId ?? null
+            }))
+        );
+    }
+
+    // Copia i POI dell'evento (mappa: punti di interesse configurati).
+    const sourcePois = await POIModel.find({ eventId: sourceId }).lean();
+    if (sourcePois.length > 0) {
+        await POIModel.insertMany(
+            sourcePois.map((poi) => ({
+                eventId: duplicateId,
+                name: poi.name,
+                description: poi.description ?? null,
+                iconType: poi.iconType,
+                iconImage: poi.iconImage ?? null,
+                coverImage: poi.coverImage ?? null,
+                location: poi.location,
+                gallery: poi.gallery ?? []
+            }))
+        );
+    }
+
+    return res.status(201).json({
+        item: toEventResponse(duplicate),
+        stats: {
+            standsLinked: linkedStands.length,
+            productsCopied: sourceProducts.length,
+            poisCopied: sourcePois.length
+        }
+    });
+}
+
 export async function eventMenu(req: Request, res: Response) {
     const eventId = req.params.eventId;
 

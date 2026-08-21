@@ -8,6 +8,12 @@ import styles from './AdminSidebar.module.scss'
 
 type EventItem = { id: string; name: string }
 
+type MyStand = { id: string; name: string; eventIds: string[] }
+type MyStation = { id: string; name: string; standId: string | null; standName: string | null }
+type RoleInfo = { slug: string; scope: string; eventId: string | null; standId: string | null }
+
+type SidebarItem = { label: string; to: string; icon: string; external?: boolean }
+
 type AdminSidebarProps = {
   isMobileOpen: boolean
   onMobileClose: () => void
@@ -15,7 +21,7 @@ type AdminSidebarProps = {
 
 type SidebarSection = {
   label: string
-  items: { label: string; to: string; icon: string }[]
+  items: SidebarItem[]
 }
 
 export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps) {
@@ -24,11 +30,47 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
   const [events, setEvents] = useState<EventItem[]>([])
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [myStands, setMyStands] = useState<MyStand[]>([])
+  const [myStations, setMyStations] = useState<MyStation[]>([])
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
+  const [roles, setRoles] = useState<RoleInfo[]>([])
+  const [eventEnds, setEventEnds] = useState<Record<string, string>>({})
+  const [now] = useState(() => Date.now())
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     apiRequest<{ items: EventItem[] }>('/events')
       .then((d) => setEvents(d.items))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    apiRequest<{ stands: MyStand[]; stations: MyStation[] }>('/auth/me/stands')
+      .then((d) => {
+        setMyStands(d.stands)
+        setMyStations(d.stations)
+        const ids = [...new Set(d.stands.flatMap((s) => s.eventIds).filter(Boolean))]
+        Promise.all(
+          ids.map((eid) =>
+            apiRequest<{ item: { endDate?: string } }>(`/events/${eid}`)
+              .then((r) => ({ eid, endDate: r.item.endDate ?? null }))
+              .catch(() => ({ eid, endDate: null }))
+          )
+        ).then((resolved) => {
+          const ends: Record<string, string> = {}
+          for (const r of resolved) {
+            if (r.endDate) ends[r.eid] = r.endDate
+          }
+          setEventEnds((prev) => ({ ...prev, ...ends }))
+        })
+      })
+      .catch(() => {})
+
+    apiRequest<{ isPlatformAdmin: boolean; roles: RoleInfo[] }>('/auth/me/roles')
+      .then((d) => {
+        setIsPlatformAdmin(d.isPlatformAdmin)
+        setRoles(d.roles)
+      })
       .catch(() => {})
   }, [])
 
@@ -51,6 +93,57 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
     basePath: `/admin/events/${ev.id}`,
   }))
 
+  const isEventFinished = (eventId: string) => {
+    const end = eventEnds[eventId]
+    if (!end) return false
+    const endOfDay = new Date(end)
+    endOfDay.setHours(23, 59, 59, 999)
+    return endOfDay.getTime() < now
+  }
+
+  const canAccessStandCash = (s: MyStand) => {
+    if (isPlatformAdmin) return true
+    if (roles.some((r) => r.scope === 'stand' && r.standId === s.id && r.slug === 'cashier')) return true
+    return s.eventIds.some((eventId) =>
+      roles.some(
+        (r) => r.scope === 'event' && r.eventId === eventId && (r.slug === 'event-admin' || r.slug === 'event-cashier')
+      )
+    )
+  }
+
+  const operativoItems: SidebarItem[] = []
+  for (const s of myStands) {
+    operativoItems.push({
+      label: `Ordini ${s.name}`,
+      to: `/admin/stands/${s.id}/orders`,
+      icon: '\u{1F4CB}',
+    })
+    const ongoingEventId = s.eventIds.find((eventId) => !isEventFinished(eventId))
+    if (ongoingEventId && canAccessStandCash(s)) {
+      operativoItems.push({
+        label: `Cassa ${s.name}`,
+        to: `/admin/events/${ongoingEventId}/stands/${s.id}/order`,
+        icon: '\u{1F4B0}',
+      })
+    }
+    if (ongoingEventId) {
+      operativoItems.push({
+        label: `Coda ${s.name}`,
+        to: `/events/${ongoingEventId}/stands/${s.id}/ordersqueue`,
+        icon: '\u{1F441}',
+        external: true,
+      })
+    }
+  }
+  for (const st of myStations) {
+    operativoItems.push({
+      label: `Coda ${st.name}`,
+      to: `/orders/station/${st.id}`,
+      icon: '\u2699',
+      external: true,
+    })
+  }
+
   const sections: SidebarSection[] = [
     {
       label: 'Ordini',
@@ -67,6 +160,9 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
         })),
       ],
     },
+    ...(operativoItems.length > 0
+      ? [{ label: 'Operativo', items: operativoItems } as SidebarSection]
+      : []),
     {
       label: 'Gestione',
       items: [
@@ -165,6 +261,8 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
                   to={item.to}
                   onClick={onMobileClose}
                   title={isCollapsed ? item.label : undefined}
+                  target={item.external ? '_blank' : undefined}
+                  rel={item.external ? 'noopener noreferrer' : undefined}
                 >
                   <span className={styles.navIcon}>{item.icon}</span>
                   {!isCollapsed && <span className={styles.navLabel}>{item.label}</span>}

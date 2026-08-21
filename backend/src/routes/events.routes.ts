@@ -3,6 +3,7 @@ import { Router } from 'express';
 import {
     createEvent,
     deleteEvent,
+    duplicateEvent,
     eventContestsQrCode,
     eventMenu,
     eventMenuQrCode,
@@ -27,6 +28,7 @@ eventsRouter.get('/:eventId/menu', asyncHandler(eventMenu));
 eventsRouter.get('/:eventId/contests-qrcode', asyncHandler(eventContestsQrCode));
 
 eventsRouter.post('/', asyncHandler(authMiddleware), asyncHandler(createEvent));
+eventsRouter.post('/:eventId/duplicate', asyncHandler(authMiddleware), asyncHandler(duplicateEvent));
 eventsRouter.patch('/:eventId', asyncHandler(authMiddleware), asyncHandler(updateEvent));
 eventsRouter.delete('/:eventId', asyncHandler(authMiddleware), asyncHandler(deleteEvent));
 

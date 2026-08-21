@@ -40,7 +40,7 @@ const sections = [
     { icon: '\u{2764}\u{FE0F}', name: 'Preferiti', desc: 'Eventi e stand salvati per accesso rapido dal menu.' },
   ] },
   { icon: '\u{1F4CA}', title: 'Dashboard &amp; Operatività', features: [
-    { icon: '\u{1F4BB}', name: 'Doppia dashboard', desc: 'Vista utente (eventi, wallet, QR) e operatore (gestione, report).' },
+    { icon: '\u{1F4BB}', name: 'Dashboard e admin', desc: 'Area personale (eventi, wallet, QR) separata dall\'area admin con sidebar operativa.' },
     { icon: '\u{1F5C3}\u{FE0F}', name: 'Cassa Unica POS', desc: 'Interfaccia calcolatrice con selezione cliente, griglia prodotti e pagamento misto.' },
     { icon: '\u{1F4F1}', name: 'Coda postazione', desc: 'Kiosk fullscreen, font grandi, auto-refresh 5s, bottone Pronto per item.' },
     { icon: '\u{1F4D6}', name: 'Guide stampabili', desc: '4 guide Q&A: amministratore, cassiere, addetto postazione, cassiere stand.' },
@@ -209,7 +209,7 @@ export function FlyerPage() {
       ]} />
 
       <Section icon={'\u{1F4CA}'} title="Dashboard &amp; Operatività" features={[
-        { icon: '\u{1F4BB}', name: 'Doppia dashboard', desc: 'Vista utente (eventi, wallet, QR) e operatore (gestione, report).' },
+        { icon: '\u{1F4BB}', name: 'Dashboard e admin', desc: 'Area personale (eventi, wallet, QR) separata dall\'area admin con sidebar operativa.' },
         { icon: '\u{1F5C3}\u{FE0F}', name: 'Cassa Unica POS', desc: 'Interfaccia calcolatrice con selezione cliente, griglia prodotti e pagamento misto.' },
         { icon: '\u{1F4F1}', name: 'Coda postazione', desc: 'Kiosk fullscreen, font grandi, auto-refresh 5s, bottone Pronto per item.' },
         { icon: '\u{1F4D6}', name: 'Guide stampabili', desc: '4 guide Q&A: amministratore, cassiere, addetto postazione, cassiere stand.' },

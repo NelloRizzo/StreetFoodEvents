@@ -347,6 +347,16 @@
   font-size: 0.82rem;
 }
 
+.productCategory {
+  justify-self: start;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: rgba(43, 122, 120, 0.12);
+  color: var(--color-brand-deep);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
 .productPrice {
   color: var(--color-ink-strong);
   font-size: 0.9rem;

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { CategorySelect, type EventCategory } from '../components/CategorySelect'
 import styles from './EventProductsPage.module.scss'
 
 type EventProduct = {
@@ -11,12 +12,13 @@ type EventProduct = {
   productId: string
   stationIds: string[]
   priceOverride: number | null
+  categoryId: string | null
   available: boolean
   createdAt: string
   updatedAt: string
 }
 
-type Event = { id: string; name: string; currencyName: string }
+type Event = { id: string; name: string; currencyName: string; categories: EventCategory[] }
 type Stand = { id: string; name: string; eventIds: string[] }
 type Product = { id: string; name: string; price: number }
 type Station = { id: string; name: string }
@@ -27,9 +29,10 @@ type FormData = {
   productId: string
   stationIds: string[]
   priceOverride: string
+  categoryId: string
 }
 
-const emptyForm: FormData = { eventId: '', standId: '', productId: '', stationIds: [], priceOverride: '' }
+const emptyForm: FormData = { eventId: '', standId: '', productId: '', stationIds: [], priceOverride: '', categoryId: '' }
 
 export function EventProductsPage() {
   const [items, setItems] = useState<EventProduct[]>([])
@@ -77,6 +80,13 @@ export function EventProductsPage() {
     setStations([])
   }
 
+  const eventCategories = (eventId: string): EventCategory[] =>
+    events.find((e) => e.id === eventId)?.categories ?? []
+
+  const updateEventCategories = (eventId: string, categories: EventCategory[]) => {
+    setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, categories } : e)))
+  }
+
   const currencyInitial = (eventId: string) => {
     const ev = events.find((e) => e.id === eventId)
     return ev?.currencyName ? ev.currencyName.charAt(0).toUpperCase() : '€'
@@ -115,6 +125,7 @@ export function EventProductsPage() {
       productId: form.productId,
       stationIds: form.stationIds,
       priceOverride: form.priceOverride ? Number(form.priceOverride) : null,
+      categoryId: form.categoryId || null,
     }
 
     await apiRequest('/event-products', {
@@ -191,6 +202,18 @@ export function EventProductsPage() {
             </div>
 
             <div className={styles.field}>
+              <label htmlFor="ep-category">Categoria</label>
+              <CategorySelect
+                id="ep-category"
+                eventId={form.eventId}
+                categories={eventCategories(form.eventId)}
+                value={form.categoryId}
+                onChange={(categoryId) => setForm({ ...form, categoryId })}
+                onCategoriesChange={(cats) => updateEventCategories(form.eventId, cats)}
+              />
+            </div>
+
+            <div className={styles.field}>
               <label>Postazioni</label>
               {stations.length === 0 ? (
                 <p className={styles.hint}>Seleziona prima evento e stand per vedere le postazioni.</p>
@@ -231,6 +254,7 @@ export function EventProductsPage() {
                 <span className={styles.cardStations}>
                   Postazioni: {ep.stationIds.map((id) => stationName(id) || id).join(', ')}
                 </span>
+                {ep.categoryId && <span className={styles.cardCategory}>{ep.categoryId}</span>}
                 {ep.priceOverride !== null && (
                   <span className={styles.cardPrice}>Prezzo: {ep.priceOverride.toFixed(2)} {currencyInitial(ep.eventId)}</span>
                 )}

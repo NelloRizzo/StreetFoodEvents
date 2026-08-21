@@ -161,7 +161,7 @@ const stationAttendantSections: QaSection[] = [
     items: [
       {
         q: 'Come accedo alla coda della mia postazione?',
-        a: 'Dalla dashboard (vista operatore), nella sezione "Gestione stand", clicca sul nome della tua postazione. Si apre una schermata a schermo intero con caratteri grandi e sfondo scuro, ottimizzata per essere vista da lontano. Se non vedi la tua postazione, contatta l\'amministratore per l\'assegnazione.',
+        a: 'Dall\'area admin, nella sidebar alla sezione "Operativo", clicca su "Coda" accanto al nome della tua postazione. Si apre una schermata a schermo intero con caratteri grandi e sfondo scuro, ottimizzata per essere vista da lontano. Se non vedi la tua postazione, contatta l\'amministratore per l\'assegnazione.',
       },
       {
         q: 'La pagina si aggiorna da sola?',
@@ -195,7 +195,7 @@ const stationAttendantSections: QaSection[] = [
       },
       {
         q: 'La coda non mostra nuovi ordini. Cosa controllo?',
-        a: 'Verifica che la connessione internet sia attiva. Controlla anche che la postazione sia correttamente assegnata: dalla dashboard operatore, la tua postazione deve apparire nella sezione "Gestione stand". Se il problema persiste, contatta l\'amministratore.',
+        a: 'Verifica che la connessione internet sia attiva. Controlla anche che la postazione sia correttamente assegnata: nell\'area admin, sezione "Operativo" della sidebar, la tua postazione deve apparire tra le code disponibili. Se il problema persiste, contatta l\'amministratore.',
       },
     ],
   },
@@ -203,8 +203,8 @@ const stationAttendantSections: QaSection[] = [
 
 const stationAttendantGlossary: GlossaryEntry[] = [
   { term: 'Coda postazione', sectionTitle: 'Accesso alla coda' },
-  { term: 'Vista operatore', sectionTitle: 'Accesso alla coda' },
-  { term: 'Dashboard operatore', sectionTitle: 'Accesso alla coda' },
+  { term: 'Area admin', sectionTitle: 'Accesso alla coda' },
+  { term: 'Sidebar "Operativo"', sectionTitle: 'Accesso alla coda' },
   { term: 'Refresh automatico', sectionTitle: 'Accesso alla coda' },
   { term: 'Segnale acustico', sectionTitle: 'Accesso alla coda' },
   { term: 'Pulsante Pronto', sectionTitle: 'Gestione ordini in coda' },
@@ -220,15 +220,15 @@ const stationAttendantGlossary: GlossaryEntry[] = [
    ═══════════════════════════════════════════════════════════════════════════ */
 const standCashierSections: QaSection[] = [
   {
-    title: 'Accesso e vista operatore',
+    title: 'Accesso e area admin',
     items: [
       {
         q: 'Come accedo alla gestione del mio stand?',
-        a: 'Dalla dashboard (vista operatore), nella sezione "Gestione stand", clicca sul nome dello stand. Si apre la scheda dello stand con tutte le informazioni. In alternativa, vai alla pagina "Gestisci ordini" dal pulsante nella scheda dello stand.',
+        a: 'Dall\'area admin, nella sidebar alla sezione "Operativo", clicca su "Ordini" accanto al nome del tuo stand per gestire gli ordini, oppure su "Cassa" per aprire la cassa a schermo intero.',
       },
       {
-        q: 'Come passo alla vista operatore?',
-        a: 'Nella barra di navigazione in alto, clicca sul selettore "Utente / Operatore" per passare alla vista operatore. In questa vista la dashboard mostra gli strumenti di gestione stand e eventi.',
+        q: 'Dove trovo gli strumenti di gestione?',
+        a: 'Tutti gli strumenti operativi (cassa, ordini, code, liquidazioni) si trovano nell\'area admin nella sidebar di sinistra. La dashboard resta la tua area personale con eventi preferiti e saldo wallet.',
       },
     ],
   },
@@ -258,7 +258,7 @@ const standCashierSections: QaSection[] = [
     items: [
       {
         q: 'Come vedo l\'elenco degli ordini del mio stand?',
-        a: 'Dalla scheda dello stand, seleziona l\'evento e clicca "Gestisci ordini". Oppure vai alla dashboard operatore e clicca sul nome dello stand nella sezione "Gestione stand". La pagina mostra tutti gli ordini, filtrabili per stato (In attesa, Confermato, In preparazione, Pronto, Completato, Annullato).',
+        a: 'Dall\'area admin, sezione "Operativo" della sidebar, clicca su "Ordini" accanto al nome del tuo stand. La pagina mostra tutti gli ordini, filtrabili per stato (In attesa, Confermato, In preparazione, Pronto, Completato, Annullato).',
       },
       {
         q: 'Come segno un ordine come pronto?',
@@ -294,9 +294,9 @@ const standCashierSections: QaSection[] = [
 ]
 
 const standCashierGlossary: GlossaryEntry[] = [
-  { term: 'Vista operatore', sectionTitle: 'Accesso e vista operatore' },
-  { term: 'Dashboard', sectionTitle: 'Accesso e vista operatore' },
-  { term: 'Gestisci ordini', sectionTitle: 'Accesso e vista operatore' },
+  { term: 'Area admin', sectionTitle: 'Accesso e area admin' },
+  { term: 'Sidebar "Operativo"', sectionTitle: 'Accesso e area admin' },
+  { term: 'Ordini stand', sectionTitle: 'Accesso e area admin' },
   { term: 'Nuovo ordine', sectionTitle: 'Creazione ordini' },
   { term: 'QR cliente', sectionTitle: 'Creazione ordini' },
   { term: 'Ordine diretto', sectionTitle: 'Creazione ordini' },

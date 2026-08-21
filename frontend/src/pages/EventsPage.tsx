@@ -202,6 +202,9 @@ export function EventsPage() {
   const [urlEditMode, setUrlEditMode] = useState(false)
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [duplicateSource, setDuplicateSource] = useState<EventItem | null>(null)
+  const [dupForm, setDupForm] = useState({ name: '', startDate: '', endDate: '', isPublic: false })
+  const [isDuplicating, setIsDuplicating] = useState(false)
   const comuni = useItalianComuni()
   const [cityQuery, setCityQuery] = useState('')
   const [citySuggestions, setCitySuggestions] = useState<ComuneEntry[]>([])
@@ -575,6 +578,46 @@ export function EventsPage() {
   }
 
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('it-IT')
+
+  const plusOneYear = (iso: string) => {
+    const d = new Date(iso)
+    d.setFullYear(d.getFullYear() + 1)
+    return d.toISOString().slice(0, 10)
+  }
+
+  const openDuplicate = (ev: EventItem) => {
+    setShowForm(false)
+    setDuplicateSource(ev)
+    setDupForm({
+      name: `${ev.name} (copia)`,
+      startDate: plusOneYear(ev.startDate),
+      endDate: plusOneYear(ev.endDate),
+      isPublic: false,
+    })
+  }
+
+  const handleDuplicate = async () => {
+    if (!duplicateSource) return
+    setIsDuplicating(true)
+    try {
+      await apiRequest<{ item: EventItem }>(`/events/${duplicateSource.id}/duplicate`, {
+        method: 'POST',
+        bodyJson: {
+          name: dupForm.name,
+          startDate: dupForm.startDate,
+          endDate: dupForm.endDate,
+          isPublic: dupForm.isPublic,
+        },
+      })
+      setDuplicateSource(null)
+      await fetchEvents()
+      setAlertMsg('Evento duplicato: stand collegati, menu, categorie e POI sono stati copiati nella nuova edizione.')
+    } catch {
+      setAlertMsg('Impossibile duplicare l\'evento. Riprova.')
+    } finally {
+      setIsDuplicating(false)
+    }
+  }
 
   if (isLoading) return null
 
@@ -1069,6 +1112,54 @@ export function EventsPage() {
           </form>
         )}
 
+        {duplicateSource && (
+          <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleDuplicate() }}>
+            <fieldset className={styles.fieldset}>
+              <legend className={styles.legend}>Duplica evento</legend>
+              <p className={styles.fieldHint}>
+                Crea una nuova edizione partendo da <strong>{duplicateSource.name}</strong>: vengono copiati
+                configurazione, stand collegati (con numerazione e fee), menu/prodotti, categorie, POI e tagli.
+                Non vengono copiati ordini, wallet, transazioni, foto e contest.
+              </p>
+              <div className={styles.field}>
+                <label htmlFor="dup-name">Nome nuovo evento *</label>
+                <input id="dup-name" value={dupForm.name} onChange={(e) => setDupForm({ ...dupForm, name: e.target.value })} required />
+              </div>
+              <div className={styles.fieldRow}>
+                <div className={styles.field}>
+                  <label htmlFor="dup-start">Data inizio *</label>
+                  <input id="dup-start" type="date" value={dupForm.startDate} onChange={(e) => setDupForm({ ...dupForm, startDate: e.target.value })} required />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="dup-end">Data fine *</label>
+                  <input id="dup-end" type="date" value={dupForm.endDate} onChange={(e) => setDupForm({ ...dupForm, endDate: e.target.value })} required />
+                </div>
+              </div>
+              <div className={styles.checkField}>
+                <label className={styles.checkLabel}>
+                  <input
+                    type="checkbox"
+                    checked={dupForm.isPublic}
+                    onChange={(e) => setDupForm({ ...dupForm, isPublic: e.target.checked })}
+                  />
+                  <span>Visibile nella parte pubblica</span>
+                </label>
+                <p className={styles.fieldHint}>
+                  Lascia disabilitato per preparare l&apos;edizione in privato: potrai renderla visibile quando pronta.
+                </p>
+              </div>
+            </fieldset>
+            <div className={styles.formActions}>
+              <button type="submit" className={styles.primaryBtn} disabled={isDuplicating}>
+                {isDuplicating ? 'Duplicazione…' : 'Duplica evento'}
+              </button>
+              <button type="button" className={styles.secondaryBtn} onClick={() => setDuplicateSource(null)}>
+                Annulla
+              </button>
+            </div>
+          </form>
+        )}
+
         <div className={styles.list}>
           {events.map((ev) => (
             <article key={ev.id} className={styles.card}>
@@ -1092,6 +1183,9 @@ export function EventsPage() {
                 </button>
                 <button className={styles.textBtn} onClick={() => openEdit(ev)}>
                   Modifica
+                </button>
+                <button className={styles.textBtn} onClick={() => openDuplicate(ev)}>
+                  Duplica
                 </button>
                 <button className={styles.textBtn} onClick={() => setExpandedEventId(expandedEventId === ev.id ? null : ev.id)}>
                   {expandedEventId === ev.id ? 'Chiudi stand' : 'Stand'}
