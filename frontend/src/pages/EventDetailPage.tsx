@@ -52,6 +52,7 @@ type Stand = {
   eventIds: string[]
   numbers: Array<{ eventId: string; number: number; showOnMap?: boolean }>
   coverImage: UploadedImg | null
+  logo: UploadedImg | null
 }
 
 const STAND_TYPE_LABELS = {
@@ -518,9 +519,9 @@ export function EventDetailPage() {
                     to={`/events/${eventId}/stands/${stand.id}`}
                     className={styles.standCard}
                   >
-                    {stand.coverImage?.url ? (
+                    {stand.coverImage?.url || stand.logo?.url ? (
                       <div className={styles.standCover}>
-                        <img src={stand.coverImage.url} alt="" />
+                        <img src={(stand.coverImage ?? stand.logo)!.url} alt="" />
                       </div>
                     ) : (
                       <div className={styles.standCoverPlaceholder}>

@@ -69,7 +69,7 @@ export function AdminTopBar({ onMenuToggle }: AdminTopBarProps) {
 
       <div className={styles.right}>
         <Link className={styles.publicLink} to="/" target="_blank" rel="noopener">
-          {'\u{1F310}'} Modalit\u00E0 pubblica
+          {'\u{1F310}'} Modalità pubblica
         </Link>
         <Link className={styles.userLink} to="/admin/dashboard">
           <Avatar

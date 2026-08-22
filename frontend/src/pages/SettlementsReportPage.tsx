@@ -17,6 +17,8 @@ type ReportStand = {
   settledCredits: number
   earnedCredits: number
   toReturnCredits: number
+  loadedEuro: number
+  settledEuro: number
   grossEuro: number
   feeEuro: number
   payoutEuro: number
@@ -38,6 +40,8 @@ type SettlementReport = {
     settledCredits: number
     earnedCredits: number
     toReturnCredits: number
+    loadedEuro: number
+    settledEuro: number
     grossEuro: number
     feeEuro: number
     payoutEuro: number
@@ -57,6 +61,8 @@ function StandRow({ stand, isTotal }: { stand: ReportStand; isTotal?: boolean })
       <td className={reportStyles.num}>{stand.settledCredits.toFixed(2)}</td>
       <td className={reportStyles.num}>{stand.earnedCredits.toFixed(2)}</td>
       <td className={`${reportStyles.num} ${styles.remainingValue}`}>{stand.toReturnCredits.toFixed(2)}</td>
+      <td className={reportStyles.num}>{stand.loadedEuro !== 0 ? fmtEur(stand.loadedEuro) : '—'}</td>
+      <td className={reportStyles.num}>{stand.settledEuro !== 0 ? fmtEur(stand.settledEuro) : '—'}</td>
       <td className={reportStyles.num}>{fmtEur(stand.grossEuro)}</td>
       <td className={`${reportStyles.num} ${styles.feeValue}`}>- {fmtEur(stand.feeEuro)}</td>
       <td className={`${reportStyles.num} ${styles.payoutValue}`}>{fmtEur(stand.payoutEuro)}</td>
@@ -191,6 +197,8 @@ export function SettlementsReportPage() {
                       <th className={reportStyles.num}>Liquidati (AVERE)</th>
                       <th className={reportStyles.num}>Guadagnati</th>
                       <th className={reportStyles.num}>Da restituire</th>
+                      <th className={reportStyles.num}>Voci € DARE</th>
+                      <th className={reportStyles.num}>Voci € AVERE</th>
                       <th className={reportStyles.num}>Lordo €</th>
                       <th className={reportStyles.num}>Trattenuta €</th>
                       <th className={reportStyles.num}>Erogato €</th>
@@ -209,6 +217,8 @@ export function SettlementsReportPage() {
               Le operazioni possono essere filtrate per data. «Caricati» (DARE) sono i crediti dati allo stand da restituire
               in liquidazione; «Liquidati» (AVERE) i crediti restituiti con pagamento in euro; «Da restituire» = caricati −
               liquidati. «Crediti guadagnati» fa riferimento a tutto l'evento (report ordini), a prescindere dal filtro.
+              «Voci €» sono operazioni registrate direttamente in euro: DARE = credito da esigere dallo stand, AVERE =
+              pagamento già corrisposto (incluso nell'erogato).
             </p>
           </div>
         </div>

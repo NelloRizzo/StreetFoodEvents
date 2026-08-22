@@ -29,6 +29,7 @@ export function HomePage() {
   const { isAuthenticated } = useAuth()
   const [events, setEvents] = useState<EventItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [now] = useState(() => Date.now())
 
   useEffect(() => {
       apiRequest<{ items: EventItem[] }>('/events?public=true')
@@ -38,6 +39,18 @@ export function HomePage() {
       })
       .catch(() => setIsLoading(false))
   }, [])
+
+  const isFinished = (ev: EventItem) => {
+    const endOfDay = new Date(ev.endDate)
+    endOfDay.setHours(23, 59, 59, 999)
+    return endOfDay.getTime() < now
+  }
+
+  const upcomingEvents = events.filter((ev) => !isFinished(ev))
+  const finishedEvents = events
+    .filter(isFinished)
+    .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())
+    .slice(0, 3)
 
   return (
     <main className={homeStyles.page}>
@@ -53,12 +66,12 @@ export function HomePage() {
 
           {isLoading && <p className={homeStyles.empty}>Caricamento...</p>}
 
-          {!isLoading && events.length === 0 && (
+          {!isLoading && upcomingEvents.length === 0 && (
             <p className={homeStyles.empty}>Nessun evento in programma al momento.</p>
           )}
 
           <div className={homeStyles.eventGrid}>
-            {events.map((event) => (
+            {upcomingEvents.map((event) => (
               <Link key={event.id} to={`/events/${event.id}`} className={homeStyles.eventCard}>
                 {event.coverImage?.url && (
                   <div className={homeStyles.cardCover}>
@@ -98,6 +111,27 @@ export function HomePage() {
               </Link>
             ))}
           </div>
+
+          {finishedEvents.length > 0 && (
+            <section className={homeStyles.pastSection}>
+              <h2 className={homeStyles.pastTitle}>Eventi terminati</h2>
+              <div className={homeStyles.pastList}>
+                {finishedEvents.map((event) => (
+                  <Link key={event.id} to={`/events/${event.id}`} className={homeStyles.pastItem}>
+                    {event.logo?.url && (
+                      <img className={homeStyles.pastLogo} src={event.logo.url} alt="" />
+                    )}
+                    <span className={homeStyles.pastName}>{event.name}</span>
+                    <span className={homeStyles.pastDate}>
+                      {new Date(event.startDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                      {' – '}
+                      {new Date(event.endDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           {!isAuthenticated && (
             <div className={homeStyles.ctaSection}>

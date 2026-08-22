@@ -13,9 +13,8 @@ export function AdminLayout() {
   const isCashier = /\/stands\/[^/]+\/order/.test(location.pathname) || /\/cashier/.test(location.pathname)
   const isOrdersQueue = /\/ordersqueue/.test(location.pathname)
   const isStationQueue = /\/orders\/station\//.test(location.pathname)
-  const isMenuPrint = /\/menu-print/.test(location.pathname)
 
-  const hideChrome = isSlideshow || isCashier || isOrdersQueue || isStationQueue || isMenuPrint
+  const hideChrome = isSlideshow || isCashier || isOrdersQueue || isStationQueue
 
   return (
     <div className={styles.admin}>

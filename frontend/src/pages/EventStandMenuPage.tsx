@@ -58,6 +58,7 @@ type Stand = {
   slogan: string | null
   description: string | null
   coverImage: UploadedImage | null
+  logo: UploadedImage | null
   gallery: UploadedImage[]
   numbers: { eventId: string; number: number; showOnMap: boolean }[]
 }
@@ -246,8 +247,8 @@ export function EventStandMenuPage() {
                     className={`${styles.standChip} ${isActive ? styles.standChipActive : ''}`}
                     onClick={() => { if (!isActive) { setCart([]); setViewMode('stand') } }}
                   >
-                    {s.coverImage && (
-                      <img src={s.coverImage.url} alt="" className={styles.standChipImg} />
+                    {(s.logo ?? s.coverImage) && (
+                      <img src={(s.logo ?? s.coverImage)!.url} alt="" className={styles.standChipImg} />
                     )}
                     {num && <span className={styles.standChipNum}>{num.number}</span>}
                     <span className={styles.standChipName}>{s.name}</span>
@@ -275,8 +276,12 @@ export function EventStandMenuPage() {
           <div className={styles.headerLeft}>
             {viewMode === 'stand' ? (
               <>
-                {stand.coverImage && (
-                  <img src={stand.coverImage.url} alt={`${stand.name} — logo`} className={styles.logo} />
+                {(stand.logo ?? stand.coverImage) && (
+                  <img
+                    src={(stand.logo ?? stand.coverImage)!.url}
+                    alt={`${stand.name} — logo`}
+                    className={styles.logo}
+                  />
                 )}
                 <div>
                   <span className="eyebrow">Menu — {event.name}</span>

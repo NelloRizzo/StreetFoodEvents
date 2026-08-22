@@ -11,6 +11,7 @@ import cambioStyles from './EventExchangePage.module.scss'
 import settlementStyles from './StandSettlementsPage.module.scss'
 
 type SettlementDirection = 'debit' | 'credit'
+type SettlementUnit = 'credits' | 'euro'
 
 type EventDenomination = { label: string; value: number; quantity: number }
 type EventFeeBand = { maxAmount: number; feePercent: number; feeFlat: number }
@@ -22,6 +23,8 @@ type SettlementStand = {
   loadedCredits: number
   settledCredits: number
   toReturnCredits: number
+  loadedEuro: number
+  settledEuro: number
 }
 
 type SettlementSummary = {
@@ -38,6 +41,7 @@ type Settlement = {
   standId: string
   standName: string
   direction: SettlementDirection
+  unit: SettlementUnit
   amount: number
   exchangeRate: number
   feePercent: number
@@ -52,7 +56,7 @@ type Settlement = {
 
 type SettlementListResponse = {
   items: Settlement[]
-  totals: { loadedCredits: number; settledCredits: number; payoutEuro: number; count: number }
+  totals: { loadedCredits: number; settledCredits: number; loadedEuro: number; settledEuro: number; payoutEuro: number; count: number }
   pagination: { page: number; totalPages: number; total: number; limit: number }
 }
 
@@ -77,6 +81,7 @@ export function StandSettlementsPage() {
 
   const [selectedStandId, setSelectedStandId] = useState('')
   const [direction, setDirection] = useState<SettlementDirection>('credit')
+  const [unit, setUnit] = useState<SettlementUnit>('credits')
   const [amount, setAmount] = useState('')
   const [feePercent, setFeePercent] = useState('')
   const [description, setDescription] = useState('')
@@ -91,7 +96,7 @@ export function StandSettlementsPage() {
   const [feePrefilled, setFeePrefilled] = useState(false)
 
   const [settlements, setSettlements] = useState<Settlement[]>([])
-  const [totals, setTotals] = useState<{ loadedCredits: number; settledCredits: number; payoutEuro: number; count: number }>({ loadedCredits: 0, settledCredits: 0, payoutEuro: 0, count: 0 })
+  const [totals, setTotals] = useState<{ loadedCredits: number; settledCredits: number; loadedEuro: number; settledEuro: number; payoutEuro: number; count: number }>({ loadedCredits: 0, settledCredits: 0, loadedEuro: 0, settledEuro: 0, payoutEuro: 0, count: 0 })
   const [txPage, setTxPage] = useState(1)
   const [txTotalPages, setTxTotalPages] = useState(1)
 
@@ -142,10 +147,14 @@ export function StandSettlementsPage() {
       }, 0)
     : 0
 
-  const creditsNum = hasDenoms && direction === 'credit' ? denomTotalCredits : parseFloat(amount)
+  const isEuro = unit === 'euro'
+  const inputNum = parseFloat(amount)
+  const creditsNum = !isEuro && hasDenoms && direction === 'credit' ? denomTotalCredits : inputNum
   const validAmount = Number.isFinite(creditsNum) && creditsNum > 0
   const isCredit = direction === 'credit'
-  const grossEuro = isCredit && validAmount ? Math.round(creditsNum / rate * 100) / 100 : 0
+  const grossEuro = isCredit && validAmount
+    ? (isEuro ? Math.round(creditsNum * 100) / 100 : Math.round(creditsNum / rate * 100) / 100)
+    : 0
 
   const resolveFee = (ge: number): string => {
     if (standFeeOverride?.feePercent != null) return String(standFeeOverride.feePercent)
@@ -154,12 +163,12 @@ export function StandSettlementsPage() {
     return ''
   }
 
-  const feeNum = isCredit && Number.isFinite(parseFloat(feePercent)) ? parseFloat(feePercent) : 0
-  const feeEuro = isCredit && validAmount ? Math.round(grossEuro * (feeNum / 100) * 100) / 100 : 0
+  const feeNum = isCredit && !isEuro && Number.isFinite(parseFloat(feePercent)) ? parseFloat(feePercent) : 0
+  const feeEuro = isCredit && !isEuro && validAmount ? Math.round(grossEuro * (feeNum / 100) * 100) / 100 : 0
   const payoutEuro = isCredit && validAmount ? Math.round((grossEuro - feeEuro) * 100) / 100 : 0
 
   useEffect(() => {
-    if (!hasDenoms || !isCredit || denomTotalCredits <= 0) return
+    if (isEuro || !hasDenoms || !isCredit || denomTotalCredits <= 0) return
     const ge = Math.round(denomTotalCredits / rate * 100) / 100
     const resolved = resolveFee(ge)
     if (resolved !== feePercent) {
@@ -168,13 +177,20 @@ export function StandSettlementsPage() {
     }
   }, [denomCounts, hasDenoms, isCredit, denomTotalCredits, rate])
 
+  const switchUnit = (next: SettlementUnit) => {
+    if (next === unit) return
+    setUnit(next)
+    setAmount('')
+    setDenomCounts({})
+  }
+
   const handleSelectStand = async (standId: string) => {
     setSelectedStandId(standId)
     setDenomCounts({})
     setFeePrefilled(false)
     const stand = summary?.stands.find((s) => s.standId === standId)
     if (stand) {
-      setAmount(isCredit && stand.earnedCredits > 0 ? String(stand.earnedCredits) : '')
+      setAmount(!isEuro && isCredit && stand.earnedCredits > 0 ? String(stand.earnedCredits) : '')
     } else {
       setAmount('')
     }
@@ -193,7 +209,7 @@ export function StandSettlementsPage() {
     if (!eventId || !selectedStandId || !validAmount) return
     setSubmitting(true)
     try {
-      const denominationsPayload = (isCredit && hasDenoms)
+      const denominationsPayload = (!isEuro && isCredit && hasDenoms)
         ? eventDenoms
             .filter((d) => {
               const count = parseFloat(denomCounts[d.label] ?? '0')
@@ -212,6 +228,7 @@ export function StandSettlementsPage() {
           standId: selectedStandId,
           amount: creditsNum,
           direction,
+          unit,
           feePercent: feeNum,
           description: description.trim() || undefined,
           denominations: denominationsPayload,
@@ -222,10 +239,16 @@ export function StandSettlementsPage() {
       setModal({
         open: true,
         variant: 'alert',
-        title: isCredit ? 'Liquidazione completata' : 'Carico crediti registrato',
-        message: isCredit
-          ? `${res.item.standName}: ${res.item.amount.toFixed(2)} ${currencyName} → €${res.item.payoutEuro.toFixed(2)} da corrispondere (€${res.item.grossEuro.toFixed(2)} lordi, ${res.item.feePercent}% trattenuta = €${res.item.feeEuro.toFixed(2)}).`
-          : `${res.item.standName}: caricati ${res.item.amount.toFixed(2)} ${currencyName} da restituire in fase di liquidazione (nessun pagamento in euro).`
+        title: !isCredit
+          ? (isEuro ? 'Credito da esigere registrato' : 'Carico crediti registrato')
+          : (isEuro ? 'Voce AVERE in euro registrata' : 'Liquidazione completata'),
+        message: !isCredit && isEuro
+          ? `${res.item.standName}: credito da esigere di €${res.item.amount.toFixed(2)} — nessun movimento di cassa ora.`
+          : isEuro
+            ? `${res.item.standName}: pagati €${res.item.payoutEuro.toFixed(2)} (voce contabile in euro, senza conversione).`
+            : isCredit
+              ? `${res.item.standName}: ${res.item.amount.toFixed(2)} ${currencyName} → €${res.item.payoutEuro.toFixed(2)} da corrispondere (€${res.item.grossEuro.toFixed(2)} lordi, ${res.item.feePercent}% trattenuta = €${res.item.feeEuro.toFixed(2)}).`
+              : `${res.item.standName}: caricati ${res.item.amount.toFixed(2)} ${currencyName} da restituire in fase di liquidazione (nessun pagamento in euro).`
       })
       fetchData()
     } catch (err) {
@@ -247,12 +270,16 @@ export function StandSettlementsPage() {
 
   return (
     <div className={`page-shell ${styles.page}`}>
-      <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
+      <Link to={`/events/${eventId}`} className={`${styles.backLink} ${settlementStyles.noPrint}`}>&larr; Torna all'evento</Link>
+      <div className={settlementStyles.printHeader}>
+        <h2>Liquidazione stand — {eventName}</h2>
+        <p>Elenco transazioni registrate · stampa del {new Date().toLocaleString('it-IT')}</p>
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
         <h1 className={styles.pageTitle}>
           <CurrencyDisplay currencyName={currencyName} currencySymbol={summary?.currencySymbol ?? null} /> Liquidazione stand - {eventName || 'Caricamento...'}
         </h1>
-        <Link to={`/admin/events/${eventId}/settlements/report`} className={cambioStyles.btnTopUp} style={{ display: 'inline-block' }}>
+        <Link to={`/admin/events/${eventId}/settlements/report`} className={`${cambioStyles.btnTopUp} ${settlementStyles.noPrint}`} style={{ display: 'inline-block' }}>
           Resoconto liquidazioni
         </Link>
       </div>
@@ -261,7 +288,7 @@ export function StandSettlementsPage() {
         <p>Caricamento...</p>
       ) : (
         <>
-          <section className={cambioStyles.section}>
+          <section className={`${cambioStyles.section} ${settlementStyles.noPrint}`}>
             <div className={settlementStyles.selectRow}>
               <label className={settlementStyles.field}>
                 Stand
@@ -300,12 +327,22 @@ export function StandSettlementsPage() {
                   <div className={cambioStyles.statValue}>{selectedStand.toReturnCredits.toFixed(2)}</div>
                   <div className={cambioStyles.statSub}>DARE − AVERE</div>
                 </div>
+                <div className={cambioStyles.statCard}>
+                  <div className={cambioStyles.statLabel}>Da esigere € (DARE)</div>
+                  <div className={cambioStyles.statValue}>€{selectedStand.loadedEuro.toFixed(2)}</div>
+                  <div className={cambioStyles.statSub}>Voci contabili in euro</div>
+                </div>
+                <div className={cambioStyles.statCard}>
+                  <div className={cambioStyles.statLabel}>Da saldare € (AVERE)</div>
+                  <div className={cambioStyles.statValue}>€{selectedStand.settledEuro.toFixed(2)}</div>
+                  <div className={cambioStyles.statSub}>Pagamenti diretti in euro</div>
+                </div>
               </div>
             )}
           </section>
 
           {selectedStand && (
-            <section className={cambioStyles.section}>
+            <section className={`${cambioStyles.section} ${settlementStyles.noPrint}`}>
               <h2 className={styles.sectionTitle}>Nuova operazione</h2>
               <div className={settlementStyles.formGrid}>
                 <div className={cambioStyles.formCard}>
@@ -327,7 +364,25 @@ export function StandSettlementsPage() {
                       Carico crediti (DARE)
                     </button>
                   </div>
-                  {hasDenoms && isCredit ? (
+                  <div className={settlementStyles.directionToggle}>
+                    <button
+                      type="button"
+                      className={`${settlementStyles.directionBtn} ${!isEuro ? settlementStyles.unitActive : ''}`}
+                      onClick={() => switchUnit('credits')}
+                      disabled={submitting}
+                    >
+                      In crediti ({currencyName})
+                    </button>
+                    <button
+                      type="button"
+                      className={`${settlementStyles.directionBtn} ${isEuro ? settlementStyles.unitActive : ''}`}
+                      onClick={() => switchUnit('euro')}
+                      disabled={submitting}
+                    >
+                      In euro (€)
+                    </button>
+                  </div>
+                  {hasDenoms && isCredit && !isEuro ? (
                     <div className={cambioStyles.field}>
                       <span style={{ fontWeight: 500, marginBottom: '0.5rem', display: 'block' }}>Tagli restituiti dallo stand</span>
                       {eventDenoms.map((d) => {
@@ -363,13 +418,15 @@ export function StandSettlementsPage() {
                     </div>
                   ) : (
                     <label className={cambioStyles.field}>
-                      {isCredit ? `Importo presentato (${currencyName})` : `Crediti da caricare (${currencyName})`}
+                      {isEuro
+                        ? 'Importo (€)'
+                        : isCredit ? `Importo presentato (${currencyName})` : `Crediti da caricare (${currencyName})`}
                       <input type="number" min="0.01" step="0.01" value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         disabled={submitting} />
                     </label>
                   )}
-                  {isCredit && (
+                  {isCredit && !isEuro && (
                     <label className={cambioStyles.field}>
                       Percentuale trattenuta dal gestore (%) — default 0
                       <input type="number" min="0" max="100" step="0.1" value={feePercent}
@@ -387,36 +444,69 @@ export function StandSettlementsPage() {
                   <button className={cambioStyles.btnTopUp} onClick={handleSubmit}
                     disabled={!validAmount || submitting}>
                     {submitting
-                      ? (isCredit ? 'Liquidazione in corso...' : 'Carico in corso...')
-                      : (isCredit ? `Liquida ${currencyName}` : `Carica ${currencyName} allo stand`)}
+                      ? 'Registrazione in corso...'
+                      : !isCredit && isEuro
+                        ? 'Registra credito da esigere'
+                        : isEuro
+                          ? 'Registra pagamento in euro'
+                          : (isCredit ? 'Registra liquidazione' : 'Carica crediti')}
                   </button>
                 </div>
 
                 <div className={`${cambioStyles.formCard} ${settlementStyles.previewCard}`}>
                   {isCredit ? (
+                    isEuro ? (
+                      <>
+                        <h3 className={settlementStyles.previewTitle}>Pagamento diretto in euro</h3>
+                        {!validAmount ? (
+                          <p className={cambioStyles.preview}>Inserisci l'importo in euro da registrare.</p>
+                        ) : (
+                          <>
+                            <div className={`${settlementStyles.previewRow} ${settlementStyles.previewTotal}`}>
+                              <span className={settlementStyles.previewLabel}>Da corrispondere</span>
+                              <span className={`${settlementStyles.previewValue} ${settlementStyles.previewPayout}`}>€{creditsNum.toFixed(2)}</span>
+                            </div>
+                            <p className={settlementStyles.previewNote}>
+                              Voce contabile in euro: nessuna conversione dai crediti, nessuna trattenuta.
+                            </p>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <h3 className={settlementStyles.previewTitle}>Corrispettivo in euro</h3>
+                        {!validAmount ? (
+                          <p className={cambioStyles.preview}>Inserisci l'importo presentato per calcolare il corrispettivo.</p>
+                        ) : (
+                          <>
+                            <div className={settlementStyles.previewRow}>
+                              <span className={settlementStyles.previewLabel}>Lordo</span>
+                              <span className={settlementStyles.previewValue}>€{grossEuro.toFixed(2)}</span>
+                            </div>
+                            <div className={settlementStyles.previewRow}>
+                              <span className={settlementStyles.previewLabel}>Trattenuta ({feeNum.toFixed(1)}%)</span>
+                              <span className={`${settlementStyles.previewValue} ${settlementStyles.previewFee}`}>- €{feeEuro.toFixed(2)}</span>
+                            </div>
+                            <div className={`${settlementStyles.previewRow} ${settlementStyles.previewTotal}`}>
+                              <span className={settlementStyles.previewLabel}>Da corrispondere</span>
+                              <span className={`${settlementStyles.previewValue} ${settlementStyles.previewPayout}`}>€{payoutEuro.toFixed(2)}</span>
+                            </div>
+                            <p className={settlementStyles.previewNote}>
+                              {creditsNum.toFixed(2)} {currencyName} ÷ {rate} (cambio) × ({100 - feeNum}%)
+                            </p>
+                          </>
+                        )}
+                      </>
+                    )
+                  ) : isEuro ? (
                     <>
-                      <h3 className={settlementStyles.previewTitle}>Corrispettivo in euro</h3>
-                      {!validAmount ? (
-                        <p className={cambioStyles.preview}>Inserisci l'importo presentato per calcolare il corrispettivo.</p>
-                      ) : (
-                        <>
-                          <div className={settlementStyles.previewRow}>
-                            <span className={settlementStyles.previewLabel}>Lordo</span>
-                            <span className={settlementStyles.previewValue}>€{grossEuro.toFixed(2)}</span>
-                          </div>
-                          <div className={settlementStyles.previewRow}>
-                            <span className={settlementStyles.previewLabel}>Trattenuta ({feeNum.toFixed(1)}%)</span>
-                            <span className={`${settlementStyles.previewValue} ${settlementStyles.previewFee}`}>- €{feeEuro.toFixed(2)}</span>
-                          </div>
-                          <div className={`${settlementStyles.previewRow} ${settlementStyles.previewTotal}`}>
-                            <span className={settlementStyles.previewLabel}>Da corrispondere</span>
-                            <span className={`${settlementStyles.previewValue} ${settlementStyles.previewPayout}`}>€{payoutEuro.toFixed(2)}</span>
-                          </div>
-                          <p className={settlementStyles.previewNote}>
-                            {creditsNum.toFixed(2)} {currencyName} ÷ {rate} (cambio) × ({100 - feeNum}%)
-                          </p>
-                        </>
-                      )}
+                      <h3 className={settlementStyles.previewTitle}>Credito da esigere</h3>
+                      <p className={cambioStyles.preview}>
+                        Lo stand deve €{validAmount ? creditsNum.toFixed(2) : '__'}: nessun movimento di cassa ora.
+                      </p>
+                      <p className={settlementStyles.previewNote}>
+                        Chiudere il debito con operazioni AVERE (anche parziali) nello stesso importo.
+                      </p>
                     </>
                   ) : (
                     <>
@@ -437,12 +527,23 @@ export function StandSettlementsPage() {
           )}
 
           <section>
-            <h2 className={styles.sectionTitle}>Storico liquidazioni</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }} className={settlementStyles.noPrint}>
+              <h2 className={styles.sectionTitle} style={{ margin: 0 }}>Storico liquidazioni</h2>
+              <button className={styles.textBtn} onClick={() => window.print()} disabled={settlements.length === 0}>
+                Stampa elenco transazioni
+              </button>
+            </div>
             {totals.count > 0 && (
               <div className={settlementStyles.totalsBar}>
                 <span className={settlementStyles.totalsItem}>Operazioni: <strong>{totals.count}</strong></span>
                 <span className={settlementStyles.totalsItem}>Caricati (DARE): <strong>{totals.loadedCredits.toFixed(2)}</strong></span>
                 <span className={settlementStyles.totalsItem}>Liquidati (AVERE): <strong>{totals.settledCredits.toFixed(2)}</strong></span>
+                {totals.loadedEuro !== 0 && (
+                  <span className={settlementStyles.totalsItem}>Voci € DARE: <strong>€{totals.loadedEuro.toFixed(2)}</strong></span>
+                )}
+                {totals.settledEuro !== 0 && (
+                  <span className={settlementStyles.totalsItem}>Voci € AVERE: <strong>€{totals.settledEuro.toFixed(2)}</strong></span>
+                )}
                 <span className={settlementStyles.totalsItem}>Totale erogato: <strong>€{totals.payoutEuro.toFixed(2)}</strong></span>
               </div>
             )}
@@ -457,7 +558,7 @@ export function StandSettlementsPage() {
                         <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
                         <th style={{ textAlign: 'left', padding: '0.5rem' }}>Stand</th>
                         <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
-                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Crediti</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo</th>
                         <th style={{ textAlign: 'right', padding: '0.5rem' }}>Corso</th>
                         <th style={{ textAlign: 'right', padding: '0.5rem' }}>Lordo €</th>
                         <th style={{ textAlign: 'right', padding: '0.5rem' }}>% gestore</th>
@@ -476,14 +577,18 @@ export function StandSettlementsPage() {
                           <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>{s.standName}</td>
                           <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
                             {s.direction === 'debit'
-                              ? <span className={settlementStyles.badgeDebit}>DARE · Carico</span>
-                              : <span className={settlementStyles.badgeCredit}>AVERE · Liquidazione</span>}
+                              ? <span className={settlementStyles.badgeDebit}>{s.unit === 'euro' ? 'DARE · Voce €' : 'DARE · Carico'}</span>
+                              : <span className={settlementStyles.badgeCredit}>{s.unit === 'euro' ? 'AVERE · Voce €' : 'AVERE · Liquidazione'}</span>}
                           </td>
-                          <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600 }}>{s.amount.toFixed(2)}</td>
-                          <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-text-muted)' }}>1 € = {s.exchangeRate} {currencyName}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600 }}>
+                            {s.unit === 'euro' ? `€${s.amount.toFixed(2)}` : s.amount.toFixed(2)}
+                          </td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-text-muted)' }}>
+                            {s.unit === 'euro' ? '—' : `1 € = ${s.exchangeRate} ${currencyName}`}
+                          </td>
                           <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.direction === 'debit' ? '—' : `€${s.grossEuro.toFixed(2)}`}</td>
-                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.direction === 'debit' ? '—' : `${s.feePercent.toFixed(1)}%`}</td>
-                          <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-red)' }}>{s.direction === 'debit' ? '—' : `- €${s.feeEuro.toFixed(2)}`}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.direction === 'debit' || s.unit === 'euro' ? '—' : `${s.feePercent.toFixed(1)}%`}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-red)' }}>{s.direction === 'debit' || s.unit === 'euro' ? '—' : `- €${s.feeEuro.toFixed(2)}`}</td>
                           <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: 'var(--color-green)' }}>{s.direction === 'debit' ? '—' : `€${s.payoutEuro.toFixed(2)}`}</td>
                           <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>{s.performedByName || '-'}</td>
                           <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden' }}>{s.description || '-'}</td>
@@ -494,7 +599,7 @@ export function StandSettlementsPage() {
                 </div>
 
                 {txTotalPages > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }} className={settlementStyles.noPrint}>
                     <button className={styles.textBtn} disabled={txPage <= 1} onClick={() => setTxPage((p) => Math.max(1, p - 1))}>
                       Precedente
                     </button>
@@ -509,7 +614,7 @@ export function StandSettlementsPage() {
           </section>
 
           {eventDenoms.length > 0 && (
-            <section style={{ marginTop: '2rem' }}>
+            <section style={{ marginTop: '2rem' }} className={settlementStyles.noPrint}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <h2 className={styles.sectionTitle} style={{ margin: 0 }}>Riepilogo tagli valuta</h2>
                 <button

@@ -19,6 +19,7 @@ import { UserRolesPage } from './pages/UserRolesPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventStandMenuPage } from './pages/EventStandMenuPage'
 import { StandDetailPage } from './pages/StandDetailPage'
+import { StandManagePage } from './pages/StandManagePage'
 import { StandOrdersPage } from './pages/StandOrdersPage'
 import { StandDisplayPage } from './pages/StandDisplayPage'
 import { StationQueuePage } from './pages/StationQueuePage'
@@ -118,6 +119,7 @@ export const router = createBrowserRouter([
       { path: 'events', element: <EventsPage /> },
       { path: 'stands', element: <StandsPage /> },
       { path: 'stands/:standId', element: <StandDetailPage /> },
+      { path: 'stands/:standId/manage', element: <StandManagePage /> },
       { path: 'stands/:standId/orders', element: <StandOrdersPage /> },
       { path: 'products', element: <ProductsPage /> },
       { path: 'event-products', element: <EventProductsPage /> },

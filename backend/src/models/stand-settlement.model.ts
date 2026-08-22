@@ -27,6 +27,12 @@ const standSettlementSchema = new Schema(
             default: 'credit',
             index: true
         },
+        unit: {
+            type: String,
+            enum: ['credits', 'euro'],
+            required: true,
+            default: 'credits'
+        },
         amount: {
             type: Number,
             required: true,

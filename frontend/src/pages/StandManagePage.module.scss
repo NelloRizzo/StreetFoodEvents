@@ -1,0 +1,92 @@
+.eventPickerRow {
+  margin-bottom: 1.5rem;
+}
+
+.field {
+  display: block;
+  max-width: 420px;
+
+  select {
+    margin-top: 0.25rem;
+    width: 100%;
+  }
+}
+
+.finishedNote {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.actionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-card);
+  color: var(--color-ink);
+  text-decoration: none;
+  transition:
+    box-shadow var(--ease-standard),
+    border-color var(--ease-standard);
+
+  &:hover {
+    border-color: var(--color-brand);
+    box-shadow: var(--shadow-card-hover);
+  }
+}
+
+.actionIcon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.actionTitle {
+  font-weight: 700;
+}
+
+.actionDesc {
+  font-size: 0.85rem;
+  color: var(--color-ink-soft);
+}
+
+.stationList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 520px;
+}
+
+.stationLink {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-strong);
+  color: var(--color-ink);
+  text-decoration: none;
+  font-weight: 600;
+
+  &:hover {
+    border-color: var(--color-brand);
+  }
+}
+
+.stationHint {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--color-ink-soft);
+}

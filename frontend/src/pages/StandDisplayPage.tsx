@@ -16,6 +16,7 @@ export function StandDisplayPage() {
   const { eventId, standId } = useParams<{ eventId: string; standId: string }>()
   const [data, setData] = useState<StandDisplayData | null>(null)
   const [eventName, setEventName] = useState('')
+  const [standLogoUrl, setStandLogoUrl] = useState<string | null>(null)
 
   useEventTheme(null)
 
@@ -40,14 +41,26 @@ export function StandDisplayPage() {
       .catch(() => {})
   }, [eventId])
 
+  useEffect(() => {
+    if (!standId) return
+    apiRequest<{ item: { logo?: { url: string } | null } }>(`/stands/${standId}`)
+      .then((res) => setStandLogoUrl(res.item.logo?.url ?? null))
+      .catch(() => {})
+  }, [standId])
+
   const orders = data?.items ?? []
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          {eventName && <span className={styles.eventName}>{eventName}</span>}
-          <span className={styles.standName}>{data?.standName ?? 'Stand'}</span>
+          {standLogoUrl && (
+            <img src={standLogoUrl} alt="" className={styles.standLogo} />
+          )}
+          <div>
+            {eventName && <span className={styles.eventName}>{eventName}</span>}
+            <span className={styles.standName}>{data?.standName ?? 'Stand'}</span>
+          </div>
         </div>
         <span className={styles.headerHint}>Stato ordini</span>
       </header>

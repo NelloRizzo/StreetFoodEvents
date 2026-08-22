@@ -483,4 +483,136 @@ describe('Integration — Stand Settlements', () => {
         expect(all.body.totals.payoutEuro).toBe(15);
         expect(all.body.totals.count).toBe(2);
     });
+
+    it('creates AVERE settlement directly in euro without conversion or fee', async () => {
+        const env = await setupSettlementEnvironment();
+
+        const res = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 30, unit: 'euro', feePercent: 50 });
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.unit).toBe('euro');
+        expect(res.body.item.amount).toBe(30);
+        expect(res.body.item.grossEuro).toBe(30);
+        expect(res.body.item.feeEuro).toBe(0);
+        expect(res.body.item.feePercent).toBe(0);
+        expect(res.body.item.payoutEuro).toBe(30);
+    });
+
+    it('rejects euro settlements with denomination counts', async () => {
+        const env = await setupSettlementEnvironment();
+
+        const res = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({
+                standId: env.stand1._id.toString(),
+                amount: 30,
+                unit: 'euro',
+                denominations: [{ label: '5 TC', value: 5, count: 6 }]
+            });
+
+        expect(res.status).toBe(400);
+    });
+
+    it('creates DARE entry in euro as receivable with no cash movement', async () => {
+        const env = await setupSettlementEnvironment();
+
+        const res = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 25, unit: 'euro', direction: 'debit' });
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.unit).toBe('euro');
+        expect(res.body.item.direction).toBe('debit');
+        expect(res.body.item.amount).toBe(25);
+        expect(res.body.item.grossEuro).toBe(0);
+        expect(res.body.item.feeEuro).toBe(0);
+        expect(res.body.item.payoutEuro).toBe(0);
+    });
+
+    it('summary and list split credits vs euro entries', async () => {
+        const env = await setupSettlementEnvironment();
+
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 50, direction: 'debit' });
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 20, feePercent: 0 });
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 15, unit: 'euro' });
+        await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 7, unit: 'euro', direction: 'debit' });
+
+        const sum = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements/summary`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+        const stand1 = sum.body.stands.find((s: { standId: string }) => s.standId === env.stand1._id.toString());
+        expect(stand1.loadedCredits).toBe(50);
+        expect(stand1.settledCredits).toBe(20);
+        expect(stand1.loadedEuro).toBe(7);
+        expect(stand1.settledEuro).toBe(15);
+
+        const list = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+        expect(list.body.totals.loadedCredits).toBe(50);
+        expect(list.body.totals.settledCredits).toBe(20);
+        expect(list.body.totals.loadedEuro).toBe(7);
+        expect(list.body.totals.settledEuro).toBe(15);
+        expect(list.body.totals.payoutEuro).toBe(25);
+
+        const report = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements/report`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+        expect(report.status).toBe(200);
+        const repStand = report.body.stands.find((s: { standId: string }) => s.standId === env.stand1._id.toString());
+        expect(repStand.loadedEuro).toBe(7);
+        expect(repStand.settledEuro).toBe(15);
+        expect(repStand.grossEuro).toBe(25);
+        expect(repStand.payoutEuro).toBe(25);
+        expect(report.body.totals.loadedEuro).toBe(7);
+        expect(report.body.totals.settledEuro).toBe(15);
+    });
+
+    it('treats legacy records without unit as credits', async () => {
+        const env = await setupSettlementEnvironment();
+
+        await StandSettlementModel.collection.insertOne({
+            eventId: env.event._id,
+            standId: env.stand1._id,
+            standName: 'Stand Alpha',
+            amount: 40,
+            exchangeRate: 2,
+            feePercent: 0,
+            grossEuro: 20,
+            feeEuro: 0,
+            payoutEuro: 20,
+            occurredAt: new Date()
+        });
+
+        const sum = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements/summary`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+        const stand1 = sum.body.stands.find((s: { standId: string }) => s.standId === env.stand1._id.toString());
+        expect(stand1.settledCredits).toBe(40);
+        expect(stand1.settledEuro).toBe(0);
+
+        const list = await request(app)
+            .get(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+        expect(list.body.items[0].unit).toBe('credits');
+        expect(list.body.totals.settledCredits).toBe(40);
+        expect(list.body.totals.settledEuro).toBe(0);
+    });
 });

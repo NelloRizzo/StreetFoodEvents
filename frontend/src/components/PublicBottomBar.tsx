@@ -92,7 +92,7 @@ export function PublicBottomBar() {
                 </span>
                 <span className={styles.userDropdownEmail}>{user?.email}</span>
                 <Link className={styles.userDropdownAction} to="/admin/dashboard">
-                  Modalit\u00E0 operatore
+                  Modalità operatore
                 </Link>
                 <Link className={styles.userDropdownAction} to="/favorites">
                   Preferiti

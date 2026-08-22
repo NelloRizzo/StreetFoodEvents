@@ -11,8 +11,6 @@ const EVENT_STORAGE_KEY = 'adminSelectedEventId'
 type EventItem = { id: string; name: string; endDate?: string | null }
 
 type MyStand = { id: string; name: string; eventIds: string[] }
-type MyStation = { id: string; name: string; standId: string | null; standName: string | null }
-type RoleInfo = { slug: string; scope: string; eventId: string | null; standId: string | null }
 
 type SidebarItem = { label: string; to: string; icon: string; external?: boolean }
 
@@ -34,10 +32,6 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [myStands, setMyStands] = useState<MyStand[]>([])
-  const [myStations, setMyStations] = useState<MyStation[]>([])
-  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
-  const [roles, setRoles] = useState<RoleInfo[]>([])
-  const [eventEnds, setEventEnds] = useState<Record<string, string>>({})
   const [now] = useState(() => Date.now())
   const [manuallySelectedEventId, setManuallySelectedEventId] = useState<string | null>(() => {
     try {
@@ -55,32 +49,8 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
   }, [])
 
   useEffect(() => {
-    apiRequest<{ stands: MyStand[]; stations: MyStation[] }>('/auth/me/stands')
-      .then((d) => {
-        setMyStands(d.stands)
-        setMyStations(d.stations)
-        const ids = [...new Set(d.stands.flatMap((s) => s.eventIds).filter(Boolean))]
-        Promise.all(
-          ids.map((eid) =>
-            apiRequest<{ item: { endDate?: string } }>(`/events/${eid}`)
-              .then((r) => ({ eid, endDate: r.item.endDate ?? null }))
-              .catch(() => ({ eid, endDate: null }))
-          )
-        ).then((resolved) => {
-          const ends: Record<string, string> = {}
-          for (const r of resolved) {
-            if (r.endDate) ends[r.eid] = r.endDate
-          }
-          setEventEnds((prev) => ({ ...prev, ...ends }))
-        })
-      })
-      .catch(() => {})
-
-    apiRequest<{ isPlatformAdmin: boolean; roles: RoleInfo[] }>('/auth/me/roles')
-      .then((d) => {
-        setIsPlatformAdmin(d.isPlatformAdmin)
-        setRoles(d.roles)
-      })
+    apiRequest<{ stands: MyStand[] }>('/auth/me/stands')
+      .then((d) => setMyStands(d.stands))
       .catch(() => {})
   }, [])
 
@@ -135,70 +105,19 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
     }
   }
 
-  const isEventFinished = (eventId: string) => {
-    const end = eventEnds[eventId]
-    if (!end) return false
-    const endOfDay = new Date(end)
-    endOfDay.setHours(23, 59, 59, 999)
-    return endOfDay.getTime() < now
-  }
-
-  const canAccessStandCash = (s: MyStand) => {
-    if (isPlatformAdmin) return true
-    if (roles.some((r) => r.scope === 'stand' && r.standId === s.id && r.slug === 'cashier')) return true
-    return s.eventIds.some((eventId) =>
-      roles.some(
-        (r) => r.scope === 'event' && r.eventId === eventId && (r.slug === 'event-admin' || r.slug === 'event-cashier')
-      )
-    )
-  }
-
   const nameCollator = new Intl.Collator('it', { sensitivity: 'base' })
-  const scopedStands = selectedEventId
+  const managedStands = selectedEventId
     ? myStands
         .filter((s) => s.eventIds.includes(selectedEventId))
         .sort((a, b) => nameCollator.compare(a.name, b.name))
     : []
-  const scopedStations = selectedEventId
-    ? myStations
-        .filter((st) => {
-          if (!st.standId) return true
-          const stand = myStands.find((s) => s.id === st.standId)
-          return !stand || stand.eventIds.includes(selectedEventId)
-        })
-        .sort((a, b) => nameCollator.compare(a.name, b.name))
-    : []
 
-  const operativoItems: SidebarItem[] = []
-  const selectedOngoing = selectedEventId ? !isEventFinished(selectedEventId) : false
-  for (const s of scopedStands) {
-    operativoItems.push({
-      label: `Ordini ${s.name}`,
-      to: `/admin/stands/${s.id}/orders`,
-      icon: '\u{1F4CB}',
-    })
-    if (selectedOngoing && basePath && canAccessStandCash(s)) {
-      operativoItems.push({
-        label: `Cassa ${s.name}`,
-        to: `${basePath}/stands/${s.id}/order`,
-        icon: '\u{1F4B0}',
-      })
-    }
-    if (selectedOngoing && selectedEventId) {
-      operativoItems.push({
-        label: `Coda ${s.name}`,
-        to: `/events/${selectedEventId}/stands/${s.id}/ordersqueue`,
-        icon: '\u{1F441}',
-        external: true,
-      })
-    }
-  }
-  for (const st of scopedStations) {
-    operativoItems.push({
-      label: `Coda ${st.name}`,
-      to: `/orders/station/${st.id}`,
-      icon: '\u2699',
-      external: true,
+  const managedStandItems: SidebarItem[] = []
+  for (const s of managedStands) {
+    managedStandItems.push({
+      label: s.name,
+      to: `/admin/stands/${s.id}/manage`,
+      icon: '\u{1F3EA}',
     })
   }
 
@@ -212,8 +131,8 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
           ],
         } as SidebarSection]
       : []),
-    ...(operativoItems.length > 0
-      ? [{ label: 'Operativo', items: operativoItems } as SidebarSection]
+    ...(managedStandItems.length > 0
+      ? [{ label: 'Operativo', items: managedStandItems } as SidebarSection]
       : []),
     {
       label: 'Gestione',

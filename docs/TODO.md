@@ -1,23 +1,16 @@
 # TODO — Street Food Events
 
+## Photo booth aperto a tutti + cornice di evento + valutazione pubblicazione social
+- Rimuovere il vincolo del ruolo fotografo: lo scatto/caricamento foto deve essere possibile per chiunque (oggi l'upload POST /photos richiede solo auth; valutare apertura anche agli anonimi).
+- L'admin dell'evento sceglie UNA cornice per l'evento (campo su Event, es. `defaultFrameId`): applicata automaticamente a tutte le foto scattate (il photo booth non chiede più la cornice al visitatore).
+- Le foto finiscono già in slideshow: valutare pubblicazione automatica/semi-automatica su Facebook, Instagram e TikTok (attenzione: Instagram Graph API richiede account Business/Creator, TikTok Content Posting API richiede approvazione app; profili personali FB non postabili via API — valutare pagine invece che profili; implicazioni GDPR/moderazione per contenuti UGC).
+- **Stato**: da pianificare/implementare.
+
 ## Visualizzazione Google Maps su EventMapPage (feature futura)
 - Mostrare stand e POI dell'evento anche su una visualizzazione "Google Maps" scelta dall'utente nella mappa.
 - Orientamento: soluzione **ufficiale con API key** (Google Maps JavaScript API), non endpoint tile non ufficiali (violano i ToS Google).
 - Richiede: chiave API Google Cloud (Maps JavaScript API) configurata come `VITE_GOOGLE_MAPS_KEY`, vista/mappa dedicata con marker custom per evento, stand e POI (popup come l'attuale pagina Leaflet).
 - Stato attuale: EventMapPage usa Leaflet con tile Esri (Satellite + Mappa); marker già renderizzati come overlay, ma nessuna base layer Google.
-
-## Cover e Logo per Eventi e Stand
-- **Eventi**: presentare sia un **cover** (banner orizzontale, già `coverImage` esistente) che un **logo** (icona rotonda, già `logo` esistente) in tutte le superfici: HomePage, EventDetailPage, dropdown Eventi navbar/sidebar, dashboard.
-- **Stand**: aggiungere un campo **logo** (icona rotonda) oltre alla `coverImage` già esistente. Mostrare logo in mappa (marker), menu pubblico, coda ordini, lista stand in EventDetailPage.
-- **Stato attuale**: Event ha `coverImage` + `logo` ma non sempre entrambi vengono mostrati ovunque; Stand ha solo `coverImage`, manca il logo.
-- **Obiettivo**: coerenza visiva — ogni entità (evento e stand) ha sempre cover + logo visibili nelle card, marker, dropdown e pagine di dettaglio.
-
-## Fix: HomePage mostra prossimi eventi + ultimi 3 terminati
-- **Da fare**: HomePage mostra in alto gli eventi prossimi/in corso, in basso una sezione compatta "Eventi terminati" con gli ultimi 3 eventi conclusi.
-
-## Fase 6: Cleanup AppLayout + Navbar legacy
-- `AppLayout.tsx` e `Navbar.tsx` sono legacy (router ora usa AdminLayout + PublicLayout).
-- **Da fare**: verificare che non siano più referenziati, rimuoverli se inutilizzati.
 
 ---
 
