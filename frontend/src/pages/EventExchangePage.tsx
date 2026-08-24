@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useAuth } from '../features/auth/auth-context'
-import styles from './EventDetailPage.module.scss'
 import cambioStyles from './EventExchangePage.module.scss'
 
 type ExchangeUser = {
@@ -290,32 +289,27 @@ export function EventExchangePage() {
 
   if (forbidden) {
     return (
-      <div className={`page-shell ${styles.page}`}>
-        <h1 className={styles.pageTitle}>Accesso negato</h1>
+      <div className={cambioStyles.fullPage}>
+        <h1 className={cambioStyles.exTitle}>Accesso negato</h1>
         <p>Non hai i permessi per accedere a questa pagina.</p>
-        <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
+        <Link to="/admin/dashboard" className={cambioStyles.exBackLink}>&larr; Torna ad admin</Link>
       </div>
     )
   }
 
   return (
-    <div className={`page-shell ${styles.page}`}>
-      <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
-      <h1 className={styles.pageTitle}>
+    <div className={cambioStyles.fullPage}>
+      <Link to="/admin/dashboard" className={cambioStyles.exBackLink}>&larr; Torna ad admin</Link>
+      <h1 className={cambioStyles.exTitle}>
         <CurrencySymbol name={currencyName} /> Cambio - {eventName || 'Caricamento...'}
       </h1>
-      <p style={{ marginTop: '0.25rem' }}>
-        <Link to={`/admin/events/${eventId}/settlements`} className={cambioStyles.btnTopUp} style={{ display: 'inline-block' }}>
-          Liquidazione stand
-        </Link>
-      </p>
 
       {loading ? (
         <p>Caricamento...</p>
       ) : (
         <>
           <section className={cambioStyles.section}>
-            <h2 className={styles.sectionTitle}>Contenuto cassa</h2>
+            <h2 className={cambioStyles.exSectionTitle}>Contenuto cassa</h2>
             {balance && (
               <>
                 <div className={cambioStyles.cardRow}>
@@ -366,14 +360,14 @@ export function EventExchangePage() {
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <label className={cambioStyles.field} style={{ flex: 1 }}>
                         Valuta
-                        <select value={mvCurrency} onChange={(e) => setMvCurrency(e.target.value as 'euro' | 'credits')}>
+                        <select className={cambioStyles.userSelect} value={mvCurrency} onChange={(e) => setMvCurrency(e.target.value as 'euro' | 'credits')}>
                           <option value="euro">Euro</option>
                           <option value="credits">{currencyName}</option>
                         </select>
                       </label>
                       <label className={cambioStyles.field} style={{ flex: 1 }}>
                         Tipo
-                        <select value={mvDirection} onChange={(e) => setMvDirection(e.target.value as 'in' | 'out')}>
+                        <select className={cambioStyles.userSelect} value={mvDirection} onChange={(e) => setMvDirection(e.target.value as 'in' | 'out')}>
                           <option value="in">Carico (entra)</option>
                           <option value="out">Prelievo (esce)</option>
                         </select>
@@ -398,7 +392,7 @@ export function EventExchangePage() {
 
                 <h3>Movimenti di cassa</h3>
                 {cashMovements.length === 0 ? (
-                  <p className={styles.empty}>Nessun movimento di cassa registrato.</p>
+                  <p className={cambioStyles.exEmpty}>Nessun movimento di cassa registrato.</p>
                 ) : (
                   <>
                     <div style={{ overflowX: 'auto' }}>
@@ -434,11 +428,11 @@ export function EventExchangePage() {
 
                     {cmTotalPages > 1 && (
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
-                        <button className={styles.textBtn} disabled={cmPage <= 1} onClick={() => setCmPage((p) => Math.max(1, p - 1))}>
+                        <button className={cambioStyles.exTextBtn} disabled={cmPage <= 1} onClick={() => setCmPage((p) => Math.max(1, p - 1))}>
                           Precedente
                         </button>
                         <span style={{ padding: '0.25rem 0.5rem' }}>{cmPage} / {cmTotalPages}</span>
-                        <button className={styles.textBtn} disabled={cmPage >= cmTotalPages} onClick={() => setCmPage((p) => p + 1)}>
+                        <button className={cambioStyles.exTextBtn} disabled={cmPage >= cmTotalPages} onClick={() => setCmPage((p) => p + 1)}>
                           Successivo
                         </button>
                       </div>
@@ -450,7 +444,7 @@ export function EventExchangePage() {
           </section>
 
           <section className={cambioStyles.section}>
-            <h2 className={styles.sectionTitle}>Seleziona utente</h2>
+            <h2 className={cambioStyles.exSectionTitle}>Seleziona utente</h2>
             <div className={cambioStyles.userRow}>
               <select
                 value={selectedUserId}
@@ -495,7 +489,7 @@ export function EventExchangePage() {
 
           <div className={cambioStyles.formGrid}>
             <section>
-              <h2 className={styles.sectionTitle}>Carica (Reale &rarr; Virtuale)</h2>
+              <h2 className={cambioStyles.exSectionTitle}>Carica (Reale &rarr; Virtuale)</h2>
               <div className={cambioStyles.formCard}>
                 <label className={cambioStyles.field}>
                   Importo €
@@ -522,7 +516,7 @@ export function EventExchangePage() {
             </section>
 
             <section>
-              <h2 className={styles.sectionTitle}>Rimborsa (Virtuale &rarr; Reale)</h2>
+              <h2 className={cambioStyles.exSectionTitle}>Rimborsa (Virtuale &rarr; Reale)</h2>
               <div className={cambioStyles.formCard}>
                 <label className={cambioStyles.field}>
                   Importo {currencyName}
@@ -550,9 +544,9 @@ export function EventExchangePage() {
           </div>
 
           <section>
-            <h2 className={styles.sectionTitle}>Storico transazioni</h2>
+            <h2 className={cambioStyles.exSectionTitle}>Storico transazioni</h2>
             {transactions.length === 0 ? (
-              <p className={styles.empty}>Nessuna transazione di cambio registrata.</p>
+              <p className={cambioStyles.exEmpty}>Nessuna transazione di cambio registrata.</p>
             ) : (
               <>
                 <div style={{ overflowX: 'auto' }}>
@@ -601,11 +595,11 @@ export function EventExchangePage() {
 
                 {txTotalPages > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
-                    <button className={styles.textBtn} disabled={txPage <= 1} onClick={() => setTxPage((p) => Math.max(1, p - 1))}>
+                    <button className={cambioStyles.exTextBtn} disabled={txPage <= 1} onClick={() => setTxPage((p) => Math.max(1, p - 1))}>
                       Precedente
                     </button>
                     <span style={{ padding: '0.25rem 0.5rem' }}>{txPage} / {txTotalPages}</span>
-                    <button className={styles.textBtn} disabled={txPage >= txTotalPages} onClick={() => setTxPage((p) => p + 1)}>
+                    <button className={cambioStyles.exTextBtn} disabled={txPage >= txTotalPages} onClick={() => setTxPage((p) => p + 1)}>
                       Successivo
                     </button>
                   </div>

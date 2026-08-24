@@ -268,3 +268,80 @@
   font-size: 0.85rem;
   color: var(--color-ink-soft);
 }
+
+/* ── Fullscreen dark theme (come cassa, palette verde) ── */
+.fullPage {
+  --color-surface: #1b332b;
+  --color-surface-soft: #234237;
+  --color-line: #2c5245;
+  --color-line-strong: #3a6a5a;
+  --color-border: #2c5245;
+  --color-ink: #e7f2ec;
+  --color-ink-strong: #f6fbf8;
+  --color-ink-soft: #a9cdbd;
+  --color-ink-weak: #8fb8a7;
+  --color-text-muted: #8fb8a7;
+  --color-green: #7ce0a8;
+  --color-red: #ff9080;
+
+  min-height: 100vh;
+  background: #0f211b;
+  color: var(--color-ink);
+  padding: 1.25rem clamp(1rem, 3vw, 2.5rem) 4rem;
+
+  .field input,
+  .userSelect,
+  .guestInput {
+    background: #14291f;
+    color: var(--color-ink-strong);
+    border-color: var(--color-line-strong);
+  }
+
+  .field input::placeholder,
+  .guestInput::placeholder {
+    color: var(--color-ink-weak);
+  }
+}
+
+.exBackLink {
+  display: inline-flex;
+  color: #7ce0a8;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.exTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  color: #f6fbf8;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+}
+
+.exSectionTitle {
+  color: #f6fbf8;
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+}
+
+.exEmpty {
+  color: #8fb8a7;
+  font-size: 0.95rem;
+  padding: 1rem 0;
+}
+
+.exTextBtn {
+  background: none;
+  border: none;
+  color: #7ce0a8;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
