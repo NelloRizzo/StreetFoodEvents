@@ -102,9 +102,10 @@ export function EventExchangePage() {
   const [cashMovements, setCashMovements] = useState<CashMovement[]>([])
   const [cmPage, setCmPage] = useState(1)
   const [cmTotalPages, setCmTotalPages] = useState(1)
-  const [floatEuro, setFloatEuro] = useState('')
-  const [floatCredits, setFloatCredits] = useState('')
-  const [savingFloat, setSavingFloat] = useState(false)
+const [floatEuro, setFloatEuro] = useState('')
+const [floatCredits, setFloatCredits] = useState('')
+const [savingFloat, setSavingFloat] = useState(false)
+const [showCashSetup, setShowCashSetup] = useState(false)
   const [mvCurrency, setMvCurrency] = useState<'euro' | 'credits'>('euro')
   const [mvDirection, setMvDirection] = useState<'in' | 'out'>('in')
   const [mvAmount, setMvAmount] = useState('')
@@ -333,62 +334,72 @@ export function EventExchangePage() {
                   </div>
                 </div>
 
-                <div className={cambioStyles.formGrid}>
-                  <div className={cambioStyles.formCard}>
-                    <h3 style={{ marginTop: 0 }}>Imposta fondo cassa</h3>
-                    <p className={cambioStyles.statSub}>Contenuto iniziale della cassa (euro e token separatamente). I valori lasciati vuoti restano invariati.</p>
-                    <label className={cambioStyles.field}>
-                      Fondo Euro
-                      <input type="number" min="0" step="0.01" value={floatEuro}
-                        onChange={(e) => setFloatEuro(e.target.value)}
-                        placeholder={balance.cashFloat ? String(balance.cashFloat.euro) : '0'} />
-                    </label>
-                    <label className={cambioStyles.field}>
-                      Fondo {currencyName}
-                      <input type="number" min="0" step="0.01" value={floatCredits}
-                        onChange={(e) => setFloatCredits(e.target.value)}
-                        placeholder={balance.cashFloat ? String(balance.cashFloat.credits) : '0'} />
-                    </label>
-                    <button className={cambioStyles.btnTopUp} onClick={handleSaveFloat} disabled={savingFloat || (floatEuro === '' && floatCredits === '')}>
-                      {savingFloat ? 'Salvataggio...' : 'Salva fondo cassa'}
-                    </button>
-                  </div>
+                <button
+                  type="button"
+                  className={cambioStyles.exTextBtn}
+                  onClick={() => setShowCashSetup((v) => !v)}
+                >
+                  {showCashSetup ? '\u25BE Nascondi impostazioni cassa' : '\u25B8 Fondo cassa e movimenti'}
+                </button>
 
-                  <div className={cambioStyles.formCard}>
-                    <h3 style={{ marginTop: 0 }}>Registra movimento</h3>
-                    <p className={cambioStyles.statSub}>Carico o prelievo di contanti/token dalla cassa (trasferimenti verso o da altre casse).</p>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <label className={cambioStyles.field} style={{ flex: 1 }}>
-                        Valuta
-                        <select className={cambioStyles.userSelect} value={mvCurrency} onChange={(e) => setMvCurrency(e.target.value as 'euro' | 'credits')}>
-                          <option value="euro">Euro</option>
-                          <option value="credits">{currencyName}</option>
-                        </select>
+                {showCashSetup && (
+                  <div className={cambioStyles.formGrid}>
+                    <div className={cambioStyles.formCard}>
+                      <h3 style={{ marginTop: 0 }}>Imposta fondo cassa</h3>
+                      <p className={cambioStyles.statSub}>Contenuto iniziale della cassa (euro e token separatamente). I valori lasciati vuoti restano invariati.</p>
+                      <label className={cambioStyles.field}>
+                        Fondo Euro
+                        <input type="number" min="0" step="0.01" value={floatEuro}
+                          onChange={(e) => setFloatEuro(e.target.value)}
+                          placeholder={balance.cashFloat ? String(balance.cashFloat.euro) : '0'} />
                       </label>
-                      <label className={cambioStyles.field} style={{ flex: 1 }}>
-                        Tipo
-                        <select className={cambioStyles.userSelect} value={mvDirection} onChange={(e) => setMvDirection(e.target.value as 'in' | 'out')}>
-                          <option value="in">Carico (entra)</option>
-                          <option value="out">Prelievo (esce)</option>
-                        </select>
+                      <label className={cambioStyles.field}>
+                        Fondo {currencyName}
+                        <input type="number" min="0" step="0.01" value={floatCredits}
+                          onChange={(e) => setFloatCredits(e.target.value)}
+                          placeholder={balance.cashFloat ? String(balance.cashFloat.credits) : '0'} />
                       </label>
+                      <button className={cambioStyles.btnTopUp} onClick={handleSaveFloat} disabled={savingFloat || (floatEuro === '' && floatCredits === '')}>
+                        {savingFloat ? 'Salvataggio...' : 'Salva fondo cassa'}
+                      </button>
                     </div>
-                    <label className={cambioStyles.field}>
-                      Importo
-                      <input type="number" min="0.01" step="0.01" value={mvAmount}
-                        onChange={(e) => setMvAmount(e.target.value)} />
-                    </label>
-                    <label className={cambioStyles.field}>
-                      Note (opzionale)
-                      <input type="text" value={mvDesc} onChange={(e) => setMvDesc(e.target.value)} />
-                    </label>
-                    <button className={mvDirection === 'in' ? cambioStyles.btnTopUp : cambioStyles.btnRefund}
-                      onClick={handleAddMovement}
-                      disabled={addingMovement || !mvAmount}>
-                      {addingMovement ? 'Registrazione...' : mvDirection === 'in' ? 'Registra carico' : 'Registra prelievo'}
-                    </button>
+
+                    <div className={cambioStyles.formCard}>
+                      <h3 style={{ marginTop: 0 }}>Registra movimento</h3>
+                      <p className={cambioStyles.statSub}>Carico o prelievo di contanti/token dalla cassa (trasferimenti verso o da altre casse).</p>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <label className={cambioStyles.field} style={{ flex: 1 }}>
+                          Valuta
+                          <select className={cambioStyles.userSelect} value={mvCurrency} onChange={(e) => setMvCurrency(e.target.value as 'euro' | 'credits')}>
+                            <option value="euro">Euro</option>
+                            <option value="credits">{currencyName}</option>
+                          </select>
+                        </label>
+                        <label className={cambioStyles.field} style={{ flex: 1 }}>
+                          Tipo
+                          <select className={cambioStyles.userSelect} value={mvDirection} onChange={(e) => setMvDirection(e.target.value as 'in' | 'out')}>
+                            <option value="in">Carico (entra)</option>
+                            <option value="out">Prelievo (esce)</option>
+                          </select>
+                        </label>
+                      </div>
+                      <label className={cambioStyles.field}>
+                        Importo
+                        <input type="number" min="0.01" step="0.01" value={mvAmount}
+                          onChange={(e) => setMvAmount(e.target.value)} />
+                      </label>
+                      <label className={cambioStyles.field}>
+                        Note (opzionale)
+                        <input type="text" value={mvDesc} onChange={(e) => setMvDesc(e.target.value)} />
+                      </label>
+                      <button className={mvDirection === 'in' ? cambioStyles.btnTopUp : cambioStyles.btnRefund}
+                        onClick={handleAddMovement}
+                        disabled={addingMovement || !mvAmount}>
+                        {addingMovement ? 'Registrazione...' : mvDirection === 'in' ? 'Registra carico' : 'Registra prelievo'}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <h3>Movimenti di cassa</h3>
                 {cashMovements.length === 0 ? (
