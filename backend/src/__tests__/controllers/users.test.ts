@@ -16,6 +16,17 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
     uploadImages: vi.fn()
 }));
 
+const emailState = vi.hoisted(() => ({
+    sendActivationEmail: vi.fn()
+}));
+
+vi.mock('@/services/email.service', () => ({
+    isEmailConfigured: () => false,
+    sendPhotoEmail: vi.fn(),
+    sendPhotosEmail: vi.fn(),
+    sendActivationEmail: emailState.sendActivationEmail
+}));
+
 import { UserModel } from '../../models/user.model';
 import { SessionModel } from '../../models/session.model';
 import {
@@ -26,6 +37,10 @@ import {
 import { createTestApp } from '../helpers/test-app';
 
 let app: Express;
+
+function makeEmailFail() {
+    emailState.sendActivationEmail.mockRejectedValue(new Error('Brevo non configurato'));
+}
 
 async function createAuthSession() {
     const user = await UserModel.create({
@@ -69,8 +84,9 @@ describe('Users API', () => {
         expect(res.status).toBe(401);
     });
 
-    it('creates a user', async () => {
+    it('creates a user via invitation (inactive, no password)', async () => {
         app = createTestApp();
+        makeEmailFail();
         const { sessionToken } = await createAuthSession();
 
         const res = await request(app)
@@ -79,17 +95,18 @@ describe('Users API', () => {
             .send({
                 firstName: 'Mario',
                 lastName: 'Rossi',
-                email: `mario-${Date.now()}@test.com`,
-                password: 'Password123!'
+                email: `mario-${Date.now()}@test.com`
             });
 
         expect(res.status).toBe(201);
         expect(res.body.item.firstName).toBe('Mario');
         expect(res.body.item.lastName).toBe('Rossi');
-        expect(res.body.item.isActive).toBe(true);
+        expect(res.body.item.isActive).toBe(false);
+        expect(res.body.emailSent).toBe(false);
+        expect(typeof res.body.activationUrl).toBe('string');
     });
 
-    it('rejects create with short password', async () => {
+    it('rejects create with missing email', async () => {
         app = createTestApp();
         const { sessionToken } = await createAuthSession();
 
@@ -98,13 +115,10 @@ describe('Users API', () => {
             .set('Cookie', `sid=${sessionToken}`)
             .send({
                 firstName: 'Mario',
-                lastName: 'Rossi',
-                email: `mario-${Date.now()}@test.com`,
-                password: 'short'
+                lastName: 'Rossi'
             });
 
         expect(res.status).toBe(400);
-        expect(res.body.message).toMatch(/at least 8 characters/i);
     });
 
     it('rejects create with duplicate email', async () => {

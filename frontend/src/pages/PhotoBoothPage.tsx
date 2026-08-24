@@ -20,6 +20,7 @@ type EventDetail = {
   startDate: string
   endDate: string
   location: { label: string; city?: string | null }
+  defaultFrameId?: string | null
 }
 
 const OUTPUT_SIZE = 1380
@@ -76,6 +77,10 @@ export function PhotoBoothPage() {
         setEventName(ev.item.name)
         setEventDetail(ev.item)
         setFrames(fr.items)
+        const eventDefault = ev.item.defaultFrameId ?? null
+        if (eventDefault && fr.items.some((f) => f.id === eventDefault)) {
+          setSelectedFrameId(eventDefault)
+        }
         setRecentPhotos(ph.items)
       })
       .catch(() => setError('Errore nel caricamento'))
@@ -415,7 +420,7 @@ export function PhotoBoothPage() {
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {frames.length > 0 && !captured && (
+        {frames.length > 0 && !captured && !eventDetail?.defaultFrameId && (
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Scegli una cornice</h2>
             <div className={styles.frameGrid}>
@@ -448,6 +453,12 @@ export function PhotoBoothPage() {
               Cornice selezionata: <strong>{selectedFrameId === null ? 'Nessuna' : frames.find((f) => f.id === selectedFrameId)?.name ?? '—'}</strong>
             </p>
           </section>
+        )}
+
+        {eventDetail?.defaultFrameId && !captured && (
+          <p className={styles.selectedFrameLabel}>
+            Cornice dell'evento: <strong>{frames.find((f) => f.id === eventDetail.defaultFrameId)?.name ?? 'attiva'}</strong>
+          </p>
         )}
 
         <section className={styles.section}>

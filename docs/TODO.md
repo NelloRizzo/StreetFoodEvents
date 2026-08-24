@@ -1,10 +1,39 @@
 # TODO — Street Food Events
 
-## Photo booth aperto a tutti + cornice di evento + valutazione pubblicazione social
-- Rimuovere il vincolo del ruolo fotografo: lo scatto/caricamento foto deve essere possibile per chiunque (oggi l'upload POST /photos richiede solo auth; valutare apertura anche agli anonimi).
-- L'admin dell'evento sceglie UNA cornice per l'evento (campo su Event, es. `defaultFrameId`): applicata automaticamente a tutte le foto scattate (il photo booth non chiede più la cornice al visitatore).
-- Le foto finiscono già in slideshow: valutare pubblicazione automatica/semi-automatica su Facebook, Instagram e TikTok (attenzione: Instagram Graph API richiede account Business/Creator, TikTok Content Posting API richiede approvazione app; profili personali FB non postabili via API — valutare pagine invece che profili; implicazioni GDPR/moderazione per contenuti UGC).
-- **Stato**: da pianificare/implementare.
+## Photo booth aperto a tutti + cornice di evento
+- ✅ IMPLEMENTATI (Ago 2026, vedi CHANGELOG): upload foto aperto a tutti (immagini anche anonime, video solo auth) e `defaultFrameId` su Event con applicazione automatica nel photo booth.
+
+### Pubblicazione social — analisi problematiche (ricerca Ago 2026)
+Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-side) e hostate su Cloudinary con URL pubblico — requisito indispensabile: Meta fa fetch dell'immagine dall'URL passato.
+
+**Facebook**:
+- Profili personali NON postabili via API (dal 2018) → solo Pagine (`POST /{page-id}/photos` con `url=`).
+- Permessi `pages_manage_posts` + `pages_read_engagement` (+ `publish_video`); utente con task CREATE_CONTENT/MANAGE sulla Page; Page access token.
+- Multi-business ⇒ App Review + Business Verification (Tech Provider); uso interno su nostre Page ⇒ Standard Access senza review ma gestione token manuale.
+- Rischio errore 368 (anti-spam) pubblicando molte foto simili in sequenza.
+
+**Instagram**:
+- Solo account professional (Business/Creator); due varianti: Instagram Login (`graph.instagram.com`, permessi `instagram_business_content_publish`) o Facebook Login (`instagram_content_publish` + Page token). Da scegliere a monte.
+- Flusso asincrono container→media_publish con polling `status_code`; immagini SOLO JPEG; rate limit 100 post/24h per account (50 caroselli; carousel max 10 foto = 1 post).
+- PPA (Page Publishing Authorization) può bloccare la pubblicazione su alcune Page; App Review come FB per uso multi-business.
+
+**TikTok**:
+- Client non auditato = post SOLO privati (`SELF_ONLY`) e max 5 utenti/24h ⇒ inutilizzabile in produzione senza audit (UX mockup + compliance + approvazione TikTok).
+- UX obbligatorie: dropdown privacy senza default, consenso esplicito pre-publish ("Music Usage Confirmation"); ~15 post/giorno per creator; scope `video.publish`; URL ownership per PULL_FROM_URL.
+
+**Trasversale**:
+- OAuth multi-tenant per organizzatore vs unico account piattaforma; token Page ~60 giorni (refresh flow necessario).
+- Nessuno scheduler/coda nel backend (Render free = 1 processo): servirebbe modello `SocialPost { photoIds[], platforms[], status, attempts, lastError }` + loop in-process o enqueue inline in createEventPhoto.
+- GDPR: nessun consenso sul documento EventPhoto oggi; cancellare la foto locale NON la rimuove dai social.
+- Rate limit rendono irrealistico il post per-singola-foto: batch/carousel quasi obbligatorio.
+
+**Opzioni**: (A) semi-automatica con selezione dalla galleria [consigliata]; (B) carousel giornaliero automatico (10 migliori foto); (C) Web Share API nativa (zero review, funziona anche su profili); (D) bridge Buffer/Zapier/Make.
+
+**Stato**: IMPLEMENTATA (Ago 2026) — opzione (A): trigger manuale dalla galleria, account UNICO della piattaforma, solo Meta. Vedi CHANGELOG Agosto 2026. Restano aperti:
+- OAuth multi-tenant per organizzatore (oggi solo account piattaforma); refresh token Page ~60 giorni.
+- TikTok (richiede audit app; post SELF_ONLY senza).
+- Carousel/batch automatico giornaliero; gestione GDPR della rimozione dal social (cancellare la foto locale NON la rimuove dai social).
+- Pubblicazione dall'account dell'utente che scatta + tag automatico dell'evento: VALUTATA E SCARTATA (Ago 2026) — i profili Facebook personali non sono postabili via API dal 2018 (servirebbe OAuth multi-utente con Pagina/IG professional per ogni fotografo + App Review Meta); il tag evento realistico è la @menzione dell'handle nel caption, non il tag foto.
 
 ## Visualizzazione Google Maps su EventMapPage (feature futura)
 - Mostrare stand e POI dell'evento anche su una visualizzazione "Google Maps" scelta dall'utente nella mappa.

@@ -9,6 +9,12 @@
   select {
     margin-top: 0.25rem;
     width: 100%;
+    padding: 0.65rem 0.75rem;
+    font-size: 1rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    color: var(--color-ink);
   }
 }
 

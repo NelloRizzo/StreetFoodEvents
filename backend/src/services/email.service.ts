@@ -115,3 +115,75 @@ export async function sendPhotosEmail(
 export async function sendPhotoEmail(to: string, photoUrl: string, eventName?: string, eventLocation?: string): Promise<void> {
     return sendPhotosEmail(to, [photoUrl], eventName, eventLocation);
 }
+
+function buildEmailHtml(title: string, bodyHtml: string): string {
+    return `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 2rem;">
+            <h1 style="color: #333;">${title}</h1>
+            ${bodyHtml}
+        </div>
+    `;
+}
+
+async function sendBrevoEmail(to: string, subject: string, html: string): Promise<void> {
+    if (!isEmailConfigured()) {
+        throw new Error('Brevo non configurato. Imposta BREVO_API_KEY.');
+    }
+
+    const from = env.EMAIL_FROM ?? 'noreply@streetfoodevents.com';
+
+    const res = await fetch(BREVO_API_URL, {
+        method: 'POST',
+        headers: {
+            'api-key': env.BREVO_API_KEY!,
+            'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(15_000),
+        body: JSON.stringify({
+            sender: { email: from, name: 'Street Food Events' },
+            to: [{ email: to }],
+            subject,
+            htmlContent: html,
+        }),
+    });
+
+    if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Brevo error ${res.status}: ${body}`);
+    }
+}
+
+export async function sendActivationEmail(
+    to: string,
+    firstName: string,
+    activationUrl: string
+): Promise<void> {
+    const html = buildEmailHtml(
+        `Benvenuto${firstName ? `, ${firstName}` : ''}!`,
+        `
+        <p style="color: #444; font-size: 1.05rem; line-height: 1.6;">
+            È stato creato un account per te su Street Food Events.
+            Per attivarlo e scegliere la tua password personale, clicca sul pulsante qui sotto:
+        </p>
+        <a href="${activationUrl}" style="
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            margin: 1rem 0;
+            background: #e67e22;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+        ">Attiva il tuo account</a>
+        <p style="color: #888; font-size: 0.9rem;">
+            Se il pulsante non funziona, copia e incolla questo link nel browser:<br />
+            <a href="${activationUrl}">${activationUrl}</a>
+        </p>
+        <p style="color: #888; font-size: 0.85rem;">
+            Il link è valido per 7 giorni. Se non hai richiesto questo account, ignora questa email.
+        </p>
+        `
+    );
+
+    return sendBrevoEmail(to, 'Attiva il tuo account — Street Food Events', html);
+}

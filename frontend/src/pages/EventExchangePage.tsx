@@ -42,6 +42,8 @@ type BalanceSummary = {
   netBalance: number
   topUpCount: number
   refundCount: number
+  totalTopUpReal: number
+  totalRefundReal: number
   myTopUp: number
   myRefund: number
   myNetBalance: number
@@ -57,6 +59,22 @@ type BalanceSummary = {
   exchangeRate: number
   currencyName: string
   currencySymbol: string | null
+  cashFloat: { euro: number; credits: number; setAt: string | null } | null
+  euroContent: number
+  creditsContent: number
+  cashMovements: { euroIn: number; euroOut: number; creditsIn: number; creditsOut: number }
+}
+
+type CashMovement = {
+  id: string
+  eventId: string
+  currency: 'euro' | 'credits'
+  direction: 'in' | 'out'
+  amount: number
+  description: string | null
+  performedByUserId: string | null
+  performedByName: string | null
+  occurredAt: string
 }
 
 function CurrencySymbol({ name }: { name: string }) {
@@ -82,6 +100,18 @@ export function EventExchangePage() {
   const [txPage, setTxPage] = useState(1)
   const [txTotalPages, setTxTotalPages] = useState(1)
 
+  const [cashMovements, setCashMovements] = useState<CashMovement[]>([])
+  const [cmPage, setCmPage] = useState(1)
+  const [cmTotalPages, setCmTotalPages] = useState(1)
+  const [floatEuro, setFloatEuro] = useState('')
+  const [floatCredits, setFloatCredits] = useState('')
+  const [savingFloat, setSavingFloat] = useState(false)
+  const [mvCurrency, setMvCurrency] = useState<'euro' | 'credits'>('euro')
+  const [mvDirection, setMvDirection] = useState<'in' | 'out'>('in')
+  const [mvAmount, setMvAmount] = useState('')
+  const [mvDesc, setMvDesc] = useState('')
+  const [addingMovement, setAddingMovement] = useState(false)
+
   const [selectedUserId, setSelectedUserId] = useState('')
   const selectedUserIdRef = useRef('')
   const [selUserBalance, setSelUserBalance] = useState(0)
@@ -106,15 +136,18 @@ export function EventExchangePage() {
       setEventName(ev.item.name)
     } catch { /* event name non essenziale */}
     try {
-      const [bal, usrs, txs] = await Promise.all([
+      const [bal, usrs, txs, cms] = await Promise.all([
         apiRequest<BalanceSummary>(`/exchange/${eventId}/balance`),
         apiRequest<{ items: ExchangeUser[] }>(`/exchange/${eventId}/users`),
         apiRequest<{ items: Transaction[]; pagination: { page: number; totalPages: number } }>(`/exchange/${eventId}/transactions?page=${txPage}&limit=20`),
+        apiRequest<{ items: CashMovement[]; pagination: { page: number; totalPages: number } }>(`/exchange/${eventId}/cash-movements?page=${cmPage}&limit=10`),
       ])
       setBalance(bal)
       setUsers(usrs.items)
       setTransactions(txs.items)
       setTxTotalPages(txs.pagination.totalPages)
+      setCashMovements(cms.items)
+      setCmTotalPages(cms.pagination.totalPages)
       const currentId = selectedUserIdRef.current
       const stillExists = usrs.items.some((u) => u.id === currentId)
       if (!currentId || !stillExists) {
@@ -132,7 +165,7 @@ export function EventExchangePage() {
     }
     if (any403) setForbidden(true)
     setLoading(false)
-  }, [eventId, isAuthenticated, txPage])
+  }, [eventId, isAuthenticated, txPage, cmPage])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -186,12 +219,46 @@ export function EventExchangePage() {
     }
   }
 
-  const handleResetCashRegister = async () => {
+  const handleSaveFloat = async () => {
     if (!eventId) return
+    setSavingFloat(true)
     try {
-      await apiRequest(`/exchange/${eventId}/reset-cash-register`, { method: 'POST' })
+      await apiRequest(`/exchange/${eventId}/cash-float`, {
+        method: 'POST',
+        bodyJson: {
+          ...(floatEuro !== '' ? { euro: parseFloat(floatEuro) } : {}),
+          ...(floatCredits !== '' ? { credits: parseFloat(floatCredits) } : {})
+        }
+      })
+      setFloatEuro('')
+      setFloatCredits('')
+      setModal({ open: true, variant: 'alert', title: 'Fondo cassa aggiornato', message: 'Il fondo cassa è stato impostato.' })
       fetchData()
-    } catch { /* ignore */ }
+    } catch (err) {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante il salvataggio del fondo cassa' })
+    } finally {
+      setSavingFloat(false)
+    }
+  }
+
+  const handleAddMovement = async () => {
+    if (!eventId || !mvAmount) return
+    const amount = parseFloat(mvAmount)
+    if (!amount || amount <= 0) return
+    setAddingMovement(true)
+    try {
+      await apiRequest(`/exchange/${eventId}/cash-movements`, {
+        method: 'POST',
+        bodyJson: { currency: mvCurrency, direction: mvDirection, amount, description: mvDesc.trim() || undefined }
+      })
+      setMvAmount('')
+      setMvDesc('')
+      fetchData()
+    } catch (err) {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante la registrazione del movimento' })
+    } finally {
+      setAddingMovement(false)
+    }
   }
 
   const handleCreateGuest = async () => {
@@ -248,73 +315,136 @@ export function EventExchangePage() {
       ) : (
         <>
           <section className={cambioStyles.section}>
-            <h2 className={styles.sectionTitle}>Riepilogo cassa</h2>
+            <h2 className={styles.sectionTitle}>Contenuto cassa</h2>
             {balance && (
               <>
                 <div className={cambioStyles.cardRow}>
                   <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>Tutte le postazioni — Carichi</div>
-                    <div className={cambioStyles.statValue}>
-                      <span className={cambioStyles.creditValue}>{fmt(balance.totalTopUp)}</span>
-                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.totalTopUp / rate)} equival.)</span>
+                    <div className={cambioStyles.statLabel}>Euro in cassa</div>
+                    <div className={cambioStyles.statValue}>{fmtEur(balance.euroContent)}</div>
+                    <div className={cambioStyles.statSub}>
+                      Fondo: {fmtEur(balance.cashFloat?.euro ?? 0)}
+                      {' · '}Movimenti: +{fmtEur(balance.cashMovements.euroIn)} / -{fmtEur(balance.cashMovements.euroOut)}
+                      {' · '}Top-up − Rimborso: {fmtEur((balance.totalTopUpReal ?? 0) - (balance.totalRefundReal ?? 0))}
                     </div>
-                    <div className={cambioStyles.statSub}>({balance.topUpCount} operazioni)</div>
                   </div>
                   <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>Tutte le postazioni — Rimborsi</div>
-                    <div className={`${cambioStyles.statValue} ${cambioStyles.statValueNegative}`}>
-                      -{fmt(balance.totalRefund)}
-                      <span className={cambioStyles.eurValue}> (-{fmtEur(balance.totalRefund / rate)} equival.)</span>
-                    </div>
-                    <div className={cambioStyles.statSub}>({balance.refundCount} operazioni)</div>
-                  </div>
-                  <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>Tutte le postazioni — Saldo netto</div>
-                    <div className={cambioStyles.statValue}>
-                      {fmt(balance.netBalance)}
-                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.netBalance / rate)})</span>
+                    <div className={cambioStyles.statLabel}>{currencyName} in cassa</div>
+                    <div className={cambioStyles.statValue}>{fmt(balance.creditsContent)}</div>
+                    <div className={cambioStyles.statSub}>
+                      Fondo: {fmt(balance.cashFloat?.credits ?? 0)}
+                      {' · '}Movimenti: +{fmt(balance.cashMovements.creditsIn)} / -{fmt(balance.cashMovements.creditsOut)}
+                      {' · '}Rimborsi − Top-up: {fmt((balance.totalRefund ?? 0) - (balance.totalTopUp ?? 0))}
                     </div>
                   </div>
                 </div>
-                <div className={cambioStyles.cardRow}>
-                  <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>Questa postazione — Carichi</div>
-                    <div className={cambioStyles.statValue}>
-                      {fmt(balance.myTopUp)}
-                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.myTopUp / rate)} equival.)</span>
-                    </div>
-                    <div className={cambioStyles.statSub}>({balance.myTopUpCount} operazioni)</div>
+
+                <div className={cambioStyles.formGrid}>
+                  <div className={cambioStyles.formCard}>
+                    <h3 style={{ marginTop: 0 }}>Imposta fondo cassa</h3>
+                    <p className={cambioStyles.statSub}>Contenuto iniziale della cassa (euro e token separatamente). I valori lasciati vuoti restano invariati.</p>
+                    <label className={cambioStyles.field}>
+                      Fondo Euro
+                      <input type="number" min="0" step="0.01" value={floatEuro}
+                        onChange={(e) => setFloatEuro(e.target.value)}
+                        placeholder={balance.cashFloat ? String(balance.cashFloat.euro) : '0'} />
+                    </label>
+                    <label className={cambioStyles.field}>
+                      Fondo {currencyName}
+                      <input type="number" min="0" step="0.01" value={floatCredits}
+                        onChange={(e) => setFloatCredits(e.target.value)}
+                        placeholder={balance.cashFloat ? String(balance.cashFloat.credits) : '0'} />
+                    </label>
+                    <button className={cambioStyles.btnTopUp} onClick={handleSaveFloat} disabled={savingFloat || (floatEuro === '' && floatCredits === '')}>
+                      {savingFloat ? 'Salvataggio...' : 'Salva fondo cassa'}
+                    </button>
                   </div>
-                  <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>Questa postazione — Rimborsi</div>
-                    <div className={`${cambioStyles.statValue} ${cambioStyles.statValueNegative}`}>
-                      -{fmt(balance.myRefund)}
-                      <span className={cambioStyles.eurValue}> (-{fmtEur(balance.myRefund / rate)} equival.)</span>
+
+                  <div className={cambioStyles.formCard}>
+                    <h3 style={{ marginTop: 0 }}>Registra movimento</h3>
+                    <p className={cambioStyles.statSub}>Carico o prelievo di contanti/token dalla cassa (trasferimenti verso o da altre casse).</p>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <label className={cambioStyles.field} style={{ flex: 1 }}>
+                        Valuta
+                        <select value={mvCurrency} onChange={(e) => setMvCurrency(e.target.value as 'euro' | 'credits')}>
+                          <option value="euro">Euro</option>
+                          <option value="credits">{currencyName}</option>
+                        </select>
+                      </label>
+                      <label className={cambioStyles.field} style={{ flex: 1 }}>
+                        Tipo
+                        <select value={mvDirection} onChange={(e) => setMvDirection(e.target.value as 'in' | 'out')}>
+                          <option value="in">Carico (entra)</option>
+                          <option value="out">Prelievo (esce)</option>
+                        </select>
+                      </label>
                     </div>
-                    <div className={cambioStyles.statSub}>({balance.myRefundCount} operazioni)</div>
-                  </div>
-                  <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>Questa postazione — Saldo netto</div>
-                    <div className={cambioStyles.statValue}>
-                      {fmt(balance.myNetBalance)}
-                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.myNetBalance / rate)})</span>
-                    </div>
+                    <label className={cambioStyles.field}>
+                      Importo
+                      <input type="number" min="0.01" step="0.01" value={mvAmount}
+                        onChange={(e) => setMvAmount(e.target.value)} />
+                    </label>
+                    <label className={cambioStyles.field}>
+                      Note (opzionale)
+                      <input type="text" value={mvDesc} onChange={(e) => setMvDesc(e.target.value)} />
+                    </label>
+                    <button className={mvDirection === 'in' ? cambioStyles.btnTopUp : cambioStyles.btnRefund}
+                      onClick={handleAddMovement}
+                      disabled={addingMovement || !mvAmount}>
+                      {addingMovement ? 'Registrazione...' : mvDirection === 'in' ? 'Registra carico' : 'Registra prelievo'}
+                    </button>
                   </div>
                 </div>
-                <div className={cambioStyles.cardRow}>
-                  <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>Dall'ultimo azzeramento</div>
-                    <div className={cambioStyles.statValue}>
-                      {fmt(balance.netSinceReset)}
-                      <span className={cambioStyles.eurValue}> ({fmtEur(balance.netSinceReset / rate)})</span>
+
+                <h3>Movimenti di cassa</h3>
+                {cashMovements.length === 0 ? (
+                  <p className={styles.empty}>Nessun movimento di cassa registrato.</p>
+                ) : (
+                  <>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
+                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
+                            <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo</th>
+                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Note</th>
+                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Operatore</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {cashMovements.map((cm) => (
+                            <tr key={cm.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                              <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
+                                {new Date(cm.occurredAt).toLocaleString('it-IT')}
+                              </td>
+                              <td style={{ padding: '0.5rem' }}>
+                                {cm.direction === 'in' ? 'Carico' : 'Prelievo'} {cm.currency === 'euro' ? '€' : currencyName}
+                              </td>
+                              <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: cm.direction === 'in' ? 'var(--color-green)' : 'var(--color-red)' }}>
+                                {cm.direction === 'in' ? '+' : '-'}{cm.currency === 'euro' ? fmtEur(cm.amount) : fmt(cm.amount)}
+                              </td>
+                              <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden' }}>{cm.description || '-'}</td>
+                              <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>{cm.performedByName || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <div className={cambioStyles.statSub}>{balance.lastResetAt ? `dal ${new Date(balance.lastResetAt).toLocaleString('it-IT')}` : 'Mai azzerato'}</div>
-                  </div>
-                  <div className={cambioStyles.statCard}>
-                    <div className={cambioStyles.statLabel}>&nbsp;</div>
-                    <button className={styles.dangerBtn} onClick={handleResetCashRegister}>Azzerra cassa</button>
-                  </div>
-                </div>
+
+                    {cmTotalPages > 1 && (
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                        <button className={styles.textBtn} disabled={cmPage <= 1} onClick={() => setCmPage((p) => Math.max(1, p - 1))}>
+                          Precedente
+                        </button>
+                        <span style={{ padding: '0.25rem 0.5rem' }}>{cmPage} / {cmTotalPages}</span>
+                        <button className={styles.textBtn} disabled={cmPage >= cmTotalPages} onClick={() => setCmPage((p) => p + 1)}>
+                          Successivo
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </>
             )}
           </section>

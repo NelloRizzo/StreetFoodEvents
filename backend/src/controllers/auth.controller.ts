@@ -11,6 +11,7 @@ import { UserModel } from '../models/user.model';
 import { UserRoleModel } from '../models/user-role.model';
 import { UserStationModel } from '../models/user-station.model';
 import { deleteImage } from '../services/cloudinary-upload.service';
+import { hashActivationToken } from '../utils/activation-token';
 import {
   clearSessionCookie,
   generateSessionToken,
@@ -143,14 +144,22 @@ export async function login(req: Request, res: Response) {
     });
   }
 
-  const user = await UserModel.findOne({
-    email,
-    isActive: true
-  }).select('+passwordHash');
+  const user = await UserModel.findOne({ email }).select('+passwordHash');
 
   if (!user) {
     return res.status(401).json({
       message: 'Invalid credentials'
+    });
+  }
+
+  if (!user.isActive || !user.passwordHash) {
+    if (!user.activatedAt && !user.passwordHash) {
+      return res.status(403).json({
+        message: 'Account non ancora attivato: controlla la tua email e segui il link di attivazione'
+      });
+    }
+    return res.status(403).json({
+      message: 'Account disattivato'
     });
   }
 
@@ -280,7 +289,7 @@ export async function updateMe(req: Request, res: Response) {
   if (req.body.currentPassword && req.body.newPassword) {
     const userWithHash = await UserModel.findById(req.user.id).select('+passwordHash');
 
-    if (!userWithHash) {
+    if (!userWithHash || !userWithHash.passwordHash) {
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -402,5 +411,38 @@ export async function getMyStands(req: Request, res: Response) {
   return res.status(200).json({
     stands: stands.map((s) => ({ id: s._id.toString(), name: s.name, eventIds: (s.eventIds ?? []).map((id) => id.toString()) })),
     stations: Array.from(stationMap.values()),
+  });
+}
+
+export async function activateAccount(req: Request, res: Response) {
+  const token = typeof req.body.token === 'string' ? req.body.token.trim() : '';
+  const password = typeof req.body.password === 'string' ? req.body.password : '';
+
+  if (!token) {
+    return res.status(400).json({ message: 'Token mancante' });
+  }
+  if (!password || password.length < 8) {
+    return res.status(400).json({ message: 'La password deve essere di almeno 8 caratteri' });
+  }
+
+  const user = await UserModel.findOne({
+    activationTokenHash: hashActivationToken(token),
+    activationTokenExpiresAt: { $gt: new Date() }
+  });
+
+  if (!user) {
+    return res.status(400).json({ message: 'Link di attivazione non valido o scaduto' });
+  }
+
+  user.passwordHash = await argon2.hash(password);
+  user.isActive = true;
+  user.activatedAt = new Date();
+  user.activationTokenHash = null;
+  user.activationTokenExpiresAt = null;
+  await user.save();
+
+  return res.status(200).json({
+    success: true,
+    user: { id: user._id.toString(), email: user.email, firstName: user.firstName }
   });
 }

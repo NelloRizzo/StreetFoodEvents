@@ -22,3 +22,7 @@ exchangeRouter.post('/:eventId/reset-cash-register', asyncHandler(hasRole(['exch
 exchangeRouter.get('/:eventId/cash-register-reset', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.getCashRegisterReset));
 
 exchangeRouter.get('/:eventId/denomination-report', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.denominationReport));
+
+exchangeRouter.post('/:eventId/cash-float', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.setCashFloat));
+exchangeRouter.get('/:eventId/cash-movements', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.listCashMovements));
+exchangeRouter.post('/:eventId/cash-movements', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.addCashMovement));

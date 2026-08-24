@@ -19,6 +19,16 @@ type EventPhoto = {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
 
+type SocialPlatform = 'facebook' | 'instagram'
+
+type SocialPostStatusInfo = {
+  id: string
+  platform: SocialPlatform
+  status: string
+  permalink: string | null
+  lastError: string | null
+}
+
 export function EventGalleryPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const { isAuthenticated } = useAuth()
@@ -47,6 +57,18 @@ export function EventGalleryPage() {
   const [lightboxPhoto, setLightboxPhoto] = useState<EventPhoto | null>(null)
 
   const [marketingConsent, setMarketingConsent] = useState(false)
+
+  const [socialConfig, setSocialConfig] = useState<{ facebook: boolean; instagram: boolean } | null>(null)
+  const [socialOpen, setSocialOpen] = useState(false)
+  const [socialPlatforms, setSocialPlatforms] = useState<{ facebook: boolean; instagram: boolean }>({ facebook: true, instagram: true })
+  const [socialCaption, setSocialCaption] = useState('')
+  const [socialSubmitting, setSocialSubmitting] = useState(false)
+  const [socialError, setSocialError] = useState('')
+  const [socialPosts, setSocialPosts] = useState<SocialPostStatusInfo[] | null>(null)
+
+  const [eventDefaultFrameId, setEventDefaultFrameId] = useState<string | null>(null)
+  const [frameOptions, setFrameOptions] = useState<{ id: string; name: string }[]>([])
+  const [savingFrame, setSavingFrame] = useState(false)
 
   const handleSendEmail = useCallback(async (to: string, consent?: boolean) => {
     if (!eventId || emailSending) return
@@ -80,6 +102,67 @@ export function EventGalleryPage() {
     }
   }, [eventId, emailModalPhoto, bulkEmailIds, emailSending, marketingConsent])
 
+  const selectedSocialPhotos = useMemo(
+    () => photos.filter((p) => selectedIds.has(p.id) && p.type === 'image' && p.image),
+    [photos, selectedIds]
+  )
+
+  const openSocialModal = () => {
+    setSocialCaption(eventName)
+    setSocialError('')
+    setSocialPosts(null)
+    setSocialOpen(true)
+    if (!socialConfig && eventId) {
+      apiRequest<{ facebook: boolean; instagram: boolean }>(`/events/${eventId}/social/config`)
+        .then((cfg) => {
+          setSocialConfig(cfg)
+          setSocialPlatforms({ facebook: cfg.facebook, instagram: cfg.instagram })
+        })
+        .catch(() => setSocialConfig({ facebook: false, instagram: false }))
+    }
+  }
+
+  const handlePublish = async () => {
+    if (!eventId || socialSubmitting) return
+    const platforms = (['facebook', 'instagram'] as const).filter((p) => socialPlatforms[p])
+    if (platforms.length === 0) {
+      setSocialError('Seleziona almeno una piattaforma')
+      return
+    }
+    setSocialSubmitting(true)
+    setSocialError('')
+    try {
+      const res = await apiRequest<{ items: SocialPostStatusInfo[] }>(`/events/${eventId}/social/posts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          photoIds: selectedSocialPhotos.map((p) => p.id),
+          platforms,
+          caption: socialCaption,
+        }),
+      })
+      setSocialPosts(res.items)
+    } catch (err) {
+      setSocialError(err instanceof Error ? err.message : 'Pubblicazione fallita')
+    } finally {
+      setSocialSubmitting(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!socialOpen || !socialPosts || !eventId) return
+    if (!socialPosts.some((p) => p.status === 'pending' || p.status === 'processing')) return
+
+    const ids = socialPosts.map((p) => p.id).join(',')
+    const timer = setInterval(() => {
+      apiRequest<{ items: SocialPostStatusInfo[] }>(`/events/${eventId}/social/posts?ids=${ids}`)
+        .then((data) => setSocialPosts(data.items))
+        .catch(() => {})
+    }, 3000)
+
+    return () => clearInterval(timer)
+  }, [socialOpen, socialPosts, eventId])
+
   const themeData = eventId
     ? { themeBrand: null, themeText: null, themeSurface: null, themeHighlight: null }
     : null
@@ -89,11 +172,12 @@ export function EventGalleryPage() {
     if (!eventId) return
 
     Promise.all([
-      apiRequest<{ item: { name: string } }>(`/events/${eventId}`),
+      apiRequest<{ item: { name: string; defaultFrameId: string | null } }>(`/events/${eventId}`),
       apiRequest<{ items: EventPhoto[] }>(`/events/${eventId}/photos`),
     ])
       .then(([ev, ph]) => {
         setEventName(ev.item.name)
+        setEventDefaultFrameId(ev.item.defaultFrameId ?? null)
         setPhotos(ph.items)
         setIsLoading(false)
       })
@@ -108,8 +192,14 @@ export function EventGalleryPage() {
         const eventRoles = data.roles.filter(
           (r) => r.scope === 'platform' || (r.scope === 'event' && r.eventId === eventId)
         )
-        setHasPhotoRole(eventRoles.some((r) => r.slug === 'photo-admin' || r.slug === 'platform-admin'))
+        const isPhotoAdmin = eventRoles.some((r) => r.slug === 'photo-admin' || r.slug === 'platform-admin')
+        setHasPhotoRole(isPhotoAdmin)
         setHasPrintRole(eventRoles.some((r) => r.slug === 'photo-print' || r.slug === 'photo-admin' || r.slug === 'platform-admin'))
+        if (isPhotoAdmin) {
+          apiRequest<{ items: { id: string; name: string }[] }>('/frames')
+            .then((d) => setFrameOptions(d.items))
+            .catch(() => {})
+        }
       })
       .catch(() => {})
   }, [eventId, isAuthenticated])
@@ -121,6 +211,22 @@ export function EventGalleryPage() {
       else next.add(id)
       return next
     })
+  }
+
+  const handleChangeDefaultFrame = (value: string) => {
+    if (!eventId || savingFrame) return
+    setSavingFrame(true)
+    apiRequest<{ item: { defaultFrameId: string | null } }>(`/events/${eventId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ defaultFrameId: value || null }),
+    })
+      .then((res) => {
+        setEventDefaultFrameId(res.item.defaultFrameId ?? null)
+        setUploadError('')
+      })
+      .catch(() => setUploadError('Salvataggio cornice evento fallito'))
+      .finally(() => setSavingFrame(false))
   }
 
   const handlePrint = () => {
@@ -309,6 +415,22 @@ export function EventGalleryPage() {
           </span>
           <div className={styles.actions}>
             {hasPhotoRole && (
+              <label className={styles.frameSelectWrap}>
+                Cornice evento
+                <select
+                  value={eventDefaultFrameId ?? ''}
+                  onChange={(e) => handleChangeDefaultFrame(e.target.value)}
+                  className={styles.frameSelect}
+                  disabled={savingFrame}
+                >
+                  <option value="">Nessuna</option>
+                  {frameOptions.map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {hasPhotoRole && (
               <>
                 <button
                   className={styles.printBtn}
@@ -338,6 +460,11 @@ export function EventGalleryPage() {
             {hasPrintRole && selectedIds.size > 0 && (
               <button className={styles.printBtn} onClick={handleBulkEmail}>
                 Invia selezionate via email
+              </button>
+            )}
+            {hasPhotoRole && selectedSocialPhotos.length > 0 && (
+              <button className={styles.printBtn} onClick={openSocialModal}>
+                Pubblica sui social ({selectedSocialPhotos.length})
               </button>
             )}
             {hasPhotoRole && selectedIds.size > 0 && (
@@ -519,6 +646,73 @@ export function EventGalleryPage() {
           }
         }}
       />
+
+      {socialOpen && (
+        <div className={styles.socialOverlay} onClick={() => { if (!socialSubmitting) setSocialOpen(false) }}>
+          <div className={styles.socialModal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.socialTitle}>Pubblica sui social</h2>
+            {!socialPosts ? (
+              <>
+                <p className={styles.socialInfo}>{selectedSocialPhotos.length} foto selezionate</p>
+                <div className={styles.socialPlatforms}>
+                  {(['facebook', 'instagram'] as const).map((p) => (
+                    <label key={p} className={styles.socialPlatform}>
+                      <input
+                        type="checkbox"
+                        checked={socialPlatforms[p]}
+                        disabled={!socialConfig?.[p]}
+                        onChange={() => setSocialPlatforms((prev) => ({ ...prev, [p]: !prev[p] }))}
+                      />
+                      {p === 'facebook' ? 'Facebook' : 'Instagram'}
+                      {socialConfig && !socialConfig[p] && ' (non configurata)'}
+                    </label>
+                  ))}
+                </div>
+                <textarea
+                  value={socialCaption}
+                  onChange={(e) => setSocialCaption(e.target.value)}
+                  placeholder="Didascalia"
+                  rows={3}
+                  className={styles.socialCaption}
+                />
+                {socialError && <p className={styles.uploadError}>{socialError}</p>}
+                <div className={styles.socialActions}>
+                  <button className={styles.clearFiltersBtn} onClick={() => setSocialOpen(false)} disabled={socialSubmitting}>
+                    Annulla
+                  </button>
+                  <button className={styles.printBtn} onClick={handlePublish} disabled={socialSubmitting}>
+                    {socialSubmitting ? 'Pubblicazione...' : 'Pubblica'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <ul className={styles.socialResults}>
+                  {socialPosts.map((p) => (
+                    <li key={p.id} className={`${styles.socialResultItem} ${p.status === 'published' ? styles.socialOk : p.status === 'failed' ? styles.socialKo : ''}`}>
+                      <span>{p.platform === 'facebook' ? 'Facebook' : 'Instagram'}:</span>
+                      {p.status === 'published' && p.permalink ? (
+                        <a href={p.permalink} target="_blank" rel="noreferrer">Visualizza post</a>
+                      ) : (
+                        <span>
+                          {p.status === 'published'
+                            ? 'Pubblicato'
+                            : p.status === 'failed'
+                              ? `Errore: ${p.lastError ?? 'sconosciuto'}`
+                              : 'In pubblicazione...'}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <div className={styles.socialActions}>
+                  <button className={styles.printBtn} onClick={() => setSocialOpen(false)}>Chiudi</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

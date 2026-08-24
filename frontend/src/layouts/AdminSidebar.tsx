@@ -149,7 +149,10 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
       items: [
         { label: 'Portafogli eventi', to: '/admin/event-users', icon: '\u{1F4B3}' },
         ...(basePath
-          ? [{ label: 'Liquidazione', to: `${basePath}/settlements`, icon: '\u{1F4B8}' } as SidebarItem]
+          ? [
+              { label: 'Cambio', to: `${basePath}/exchange`, icon: '\u{1F504}' } as SidebarItem,
+              { label: 'Liquidazione', to: `${basePath}/settlements`, icon: '\u{1F4B8}' } as SidebarItem,
+            ]
           : []),
       ],
     },

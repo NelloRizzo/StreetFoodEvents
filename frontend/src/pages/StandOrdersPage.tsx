@@ -145,8 +145,8 @@ export function StandOrdersPage() {
   if (!standId) return null
 
   const eventFilterDisabled = Boolean(urlEventId)
-  const backLink = urlEventId ? `/events/${urlEventId}` : '/admin/dashboard'
-  const backLabel = urlEventId ? 'Torna all\'evento' : 'Dashboard'
+  const backLink = urlEventId ? `/events/${urlEventId}` : `/admin/stands/${standId}/manage`
+  const backLabel = urlEventId ? 'Torna all\'evento' : 'Gestione stand'
   const title = urlEventId && eventName ? `Ordini — ${eventName}` : 'Ordini dello stand'
   const newOrderLink = urlEventId
     ? `/admin/events/${urlEventId}/stands/${standId}/order`

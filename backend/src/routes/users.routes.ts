@@ -5,6 +5,7 @@ import {
     deleteUser,
     getUserById,
     listUsers,
+    resendInvite,
     updateUser
 } from '../controllers/users.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
@@ -17,5 +18,6 @@ usersRouter.use(asyncHandler(authMiddleware));
 usersRouter.get('/', asyncHandler(listUsers));
 usersRouter.get('/:userId', asyncHandler(getUserById));
 usersRouter.post('/', asyncHandler(createUser));
+usersRouter.post('/:userId/resend-invite', asyncHandler(resendInvite));
 usersRouter.patch('/:userId', asyncHandler(updateUser));
 usersRouter.delete('/:userId', asyncHandler(deleteUser));

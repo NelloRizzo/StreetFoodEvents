@@ -52,6 +52,10 @@ const envSchema = z.object({
     EMAIL_FROM: z.string().email('EMAIL_FROM must be a valid email').optional(),
     EMAIL_MESSAGE_TEMPLATE: z.string().optional(),
 
+    META_PAGE_ACCESS_TOKEN: z.string().optional(),
+    META_PAGE_ID: z.string().optional(),
+    META_IG_USER_ID: z.string().optional(),
+
     STAND_DISPLAY_READY_TIMEOUT_MINUTES: z.coerce
         .number()
         .int()

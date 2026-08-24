@@ -48,6 +48,8 @@ vi.mock('@/services/email.service', () => ({
     sendPhotosEmail: (...args: unknown[]) => sendPhotosEmailMock(...args)
 }));
 
+import { Types } from 'mongoose';
+
 import { EventModel } from '../../models/event.model';
 import { RoleModel } from '../../models/role.model';
 import { SessionModel } from '../../models/session.model';
@@ -134,6 +136,61 @@ describe('Integration: event photos with videos', () => {
             .attach('video', Buffer.from('fake-video'), { filename: 'clip.mp4', contentType: 'video/mp4' });
 
         expect(res.status).toBe(401);
+    });
+
+    it('allows anonymous image upload with null createdBy', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/photos`)
+            .attach('image', Buffer.from('fake-image'), { filename: 'photo.jpg', contentType: 'image/jpeg' });
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.type).toBe('image');
+        expect(res.body.item.createdBy).toBeNull();
+        expect(uploadImageBufferMock).toHaveBeenCalledTimes(1);
+
+        const list = await request(app).get(`/api/events/${event._id}/photos`);
+        expect(list.status).toBe(200);
+        expect(list.body.items).toHaveLength(1);
+        expect(list.body.items[0].createdBy).toBeNull();
+    });
+
+    it('sets and clears defaultFrameId on the event via PATCH and exposes it publicly', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const { sessionToken } = await createAuthSession();
+
+        const initial = await request(app).get(`/api/events/${event._id}`);
+        expect(initial.status).toBe(200);
+        expect(initial.body.item.defaultFrameId).toBeNull();
+
+        const frameId = new Types.ObjectId().toString();
+        const patched = await request(app)
+            .patch(`/api/events/${event._id}`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ defaultFrameId: frameId });
+        expect(patched.status).toBe(200);
+        expect(patched.body.item.defaultFrameId).toBe(frameId);
+
+        const fetched = await request(app).get(`/api/events/${event._id}`);
+        expect(fetched.status).toBe(200);
+        expect(fetched.body.item.defaultFrameId).toBe(frameId);
+
+        const cleared = await request(app)
+            .patch(`/api/events/${event._id}`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ defaultFrameId: null });
+        expect(cleared.status).toBe(200);
+        expect(cleared.body.item.defaultFrameId).toBeNull();
+
+        const invalid = await request(app)
+            .patch(`/api/events/${event._id}`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ defaultFrameId: 'not-an-id' });
+        expect(invalid.status).toBe(200);
+        expect(invalid.body.item.defaultFrameId).toBeNull();
     });
 
     it('returns 400 when no file is provided', async () => {

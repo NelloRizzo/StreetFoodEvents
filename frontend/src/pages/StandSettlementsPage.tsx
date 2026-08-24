@@ -353,7 +353,7 @@ export function StandSettlementsPage() {
                       onClick={() => setDirection('credit')}
                       disabled={submitting}
                     >
-                      Liquidazione (AVERE)
+                      AVERE &middot; Pago lo stand
                     </button>
                     <button
                       type="button"
@@ -361,9 +361,13 @@ export function StandSettlementsPage() {
                       onClick={() => setDirection('debit')}
                       disabled={submitting}
                     >
-                      Carico crediti (DARE)
+                      DARE &middot; Carico allo stand
                     </button>
                   </div>
+                  <p style={{ fontSize: '0.78rem', lineHeight: 1.5, color: 'var(--color-text-muted)', margin: '0 0 0.9rem', padding: '0.5rem 0.7rem', border: '1px solid var(--color-border)', borderRadius: 8 }}>
+                    <strong>AVERE</strong> = denaro che esce dalla cassa verso lo standista (liquidazione crediti o pagamento diretto).<br />
+                    <strong>DARE</strong> = valore che lo stand deve al gestore (crediti consegnati da restituire, oppure debito in euro).
+                  </p>
                   <div className={settlementStyles.directionToggle}>
                     <button
                       type="button"
@@ -446,10 +450,10 @@ export function StandSettlementsPage() {
                     {submitting
                       ? 'Registrazione in corso...'
                       : !isCredit && isEuro
-                        ? 'Registra credito da esigere'
+                        ? 'Registra addebito in euro allo stand'
                         : isEuro
-                          ? 'Registra pagamento in euro'
-                          : (isCredit ? 'Registra liquidazione' : 'Carica crediti')}
+                          ? 'Registra pagamento in euro allo stand'
+                          : (isCredit ? 'Registra liquidazione (paga lo stand)' : 'Carica crediti allo stand (da restituire)')}
                   </button>
                 </div>
 

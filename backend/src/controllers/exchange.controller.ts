@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 
 import { EventUserModel } from '../models/event-user.model';
 import { EventUserTransactionModel } from '../models/event-user-transaction.model';
+import { CashRegisterMovementModel } from '../models/cash-register-movement.model';
 import { EventModel } from '../models/event.model';
 import { OrderModel } from '../models/order.model';
 import { StandModel } from '../models/stand.model';
@@ -188,12 +189,39 @@ async function getBalance(req: Request, res: Response) {
     const my = extract(myAggregation);
     const mySince = extract(mySinceResetAgg);
 
+    const floatEuro = event.cashFloat?.euro ?? 0;
+    const floatCredits = event.cashFloat?.credits ?? 0;
+    const floatSetAt: Date | null = event.cashFloat?.setAt ?? null;
+
+    const movementRows = await CashRegisterMovementModel.aggregate([
+        { $match: { eventId: eventIdObj } },
+        { $group: { _id: { currency: '$currency', direction: '$direction' }, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
+
+    let euroIn = 0, euroOut = 0, creditsIn = 0, creditsOut = 0;
+    for (const row of movementRows) {
+        if (row._id.currency === 'euro') {
+            if (row._id.direction === 'in') euroIn = row.total; else euroOut = row.total;
+        } else {
+            if (row._id.direction === 'in') creditsIn = row.total; else creditsOut = row.total;
+        }
+    }
+
+    const topUpReal = await EventUserTransactionModel.aggregate([
+        { $match: allTimeMatch },
+        { $group: { _id: '$type', real: { $sum: '$realAmount' } } }
+    ]);
+    const topUpRealEuro = topUpReal.find((r) => r._id === 'top-up')?.real ?? 0;
+    const refundRealEuro = topUpReal.find((r) => r._id === 'refund')?.real ?? 0;
+
     return res.status(200).json({
         totalTopUp: all.topUp,
         totalRefund: all.refund,
         netBalance: all.topUp - all.refund,
         topUpCount: all.topUpCount,
         refundCount: all.refundCount,
+        totalTopUpReal: Math.round(topUpRealEuro * 100) / 100,
+        totalRefundReal: Math.round(refundRealEuro * 100) / 100,
         myTopUp: my.topUp,
         myRefund: my.refund,
         myNetBalance: my.topUp - my.refund,
@@ -208,7 +236,145 @@ async function getBalance(req: Request, res: Response) {
         lastResetAt: resetAt,
         exchangeRate: event.exchangeRate ?? 1,
         currencyName: event.currencyName,
-        currencySymbol: event.currencySymbol
+        currencySymbol: event.currencySymbol,
+        cashFloat: {
+            euro: floatEuro,
+            credits: floatCredits,
+            setAt: floatSetAt ?? event.updatedAt ?? null
+        },
+        euroContent:
+            Math.round((floatEuro + topUpRealEuro - refundRealEuro + euroIn - euroOut) * 100) / 100,
+        creditsContent:
+            Math.round((floatCredits - all.topUp + all.refund + creditsIn - creditsOut) * 100) / 100,
+        cashMovements: {
+            euroIn,
+            euroOut,
+            creditsIn,
+            creditsOut
+        }
+    });
+}
+
+async function setCashFloat(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const { euro, credits } = req.body as { euro?: unknown; credits?: unknown };
+
+    function parseAmount(value: unknown): number | undefined {
+        if (value === undefined || value === null || value === '') return undefined;
+        const n = typeof value === 'string' ? parseFloat(value) : Number(value);
+        if (Number.isNaN(n) || n < 0) return undefined;
+        return Math.round(n * 100) / 100;
+    }
+
+    if (euro !== undefined && parseAmount(euro) === undefined) {
+        return res.status(400).json({ message: 'Invalid euro amount' });
+    }
+    if (credits !== undefined && parseAmount(credits) === undefined) {
+        return res.status(400).json({ message: 'Invalid credits amount' });
+    }
+
+    const current = eventCtx.event.cashFloat ?? { euro: 0, credits: 0 };
+    const nextEuro = euro !== undefined ? parseAmount(euro)! : current.euro;
+    const nextCredits = credits !== undefined ? parseAmount(credits)! : current.credits;
+
+    eventCtx.event.cashFloat = {
+        euro: nextEuro,
+        credits: nextCredits,
+        setAt: new Date()
+    };
+
+    await eventCtx.event.save();
+
+    return res.status(200).json({
+        item: { euro: nextEuro, credits: nextCredits, setAt: eventCtx.event.cashFloat.setAt }
+    });
+}
+
+async function addCashMovement(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const { currency, direction, amount, description } = req.body as {
+        currency?: unknown;
+        direction?: unknown;
+        amount?: unknown;
+        description?: unknown;
+    };
+
+    if (currency !== 'euro' && currency !== 'credits') {
+        return res.status(400).json({ message: "Currency must be 'euro' or 'credits'" });
+    }
+    if (direction !== 'in' && direction !== 'out') {
+        return res.status(400).json({ message: "Direction must be 'in' or 'out'" });
+    }
+    const parsed =
+        typeof amount === 'number'
+            ? amount
+            : typeof amount === 'string'
+              ? parseFloat(amount)
+              : NaN;
+    if (Number.isNaN(parsed) || parsed <= 0) {
+        return res.status(400).json({ message: 'Amount must be a positive number' });
+    }
+
+    const movement = await CashRegisterMovementModel.create({
+        eventId: eventCtx.eventId,
+        currency,
+        direction,
+        amount: Math.round(parsed * 100) / 100,
+        description: typeof description === 'string' && description.trim() ? description.trim() : null,
+        performedByUserId: req.user?.id ?? null
+    });
+
+    return res.status(201).json({
+        item: {
+            id: movement._id.toString(),
+            eventId: eventCtx.eventId,
+            currency: movement.currency,
+            direction: movement.direction,
+            amount: movement.amount,
+            description: movement.description,
+            performedByUserId: movement.performedByUserId?.toString() ?? null,
+            occurredAt: movement.occurredAt
+        }
+    });
+}
+
+async function listCashMovements(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
+    const [movements, total] = await Promise.all([
+        CashRegisterMovementModel.find({ eventId: eventCtx.eventId })
+            .sort({ occurredAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate('performedByUserId', 'firstName lastName')
+            .lean(),
+        CashRegisterMovementModel.countDocuments({ eventId: eventCtx.eventId })
+    ]);
+
+    const items = movements.map((m) => ({
+        id: m._id.toString(),
+        currency: m.currency,
+        direction: m.direction,
+        amount: m.amount,
+        description: m.description ?? null,
+        performedByName: m.performedByUserId
+            ? `${(m.performedByUserId as unknown as { firstName?: string }).firstName ?? ''} ${(m.performedByUserId as unknown as { lastName?: string }).lastName ?? ''}`.trim()
+            : null,
+        occurredAt: m.occurredAt
+    }));
+
+    return res.status(200).json({
+        items,
+        pagination: { page, totalPages: Math.max(1, Math.ceil(total / limit)) }
     });
 }
 
@@ -893,5 +1059,8 @@ export const exchangeController = {
     resetCashRegister,
     getCashRegisterReset,
     createGuest,
-    denominationReport
+    denominationReport,
+    setCashFloat,
+    addCashMovement,
+    listCashMovements
 };

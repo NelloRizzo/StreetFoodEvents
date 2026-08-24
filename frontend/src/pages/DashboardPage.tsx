@@ -34,11 +34,30 @@ type HomeData = {
   activeEvents: EventInfo[]
 }
 
+type MyPhoto = {
+  id: string
+  sequenceNumber: number
+  type: 'image' | 'video'
+  thumbnail: string | null
+  takenAt: string
+}
+
+type MyPhotoGroup = {
+  eventId: string
+  eventName: string
+  eventStartDate: string | null
+  eventEndDate: string | null
+  totalCount: number
+  photos: MyPhoto[]
+}
+
 export function DashboardPage() {
   const { user } = useAuth()
   const [data, setData] = useState<HomeData | null>(null)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [showAllEvents, setShowAllEvents] = useState(false)
+  const [myPhotoGroups, setMyPhotoGroups] = useState<MyPhotoGroup[]>([])
+  const [now] = useState(() => Date.now())
 
   useEffect(() => {
     apiRequest<HomeData>('/events/home')
@@ -48,7 +67,18 @@ export function DashboardPage() {
     apiRequest<{ qrCode: string }>('/auth/me/qrcode')
       .then((d) => setQrCode(d.qrCode))
       .catch(() => { /* not required */ })
+
+    apiRequest<{ items: MyPhotoGroup[] }>('/photos/mine')
+      .then((d) => setMyPhotoGroups(d.items))
+      .catch(() => { /* not required */ })
   }, [])
+
+  const isEventFinished = (endDate: string | null) => {
+    if (!endDate) return false
+    const endOfDay = new Date(endDate)
+    endOfDay.setHours(23, 59, 59, 999)
+    return endOfDay.getTime() < now
+  }
 
   const favoriteEvents = data?.favorites ?? []
   const activeEvents = data?.activeEvents ?? []
@@ -144,6 +174,50 @@ export function DashboardPage() {
             )
           })}
         </div>
+
+        {myPhotoGroups.length > 0 && (
+          <section className={styles.photoSection}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Le mie foto</h2>
+            </div>
+            {myPhotoGroups.map((group) => {
+              const hiddenCount = group.totalCount - group.photos.length
+
+              return (
+                <article key={group.eventId} className={styles.photoEventCard}>
+                  <div className={styles.photoEventHeader}>
+                    <strong className={styles.eventName}>{group.eventName}</strong>
+                    <span className={styles.photoCount}>{group.totalCount} scatti</span>
+                    {isEventFinished(group.eventEndDate) && (
+                      <span className={styles.finishedBadge}>Terminato</span>
+                    )}
+                  </div>
+                  <div className={styles.thumbGrid}>
+                    {group.photos.map((photo) => (
+                      <figure key={photo.id} className={styles.thumb}>
+                        {photo.thumbnail ? (
+                          <img src={photo.thumbnail} alt={`Foto ${photo.sequenceNumber}`} loading="lazy" />
+                        ) : (
+                          <span className={styles.thumbPlaceholder}>–</span>
+                        )}
+                        <figcaption className={styles.seqBadge}>#{photo.sequenceNumber}</figcaption>
+                        {photo.type === 'video' && <span className={styles.videoBadge}>🎬</span>}
+                      </figure>
+                    ))}
+                  </div>
+                  <div className={styles.photoEventFooter}>
+                    {hiddenCount > 0 && (
+                      <span className={styles.moreCount}>+{hiddenCount} in galleria</span>
+                    )}
+                    <Link className={styles.eventLink} to={`/events/${group.eventId}/galleria`}>
+                      Apri galleria
+                    </Link>
+                  </div>
+                </article>
+              )
+            })}
+          </section>
+        )}
 
         {qrCode && (
           <section className={styles.qrSection}>

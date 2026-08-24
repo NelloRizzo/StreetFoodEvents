@@ -181,6 +181,22 @@ const eventSchema = new Schema(
             default: null,
             maxlength: 300
         },
+        defaultFrameId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Frame',
+            default: null
+        },
+        cashFloat: {
+            type: new Schema(
+                {
+                    euro: { type: Number, required: true, default: 0, min: 0 },
+                    credits: { type: Number, required: true, default: 0, min: 0 },
+                    setAt: { type: Date, default: null }
+                },
+                { _id: false }
+            ),
+            default: null
+        },
         isPublic: {
             type: Boolean,
             default: true

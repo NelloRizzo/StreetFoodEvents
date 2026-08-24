@@ -1,12 +1,13 @@
 import { Router } from 'express';
 
-import { getMyRoles, getMyStands, login, logout, me, meQrCode, register, updateMe } from '../controllers/auth.controller';
+import { activateAccount, getMyRoles, getMyStands, login, logout, me, meQrCode, register, updateMe } from '../controllers/auth.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/async-handler';
 
 export const authRouter = Router();
 
 authRouter.post('/register', asyncHandler(register));
+authRouter.post('/activate', asyncHandler(activateAccount));
 authRouter.post('/login', asyncHandler(login));
 authRouter.post('/logout', asyncHandler(authMiddleware), asyncHandler(logout));
 authRouter.get('/me', asyncHandler(authMiddleware), asyncHandler(me));

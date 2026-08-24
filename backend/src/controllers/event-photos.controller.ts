@@ -66,6 +66,10 @@ export async function createEventPhoto(req: Request, res: Response) {
         return res.status(400).json({ message: 'Image or video file is required' });
     }
 
+    if (videoFile && !req.user) {
+        return res.status(401).json({ message: 'Authentication required for video upload' });
+    }
+
     const nowStr = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
     const folder = `events/${eventId}/photos/${nowStr}`;
 

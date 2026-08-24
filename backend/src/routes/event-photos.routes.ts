@@ -8,7 +8,7 @@ import {
     sendEventPhotoEmail,
     sendEventPhotosEmail
 } from '../controllers/event-photos.controller';
-import { authMiddleware } from '../middlewares/auth.middleware';
+import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.middleware';
 import { hasRole } from '../middlewares/role.middleware';
 import { multerMediaUpload } from '../middlewares/upload.middleware';
 import { asyncHandler } from '../utils/async-handler';
@@ -19,7 +19,7 @@ eventPhotosRouter.get('/', asyncHandler(listEventPhotos));
 
 eventPhotosRouter.post(
     '/',
-    asyncHandler(authMiddleware),
+    asyncHandler(optionalAuthMiddleware),
     multerMediaUpload.fields([
         { name: 'image', maxCount: 1 },
         { name: 'video', maxCount: 1 }

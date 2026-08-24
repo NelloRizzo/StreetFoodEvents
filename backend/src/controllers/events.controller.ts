@@ -86,6 +86,7 @@ function toEventResponse(event: {
     cashPaymentsEnabled?: boolean | null;
     unifiedCashierEnabled?: boolean | null;
     slideshowTitle?: string | null;
+    defaultFrameId?: Types.ObjectId | null;
     isPublic?: boolean | null;
     feeBands?: unknown[];
     denominations?: unknown[];
@@ -115,6 +116,7 @@ function toEventResponse(event: {
         cashPaymentsEnabled: event.cashPaymentsEnabled ?? true,
         unifiedCashierEnabled: event.unifiedCashierEnabled ?? false,
         slideshowTitle: event.slideshowTitle ?? null,
+        defaultFrameId: event.defaultFrameId ? event.defaultFrameId.toString() : null,
         isPublic: event.isPublic ?? true,
         feeBands: event.feeBands ?? [],
         denominations: event.denominations ?? [],
@@ -303,6 +305,7 @@ export async function updateEvent(req: Request, res: Response) {
         cashPaymentsEnabled,
         unifiedCashierEnabled,
         slideshowTitle,
+        defaultFrameId,
         isPublic,
         feeBands,
         denominations,
@@ -390,6 +393,14 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (slideshowTitle !== undefined) {
         event.slideshowTitle = slideshowTitle;
+    }
+
+    if (defaultFrameId !== undefined) {
+        if (defaultFrameId === null) {
+            event.defaultFrameId = null;
+        } else if (typeof defaultFrameId === 'string' && isValidObjectId(defaultFrameId)) {
+            event.defaultFrameId = new Types.ObjectId(defaultFrameId);
+        }
     }
 
     if (isPublic !== undefined) {

@@ -200,6 +200,110 @@
   text-align: center;
 }
 
+.photoSection {
+  margin-top: 2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.photoEventCard {
+  padding: 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-card);
+  display: grid;
+  gap: 0.9rem;
+}
+
+.photoEventHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.photoCount {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-brand-deep);
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-soft);
+}
+
+.finishedBadge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8c1e1e;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: rgba(140, 30, 30, 0.08);
+}
+
+.thumbGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 0.5rem;
+}
+
+.thumb {
+  position: relative;
+  aspect-ratio: 1;
+  margin: 0;
+  border-radius: var(--radius-sm, 0.5rem);
+  overflow: hidden;
+  background: rgba(38, 65, 55, 0.06);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.thumbPlaceholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--color-ink-soft);
+}
+
+.seqBadge {
+  position: absolute;
+  bottom: 0.3rem;
+  left: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-pill);
+}
+
+.videoBadge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.photoEventFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.moreCount {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+}
+
 @media (min-width: 48rem) {
   .page {
     padding: 2rem 0 4rem;

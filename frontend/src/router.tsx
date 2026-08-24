@@ -29,6 +29,7 @@ import { StandsPage } from './pages/StandsPage'
 import { CashierOrderPage } from './pages/CashierOrderPage'
 import { EventCashierPage } from './pages/EventCashierPage'
 import { EventMapPage } from './pages/EventMapPage'
+import { EventMenuPage } from './pages/EventMenuPage'
 import { EventOrdersPage } from './pages/EventOrdersPage'
 import { EventReportPage } from './pages/EventReportPage'
 import { EventGalleryPage } from './pages/EventGalleryPage'
@@ -47,9 +48,12 @@ import { ContestPage } from './pages/ContestPage'
 import { ContestPlayPage } from './pages/ContestPlayPage'
 import { ContestVerifyPage } from './pages/ContestVerifyPage'
 import { EventExchangePage } from './pages/EventExchangePage'
+import { EventContestManagePage } from './pages/EventContestManagePage'
 import { StandSettlementsPage } from './pages/StandSettlementsPage'
 import { SettlementsReportPage } from './pages/SettlementsReportPage'
 import { ContestDeliveryPage } from './pages/ContestDeliveryPage'
+import { ActivationPage } from './pages/ActivationPage'
+import { ParamRedirect } from './components/ParamRedirect'
 
 export const router = createBrowserRouter([
   /* ── Public routes ── */
@@ -62,6 +66,7 @@ export const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'events/:eventId', element: <EventDetailPage /> },
+      { path: 'events/:eventId/menu', element: <EventMenuPage /> },
       { path: 'events/:eventId/mappa', element: <EventMapPage /> },
       { path: 'events/:eventId/pois/:poiId', element: <PoiDetailPage /> },
       { path: 'events/:eventId/stands/:standId', element: <EventStandMenuPage /> },
@@ -81,13 +86,13 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <Navigate to="/admin/dashboard" replace /> },
       { path: 'events', element: <Navigate to="/admin/events" replace /> },
       { path: 'stands', element: <Navigate to="/admin/stands" replace /> },
-      { path: 'stands/:standId', element: <Navigate to="/admin/stands/:standId" replace /> },
-      { path: 'stands/:standId/orders', element: <Navigate to="/admin/stands/:standId/orders" replace /> },
+      { path: 'stands/:standId', element: <ParamRedirect build={(p) => `/admin/stands/${p.standId}`} /> },
+      { path: 'stands/:standId/orders', element: <ParamRedirect build={(p) => `/admin/stands/${p.standId}/orders`} /> },
       { path: 'products', element: <Navigate to="/admin/products" replace /> },
       { path: 'event-products', element: <Navigate to="/admin/event-products" replace /> },
       { path: 'event-users', element: <Navigate to="/admin/event-users" replace /> },
       { path: 'favorites', element: <Navigate to="/admin/favorites" replace /> },
-      { path: 'orders/:orderId', element: <Navigate to="/admin/orders/:orderId" replace /> },
+      { path: 'orders/:orderId', element: <ParamRedirect build={(p) => `/admin/orders/${p.orderId}`} /> },
       { path: 'staff', element: <Navigate to="/admin/staff" replace /> },
       { path: 'users', element: <Navigate to="/admin/users" replace /> },
       { path: 'user-roles', element: <Navigate to="/admin/user-roles" replace /> },
@@ -112,6 +117,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/settlements/report', element: <SettlementsReportPage /> },
       { path: 'events/:eventId/galleria', element: <EventGalleryPage /> },
       { path: 'events/:eventId/photo-booth', element: <PhotoBoothPage /> },
+      { path: 'events/:eventId/contest-manage', element: <EventContestManagePage /> },
       { path: 'events/:eventId/stands/:standId/orders', element: <StandOrdersPage /> },
       { path: 'events/:eventId/stands/:standId/order', element: <CashierOrderPage /> },
 
@@ -142,4 +148,5 @@ export const router = createBrowserRouter([
   { path: 'orders/station/:stationId', element: <StationQueuePage /> },
   { path: 'flyer', element: <FlyerPage /> },
   { path: 'show/:entityType/:alias', element: <AliasRedirectPage /> },
+  { path: 'attiva/:token', element: <ActivationPage /> },
 ])

@@ -45,34 +45,41 @@ export function EventProductsPage() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormData>(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [filterEventId, setFilterEventId] = useState('')
 
-  const fetchItems = async () => {
+  const loadItems = async (eventId: string) => {
     try {
-      const data = await apiRequest<{ items: EventProduct[] }>('/event-products')
+      const data = await apiRequest<{ items: EventProduct[] }>(`/event-products${eventId ? `?eventId=${eventId}` : ''}`)
       setItems(data.items)
     } catch { /* ignore */ }
     setIsLoading(false)
   }
 
-  const fetchRefs = async () => {
-    try {
-      const [eventsData, standsData, productsData, stationsData] = await Promise.all([
-        apiRequest<{ items: Event[] }>('/events'),
-        apiRequest<{ items: Stand[] }>('/stands'),
-        apiRequest<{ items: Product[] }>('/products'),
-        apiRequest<{ items: Station[] }>('/stations'),
-      ])
-      setEvents(eventsData.items)
-      setStands(standsData.items)
-      setProducts(productsData.items)
-      setStations(stationsData.items)
-    } catch { /* not required */ }
-  }
-
   useEffect(() => {
-    fetchItems()
-    fetchRefs()
+    apiRequest<{ items: EventProduct[] }>('/event-products')
+      .then((d) => setItems(d.items))
+      .catch(() => { /* ignore */ })
+      .finally(() => setIsLoading(false))
+
+    Promise.all([
+      apiRequest<{ items: Event[] }>('/events'),
+      apiRequest<{ items: Stand[] }>('/stands'),
+      apiRequest<{ items: Product[] }>('/products'),
+      apiRequest<{ items: Station[] }>('/stations'),
+    ])
+      .then(([eventsData, standsData, productsData, stationsData]) => {
+        setEvents(eventsData.items)
+        setStands(standsData.items)
+        setProducts(productsData.items)
+        setStations(stationsData.items)
+      })
+      .catch(() => { /* not required */ })
   }, [])
+
+  const handleFilterEventChange = (eventId: string) => {
+    setFilterEventId(eventId)
+    void loadItems(eventId)
+  }
 
   const handleEventChange = (eventId: string) => {
     setForm({ ...emptyForm, eventId })
@@ -137,11 +144,18 @@ export function EventProductsPage() {
     setForm(emptyForm)
     setFilteredStands([])
     setStations([])
-    await fetchItems()
+    await loadItems(filterEventId)
   }
 
   const handleDelete = async (id: string) => {
     setDeleteTarget(id)
+  }
+
+  const updateCardCategory = async (ep: EventProduct, categoryId: string) => {
+    try {
+      await apiRequest(`/event-products/${ep.id}`, { method: 'PATCH', bodyJson: { categoryId: categoryId || null } })
+      setItems((prev) => prev.map((p) => (p.id === ep.id ? { ...p, categoryId: categoryId || null } : p)))
+    } catch { /* ignore */ }
   }
 
   const eventName = (id: string) => events.find((e) => e.id === id)?.name ?? id
@@ -162,6 +176,18 @@ export function EventProductsPage() {
           <button className={styles.primaryBtn} onClick={openCreate}>
             Associa prodotto
           </button>
+        </div>
+
+        <div className={styles.filterBar}>
+          <label htmlFor="ep-filter-event">Filtra per evento</label>
+          <select id="ep-filter-event" value={filterEventId} onChange={(e) => handleFilterEventChange(e.target.value)}>
+            <option value="">Tutti gli eventi</option>
+            {[...events]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((ev) => (
+                <option key={ev.id} value={ev.id}>{ev.name}</option>
+              ))}
+          </select>
         </div>
 
         {showForm && (
@@ -254,7 +280,17 @@ export function EventProductsPage() {
                 <span className={styles.cardStations}>
                   Postazioni: {ep.stationIds.map((id) => stationName(id) || id).join(', ')}
                 </span>
-                {ep.categoryId && <span className={styles.cardCategory}>{ep.categoryId}</span>}
+                <div className={styles.cardCategory}>
+                  <span className={styles.cardCategoryLabel}>Categoria</span>
+                  <CategorySelect
+                    id={`ep-cat-${ep.id}`}
+                    eventId={ep.eventId}
+                    categories={eventCategories(ep.eventId)}
+                    value={ep.categoryId ?? ''}
+                    onChange={(categoryId) => { void updateCardCategory(ep, categoryId) }}
+                    onCategoriesChange={(cats) => updateEventCategories(ep.eventId, cats)}
+                  />
+                </div>
                 {ep.priceOverride !== null && (
                   <span className={styles.cardPrice}>Prezzo: {ep.priceOverride.toFixed(2)} {currencyInitial(ep.eventId)}</span>
                 )}
@@ -295,7 +331,7 @@ export function EventProductsPage() {
           if (!deleteTarget) return
           await apiRequest(`/event-products/${deleteTarget}`, { method: 'DELETE' })
           setDeleteTarget(null)
-          await fetchItems()
+          await loadItems(filterEventId)
         }}
         onCancel={() => setDeleteTarget(null)}
       />

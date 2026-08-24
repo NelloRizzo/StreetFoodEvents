@@ -57,6 +57,15 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 ### API routes
 `GET /health` (no auth). All `/api/*` routes: GET are public except users/event-users/event-products/favorites/orders/upload. POST/PATCH/DELETE are protected.
 
+### API routes — Auth & utenti
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| POST | `/api/auth/activate` | no | Attiva account su invito: body `{ token, password }` (≥8), imposta passwordHash (argon2) + isActive, invalida il token |
+| POST | `/api/users` | auth | SOLO invito: niente password — crea utente inattivo con token attivazione (SHA-256, 7 giorni) e invia email `${CLIENT_URL}/attiva/:token`; se Brevo non configurata → 201 con `emailSent: false` + `activationUrl` |
+| POST | `/api/users/:userId/resend-invite` | auth | Rigenera token attivazione e reinvia email (400 se già attivato) |
+
+Login: utente inattivo o senza password → 403 con messaggio distinto ("non ancora attivato" vs "disattivato"). `passwordHash` è nullable.
+
 ### API routes — Events
 | Method | Route | Auth | Description |
 |---|---|---|---|
@@ -77,7 +86,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | Method | Route | Auth | Description |
 |---|---|---|---|
 | GET | `/api/events/:eventId/photos` | no | Lista media evento (foto e video) |
-| POST | `/api/events/:eventId/photos` | auth | Carica media: multipart con campo `image` (foto, 10 MB) oppure `video` (fino a 100 MB) |
+| POST | `/api/events/:eventId/photos` | no (immagini) / auth (video) | Carica media: multipart con campo `image` (foto, 10 MB, anche anonimo) oppure `video` (fino a 100 MB, richiede auth — anonimo → 401) |
 | POST | `/api/events/:eventId/photos/send-email` | photo-print / photo-admin / platform-admin | Invia più foto selezionate a un unico indirizzo email (body: `email`, `photoIds[]`, `marketingConsent`) |
 | POST | `/api/events/:eventId/photos/:photoId/send-email` | photo-print / photo-admin / platform-admin | Invia una singola foto via email (body: `email`, `marketingConsent`) |
 | DELETE | `/api/events/:eventId/photos` | photo-admin | Cancella tutte le foto/video (delete Cloudinary con `resource_type` corretto) |
@@ -90,16 +99,28 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | POST | `/api/events/:eventId/frames` | photo-admin | Carica cornice (multipart image + name) |
 | DELETE | `/api/events/:eventId/frames/:frameId` | photo-admin | Elimina cornice |
 
+### API routes — Pubblicazione social
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/photos/mine` | auth | Foto scattate dall'utente autenticato, raggruppate per evento (max 30 per evento, thumbnail generate server-side) |
+| GET | `/api/events/:eventId/social/config` | photo-admin / platform-admin | Piattaforme configurate (`{ facebook, instagram }`) |
+| POST | `/api/events/:eventId/social/posts` | photo-admin / platform-admin | Accoda pubblicazione: body `{ photoIds[], platforms[], caption? }`. Solo immagini (video → 400); foto di altro evento → 404; piattaforma non configurata → post con `status: 'failed'` immediato |
+| GET | `/api/events/:eventId/social/posts?ids=a,b` | photo-admin / platform-admin | Stato dei post social (polling esito) |
+
+Pubblicazione Meta: account UNICO della piattaforma via env opzionali `META_PAGE_ACCESS_TOKEN`, `META_PAGE_ID`, `META_IG_USER_ID` (Facebook Page + Instagram professional, variante Facebook Login su graph.facebook.com). Coda in-process con worker `setInterval` avviato da `server.ts`; retry max 3 con backoff. Se le env non sono impostate la feature resta silenziosamente disattivata.
+
 ### Frontend — Alias routes
 | Route | Element | Description |
 |---|---|---|
 | `/show/:entityType/:alias` | AliasRedirectPage | Redirect verso pagina reale |
+| `/attiva/:token` | ActivationPage | Attivazione account su invito: imposta password, attiva utente |
 
 ### Frontend — Gallery route
 | Route | Element | Description |
 |---|---|---|
-| `/events/:eventId/galleria` | EventGalleryPage | Galleria foto con stampa e selezione |
+| `/events/:eventId/galleria` | EventGalleryPage | Galleria foto con stampa, selezione, invio email e pubblicazione social |
 | `/events/:eventId/slideshow` | SlideshowPage | Slideshow automatico con rotazione e cornici |
+| `/events/:eventId/menu` | EventMenuPage | Menù pubblico dell'evento: vista per stand o per categorie, ordine alfabetico |
 
 ### Frontend — Stand display route
 | Route | Element | Description |
@@ -116,6 +137,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 ### Frontend — Contest routes
 | Route | Element | Description |
 |---|---|---|
+| `/admin/events/:eventId/contest-manage` | EventContestManagePage | Gestione contest (POI contest, contest, avvio/stop, stampa QR), solo contest-admin / platform-admin |
 | Richieste API gestite da `EventDetailPage.tsx` nelle sezioni Contest POI, poi create/edit contest | | |
 
 ### API routes — Orders
@@ -135,7 +157,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | Method | Route | Auth | Description |
 |---|---|---|---|
 | GET | `/api/exchange/:eventId/users` | exchange-admin / platform-admin | Lista utenti cambio (auto-crea anonimo se mancante) |
-| GET | `/api/exchange/:eventId/balance` | exchange-admin / platform-admin | Saldo cassa (top-up/refund aggregati) |
+| GET | `/api/exchange/:eventId/balance` | exchange-admin / platform-admin | Saldo cassa (top-up/refund aggregati + fondo cassa e contenuto euro/token) |
 | GET | `/api/exchange/:eventId/transactions` | exchange-admin / platform-admin | Storico transazioni (paginato) |
 | POST | `/api/exchange/:eventId/top-up` | exchange-admin / platform-admin | Carica crediti (reale → virtuale) |
 | POST | `/api/exchange/:eventId/refund` | exchange-admin / platform-admin | Rimborsa crediti (virtuale → reale) |
@@ -144,6 +166,9 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 | GET | `/api/exchange/:eventId/settlements` | exchange-admin / platform-admin | Storico liquidazioni stand (paginato, filtro standId) |
 | POST | `/api/exchange/:eventId/settlements` | exchange-admin / platform-admin | Crea liquidazione stand (standId, amount crediti libero, feePercent default 0) |
 | POST | `/api/exchange/:eventId/guests` | exchange-admin / platform-admin | Crea cliente al volo (displayName opzionale) |
+| POST | `/api/exchange/:eventId/cash-float` | exchange-admin / platform-admin | Imposta/modifica fondo cassa (euro, credits) |
+| GET | `/api/exchange/:eventId/cash-movements` | exchange-admin / platform-admin | Storico movimenti cassa (paginato) |
+| POST | `/api/exchange/:eventId/cash-movements` | exchange-admin / platform-admin | Registra movimento carico/prelievo (currency euro/credits, direction in/out) |
 | POST | `/api/exchange/:eventId/reset-cash-register` | exchange-admin / platform-admin | Azzera cassa |
 | GET | `/api/exchange/:eventId/cash-register-reset` | exchange-admin / platform-admin | Data ultimo azzeramento |
 

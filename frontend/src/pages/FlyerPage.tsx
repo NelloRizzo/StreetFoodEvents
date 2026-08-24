@@ -8,8 +8,9 @@ const sections = [
     { icon: '\u{1F3D7}\u{FE0F}', name: 'Creazione evento', desc: 'Copertina, galleria, luogo, date, url ufficiale e descrizioni breve/lunga.' },
     { icon: '\u{270F}\u{FE0F}', name: 'Editor Rich Text', desc: 'Descrizioni formattate con TipTap: grassetto, corsivo, elenchi, link e blockquote.' },
     { icon: '\u{1F4CD}', name: 'Punti di Interesse', desc: 'POI su mappa con cover, galleria e icone personalizzate.' },
-    { icon: '\u{1F5FA}\u{FE0F}', name: 'Mappa interattiva', desc: 'Leaflet con marker per stand e POI, zoom adattivo e link rapidi.' },
+    { icon: '\u{1F5FA}\u{FE0F}', name: 'Mappa interattiva', desc: 'Leaflet con marker numerati per stand e POI, zoom adattivo e link rapidi.' },
     { icon: '\u{1F3A8}', name: 'Tema personalizzato', desc: 'Colori brand, testo, superficie e accento per ogni evento.' },
+    { icon: '\u{1F3AF}', name: 'Contest & Giochi', desc: 'Caccia ai POI con QR code, indizi a gruppi, classifica e consegna premi.' },
   ] },
   { icon: '\u{1F3EA}', title: 'Stand &amp; Menu', features: [
     { icon: '\u{1F3D7}\u{FE0F}', name: 'Gestione stand', desc: 'Nome, slogan, descrizione e posizione geografica su mappa.' },
@@ -17,13 +18,28 @@ const sections = [
     { icon: '\u{1F372}', name: 'Catalogo prodotti', desc: 'Nome, ingredienti, immagine cover e galleria multipla.' },
     { icon: '\u{1F4B0}', name: 'Prezzi flessibili', desc: 'Prezzo personalizzato per evento e per tipologia utente.' },
     { icon: '\u{2705}', name: 'Disponibilità', desc: 'Toggle on/off per escludere prodotti dagli ordini senza eliminarli.' },
+    { icon: '\u{1F522}', name: 'Numerazione stand', desc: 'Progressivo per evento con rinumerazione rapida e marker numerati in mappa.' },
+    { icon: '\u{1F4D1}', name: 'Menù pubblico', desc: 'Pagina menù online con QR code, per evento o singolo stand.' },
   ] },
   { icon: '\u{1F6D2}', title: 'Ordini', features: [
     { icon: '\u{1F504}', name: 'Ciclo vita ordine', desc: 'Pending → confirmed → preparing → ready → completed, con cancellazione e rimborso crediti.' },
     { icon: '\u{1F4B3}', name: 'Pagamento misto', desc: 'Usa crediti evento + moneta reale insieme (es. 5 crediti + 5 €).' },
+    { icon: '\u{1F381}', name: 'Ordini omaggio', desc: 'Regala prodotti senza incasso: badge dedicato e contatore con soglia d\u2019avviso.' },
     { icon: '\u{1F4F1}', name: 'QR Code & ricevuta', desc: 'Ricevuta pubblica con QR code per ritiro ordine.' },
     { icon: '\u{1F514}', name: 'Notifica sonora', desc: 'Beep 880Hz in postazione quando arrivano nuovi ordini.' },
-    { icon: '\u{1F4CA}', name: 'Storico e resoconti', desc: 'Report per stand: serata, manifestazione o tutte le edizioni.' },
+    { icon: '\u{1F4CA}', name: 'Storico e resoconti', desc: 'Report per stand ed evento, convertiti in euro col cambio dell\u2019evento.' },
+  ] },
+  { icon: '\u{1F4B6}', title: 'Cassa &amp; Cambio', features: [
+    { icon: '\u{1F5C3}\u{FE0F}', name: 'Cassa unica POS', desc: 'Interfaccia calcolatrice con selezione cliente, griglia prodotti e pagamento misto.' },
+    { icon: '\u{1F501}', name: 'Cambio valuta', desc: 'Ricariche, rimborsi e clienti al volo; fondo cassa euro/token con movimenti di carico e prelievo.' },
+    { icon: '\u{1F9FE}', name: 'Liquidazioni stand', desc: 'AVERE/DARE con trattenuta percentuale e resoconto aggregato per evento stampabile.' },
+    { icon: '\u{1FA99}', name: 'Monete personalizzate', desc: 'Nome, simbolo e tagli valuta per ogni evento; resoconti convertiti in euro.' },
+  ] },
+  { icon: '\u{1F4F8}', title: 'Foto &amp; Social', features: [
+    { icon: '\u{1F4F7}', name: 'Photo booth', desc: 'Scatti con webcam e cornici personalizzate, aperto a tutti i visitatori.' },
+    { icon: '\u{1F5BC}\u{FE0F}', name: 'Galleria evento', desc: 'Foto e video con stampa, selezione multipla e invio via email.' },
+    { icon: '\u{1F39E}\u{FE0F}', name: 'Slideshow', desc: 'Proiezione automatica a schermo intero con rotazione di foto e video.' },
+    { icon: '\u{1F4E3}', name: 'Pubblicazione social', desc: 'Condivisione su Facebook e Instagram direttamente dalla galleria.' },
   ] },
   { icon: '\u{1F465}', title: 'Ruoli &amp; Permessi', features: [
     { icon: '\u{1F510}', name: 'Platform-admin', desc: 'Accesso completo a tutti gli eventi, utenti e configurazioni.' },
@@ -34,18 +50,18 @@ const sections = [
     { icon: '\u{2705}', name: 'Stand-pickup', desc: 'Conferma solo la consegna degli ordini allo stand.' },
   ] },
   { icon: '\u{1F4B3}', title: 'Portafoglio', features: [
-    { icon: '\u{1FA99}', name: 'Crediti evento', desc: 'Moneta interna dedicata a ogni manifestazione.' },
+    { icon: '\u{1FA99}', name: 'Crediti evento', desc: 'Moneta interna personalizzabile (nome e simbolo) dedicata a ogni manifestazione.' },
     { icon: '\u{1F4C4}', name: 'Transazioni tracciate', desc: 'Ledger completo con ricariche, addebiti e storni.' },
     { icon: '\u{1F4F7}', name: 'QR Code personale', desc: 'Identificazione utente via webcam per pagamenti rapidi.' },
     { icon: '\u{2764}\u{FE0F}', name: 'Preferiti', desc: 'Eventi e stand salvati per accesso rapido dal menu.' },
   ] },
   { icon: '\u{1F4CA}', title: 'Dashboard &amp; Operatività', features: [
     { icon: '\u{1F4BB}', name: 'Dashboard e admin', desc: 'Area personale (eventi, wallet, QR) separata dall\'area admin con sidebar operativa.' },
-    { icon: '\u{1F5C3}\u{FE0F}', name: 'Cassa Unica POS', desc: 'Interfaccia calcolatrice con selezione cliente, griglia prodotti e pagamento misto.' },
+    { icon: '\u{1F4FA}', name: 'Display coda ordini', desc: 'Schermo pubblico fullscreen per stand: avanzamento articoli per postazione, auto-refresh.' },
     { icon: '\u{1F4F1}', name: 'Coda postazione', desc: 'Kiosk fullscreen, font grandi, auto-refresh 5s, bottone Pronto per item.' },
     { icon: '\u{1F4D6}', name: 'Guide stampabili', desc: '4 guide Q&A: amministratore, cassiere, addetto postazione, cassiere stand.' },
   ] },
-  { icon: '\u{1F3A8}', title: 'Esperienza', features: [
+  { icon: '\u{1F31F}', title: 'Esperienza', features: [
     { icon: '\u{1F31F}', name: 'Temi stagionali', desc: '6 palette applicate automaticamente in base alla data.' },
     { icon: '\u{1F3A8}', name: 'Tema per evento', desc: '4 colori personalizzati con derivazioni automatiche via color-mix.' },
     { icon: '\u{1F4F1}', name: 'Mobile first', desc: 'Interfaccia responsive pensata per smartphone e tablet.' },
@@ -56,7 +72,7 @@ function buildFlyerHtml() {
   const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 
   const statsHtml = [
-    { v: '7', l: 'Aree funzionali' },
+    { v: '9', l: 'Aree funzionali' },
     { v: '6', l: 'Ruoli dedicati' },
     { v: '100%', l: 'Mobile' },
     { v: '4', l: 'Guide stampabili' },
@@ -104,7 +120,7 @@ body{width:min(100%,1200px);margin:0 auto;padding:1rem 1.2rem 2rem}
 <div class="hero">
   <span style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.35rem 0.85rem;border:1px solid rgba(38,65,55,0.22);border-radius:999px;background:rgba(255,250,242,0.72);color:#8d3f17;font-size:0.75rem;font-weight:700;text-transform:uppercase">&#x1F372; Street Food Events</span>
   <h1>Tutto l&rsquo;evento<br><span class="accent">in una piattaforma.</span></h1>
-  <p>Dal primo stand all&rsquo;ultimo ordine: coordina eventi enogastronomici, gestisci stand, menu, postazioni, pagamenti misti e personale — tutto in un&rsquo;unica soluzione mobile-first.</p>
+  <p>Dal primo stand all&rsquo;ultimo ordine: eventi, menu, pagamenti misti, cambio valuta, photo booth social e contest interattivi — tutto in un&rsquo;unica soluzione mobile-first.</p>
   <div class="stats">${statsHtml}</div>
 </div>
 
@@ -145,13 +161,13 @@ export function FlyerPage() {
               <span className={styles.heroAccent}>in una piattaforma.</span>
             </h1>
             <p className={styles.heroCopy}>
-              Dal primo stand all&rsquo;ultimo ordine: coordina eventi enogastronomici,
-              gestisci stand, menu, postazioni, pagamenti misti e personale &mdash;
+              Dal primo stand all&rsquo;ultimo ordine: eventi, menu, pagamenti misti,
+              cambio valuta, photo booth social e contest interattivi &mdash;
               tutto in un&rsquo;unica soluzione mobile-first.
             </p>
             <div className={styles.stats}>
               {[
-                { value: '7', label: 'Aree funzionali' },
+                { value: '9', label: 'Aree funzionali' },
                 { value: '6', label: 'Ruoli dedicati' },
                 { value: '100%', label: 'Mobile' },
                 { value: '4', label: 'Guide stampabili' },
@@ -172,8 +188,9 @@ export function FlyerPage() {
         { icon: '\u{1F3D7}\u{FE0F}', name: 'Creazione evento', desc: 'Copertina, galleria, luogo, date, url ufficiale e descrizioni breve/lunga.' },
         { icon: '\u{270F}\u{FE0F}', name: 'Editor Rich Text', desc: 'Descrizioni formattate con TipTap: grassetto, corsivo, elenchi, link e blockquote.' },
         { icon: '\u{1F4CD}', name: 'Punti di Interesse', desc: 'POI su mappa con cover, galleria e icone personalizzate.' },
-        { icon: '\u{1F5FA}\u{FE0F}', name: 'Mappa interattiva', desc: 'Leaflet con marker per stand e POI, zoom adattivo e link rapidi.' },
+        { icon: '\u{1F5FA}\u{FE0F}', name: 'Mappa interattiva', desc: 'Leaflet con marker numerati per stand e POI, zoom adattivo e link rapidi.' },
         { icon: '\u{1F3A8}', name: 'Tema personalizzato', desc: 'Colori brand, testo, superficie e accento per ogni evento.' },
+        { icon: '\u{1F3AF}', name: 'Contest & Giochi', desc: 'Caccia ai POI con QR code, indizi a gruppi, classifica e consegna premi.' },
       ]} />
 
       <Section icon={'\u{1F3EA}'} title="Stand &amp; Menu" features={[
@@ -182,14 +199,31 @@ export function FlyerPage() {
         { icon: '\u{1F372}', name: 'Catalogo prodotti', desc: 'Nome, ingredienti, immagine cover e galleria multipla.' },
         { icon: '\u{1F4B0}', name: 'Prezzi flessibili', desc: 'Prezzo personalizzato per evento e per tipologia utente.' },
         { icon: '\u{2705}', name: 'Disponibilità', desc: 'Toggle on/off per escludere prodotti dagli ordini senza eliminarli.' },
+        { icon: '\u{1F522}', name: 'Numerazione stand', desc: 'Progressivo per evento con rinumerazione rapida e marker numerati in mappa.' },
+        { icon: '\u{1F4D1}', name: 'Menù pubblico', desc: 'Pagina menù online con QR code, per evento o singolo stand.' },
       ]} />
 
       <Section icon={'\u{1F6D2}'} title="Ordini" features={[
         { icon: '\u{1F504}', name: 'Ciclo vita ordine', desc: 'pending → confirmed → preparing → ready → completed, con cancellazione e rimborso crediti.' },
         { icon: '\u{1F4B3}', name: 'Pagamento misto', desc: 'Usa crediti evento + moneta reale insieme (es. 5 crediti + 5 €).' },
+        { icon: '\u{1F381}', name: 'Ordini omaggio', desc: 'Regala prodotti senza incasso: badge dedicato e contatore con soglia d\u2019avviso.' },
         { icon: '\u{1F4F1}', name: 'QR Code & ricevuta', desc: 'Ricevuta pubblica con QR code per ritiro ordine.' },
         { icon: '\u{1F514}', name: 'Notifica sonora', desc: 'Beep 880Hz in postazione quando arrivano nuovi ordini.' },
-        { icon: '\u{1F4CA}', name: 'Storico e resoconti', desc: 'Report per stand: serata, manifestazione o tutte le edizioni.' },
+        { icon: '\u{1F4CA}', name: 'Storico e resoconti', desc: 'Report per stand ed evento, convertiti in euro col cambio dell\u2019evento.' },
+      ]} />
+
+      <Section icon={'\u{1F4B6}'} title="Cassa &amp; Cambio" features={[
+        { icon: '\u{1F5C3}\u{FE0F}', name: 'Cassa unica POS', desc: 'Interfaccia calcolatrice con selezione cliente, griglia prodotti e pagamento misto.' },
+        { icon: '\u{1F501}', name: 'Cambio valuta', desc: 'Ricariche, rimborsi e clienti al volo; fondo cassa euro/token con movimenti di carico e prelievo.' },
+        { icon: '\u{1F9FE}', name: 'Liquidazioni stand', desc: 'AVERE/DARE con trattenuta percentuale e resoconto aggregato per evento stampabile.' },
+        { icon: '\u{1FA99}', name: 'Monete personalizzate', desc: 'Nome, simbolo e tagli valuta per ogni evento; resoconti convertiti in euro.' },
+      ]} />
+
+      <Section icon={'\u{1F4F8}'} title="Foto &amp; Social" features={[
+        { icon: '\u{1F4F7}', name: 'Photo booth', desc: 'Scatti con webcam e cornici personalizzate, aperto a tutti i visitatori.' },
+        { icon: '\u{1F5BC}\u{FE0F}', name: 'Galleria evento', desc: 'Foto e video con stampa, selezione multipla e invio via email.' },
+        { icon: '\u{1F39E}\u{FE0F}', name: 'Slideshow', desc: 'Proiezione automatica a schermo intero con rotazione di foto e video.' },
+        { icon: '\u{1F4E3}', name: 'Pubblicazione social', desc: 'Condivisione su Facebook e Instagram direttamente dalla galleria.' },
       ]} />
 
       <Section icon={'\u{1F465}'} title="Ruoli &amp; Permessi" features={[
@@ -202,7 +236,7 @@ export function FlyerPage() {
       ]} />
 
       <Section icon={'\u{1F4B3}'} title="Portafoglio" features={[
-        { icon: '\u{1FA99}', name: 'Crediti evento', desc: 'Moneta interna dedicata a ogni manifestazione.' },
+        { icon: '\u{1FA99}', name: 'Crediti evento', desc: 'Moneta interna personalizzabile (nome e simbolo) dedicata a ogni manifestazione.' },
         { icon: '\u{1F4C4}', name: 'Transazioni tracciate', desc: 'Ledger completo con ricariche, addebiti e storni.' },
         { icon: '\u{1F4F7}', name: 'QR Code personale', desc: 'Identificazione utente via webcam per pagamenti rapidi.' },
         { icon: '\u{2764}\u{FE0F}', name: 'Preferiti', desc: 'Eventi e stand salvati per accesso rapido dal menu.' },
@@ -210,7 +244,7 @@ export function FlyerPage() {
 
       <Section icon={'\u{1F4CA}'} title="Dashboard &amp; Operatività" features={[
         { icon: '\u{1F4BB}', name: 'Dashboard e admin', desc: 'Area personale (eventi, wallet, QR) separata dall\'area admin con sidebar operativa.' },
-        { icon: '\u{1F5C3}\u{FE0F}', name: 'Cassa Unica POS', desc: 'Interfaccia calcolatrice con selezione cliente, griglia prodotti e pagamento misto.' },
+        { icon: '\u{1F4FA}', name: 'Display coda ordini', desc: 'Schermo pubblico fullscreen per stand: avanzamento articoli per postazione, auto-refresh.' },
         { icon: '\u{1F4F1}', name: 'Coda postazione', desc: 'Kiosk fullscreen, font grandi, auto-refresh 5s, bottone Pronto per item.' },
         { icon: '\u{1F4D6}', name: 'Guide stampabili', desc: '4 guide Q&A: amministratore, cassiere, addetto postazione, cassiere stand.' },
       ]} />

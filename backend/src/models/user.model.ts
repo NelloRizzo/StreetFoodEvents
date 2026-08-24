@@ -40,7 +40,8 @@ const userSchema = new Schema(
 
     passwordHash: {
       type: String,
-      required: true,
+      required: false,
+      default: null,
       select: false
     },
 
@@ -54,6 +55,22 @@ const userSchema = new Schema(
       type: Boolean,
       default: true,
       index: true
+    },
+
+    activationTokenHash: {
+      type: String,
+      default: null,
+      select: false
+    },
+
+    activationTokenExpiresAt: {
+      type: Date,
+      default: null
+    },
+
+    activatedAt: {
+      type: Date,
+      default: null
     },
 
     lastLoginAt: {

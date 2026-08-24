@@ -3,11 +3,13 @@ import http from 'node:http';
 import { app } from './app';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { env } from './config/env';
+import { startSocialPublishWorker } from './services/social-publish.service';
 
 const server = http.createServer(app);
 
 async function startServer() {
     await connectDatabase();
+    startSocialPublishWorker();
 
     server.listen(env.PORT, () => {
         console.log(`Server listening on port ${env.PORT}`);

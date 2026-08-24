@@ -13,8 +13,9 @@ export function AdminLayout() {
   const isCashier = /\/stands\/[^/]+\/order/.test(location.pathname) || /\/cashier/.test(location.pathname)
   const isOrdersQueue = /\/ordersqueue/.test(location.pathname)
   const isStationQueue = /\/orders\/station\//.test(location.pathname)
+  const isExchange = /\/events\/[^/]+\/exchange/.test(location.pathname)
 
-  const hideChrome = isSlideshow || isCashier || isOrdersQueue || isStationQueue
+  const hideChrome = isSlideshow || isCashier || isOrdersQueue || isStationQueue || isExchange
 
   return (
     <div className={styles.admin}>
@@ -30,10 +31,14 @@ export function AdminLayout() {
           <AdminTopBar onMenuToggle={() => setIsMobileMenuOpen((v) => !v)} />
         )}
 
-        <div className={styles.content}>
-          <div className="page-shell">
+        <div className={styles.content} data-fullbleed={hideChrome || undefined}>
+          {hideChrome ? (
             <Outlet />
-          </div>
+          ) : (
+            <div className="page-shell">
+              <Outlet />
+            </div>
+          )}
         </div>
       </div>
     </div>
