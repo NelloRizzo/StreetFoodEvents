@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { CategorySelect, type EventCategory } from '../components/CategorySelect'
+import { CategorySelect } from '../components/CategorySelect'
 import styles from './EventProductsPage.module.scss'
 
 type EventProduct = {
@@ -18,7 +18,7 @@ type EventProduct = {
   updatedAt: string
 }
 
-type Event = { id: string; name: string; currencyName: string; categories: EventCategory[] }
+type Event = { id: string; name: string; currencyName: string }
 type Stand = { id: string; name: string; eventIds: string[] }
 type Product = { id: string; name: string; price: number }
 type Station = { id: string; name: string }
@@ -85,13 +85,6 @@ export function EventProductsPage() {
     setForm({ ...emptyForm, eventId })
     setFilteredStands(stands.filter((s) => s.eventIds?.includes(eventId)))
     setStations([])
-  }
-
-  const eventCategories = (eventId: string): EventCategory[] =>
-    events.find((e) => e.id === eventId)?.categories ?? []
-
-  const updateEventCategories = (eventId: string, categories: EventCategory[]) => {
-    setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, categories } : e)))
   }
 
   const currencyInitial = (eventId: string) => {
@@ -230,11 +223,8 @@ export function EventProductsPage() {
             <div className={styles.field}>
               <label>Categorie</label>
               <CategorySelect
-                eventId={form.eventId}
-                categories={eventCategories(form.eventId)}
                 value={form.categoryIds}
                 onChange={(categoryIds) => setForm({ ...form, categoryIds })}
-                onCategoriesChange={(cats) => updateEventCategories(form.eventId, cats)}
               />
             </div>
 
@@ -282,11 +272,8 @@ export function EventProductsPage() {
                 <div className={styles.cardCategory}>
                   <span className={styles.cardCategoryLabel}>Categorie</span>
                   <CategorySelect
-                    eventId={ep.eventId}
-                    categories={eventCategories(ep.eventId)}
                     value={ep.categoryIds ?? []}
                     onChange={(categoryIds) => { void updateCardCategory(ep, categoryIds) }}
-                    onCategoriesChange={(cats) => updateEventCategories(ep.eventId, cats)}
                   />
                 </div>
                 {ep.priceOverride !== null && (

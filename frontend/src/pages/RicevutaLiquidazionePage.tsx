@@ -60,10 +60,25 @@ export function RicevutaLiquidazionePage() {
         </div>
 
         <div className={styles.section}>
+          <h2>Saldo crediti (storno 1:1)</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-ink-soft)', margin: '0 0 0.5rem' }}>
+            Lo storno avviene a parit&agrave; di crediti, indipendentemente dal corso cambio.
+          </p>
+          <table className={styles.table}>
+            <tbody>
+              <tr><td>Crediti caricati allo stand (DARE)</td><td>&nbsp;</td></tr>
+              <tr><td>Crediti liquidati in precedenza (AVERE)</td><td>&nbsp;</td></tr>
+              <tr><td>Importo della presente operazione (crediti)</td><td>&nbsp;</td></tr>
+              <tr><td><strong>Da restituire (totale DARE &minus; totale AVERE)</strong></td><td>&nbsp;</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className={styles.section}>
           <h2>Euro (solo AVERE — liquidazione)</h2>
           <table className={styles.table}>
             <tbody>
-              <tr><td>Lordo &euro;</td><td>&nbsp;</td></tr>
+              <tr><td>Lordo &euro; (crediti &divide; corso cambio)</td><td>&nbsp;</td></tr>
               <tr><td>Percentuale trattenuta gestore %</td><td>&nbsp;</td></tr>
               <tr><td>Trattenuta &euro;</td><td>&nbsp;</td></tr>
               <tr><td><strong>Da corrispondere allo stand &euro;</strong></td><td>&nbsp;</td></tr>
@@ -73,8 +88,19 @@ export function RicevutaLiquidazionePage() {
 
         <p style={{ fontSize: '0.85rem', color: 'var(--color-ink-soft)' }}>
           <strong>DARE (carico crediti):</strong> nessun corrispettivo in euro. I crediti caricati allo stand sono
-          da restituire in fase di liquidazione (AVERE).
+          da restituire in fase di liquidazione (AVERE) con storno 1:1.
         </p>
+
+        <div className={styles.section}>
+          <h2>Registrazione transazione</h2>
+          <table className={styles.table}>
+            <tbody>
+              <tr><td>N. riferimento transazione</td><td>&nbsp;</td></tr>
+              <tr><td>Data registrazione a sistema</td><td>&nbsp;</td></tr>
+              <tr><td>Operatore che ha registrato</td><td>&nbsp;</td></tr>
+            </tbody>
+          </table>
+        </div>
 
         <div className={styles.section}>
           <h2>Note</h2>
@@ -98,6 +124,10 @@ export function RicevutaLiquidazionePage() {
           <p>
             <strong>Importante:</strong> questa ricevuta è solo un documento di cortesia/informativo.
             I valori economici ufficiali sono quelli registrati nel sistema (storico liquidazioni e resoconto per evento).
+          </p>
+          <p>
+            Lo storno crediti avviene sempre a rapporto <strong>1:1</strong> (1 credito = 1 credito),
+            indipendentemente dal corso cambio utilizzato per la conversione in euro.
           </p>
         </footer>
       </article>

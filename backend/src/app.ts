@@ -34,6 +34,7 @@ import { contestsRouter } from './routes/contests.routes';
 import { emailSubscriptionsRouter } from './routes/email-subscriptions.routes';
 import { exchangeRouter } from './routes/exchange.routes';
 import { usageContractsRouter } from './routes/usage-contracts.routes';
+import { categoriesRouter } from './routes/categories.routes';
 
 export const app = express();
 
@@ -94,6 +95,7 @@ app.use('/api/usage-contracts', usageContractsRouter);
 app.use('/api/pois', poisRouter);
 app.use('/api/contests', contestsRouter);
 app.use('/api/exchange', exchangeRouter);
+app.use('/api/categories', categoriesRouter);
 app.use('/api/email-subscriptions', emailSubscriptionsRouter);
 app.use('/api/aliases', aliasesRouter);
 app.use('/api/resolve', resolveRouter);

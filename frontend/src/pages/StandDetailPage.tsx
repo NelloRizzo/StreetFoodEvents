@@ -8,7 +8,7 @@ import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { ImageUploader } from '../components/ImageUploader'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
-import { CategorySelect, type EventCategory } from '../components/CategorySelect'
+import { CategorySelect } from '../components/CategorySelect'
 import type { UploadedImage } from '../lib/upload'
 import styles from './StandDetailPage.module.scss'
 
@@ -45,7 +45,7 @@ type EventProduct = {
   updatedAt: string
 }
 
-type EventRef = { id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null; categories: EventCategory[] }
+type EventRef = { id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }
 type ProductRef = { id: string; name: string; price: number }
 
 type ProductFormData = {
@@ -254,13 +254,6 @@ export function StandDetailPage() {
     setShowProductForm(false)
     setProductForm(emptyProductForm)
     await fetchEventProducts()
-  }
-
-  const eventCategories = (eventId: string): EventCategory[] =>
-    events.find((e) => e.id === eventId)?.categories ?? []
-
-  const updateEventCategories = (eventId: string, categories: EventCategory[]) => {
-    setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, categories } : e)))
   }
 
   const deleteEventProduct = async (id: string) => {
@@ -530,11 +523,8 @@ export function StandDetailPage() {
               <div className={styles.field}>
                 <label>Categorie</label>
                 <CategorySelect
-                  eventId={productForm.eventId}
-                  categories={eventCategories(productForm.eventId)}
                   value={productForm.categoryIds}
                   onChange={(categoryIds) => setProductForm({ ...productForm, categoryIds })}
-                  onCategoriesChange={(cats) => updateEventCategories(productForm.eventId, cats)}
                 />
               </div>
 

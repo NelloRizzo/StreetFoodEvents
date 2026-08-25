@@ -223,6 +223,12 @@ export function EventDetailPage() {
             <Link to={`/events/${eventId}/menu`} className={styles.actionBtnOutline}>
               Menù
             </Link>
+            <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
+              Galleria
+            </Link>
+            <Link to={`/events/${eventId}/photo-booth`} className={styles.actionBtnOutline}>
+              Scatta foto
+            </Link>
             <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} label="QR Evento" />
             <QRCodeDownload apiPath={`/events/${eventId}/menu-qrcode`} fileName={`menu-${event.name}`} label="QR Menu" />
           </div>

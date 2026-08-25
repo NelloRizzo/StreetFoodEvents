@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import { apiRequest } from '../lib/api'
 import styles from './CategorySelect.module.scss'
 
-export type EventCategory = { label: string; sortOrder?: number }
+export type EventCategory = { id: string; label: string; sortOrder?: number }
 
 export function normalizeCategoryLabel(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ')
@@ -18,18 +18,32 @@ export function categoryKey(label: string): string {
 
 type CategorySelectProps = {
   id?: string
-  eventId: string
-  categories: EventCategory[]
   value: string[]
   onChange: (categoryIds: string[]) => void
-  onCategoriesChange: (categories: EventCategory[]) => void
 }
 
-export function CategorySelect({ id, eventId, categories, value, onChange, onCategoriesChange }: CategorySelectProps) {
+export function CategorySelect({ id, value, onChange }: CategorySelectProps) {
+  const [categories, setCategories] = useState<EventCategory[]>([])
+  const [loading, setLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await apiRequest<{ items: EventCategory[] }>('/categories')
+        if (!cancelled) setCategories(res.items ?? [])
+      } catch {
+        // silently fail — chips just won't show
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const toggleCategory = (label: string) => {
     setError(null)
@@ -64,13 +78,13 @@ export function CategorySelect({ id, eventId, categories, value, onChange, onCat
         categories.length > 0
           ? Math.max(...categories.map((c) => c.sortOrder ?? 0)) + 1
           : 1
-      const next = [...categories, { label, sortOrder: nextSortOrder }]
-      await apiRequest(`/events/${eventId}`, {
-        method: 'PATCH',
-        bodyJson: { categories: next },
+      const res = await apiRequest<{ item: EventCategory }>('/categories', {
+        method: 'POST',
+        bodyJson: { label, sortOrder: nextSortOrder },
       })
-      onCategoriesChange(next)
-      onChange([...value, label])
+      const created = res.item
+      setCategories((prev) => [...prev, created].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.label.localeCompare(b.label)))
+      onChange([...value, created.label])
       setError(null)
       setIsCreating(false)
       setDraft('')
@@ -81,10 +95,8 @@ export function CategorySelect({ id, eventId, categories, value, onChange, onCat
     }
   }
 
-  if (!eventId) {
-    return (
-      <p className={styles.hint}>Seleziona prima un evento per scegliere le categorie.</p>
-    )
+  if (loading) {
+    return <p className={styles.hint}>Caricamento categorie…</p>
   }
 
   return (
@@ -92,7 +104,7 @@ export function CategorySelect({ id, eventId, categories, value, onChange, onCat
       <div className={styles.chipGroup}>
         {categories.map((c) => (
           <button
-            key={c.label}
+            key={c.id}
             type="button"
             className={`${styles.chip} ${value.includes(c.label) ? styles.chipActive : ''}`}
             onClick={() => toggleCategory(c.label)}

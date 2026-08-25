@@ -76,6 +76,8 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/stands/:standId', element: <EventStandMenuPage /> },
       { path: 'events/:eventId/stands/:standId/ordersqueue', element: <StandDisplayPage /> },
       { path: 'events/:eventId/contests', element: <EventContestsPage /> },
+      { path: 'events/:eventId/galleria', element: <EventGalleryPage /> },
+      { path: 'events/:eventId/photo-booth', element: <PhotoBoothPage /> },
       { path: 'events/:eventId/slideshow', element: <SlideshowPage /> },
       { path: 'contest/:contestId', element: <ContestPage /> },
       { path: 'contest/:contestId/play', element: <ContestPlayPage /> },
