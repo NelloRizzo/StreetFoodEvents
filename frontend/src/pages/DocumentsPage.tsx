@@ -15,6 +15,18 @@ const documents: DocEntry[] = [
     to: '/admin/documents/product-guide',
     icon: '\u{1F4CB}',
   },
+  {
+    title: 'Ricevuta di liquidazione / carico crediti',
+    description: 'Modello da compilare e firmare per ogni operazione di carico crediti (DARE) o liquidazione (AVERE) con lo stand.',
+    to: '/admin/documents/liquidation-receipt',
+    icon: '\u{1F4B0}',
+  },
+  {
+    title: 'Informativa privacy e modulo consenso',
+    description: 'Informativa GDPR per la raccolta email (foto) e comunicazioni promozionali, con modulo di consenso da far sottoscrivere.',
+    to: '/admin/documents/privacy-notice',
+    icon: '\u{1F512}',
+  },
 ]
 
 export function DocumentsPage() {

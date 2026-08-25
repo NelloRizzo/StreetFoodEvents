@@ -55,6 +55,8 @@ import { ContestDeliveryPage } from './pages/ContestDeliveryPage'
 import { ActivationPage } from './pages/ActivationPage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { ProductGuidePage } from './pages/ProductGuidePage'
+import { RicevutaLiquidazionePage } from './pages/RicevutaLiquidazionePage'
+import { InformativaPrivacyPage } from './pages/InformativaPrivacyPage'
 import { ParamRedirect } from './components/ParamRedirect'
 
 export const router = createBrowserRouter([
@@ -142,6 +144,8 @@ export const router = createBrowserRouter([
       { path: 'menu-print', element: <MenuPrintPage /> },
       { path: 'documents', element: <DocumentsPage /> },
       { path: 'documents/product-guide', element: <ProductGuidePage /> },
+      { path: 'documents/liquidation-receipt', element: <RicevutaLiquidazionePage /> },
+      { path: 'documents/privacy-notice', element: <InformativaPrivacyPage /> },
 
       /* Legacy admin sub-paths */
       { path: 'usage-contracts-legacy', element: <Navigate to="/admin/usage-contracts" replace /> },
