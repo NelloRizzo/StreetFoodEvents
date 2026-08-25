@@ -6,10 +6,34 @@ import { ImageUploader } from '../components/ImageUploader'
 import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './ProductsPage.module.scss'
 
+const ALLERGEN_OPTIONS = [
+  { value: 'gluten', label: 'Glutine' },
+  { value: 'crustaceans', label: 'Crostacei' },
+  { value: 'eggs', label: 'Uova' },
+  { value: 'fish', label: 'Pesce' },
+  { value: 'peanuts', label: 'Arachidi' },
+  { value: 'soy', label: 'Soia' },
+  { value: 'milk', label: 'Latte' },
+  { value: 'tree-nuts', label: 'Frutta a guscio' },
+  { value: 'celery', label: 'Sedano' },
+  { value: 'mustard', label: 'Senape' },
+  { value: 'sesame', label: 'Sesamo' },
+  { value: 'sulphites', label: 'Solfiti' },
+  { value: 'lupins', label: 'Lupini' },
+  { value: 'molluscs', label: 'Molluschi' },
+]
+
+const ALLERGEN_LABELS: Record<string, string> = Object.fromEntries(
+  ALLERGEN_OPTIONS.map((o) => [o.value, o.label])
+)
+
 type Product = {
   id: string
   name: string
+  description: string | null
   ingredients: string[]
+  allergens: string[]
+  isFrozen: boolean
   price: number
   coverImage: unknown | null
   gallery: unknown[]
@@ -19,13 +43,25 @@ type Product = {
 
 type ProductFormData = {
   name: string
+  description: string
   ingredients: string
+  allergens: string[]
+  isFrozen: boolean
   price: string
   coverImage: UploadedImage | null
   gallery: UploadedImage[]
 }
 
-const emptyForm: ProductFormData = { name: '', ingredients: '', price: '', coverImage: null, gallery: [] }
+const emptyForm: ProductFormData = {
+  name: '',
+  description: '',
+  ingredients: '',
+  allergens: [],
+  isFrozen: false,
+  price: '',
+  coverImage: null,
+  gallery: [],
+}
 
 export function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -54,7 +90,10 @@ export function ProductsPage() {
   const openEdit = (product: Product) => {
     setForm({
       name: product.name,
+      description: product.description ?? '',
       ingredients: product.ingredients.join(', '),
+      allergens: product.allergens ?? [],
+      isFrozen: product.isFrozen ?? false,
       price: String(product.price),
       coverImage: product.coverImage as UploadedImage | null,
       gallery: product.gallery as UploadedImage[],
@@ -63,10 +102,22 @@ export function ProductsPage() {
     setShowForm(true)
   }
 
+  const toggleAllergen = (value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      allergens: prev.allergens.includes(value)
+        ? prev.allergens.filter((a) => a !== value)
+        : [...prev.allergens, value],
+    }))
+  }
+
   const handleSubmit = async () => {
     const bodyJson = {
       name: form.name,
+      description: form.description.trim() || null,
       ingredients: form.ingredients.split(',').map((s) => s.trim()).filter(Boolean),
+      allergens: form.allergens,
+      isFrozen: form.isFrozen,
       price: Number(form.price),
       coverImage: form.coverImage,
       gallery: form.gallery,
@@ -117,9 +168,42 @@ export function ProductsPage() {
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="prod-ingredients">Ingredienti (separati da virgola)</label>
-              <input id="prod-ingredients" value={form.ingredients} onChange={(e) => setForm({ ...form, ingredients: e.target.value })} />
+              <label htmlFor="prod-desc">Descrizione</label>
+              <textarea id="prod-desc" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Descrizione breve del prodotto (opzionale)" />
             </div>
+
+            <div className={styles.field}>
+              <label htmlFor="prod-ingredients">Ingredienti (separati da virgola)</label>
+              <textarea id="prod-ingredients" rows={2} value={form.ingredients} onChange={(e) => setForm({ ...form, ingredients: e.target.value })} placeholder="es. farina, pomodoro, mozzarella, basilico" />
+            </div>
+
+            <div className={styles.field}>
+              <label>Allergeni (Reg. UE 1169/2011)</label>
+              <div className={styles.allergenGrid}>
+                {ALLERGEN_OPTIONS.map((opt) => (
+                  <label key={opt.value} className={styles.allergenCheck}>
+                    <input
+                      type="checkbox"
+                      checked={form.allergens.includes(opt.value)}
+                      onChange={() => toggleAllergen(opt.value)}
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <label className={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={form.isFrozen}
+                onChange={(e) => setForm({ ...form, isFrozen: e.target.checked })}
+              />
+              <span>Prodotto congelato *</span>
+            </label>
+            <p className={styles.fieldHint}>
+              * I prodotti congelati sono contrassegnati con un asterisco (*) conformemente al D.Lgs. 231/2017.
+            </p>
 
             <div className={styles.field}>
               <label htmlFor="prod-price">Prezzo standard</label>
@@ -157,10 +241,21 @@ export function ProductsPage() {
           {products.map((product) => (
             <article key={product.id} className={styles.card}>
               <div className={styles.cardBody}>
-                <strong className={styles.cardName}>{product.name}</strong>
+                <strong className={styles.cardName}>
+                  {product.name}
+                  {product.isFrozen && <span className={styles.frozenBadge}>*</span>}
+                </strong>
                 <span className={styles.cardPrice}>{product.price.toFixed(2)} &euro;</span>
+                {product.description && (
+                  <span className={styles.cardIngredients}>{product.description}</span>
+                )}
                 {product.ingredients.length > 0 && (
-                  <span className={styles.cardIngredients}>{product.ingredients.join(', ')}</span>
+                  <span className={styles.cardIngredients}>Ingredienti: {product.ingredients.join(', ')}</span>
+                )}
+                {product.allergens.length > 0 && (
+                  <span className={styles.cardAllergens}>
+                    Allergeni: {product.allergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(', ')}
+                  </span>
                 )}
               </div>
               <div className={styles.cardActions}>

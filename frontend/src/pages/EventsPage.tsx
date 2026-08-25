@@ -86,7 +86,6 @@ type EventFormData = {
   currencySymbol: UploadedImage | null
   feeBands: Array<{ maxAmount: string; feePercent: string; feeFlat: string }>
   denominations: Array<{ label: string; value: string; quantity: string }>
-  categories: Array<{ label: string }>
 }
 
 const emptyForm: EventFormData = {
@@ -122,7 +121,6 @@ const emptyForm: EventFormData = {
   currencySymbol: null,
   feeBands: [],
   denominations: [],
-  categories: [],
 }
 
 type StandItem = {
@@ -426,7 +424,6 @@ export function EventsPage() {
         value: String(d.value),
         quantity: String(d.quantity),
       })),
-      categories: (ev.categories ?? []).map((c) => ({ label: c.label })),
     })
     setEditingId(ev.id)
     setShowForm(true)
@@ -490,10 +487,6 @@ export function EventsPage() {
         label: d.label,
         value: d.value ? Number(d.value) : 0,
         quantity: d.quantity ? Number(d.quantity) : 0,
-      })),
-      categories: form.categories.map((c, i) => ({
-        label: c.label,
-        sortOrder: i,
       })),
     }
 
@@ -1063,41 +1056,6 @@ export function EventsPage() {
                 onClick={() => setForm({ ...form, denominations: [...form.denominations, { label: '', value: '', quantity: '' }] })}
               >
                 + Aggiungi taglio
-              </button>
-            </fieldset>
-
-            <fieldset className={styles.fieldset}>
-              <legend className={styles.legend}>Categorie prodotti</legend>
-              <p className={styles.fieldHint}>Categorie per organizzare il menu pubblico per categoria (es. "Street Food", "Dolci", "Bevande").</p>
-              {form.categories.map((c, idx) => (
-                <div key={idx} className={styles.fieldRow}>
-                  <div className={styles.field} style={{ flex: 1 }}>
-                    <label>Nome categoria</label>
-                    <input
-                      value={c.label}
-                      onChange={(e) => {
-                        const cats = [...form.categories]
-                        cats[idx] = { ...cats[idx], label: e.target.value }
-                        setForm({ ...form, categories: cats })
-                      }}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.textBtn}
-                    style={{ alignSelf: 'flex-end', marginBottom: '0.25rem' }}
-                    onClick={() => setForm({ ...form, categories: form.categories.filter((_, i) => i !== idx) })}
-                  >
-                    Rimuovi
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                className={styles.secondaryBtn}
-                onClick={() => setForm({ ...form, categories: [...form.categories, { label: '' }] })}
-              >
-                + Aggiungi categoria
               </button>
             </fieldset>
 

@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { type UploadedImage } from '../lib/upload'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
@@ -64,12 +65,14 @@ const STAND_TYPE_EMOJIS = {
 
 export function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>()
+  const { isAuthenticated } = useAuth()
   const [event, setEvent] = useState<Event | null>(null)
   const [stands, setStands] = useState<Stand[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isFavorite, setIsFavorite] = useState(false)
   const [favId, setFavId] = useState<string | null>(null)
   const [favLoading, setFavLoading] = useState(false)
+  const [hasContestAdmin, setHasContestAdmin] = useState(false)
   const [modal, setModal] = useState<{ open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }>({ open: false, variant: 'alert', title: '', message: '' })
   const themeData = useMemo(
     () =>
@@ -119,6 +122,18 @@ export function EventDetailPage() {
       })
       .catch(() => {})
   }, [eventId])
+
+  useEffect(() => {
+    if (!eventId || !isAuthenticated) return
+    apiRequest<{ isPlatformAdmin: boolean; roles: { slug: string; scope: string; eventId: string | null }[] }>('/auth/me/roles')
+      .then((data) => {
+        const eventRoles = data.roles.filter(
+          (r) => r.scope === 'platform' || (r.scope === 'event' && r.eventId === eventId)
+        )
+        setHasContestAdmin(data.isPlatformAdmin || eventRoles.some((r) => r.slug === 'contest-admin'))
+      })
+      .catch(() => {})
+  }, [eventId, isAuthenticated])
 
   const toggleFavorite = async () => {
     if (!eventId || favLoading) return
@@ -289,6 +304,19 @@ export function EventDetailPage() {
             </section>
           )
         })}
+
+        {/* Contest admin link */}
+        {hasContestAdmin && (
+          <section className={styles.standsSection}>
+            <h2 className={styles.sectionTitle}>Contest</h2>
+            <Link to={`/admin/events/${eventId}/contest-manage`} className={styles.actionBtn}>
+              Gestisci contest
+            </Link>
+            <Link to={`/events/${eventId}/contests`} className={styles.actionBtnOutline} style={{ marginLeft: '0.5rem' }}>
+              Vedi contest pubblici
+            </Link>
+          </section>
+        )}
 
       </div>
 

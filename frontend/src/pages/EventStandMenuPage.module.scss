@@ -533,6 +533,30 @@
   font-size: 0.9rem;
 }
 
+.productDescription {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.productAllergens {
+  color: #c0392b;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.frozenBadge {
+  color: #2980b9;
+  font-weight: 900;
+}
+
+.photoDisclaimer {
+  color: var(--color-ink-soft);
+  font-size: 0.75rem;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
 .productPrice {
   color: var(--color-ink-strong);
   font-weight: 800;

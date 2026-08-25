@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 
-import { ProductModel } from '../models/product.model';
+import { ProductModel, ALLERGEN_VALUES, type Allergen } from '../models/product.model';
 import { EventProductModel } from '../models/event-product.model';
 
 function isValidObjectId(value: string | undefined): value is string {
@@ -11,7 +11,10 @@ function isValidObjectId(value: string | undefined): value is string {
 function toProductResponse(product: {
     _id: Types.ObjectId;
     name: string;
+    description?: string | null;
     ingredients: string[];
+    allergens?: Allergen[];
+    isFrozen?: boolean;
     price: number;
     coverImage?: unknown | null;
     gallery?: unknown[];
@@ -21,7 +24,10 @@ function toProductResponse(product: {
     return {
         id: product._id.toString(),
         name: product.name,
+        description: product.description ?? null,
         ingredients: product.ingredients,
+        allergens: product.allergens ?? [],
+        isFrozen: product.isFrozen ?? false,
         price: product.price,
         coverImage: product.coverImage ?? null,
         gallery: product.gallery ?? [],
@@ -63,7 +69,10 @@ export async function getProductById(req: Request, res: Response) {
 export async function createProduct(req: Request, res: Response) {
     const {
         name,
+        description,
         ingredients,
+        allergens,
+        isFrozen,
         price,
         coverImage,
         gallery
@@ -75,9 +84,16 @@ export async function createProduct(req: Request, res: Response) {
         });
     }
 
+    const validAllergens = Array.isArray(allergens)
+        ? allergens.filter((a: string): a is Allergen => ALLERGEN_VALUES.includes(a as Allergen))
+        : [];
+
     const product = await ProductModel.create({
         name,
+        description: description ?? null,
         ingredients: Array.isArray(ingredients) ? ingredients : [],
+        allergens: validAllergens,
+        isFrozen: Boolean(isFrozen),
         price,
         coverImage: coverImage ?? null,
         gallery: gallery ?? []
@@ -107,7 +123,10 @@ export async function updateProduct(req: Request, res: Response) {
 
     const {
         name,
+        description,
         ingredients,
+        allergens,
+        isFrozen,
         price,
         coverImage,
         gallery
@@ -117,8 +136,22 @@ export async function updateProduct(req: Request, res: Response) {
         product.name = name;
     }
 
+    if (description !== undefined) {
+        product.description = description;
+    }
+
     if (ingredients !== undefined) {
         product.ingredients = ingredients;
+    }
+
+    if (allergens !== undefined) {
+        product.allergens = Array.isArray(allergens)
+            ? allergens.filter((a: string): a is Allergen => ALLERGEN_VALUES.includes(a as Allergen))
+            : [];
+    }
+
+    if (isFrozen !== undefined) {
+        product.isFrozen = Boolean(isFrozen);
     }
 
     if (price !== undefined) {

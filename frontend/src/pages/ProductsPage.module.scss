@@ -118,6 +118,56 @@
   font-size: 0.85rem;
 }
 
+.cardAllergens {
+  color: #c0392b;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.frozenBadge {
+  display: inline-block;
+  margin-left: 0.3rem;
+  color: #2980b9;
+  font-weight: 900;
+}
+
+.allergenGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+
+.allergenCheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.allergenCheck input[type='checkbox'] {
+  accent-color: var(--color-brand);
+}
+
+.checkboxRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.checkboxRow input[type='checkbox'] {
+  accent-color: var(--color-brand);
+}
+
+.fieldHint {
+  color: var(--color-ink-soft);
+  font-size: 0.8rem;
+  margin-top: -0.5rem;
+}
+
 .cardActions {
   display: flex;
   gap: 0.75rem;

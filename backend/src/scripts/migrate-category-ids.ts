@@ -26,12 +26,12 @@ async function run() {
     }
 
     // Migra: categoryId stringa → categoryIds array
-    const withCategoryId = await collection.find({ categoryId: { $exists: true, $ne: null, $ne: '' } }).toArray();
+    const withCategoryId = await collection.find({ categoryId: { $exists: true, $ne: null }, $and: [{ categoryId: { $ne: '' } }] }).toArray();
     console.log(`Di questi, ${withCategoryId.length} hanno un valore non vuoto da migrare.`);
 
     // Set categoryIds from categoryId for documents that have a non-empty categoryId
     const result1 = await collection.updateMany(
-        { categoryId: { $exists: true, $ne: null, $ne: '' } },
+        { categoryId: { $exists: true, $ne: null }, $and: [{ categoryId: { $ne: '' } }] },
         [
             {
                 $set: {

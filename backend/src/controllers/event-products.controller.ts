@@ -19,7 +19,10 @@ type ImageData = {
 type PopulatedProduct = {
     _id: Types.ObjectId;
     name: string;
+    description: string | null;
     ingredients: string[];
+    allergens: string[];
+    isFrozen: boolean;
     price: number;
     coverImage: ImageData | null;
     gallery: ImageData[];
@@ -50,8 +53,11 @@ function toEventProductResponse(ep: {
             ? {
                   id: product!._id.toString(),
                   name: product!.name,
+                  description: product!.description ?? null,
                   price: product!.price,
                   ingredients: product!.ingredients,
+                  allergens: product!.allergens ?? [],
+                  isFrozen: product!.isFrozen ?? false,
                   coverImage: product!.coverImage,
                   gallery: product!.gallery,
               }

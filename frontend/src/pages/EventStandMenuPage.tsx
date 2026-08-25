@@ -19,8 +19,11 @@ type MenuItem = {
   product: {
     id: string
     name: string
+    description: string | null
     price: number
     ingredients: string[]
+    allergens: string[]
+    isFrozen: boolean
     coverImage: UploadedImage | null
   } | null
   stationIds: string[]
@@ -34,8 +37,11 @@ type CategoryMenuItem = {
   productId: string
   eventProductId: string
   name: string
+  description: string | null
   price: number
   ingredients: string[]
+  allergens: string[]
+  isFrozen: boolean
   coverImage: UploadedImage | null
   categoryIds: string[]
   stationIds: string[]
@@ -613,10 +619,21 @@ export function EventStandMenuPage() {
               </div>
             )}
             <div className={styles.productInfo}>
-              <h2 className={styles.productName}>{selectedItem.product.name}</h2>
+              <h2 className={styles.productName}>
+                {selectedItem.product.name}
+                {selectedItem.product.isFrozen && <span className={styles.frozenBadge}> *</span>}
+              </h2>
+              {selectedItem.product.description && (
+                <p className={styles.productDescription}>{selectedItem.product.description}</p>
+              )}
               {selectedItem.product.ingredients.length > 0 && (
                 <p className={styles.productIngredients}>
-                  {selectedItem.product.ingredients.join(', ')}
+                  <strong>Ingredienti:</strong> {selectedItem.product.ingredients.join(', ')}
+                </p>
+              )}
+              {selectedItem.product.allergens.length > 0 && (
+                <p className={styles.productAllergens}>
+                  <strong>Allergeni:</strong> {selectedItem.product.allergens.join(', ')}
                 </p>
               )}
               {(selectedItem.priceOverride ?? selectedItem.product.price) > 0 && (
@@ -628,6 +645,7 @@ export function EventStandMenuPage() {
                   />
                 </span>
               )}
+              <p className={styles.photoDisclaimer}>La foto è solo indicativa. Il prodotto potrebbe differire da quanto mostrato.</p>
             </div>
             <div className={styles.productActions}>
               {isAuthenticated && (

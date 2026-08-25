@@ -175,6 +175,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
         { label: 'Ruoli', to: '/admin/user-roles', icon: '\u{1F511}' },
         { label: 'Contratti d\'uso', to: '/admin/usage-contracts', icon: '\u{1F4C4}' },
         { label: 'Menu stampa', to: '/admin/menu-print', icon: '\u{1F5A8}' },
+        { label: 'Documenti', to: '/admin/documents', icon: '\u{1F4C4}' },
         { label: 'Guide', to: '/guide/event-cashier', icon: '\u{1F4D6}' },
         { label: 'Volantino', to: '/flyer', icon: '\u{1F4E2}' },
       ],

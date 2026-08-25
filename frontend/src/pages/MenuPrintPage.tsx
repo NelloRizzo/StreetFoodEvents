@@ -20,8 +20,11 @@ type Stand = {
 type ProductInfo = {
   id: string
   name: string
+  description: string | null
   price: number
   ingredients: string[]
+  allergens: string[]
+  isFrozen: boolean
   coverImage: ImageData | null
   gallery: ImageData[]
 }
@@ -78,10 +81,21 @@ function buildMenuHtml(
             const ingredients = ep.product.ingredients.length > 0
               ? `<p style="font-size:0.78rem;color:#587065;margin:0.25rem 0 0;line-height:1.4">${esc(ep.product.ingredients.join(', '))}</p>`
               : ''
+            const allergens = ep.product.allergens.length > 0
+              ? `<p style="font-size:0.75rem;color:#c0392b;margin:0.15rem 0 0;font-weight:600">Allergeni: ${esc(ep.product.allergens.join(', '))}</p>`
+              : ''
+            const frozenBadge = ep.product.isFrozen
+              ? '<span style="color:#2980b9;font-weight:900;margin-left:0.25rem">*</span>'
+              : ''
+            const desc = ep.product.description
+              ? `<p style="font-size:0.8rem;color:#587065;margin:0.15rem 0 0;font-style:italic">${esc(ep.product.description)}</p>`
+              : ''
             return `<div style="border:1px solid #ddd;border-radius:12px;padding:0.75rem;background:#fff;break-inside:avoid">
               ${prodCover}
-              <h3 style="font-size:1rem;margin:0 0 0.2rem;color:#14261f">${esc(ep.product.name)}</h3>
+              <h3 style="font-size:1rem;margin:0 0 0.2rem;color:#14261f">${esc(ep.product.name)}${frozenBadge}</h3>
+              ${desc}
               ${ingredients}
+              ${allergens}
               <p style="font-size:1.05rem;font-weight:700;color:#bf5a2a;margin:0.4rem 0 0">${price.toFixed(2)} ${priceBadge}</p>
             </div>`
           }).join('')}

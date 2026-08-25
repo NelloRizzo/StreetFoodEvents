@@ -53,6 +53,8 @@ import { StandSettlementsPage } from './pages/StandSettlementsPage'
 import { SettlementsReportPage } from './pages/SettlementsReportPage'
 import { ContestDeliveryPage } from './pages/ContestDeliveryPage'
 import { ActivationPage } from './pages/ActivationPage'
+import { DocumentsPage } from './pages/DocumentsPage'
+import { ProductGuidePage } from './pages/ProductGuidePage'
 import { ParamRedirect } from './components/ParamRedirect'
 
 export const router = createBrowserRouter([
@@ -138,6 +140,8 @@ export const router = createBrowserRouter([
       { path: 'frames', element: <FramesPage /> },
       { path: 'usage-contracts', element: <UsageContractsPage /> },
       { path: 'menu-print', element: <MenuPrintPage /> },
+      { path: 'documents', element: <DocumentsPage /> },
+      { path: 'documents/product-guide', element: <ProductGuidePage /> },
 
       /* Legacy admin sub-paths */
       { path: 'usage-contracts-legacy', element: <Navigate to="/admin/usage-contracts" replace /> },

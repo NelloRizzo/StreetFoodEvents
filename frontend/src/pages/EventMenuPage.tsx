@@ -14,8 +14,11 @@ type MenuItem = {
   standLogo: UploadedImage | null
   eventProductId: string
   name: string
+  description: string | null
   price: number
   ingredients: string[]
+  allergens: string[]
+  isFrozen: boolean
   coverImage: UploadedImage | null
   categoryIds: string[]
 }
@@ -35,7 +38,10 @@ type MenuResponse = {
 
 type ProductModal = {
   name: string
+  description: string | null
   ingredients: string[]
+  allergens: string[]
+  isFrozen: boolean
   price: number
   coverImage: UploadedImage | null
   standName: string
@@ -182,7 +188,10 @@ export function EventMenuPage() {
                         className={styles.menuCard}
                         onClick={() => setSelectedItem({
                           name: product.name,
+                          description: product.description,
                           ingredients: product.ingredients,
+                          allergens: product.allergens,
+                          isFrozen: product.isFrozen,
                           price: product.price,
                           coverImage: product.coverImage,
                           standName: group.standName,
@@ -194,7 +203,10 @@ export function EventMenuPage() {
                             e.preventDefault()
                             setSelectedItem({
                               name: product.name,
+                              description: product.description,
                               ingredients: product.ingredients,
+                              allergens: product.allergens,
+                              isFrozen: product.isFrozen,
                               price: product.price,
                               coverImage: product.coverImage,
                               standName: group.standName,
@@ -251,7 +263,10 @@ export function EventMenuPage() {
                         className={styles.menuCard}
                         onClick={() => setSelectedItem({
                           name: product.name,
+                          description: product.description,
                           ingredients: product.ingredients,
+                          allergens: product.allergens,
+                          isFrozen: product.isFrozen,
                           price: product.price,
                           coverImage: product.coverImage,
                           standName: product.standName,
@@ -263,7 +278,10 @@ export function EventMenuPage() {
                             e.preventDefault()
                             setSelectedItem({
                               name: product.name,
+                              description: product.description,
                               ingredients: product.ingredients,
+                              allergens: product.allergens,
+                              isFrozen: product.isFrozen,
                               price: product.price,
                               coverImage: product.coverImage,
                               standName: product.standName,
@@ -323,10 +341,19 @@ export function EventMenuPage() {
               </div>
             )}
             <div className={styles.productInfo}>
-              <h2 className={styles.productName}>{selectedItem.name}</h2>
+              <h2 className={styles.productName}>
+                {selectedItem.name}
+                {selectedItem.isFrozen && <span className={styles.frozenBadge}> *</span>}
+              </h2>
               <p className={styles.productIngredients}>Stand: {selectedItem.standName}</p>
+              {selectedItem.description && (
+                <p className={styles.productIngredients}>{selectedItem.description}</p>
+              )}
               {selectedItem.ingredients.length > 0 && (
-                <p className={styles.productIngredients}>{selectedItem.ingredients.join(', ')}</p>
+                <p className={styles.productIngredients}><strong>Ingredienti:</strong> {selectedItem.ingredients.join(', ')}</p>
+              )}
+              {selectedItem.allergens.length > 0 && (
+                <p className={styles.productAllergens}><strong>Allergeni:</strong> {selectedItem.allergens.join(', ')}</p>
               )}
               {selectedItem.price > 0 && (
                 <span className={styles.productPrice}>
@@ -337,6 +364,7 @@ export function EventMenuPage() {
                   />
                 </span>
               )}
+              <p className={styles.photoDisclaimer}>La foto è solo indicativa. Il prodotto potrebbe differire da quanto mostrato.</p>
             </div>
             <div className={styles.productActions}>
               <button className={styles.modalCloseBtn} onClick={() => setSelectedItem(null)}>

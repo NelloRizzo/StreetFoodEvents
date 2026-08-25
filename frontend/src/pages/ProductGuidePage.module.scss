@@ -1,0 +1,195 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.printActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.backLink {
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.printBtn {
+  padding: 0.5rem 1.2rem;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.form {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  line-height: 1.7;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--color-brand);
+  padding-bottom: 1rem;
+}
+
+.header h1 {
+  font-size: 1.6rem;
+  color: var(--color-ink-strong);
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0;
+}
+
+.topFields {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.productBlock {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.2rem;
+  page-break-inside: avoid;
+}
+
+.blockHeader {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px dashed var(--color-line);
+}
+
+.blockNumber {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--color-brand);
+}
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  min-height: 1.6rem;
+}
+
+.label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-ink-strong);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.line {
+  flex: 1;
+  border-bottom: 1px solid #aaa;
+  min-height: 1.2rem;
+}
+
+.lineShort {
+  width: 6rem;
+  border-bottom: 1px solid #aaa;
+  min-height: 1.2rem;
+}
+
+.fieldHint {
+  font-size: 0.85rem;
+  color: var(--color-ink-soft);
+}
+
+.textArea {
+  display: grid;
+  gap: 1.2rem;
+  padding-left: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.allergenSection {
+  margin: 0.75rem 0;
+}
+
+.allergenSection > .label {
+  display: block;
+  margin-bottom: 0.5rem;
+  white-space: normal;
+}
+
+.allergenGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.3rem 1rem;
+}
+
+.allergenItem {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  cursor: default;
+}
+
+.allergenName {
+  font-weight: 600;
+  color: var(--color-ink-strong);
+}
+
+.allergenExamples {
+  color: var(--color-ink-soft);
+  font-size: 0.8rem;
+}
+
+.checkbox {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid #888;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-line);
+  font-size: 0.85rem;
+  color: var(--color-ink-soft);
+}
+
+.footer p {
+  margin: 0.3rem 0;
+}
+
+@media print {
+  .printActions {
+    display: none;
+  }
+
+  .form {
+    border: none;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .page {
+    padding: 0;
+  }
+}

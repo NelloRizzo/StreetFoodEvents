@@ -726,7 +726,7 @@ export async function eventMenu(req: Request, res: Response) {
         .filter((ep) => ep.productId)
         .map((ep) => {
             const stand = standMap.get(ep.standId.toString());
-            const product = ep.productId as unknown as { _id: Types.ObjectId; name: string; price: number; ingredients: string[]; coverImage: unknown; gallery: unknown[] };
+            const product = ep.productId as unknown as { _id: Types.ObjectId; name: string; description: string | null; price: number; ingredients: string[]; allergens: string[]; isFrozen: boolean; coverImage: unknown; gallery: unknown[] };
             const standNumber = stand?.numbers?.find((n) => n.eventId.equals(eventIdObj));
 
             return {
@@ -738,8 +738,11 @@ export async function eventMenu(req: Request, res: Response) {
                 productId: product._id.toString(),
                 eventProductId: ep._id.toString(),
                 name: product.name,
+                description: product.description ?? null,
                 price: ep.priceOverride ?? product.price,
                 ingredients: product.ingredients,
+                allergens: product.allergens ?? [],
+                isFrozen: product.isFrozen ?? false,
                 coverImage: product.coverImage ?? null,
                 gallery: product.gallery ?? [],
                 categoryIds: ep.categoryIds ?? [],
