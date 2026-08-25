@@ -37,7 +37,7 @@ type CategoryMenuItem = {
   price: number
   ingredients: string[]
   coverImage: UploadedImage | null
-  categoryId: string | null
+  categoryIds: string[]
   stationIds: string[]
 }
 
@@ -515,7 +515,7 @@ export function EventStandMenuPage() {
             <div className={styles.left}>
               {categoryLabels.length > 0 ? (
                 categoryLabels.map((cat) => {
-                  const items = categoryItems.filter((ci) => ci.categoryId === cat)
+                  const items = categoryItems.filter((ci) => ci.categoryIds.includes(cat))
                   if (items.length === 0) return null
                   return (
                     <section key={cat} className={styles.menuSection}>
@@ -555,11 +555,11 @@ export function EventStandMenuPage() {
                 <p className={styles.emptyCart}>Nessun prodotto disponibile.</p>
               )}
 
-              {categoryItems.some((ci) => !ci.categoryId) && (
+              {categoryItems.some((ci) => ci.categoryIds.length === 0) && (
                 <section className={styles.menuSection}>
                   <h2 className={styles.sectionTitle}>Senza categoria</h2>
                   <div className={styles.menuList}>
-                    {categoryItems.filter((ci) => !ci.categoryId).map((item) => (
+                    {categoryItems.filter((ci) => ci.categoryIds.length === 0).map((item) => (
                       <div key={item.eventProductId} className={styles.menuCard}>
                         {item.coverImage ? (
                           <img src={item.coverImage.url} alt={item.name} className={styles.thumb} />

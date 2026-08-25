@@ -17,7 +17,7 @@ type MenuItem = {
   price: number
   ingredients: string[]
   coverImage: UploadedImage | null
-  categoryId: string | null
+  categoryIds: string[]
 }
 
 type MenuResponse = {

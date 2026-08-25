@@ -38,7 +38,7 @@ type EventProduct = {
   productId: string
   stationIds: string[]
   priceOverride: number | null
-  categoryId: string | null
+  categoryIds: string[]
   available: boolean
   sequenceOrder?: number
   createdAt: string
@@ -53,10 +53,10 @@ type ProductFormData = {
   productId: string
   stationIds: string[]
   priceOverride: string
-  categoryId: string
+  categoryIds: string[]
 }
 
-const emptyProductForm: ProductFormData = { eventId: '', productId: '', stationIds: [], priceOverride: '', categoryId: '' }
+const emptyProductForm: ProductFormData = { eventId: '', productId: '', stationIds: [], priceOverride: '', categoryIds: [] }
 
 export function StandDetailPage() {
   const { standId } = useParams<{ standId: string }>()
@@ -248,7 +248,7 @@ export function StandDetailPage() {
         productId: productForm.productId,
         stationIds: productForm.stationIds,
         priceOverride: productForm.priceOverride ? Number(productForm.priceOverride) : null,
-        categoryId: productForm.categoryId || null,
+        categoryIds: productForm.categoryIds,
       },
     })
     setShowProductForm(false)
@@ -528,13 +528,12 @@ export function StandDetailPage() {
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="ep-category">Categoria</label>
+                <label>Categorie</label>
                 <CategorySelect
-                  id="ep-category"
                   eventId={productForm.eventId}
                   categories={eventCategories(productForm.eventId)}
-                  value={productForm.categoryId}
-                  onChange={(categoryId) => setProductForm({ ...productForm, categoryId })}
+                  value={productForm.categoryIds}
+                  onChange={(categoryIds) => setProductForm({ ...productForm, categoryIds })}
                   onCategoriesChange={(cats) => updateEventCategories(productForm.eventId, cats)}
                 />
               </div>
@@ -578,7 +577,9 @@ export function StandDetailPage() {
                   <span className={styles.productStations}>
                     {stations.filter((s) => ep.stationIds.includes(s.id)).map((s) => s.name).join(', ')}
                   </span>
-                  {ep.categoryId && <span className={styles.productCategory}>{ep.categoryId}</span>}
+                  {ep.categoryIds?.length > 0 && ep.categoryIds.map((cat) => (
+                    <span key={cat} className={styles.productCategory}>{cat}</span>
+                  ))}
                   {ep.priceOverride !== null && (
                     <span className={styles.productPrice}>
                       {(() => {

@@ -661,7 +661,7 @@ export async function duplicateEvent(req: Request, res: Response) {
                 priceOverride: ep.priceOverride ?? null,
                 available: ep.available ?? true,
                 sequenceOrder: ep.sequenceOrder ?? 0,
-                categoryId: ep.categoryId ?? null
+                categoryIds: ep.categoryIds ?? []
             }))
         );
     }
@@ -742,7 +742,7 @@ export async function eventMenu(req: Request, res: Response) {
                 ingredients: product.ingredients,
                 coverImage: product.coverImage ?? null,
                 gallery: product.gallery ?? [],
-                categoryId: ep.categoryId ?? null,
+                categoryIds: ep.categoryIds ?? [],
                 stationIds: ep.stationIds.map((id) => id.toString()),
                 sequenceOrder: ep.sequenceOrder ?? 0,
             };
@@ -760,13 +760,20 @@ export async function eventMenu(req: Request, res: Response) {
     byCategory['Senza categoria'] = [];
 
     for (const item of standItems) {
-        const cat = item.categoryId;
-        if (cat && byCategory[cat]) {
-            byCategory[cat].push(item);
-        } else if (cat) {
-            byCategory[cat] = [item];
-        } else {
+        const cats = item.categoryIds;
+        if (cats.length === 0) {
             byCategory['Senza categoria'].push(item);
+        } else {
+            let placed = false;
+            for (const cat of cats) {
+                if (byCategory[cat]) {
+                    byCategory[cat].push(item);
+                    placed = true;
+                }
+            }
+            if (!placed) {
+                byCategory['Senza categoria'].push(item);
+            }
         }
     }
 

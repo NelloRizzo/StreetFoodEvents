@@ -43,11 +43,9 @@ const eventProductSchema = new Schema(
             type: Number,
             default: 0
         },
-        categoryId: {
-            type: String,
-            trim: true,
-            default: null,
-            maxlength: 80
+        categoryIds: {
+            type: [{ type: String, trim: true, maxlength: 80 }],
+            default: []
         }
     },
     {

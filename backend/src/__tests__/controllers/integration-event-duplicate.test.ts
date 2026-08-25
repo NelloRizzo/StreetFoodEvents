@@ -130,7 +130,7 @@ describe('POST /api/events/:eventId/duplicate', () => {
             priceOverride: 8,
             available: true,
             sequenceOrder: 2,
-            categoryId: 'Panini'
+            categoryIds: ['Panini']
         });
 
         await POIModel.create({
@@ -210,7 +210,7 @@ describe('POST /api/events/:eventId/duplicate', () => {
         expect(copiedProducts[0]!.standId.toString()).toBe(stand._id.toString());
         expect(copiedProducts[0]!.priceOverride).toBe(8);
         expect(copiedProducts[0]!.sequenceOrder).toBe(2);
-        expect(copiedProducts[0]!.categoryId).toBe('Panini');
+        expect(copiedProducts[0]!.categoryIds).toEqual(['Panini']);
 
         const copiedPois = await POIModel.find({ eventId: duplicateId }).lean();
         expect(copiedPois).toHaveLength(1);

@@ -16,14 +16,12 @@ export function categoryKey(label: string): string {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
-const NEW_OPTION = '__new__'
-
 type CategorySelectProps = {
   id?: string
   eventId: string
   categories: EventCategory[]
-  value: string
-  onChange: (categoryId: string) => void
+  value: string[]
+  onChange: (categoryIds: string[]) => void
   onCategoriesChange: (categories: EventCategory[]) => void
 }
 
@@ -33,18 +31,11 @@ export function CategorySelect({ id, eventId, categories, value, onChange, onCat
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  const knownValue = categories.some((c) => c.label === value)
-
-  const selectValue = isCreating ? NEW_OPTION : value
-
-  const handleSelectChange = (next: string) => {
+  const toggleCategory = (label: string) => {
     setError(null)
-    if (next === NEW_OPTION) {
-      setIsCreating(true)
-      setDraft('')
-      return
-    }
-    setIsCreating(false)
+    const next = value.includes(label)
+      ? value.filter((v) => v !== label)
+      : [...value, label]
     onChange(next)
   }
 
@@ -58,10 +49,12 @@ export function CategorySelect({ id, eventId, categories, value, onChange, onCat
     const key = categoryKey(label)
     const existing = categories.find((c) => categoryKey(c.label) === key)
     if (existing) {
+      if (!value.includes(existing.label)) {
+        onChange([...value, existing.label])
+      }
       setError(null)
       setIsCreating(false)
       setDraft('')
-      onChange(existing.label)
       return
     }
 
@@ -77,7 +70,7 @@ export function CategorySelect({ id, eventId, categories, value, onChange, onCat
         bodyJson: { categories: next },
       })
       onCategoriesChange(next)
-      onChange(label)
+      onChange([...value, label])
       setError(null)
       setIsCreating(false)
       setDraft('')
@@ -90,20 +83,32 @@ export function CategorySelect({ id, eventId, categories, value, onChange, onCat
 
   if (!eventId) {
     return (
-      <p className={styles.hint}>Seleziona prima un evento per scegliere la categoria.</p>
+      <p className={styles.hint}>Seleziona prima un evento per scegliere le categorie.</p>
     )
   }
 
   return (
-    <div className={styles.wrapper}>
-      <select id={id} value={selectValue} onChange={(e) => handleSelectChange(e.target.value)}>
-        <option value="">Senza categoria</option>
-        {!knownValue && value && <option value={value}>{value}</option>}
+    <div className={styles.wrapper} id={id}>
+      <div className={styles.chipGroup}>
         {categories.map((c) => (
-          <option key={c.label} value={c.label}>{c.label}</option>
+          <button
+            key={c.label}
+            type="button"
+            className={`${styles.chip} ${value.includes(c.label) ? styles.chipActive : ''}`}
+            onClick={() => toggleCategory(c.label)}
+          >
+            {c.label}
+          </button>
         ))}
-        <option value={NEW_OPTION}>+ Nuova categoria&hellip;</option>
-      </select>
+        <button
+          type="button"
+          className={`${styles.chip} ${styles.chipNew}`}
+          onClick={() => { setIsCreating(true); setDraft('') }}
+          disabled={isSaving}
+        >
+          + Nuova
+        </button>
+      </div>
 
       {isCreating && (
         <div className={styles.newRow}>
@@ -126,7 +131,7 @@ export function CategorySelect({ id, eventId, categories, value, onChange, onCat
           <button
             type="button"
             className={styles.cancelBtn}
-            onClick={() => { setIsCreating(false); setDraft(''); setError(null); onChange(value) }}
+            onClick={() => { setIsCreating(false); setDraft(''); setError(null) }}
             disabled={isSaving}
           >
             Annulla

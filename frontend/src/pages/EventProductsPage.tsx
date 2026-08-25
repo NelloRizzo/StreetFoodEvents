@@ -12,7 +12,7 @@ type EventProduct = {
   productId: string
   stationIds: string[]
   priceOverride: number | null
-  categoryId: string | null
+  categoryIds: string[]
   available: boolean
   createdAt: string
   updatedAt: string
@@ -29,10 +29,10 @@ type FormData = {
   productId: string
   stationIds: string[]
   priceOverride: string
-  categoryId: string
+  categoryIds: string[]
 }
 
-const emptyForm: FormData = { eventId: '', standId: '', productId: '', stationIds: [], priceOverride: '', categoryId: '' }
+const emptyForm: FormData = { eventId: '', standId: '', productId: '', stationIds: [], priceOverride: '', categoryIds: [] }
 
 export function EventProductsPage() {
   const [items, setItems] = useState<EventProduct[]>([])
@@ -132,7 +132,7 @@ export function EventProductsPage() {
       productId: form.productId,
       stationIds: form.stationIds,
       priceOverride: form.priceOverride ? Number(form.priceOverride) : null,
-      categoryId: form.categoryId || null,
+      categoryIds: form.categoryIds,
     }
 
     await apiRequest('/event-products', {
@@ -151,10 +151,10 @@ export function EventProductsPage() {
     setDeleteTarget(id)
   }
 
-  const updateCardCategory = async (ep: EventProduct, categoryId: string) => {
+  const updateCardCategory = async (ep: EventProduct, categoryIds: string[]) => {
     try {
-      await apiRequest(`/event-products/${ep.id}`, { method: 'PATCH', bodyJson: { categoryId: categoryId || null } })
-      setItems((prev) => prev.map((p) => (p.id === ep.id ? { ...p, categoryId: categoryId || null } : p)))
+      await apiRequest(`/event-products/${ep.id}`, { method: 'PATCH', bodyJson: { categoryIds } })
+      setItems((prev) => prev.map((p) => (p.id === ep.id ? { ...p, categoryIds } : p)))
     } catch { /* ignore */ }
   }
 
@@ -228,13 +228,12 @@ export function EventProductsPage() {
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="ep-category">Categoria</label>
+              <label>Categorie</label>
               <CategorySelect
-                id="ep-category"
                 eventId={form.eventId}
                 categories={eventCategories(form.eventId)}
-                value={form.categoryId}
-                onChange={(categoryId) => setForm({ ...form, categoryId })}
+                value={form.categoryIds}
+                onChange={(categoryIds) => setForm({ ...form, categoryIds })}
                 onCategoriesChange={(cats) => updateEventCategories(form.eventId, cats)}
               />
             </div>
@@ -281,13 +280,12 @@ export function EventProductsPage() {
                   Postazioni: {ep.stationIds.map((id) => stationName(id) || id).join(', ')}
                 </span>
                 <div className={styles.cardCategory}>
-                  <span className={styles.cardCategoryLabel}>Categoria</span>
+                  <span className={styles.cardCategoryLabel}>Categorie</span>
                   <CategorySelect
-                    id={`ep-cat-${ep.id}`}
                     eventId={ep.eventId}
                     categories={eventCategories(ep.eventId)}
-                    value={ep.categoryId ?? ''}
-                    onChange={(categoryId) => { void updateCardCategory(ep, categoryId) }}
+                    value={ep.categoryIds ?? []}
+                    onChange={(categoryIds) => { void updateCardCategory(ep, categoryIds) }}
                     onCategoriesChange={(cats) => updateEventCategories(ep.eventId, cats)}
                   />
                 </div>
@@ -302,7 +300,7 @@ export function EventProductsPage() {
                     try {
                       await apiRequest(`/event-products/${ep.id}`, { method: 'PATCH', bodyJson: { available: !ep.available } })
                       setItems((prev) => prev.map((p) => p.id === ep.id ? { ...p, available: !p.available } : p))
-                    } catch {}
+                    } catch { /* toggle failed */ }
                   }}
                 >
                   {ep.available ? 'Disponibile' : 'Non disp.'}
