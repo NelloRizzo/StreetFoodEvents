@@ -279,7 +279,7 @@ export function MenuPrintPage() {
       return
     }
     setLoading(true)
-    apiRequest<{ items: Stand[] }>(`/stands?eventIds=${selectedEventId}`)
+    apiRequest<{ items: Stand[] }>(`/stands?eventId=${selectedEventId}`)
       .then((data) => {
         setStands(data.items)
         setSelectedStandIds(new Set())
