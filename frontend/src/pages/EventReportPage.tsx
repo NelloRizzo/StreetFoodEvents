@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import { fetchEventReport, type EventReport, type EventReportStand } from '../lib/orders'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -109,7 +109,6 @@ export function EventReportPage() {
       <div className="page-shell">
         <div className={styles.header}>
           <div>
-            <Link to={`/admin/events/${eventId}/orders`} className={styles.backLink}>&larr; Torna agli ordini</Link>
             <h1 className={styles.title}>Report — {report.eventName}</h1>
           </div>
           <div className={styles.headerActions}>

@@ -158,14 +158,12 @@ export function EventContestManagePage() {
       <div className={`page-shell ${styles.page}`}>
         <h1 className={styles.pageTitle}>Accesso negato</h1>
         <p>Non hai i permessi per gestire i contest di questo evento.</p>
-        <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all&apos;evento</Link>
       </div>
     )
   }
 
   return (
     <div className="page-shell">
-      <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all&apos;evento</Link>
       <h1 className={styles.pageTitle}>Gestione contest — {eventName || 'Caricamento...'}</h1>
 
       {loading ? (

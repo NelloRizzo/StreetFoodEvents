@@ -263,14 +263,12 @@ export function StandSettlementsPage() {
       <div className={`page-shell ${styles.page}`}>
         <h1 className={styles.pageTitle}>Accesso negato</h1>
         <p>Non hai i permessi per accedere a questa pagina.</p>
-        <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
       </div>
     )
   }
 
   return (
     <div className={`page-shell ${styles.page}`}>
-      <Link to={`/events/${eventId}`} className={`${styles.backLink} ${settlementStyles.noPrint}`}>&larr; Torna all'evento</Link>
       <div className={settlementStyles.printHeader}>
         <h2>Liquidazione stand — {eventName}</h2>
         <p>Elenco transazioni registrate · stampa del {new Date().toLocaleString('it-IT')}</p>

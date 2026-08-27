@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import type { UploadedImage } from '../lib/upload'
@@ -119,7 +119,6 @@ export function SettlementsReportPage() {
       <div className="page-shell">
         <div className={reportStyles.header}>
           <div>
-            <Link to={`/admin/events/${eventId}/settlements`} className={reportStyles.backLink}>&larr; Torna alle liquidazioni</Link>
             <h1 className={reportStyles.title}>
               <CurrencyDisplay currencyName={report.currencyName} currencySymbol={report.currencySymbol} /> Resoconto liquidazioni — {report.eventName}
             </h1>

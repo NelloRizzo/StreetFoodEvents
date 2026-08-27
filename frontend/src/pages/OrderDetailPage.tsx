@@ -102,7 +102,6 @@ export function OrderDetailPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
-        <Link to={order.eventId && order.standId ? `/events/${order.eventId}/stands/${order.standId}/orders` : '/dashboard'} className={styles.backLink}>&larr; Torna agli ordini</Link>
 
         <div className={styles.header}>
           <div className={styles.headerInfo}>

@@ -319,7 +319,6 @@ export function StandDetailPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
-        <Link to="/admin/stands" className={styles.backLink}>&larr; Torna agli stand</Link>
 
         <div className={styles.header}>
           <div>

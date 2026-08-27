@@ -128,7 +128,6 @@ export function EventOrdersPage() {
       <div className="page-shell">
         <div className={styles.header}>
           <div>
-            <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
             <h1 className={styles.title}>Ordini — {eventName}</h1>
           </div>
           <div className={styles.headerActions}>

@@ -106,7 +106,6 @@ export function StandManagePage() {
 
   return (
     <div className={`page-shell ${styles.page}`}>
-      <Link to="/admin/dashboard" className={styles.backLink}>&larr; Dashboard</Link>
       <h1 className={styles.pageTitle}>Gestione stand &mdash; {standName || '?'}</h1>
 
       {standEvents.length > 0 && (
