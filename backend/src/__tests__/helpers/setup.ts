@@ -27,7 +27,8 @@ const collectionsToClear = [
     'usagecontracts',
     'contestpois',
     'contests',
-    'contestparticipations'
+    'contestparticipations',
+    'categories'
 ];
 
 beforeAll(async () => {

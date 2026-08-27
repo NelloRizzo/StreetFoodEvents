@@ -751,10 +751,10 @@ export async function eventMenu(req: Request, res: Response) {
             };
         });
 
-    const categories = (event.categories ?? []) as Array<{ label: string; sortOrder?: number }>;
-    const categoryLabels = categories
-        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-        .map((c) => c.label);
+    const { CategoryModel } = await import('../models/category.model');
+    const globalCategories = await CategoryModel.find().sort({ sortOrder: 1, label: 1 }).lean();
+    const categoryLabels = globalCategories.map((c) => c.label);
+    const categorySet = new Set(categoryLabels);
 
     const byCategory: Record<string, typeof standItems> = {};
     for (const label of categoryLabels) {
@@ -769,7 +769,7 @@ export async function eventMenu(req: Request, res: Response) {
         } else {
             let placed = false;
             for (const cat of cats) {
-                if (byCategory[cat]) {
+                if (categorySet.has(cat) && byCategory[cat]) {
                     byCategory[cat].push(item);
                     placed = true;
                 }

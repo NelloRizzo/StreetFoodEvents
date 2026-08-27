@@ -6,8 +6,7 @@ const categorySchema = new Schema(
             type: String,
             required: true,
             trim: true,
-            maxlength: 80,
-            unique: true
+            maxlength: 80
         },
         sortOrder: {
             type: Number,
