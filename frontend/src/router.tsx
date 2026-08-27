@@ -34,7 +34,6 @@ import { EventOrdersPage } from './pages/EventOrdersPage'
 import { EventReportPage } from './pages/EventReportPage'
 import { EventGalleryPage } from './pages/EventGalleryPage'
 import { PublicGalleryPage } from './pages/PublicGalleryPage'
-import { PhotoBoothPage } from './pages/PhotoBoothPage'
 import { PoiDetailPage } from './pages/PoiDetailPage'
 import { ReceiptPage } from './pages/ReceiptPage'
 import { GuidePage } from './pages/GuidePage'
@@ -80,7 +79,6 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/stands/:standId/ordersqueue', element: <StandDisplayPage /> },
       { path: 'events/:eventId/contests', element: <EventContestsPage /> },
       { path: 'events/:eventId/galleria', element: <PublicGalleryPage /> },
-      { path: 'events/:eventId/photo-booth', element: <PhotoBoothPage /> },
       { path: 'events/:eventId/slideshow', element: <SlideshowPage /> },
       { path: 'contest/:contestId', element: <ContestPage /> },
       { path: 'contest/:contestId/play', element: <ContestPlayPage /> },
@@ -125,7 +123,6 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/settlements', element: <StandSettlementsPage /> },
       { path: 'events/:eventId/settlements/report', element: <SettlementsReportPage /> },
       { path: 'events/:eventId/galleria', element: <EventGalleryPage /> },
-      { path: 'events/:eventId/photo-booth', element: <PhotoBoothPage /> },
       { path: 'events/:eventId/contest-manage', element: <EventContestManagePage /> },
       { path: 'events/:eventId/stands-manage', element: <StandNumberingPage /> },
       { path: 'events/:eventId/frames', element: <EventFramesPage /> },

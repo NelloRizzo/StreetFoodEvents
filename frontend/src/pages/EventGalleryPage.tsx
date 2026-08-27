@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import { ConfirmModal } from '../components/ConfirmModal'
 import { apiRequest } from '../lib/api'
@@ -578,12 +578,6 @@ export function EventGalleryPage() {
               )}
             </div>
           ))}
-        </div>
-
-        <div className={styles.boothLink}>
-          <Link to={`/admin/events/${eventId}/photo-booth`} className={styles.boothLinkBtn}>
-            Scatta una foto
-          </Link>
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
+import { PhotoBoothModal } from './PhotoBoothModal'
 import styles from './EventDetailPage.module.scss'
 
 type UploadedImg = {
@@ -72,6 +73,7 @@ export function EventDetailPage() {
   const [favId, setFavId] = useState<string | null>(null)
   const [favLoading, setFavLoading] = useState(false)
   const [modal, setModal] = useState<{ open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }>({ open: false, variant: 'alert', title: '', message: '' })
+  const [showPhotoBooth, setShowPhotoBooth] = useState(false)
   const themeData = useMemo(
     () =>
       event
@@ -211,9 +213,9 @@ export function EventDetailPage() {
             <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
               Galleria
             </Link>
-            <Link to={`/events/${eventId}/photo-booth`} className={styles.actionBtnOutline}>
+            <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
               Scatta foto
-            </Link>
+            </button>
             <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} label="QR Evento" />
             <QRCodeDownload apiPath={`/events/${eventId}/menu-qrcode`} fileName={`menu-${event.name}`} label="QR Menu" />
           </div>
@@ -308,6 +310,14 @@ export function EventDetailPage() {
         }}
         onCancel={() => setModal((prev) => ({ ...prev, open: false }))}
       />
+
+      {eventId && (
+        <PhotoBoothModal
+          open={showPhotoBooth}
+          eventId={eventId}
+          onClose={() => setShowPhotoBooth(false)}
+        />
+      )}
     </div>
   )
 }

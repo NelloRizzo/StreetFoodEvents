@@ -168,8 +168,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
       items: [
         ...(basePath
           ? [
-              { label: 'Galleria foto', to: `${basePath}/galleria`, icon: '\u{1F5BC}' } as SidebarItem,
-              { label: 'Photo booth', to: `${basePath}/photo-booth`, icon: '\u{1F4F7}' } as SidebarItem,
+              { label: 'Galleria media', to: `${basePath}/galleria`, icon: '\u{1F5BC}' } as SidebarItem,
             ]
           : []),
         { label: 'Cornici', to: '/admin/frames', icon: '\u{1F5BC}' },

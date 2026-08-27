@@ -38,6 +38,20 @@ type EventProductItem = {
   stationIds: string[]
 }
 
+type MenuProduct = {
+  standId: string
+  standName: string
+  standNumber: number | null
+  name: string
+  description: string | null
+  price: number
+  ingredients: string[]
+  allergens: string[]
+  isFrozen: boolean
+  coverImage: ImageData | null
+  categoryIds: string[]
+}
+
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -150,6 +164,99 @@ ${standsHtml}
 </body></html>`
 }
 
+function categoryMenuFullHtml(
+  event: EventRef,
+  categories: string[],
+  products: MenuProduct[]
+): string {
+  const eventLogo = event.logo
+    ? `<img src="${esc(event.logo.url)}" alt="${esc(event.name)}" style="display:block;max-height:80px;margin:0 auto 0.5rem" />`
+    : ''
+  const priceBadge = currencyBadgeHtml(event.currencyName || '€')
+  const defaultCat = 'Senza categoria'
+  const label = (c: string) => (c === defaultCat ? 'Altri Prodotti' : c)
+
+  const byCategory: Record<string, MenuProduct[]> = {}
+  const categorySet = new Set(categories)
+  for (const c of [defaultCat, ...categories]) {
+    byCategory[c] = []
+  }
+  for (const p of products) {
+    const cats = p.categoryIds.filter((c) => categorySet.has(c))
+    if (cats.length > 0) {
+      for (const c of cats) if (byCategory[c]) byCategory[c].push(p)
+    } else {
+      byCategory[defaultCat].push(p)
+    }
+  }
+
+  const sections = Object.keys(byCategory)
+    .map((cat) => ({ cat, items: byCategory[cat] }))
+    .filter((s) => s.items.length > 0)
+
+  const sectionsHtml = sections.map(({ cat, items }) => {
+    const allergenBadge = '*'
+    const cards = items.map((p) => {
+      const prodCover = p.coverImage
+        ? `<div style="border-radius:8px;overflow:hidden;margin-bottom:0.6rem">${imgHtml(p.coverImage, p.name)}</div>`
+        : ''
+      const ingredients = p.ingredients.length > 0
+        ? `<p style="font-size:0.78rem;color:#587065;margin:0.25rem 0 0;line-height:1.4">${esc(p.ingredients.join(', '))}</p>`
+        : ''
+      const allergens = p.allergens.length > 0
+        ? `<p style="font-size:0.75rem;color:#c0392b;margin:0.15rem 0 0;font-weight:600">Allergeni: ${esc(p.allergens.join(', '))}</p>`
+        : ''
+      const frozen = p.isFrozen
+        ? `<span style="color:#2980b9;font-weight:900;margin-left:0.25rem">${allergenBadge}</span>`
+        : ''
+      const desc = p.description
+        ? `<p style="font-size:0.8rem;color:#587065;margin:0.15rem 0 0;font-style:italic">${esc(p.description)}</p>`
+        : ''
+      const standLabel = p.standNumber != null ? `#${p.standNumber} ${p.standName}` : p.standName
+      return `<div style="border:1px solid #ddd;border-radius:12px;padding:0.75rem;background:#fff;break-inside:avoid">
+        ${prodCover}
+        <p style="font-size:0.72rem;font-weight:700;color:#bf5a2a;text-transform:uppercase;letter-spacing:0.03em;margin:0 0 0.2rem">${esc(standLabel)}</p>
+        <h3 style="font-size:1rem;margin:0 0 0.2rem;color:#14261f">${esc(p.name)}${frozen}</h3>
+        ${desc}
+        ${ingredients}
+        ${allergens}
+        <p style="font-size:1.05rem;font-weight:700;color:#bf5a2a;margin:0.4rem 0 0">${p.price.toFixed(2)} ${priceBadge}</p>
+      </div>`
+    }).join('')
+    return `<section style="page-break-before:always;padding:2rem 2.5rem">
+      <h2 style="font-size:1.7rem;color:#14261f;margin:0 0 0.5rem;border-bottom:2px solid rgba(191,90,42,0.2);padding-bottom:0.4rem">${esc(label(cat))}</h2>
+      <p style="font-size:0.8rem;color:#587065;margin:0 0 1rem">${items.length} prodotto${items.length === 1 ? '' : 'i'} · ${esc(event.name)}</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem">
+        ${cards}
+      </div>
+    </section>`
+  }).join('')
+
+  return `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Menu — ${esc(event.name)}</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-family:'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif;font-size:13px;color:#264137;background:#f5f0eb}
+body{background:#fffaf2;max-width:100%}
+@media print{@page{size:A3 landscape;margin:1cm}A3 landscape;margin:1cm}}
+@media print{body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@media print{.no-print{display:none!important}}
+.header{text-align:center;padding:1.5rem 2rem;border-bottom:2px solid rgba(191,90,42,0.15);margin-bottom:0.5rem}
+.header h1{font-size:2.5rem;color:#14261f;margin:0}
+.header p{font-size:0.9rem;color:#587065;margin:0.2rem 0 0}
+</style></head><body>
+<div class="header no-print" style="text-align:center;padding:1rem 2rem;border-bottom:2px solid rgba(191,90,42,0.15)">
+  <a href="#" onclick="window.print();return false" style="display:inline-block;padding:0.6rem 1.4rem;border:2px solid #bf5a2a;border-radius:999px;color:#bf5a2a;font-weight:700;text-decoration:none;font-size:0.9rem;margin-bottom:0.5rem">Stampa menu</a>
+  <h1 style="font-size:1.2rem;color:#14261f;margin:0">${esc(event.name)} &mdash; Menu per categoria</h1>
+</div>
+<div class="header" style="text-align:center;padding:1.5rem 2rem;border-bottom:2px solid rgba(191,90,42,0.15)">
+  ${eventLogo}
+  <h1 style="font-size:2.5rem;color:#14261f;margin:0">${esc(event.name)}</h1>
+  <p style="font-size:0.9rem;color:#587065;margin:0.2rem 0 0">Menu per categoria</p>
+</div>
+${sectionsHtml}
+</body></html>`
+}
+
 export function MenuPrintPage() {
   const [events, setEvents] = useState<EventRef[]>([])
   const [selectedEventId, setSelectedEventId] = useState('')
@@ -157,6 +264,7 @@ export function MenuPrintPage() {
   const [selectedStandIds, setSelectedStandIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [printMode, setPrintMode] = useState<'stand' | 'category'>('stand')
 
   useEffect(() => {
     apiRequest<{ items: EventRef[] }>('/events')
@@ -211,6 +319,21 @@ export function MenuPrintPage() {
       const event = events.find((e) => e.id === selectedEventId)
       if (!event) return
 
+      if (printMode === 'category') {
+        const data = await apiRequest<{
+          categories: string[]
+          items: MenuProduct[]
+        }>(`/events/${selectedEventId}/menu`)
+        const products = data.items.filter((p) => selectedStandIds.has(p.standId))
+        const html = categoryMenuFullHtml(event, data.categories, products)
+        const w = window.open('', '_blank', 'width=900,height=800')
+        if (w) {
+          w.document.write(html)
+          w.document.close()
+        }
+        return
+      }
+
       const selectedStands = stands.filter((s) => selectedStandIds.has(s.id))
       const results = await Promise.all(
         selectedStands.map(async (stand) => {
@@ -232,7 +355,7 @@ export function MenuPrintPage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Stampa menu stand</h1>
+      <h1 className={styles.title}>Stampa menu</h1>
 
       <div className={styles.controls}>
         <label className={styles.field}>
@@ -251,6 +374,23 @@ export function MenuPrintPage() {
 
         {selectedEventId && (
           <>
+            <div className={styles.modeSwitch}>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${printMode === 'stand' ? styles.modeActive : ''}`}
+                onClick={() => setPrintMode('stand')}
+              >
+                Per stand
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${printMode === 'category' ? styles.modeActive : ''}`}
+                onClick={() => setPrintMode('category')}
+              >
+                Per categoria
+              </button>
+            </div>
+
             <div className={styles.standActions}>
               <span className={styles.label}>Stand ({stands.length})</span>
               <button type="button" className={styles.smallBtn} onClick={selectAll}>Seleziona tutti</button>

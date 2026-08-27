@@ -35,7 +35,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   settlements: 'Liquidazioni',
   galleria: 'Galleria',
   slideshow: 'Slideshow',
-  'photo-booth': 'Photo booth',
   'contest-manage': 'Gestione contest',
 }
 

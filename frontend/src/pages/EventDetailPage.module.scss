@@ -475,8 +475,10 @@
   color: #fff;
   font-weight: 600;
   font-size: 0.85rem;
+  font-family: inherit;
   text-decoration: none;
   white-space: nowrap;
+  cursor: pointer;
   transition: background var(--ease-standard), border-color var(--ease-standard);
 
   &:hover {
