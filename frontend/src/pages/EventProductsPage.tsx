@@ -103,8 +103,9 @@ export function EventProductsPage() {
   }
 
   const openCreate = () => {
-    setForm(emptyForm)
-    setFilteredStands([])
+    const eventId = filterEventId || ''
+    setForm({ ...emptyForm, eventId })
+    setFilteredStands(eventId ? stands.filter((s) => s.eventIds?.includes(eventId)) : [])
     setStations([])
     setShowForm(true)
   }
@@ -187,12 +188,16 @@ export function EventProductsPage() {
           <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
             <div className={styles.field}>
               <label htmlFor="ep-event">Evento</label>
-              <select id="ep-event" value={form.eventId} onChange={(e) => handleEventChange(e.target.value)} required>
-                <option value="">Seleziona evento</option>
-                {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>{ev.name}</option>
-                ))}
-              </select>
+              {filterEventId ? (
+                <p className={styles.hint}>{eventName(filterEventId)}</p>
+              ) : (
+                <select id="ep-event" value={form.eventId} onChange={(e) => handleEventChange(e.target.value)} required>
+                  <option value="">Seleziona evento</option>
+                  {events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>{ev.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className={styles.field}>

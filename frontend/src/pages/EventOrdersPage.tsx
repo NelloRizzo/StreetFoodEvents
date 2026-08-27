@@ -4,10 +4,12 @@ import { useParams, Link } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import {
   fetchOrders,
+  fetchEventReport,
   updateOrderStatus,
   cancelOrder,
   cancelOrderItems,
   type Order,
+  type EventReport,
 } from '../lib/orders'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
@@ -42,6 +44,7 @@ export function EventOrdersPage() {
   const [startDate, setStartDate] = useState(today())
   const [endDate, setEndDate] = useState(today())
   const [cancelTarget, setCancelTarget] = useState<string | null>(null)
+  const [report, setReport] = useState<EventReport | null>(null)
 
   useEffect(() => {
     if (!eventId) return
@@ -78,6 +81,13 @@ export function EventOrdersPage() {
   }, [eventId, filterStatus, filterStandId, startDate, endDate])
 
   useEffect(() => { void load() }, [load])
+
+  useEffect(() => {
+    if (!eventId) return
+    fetchEventReport(eventId, startDate, endDate)
+      .then(setReport)
+      .catch(() => setReport(null))
+  }, [eventId, startDate, endDate])
 
   const handleComplete = async (orderId: string) => {
     await updateOrderStatus(orderId, 'completed')
@@ -206,6 +216,64 @@ export function EventOrdersPage() {
             </span>
           </div>
         </div>
+
+        {report && report.stands.length > 0 && (
+          <div className={styles.reportCard} style={{ marginBottom: '1.25rem' }}>
+            <div className={styles.reportHeader}>
+              <span className={styles.reportTitle}>Totali per stand</span>
+              <span className={styles.reportPeriod}>
+                {new Date(startDate + 'T00:00:00').toLocaleDateString('it-IT')} &rarr; {new Date(endDate + 'T00:00:00').toLocaleDateString('it-IT')}
+              </span>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: '#587065', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  <th style={{ padding: '0.4rem 0.5rem' }}>Stand</th>
+                  <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Ordini</th>
+                  <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Lordo</th>
+                  <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Crediti</th>
+                  <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Esterni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.stands.map((s) => (
+                  <tr key={s.standId} style={{ borderTop: '1px solid #eee' }}>
+                    <td style={{ padding: '0.45rem 0.5rem', fontWeight: 600 }}>{s.standName}</td>
+                    <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right' }}>{s.totalOrders}</td>
+                    <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right' }}>
+                      {(s.totalRevenue / (report.exchangeRate ?? 1)).toFixed(2)}
+                      {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+                    </td>
+                    <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right' }}>
+                      {(s.creditRevenue / (report.exchangeRate ?? 1)).toFixed(2)}
+                      {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+                    </td>
+                    <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right' }}>
+                      {(s.cashRevenue / (report.exchangeRate ?? 1)).toFixed(2)}
+                      {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+                    </td>
+                  </tr>
+                ))}
+                <tr style={{ borderTop: '2px solid #ddd', fontWeight: 700, backgroundColor: 'rgba(191,90,42,0.06)' }}>
+                  <td style={{ padding: '0.45rem 0.5rem' }}>Totale</td>
+                  <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right' }}>{report.totals.totalOrders}</td>
+                  <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right' }}>
+                    {(report.totals.totalRevenue / (report.exchangeRate ?? 1)).toFixed(2)}
+                    {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+                  </td>
+                  <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right' }}>
+                    {(report.totals.creditRevenue / (report.exchangeRate ?? 1)).toFixed(2)}
+                    {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+                  </td>
+                  <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right' }}>
+                    {(report.totals.cashRevenue / (report.exchangeRate ?? 1)).toFixed(2)}
+                    {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {(() => {
           const pendingOrders = orders.filter(
