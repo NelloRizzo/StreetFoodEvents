@@ -294,7 +294,17 @@ export function CashierOrderPage() {
   if (forbidden) return <div className={styles.page}><div className="page-shell"><p className={styles.empty}>Accesso negato.</p></div></div>
   if (!eventId || !standId) return null
 
-  const filteredMenu = menu.filter((ep) => ep.available !== false && (!activeStationId || ep.stationIds.includes(activeStationId)))
+  const menuByStation = stations
+    .map((s) => ({
+      station: s,
+      items: menu.filter((ep) => ep.available !== false && ep.stationIds.includes(s.id)),
+    }))
+    .filter((group) => group.items.length > 0)
+
+  const scrollToStation = (stationId: string) => {
+    setActiveStationId(stationId)
+    document.getElementById(`station-section-${stationId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   return (
     <div className={styles.page}>
@@ -338,34 +348,45 @@ export function CashierOrderPage() {
               <button
                 key={s.id}
                 className={`${styles.stationTab} ${activeStationId === s.id ? styles.stationTabActive : ''}`}
-                onClick={() => setActiveStationId(s.id)}
+                onClick={() => scrollToStation(s.id)}
               >
                 {s.name}
               </button>
             ))}
           </div>
 
-          <div className={styles.productGrid}>
-            {filteredMenu.map((ep) => (
-              <button
-                key={ep.id}
-                className={styles.productBtn}
-                onClick={() => openNotesModal(ep)}
+          <div className={styles.productSections}>
+            {menuByStation.map((group) => (
+              <section
+                key={group.station.id}
+                id={`station-section-${group.station.id}`}
+                className={styles.stationSection}
               >
-                <span className={styles.productBtnName}>{ep.product?.name ?? '...'}</span>
-                <span className={styles.productBtnPrice}>
-                  {(ep.priceOverride ?? ep.product?.price ?? 0).toFixed(2)}
-                  {eventCurrency && (
-                    <CurrencyDisplay
-                      currencyName={eventCurrency.currencyName}
-                      currencySymbol={eventCurrency.currencySymbol}
-                    />
-                  )}
-                </span>
-              </button>
+                <h2 className={styles.stationSectionTitle}>{group.station.name}</h2>
+                <div className={styles.productGrid}>
+                  {group.items.map((ep) => (
+                    <button
+                      key={ep.id}
+                      className={styles.productBtn}
+                      onClick={() => openNotesModal(ep)}
+                    >
+                      <span className={styles.productBtnName}>{ep.product?.name ?? '...'}</span>
+                      <span className={styles.productBtnPrice}>
+                        {(ep.priceOverride ?? ep.product?.price ?? 0).toFixed(2)}
+                        {eventCurrency && (
+                          <CurrencyDisplay
+                            currencyName={eventCurrency.currencyName}
+                            currencySymbol={eventCurrency.currencySymbol}
+                          />
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
             ))}
-            {filteredMenu.length === 0 && (
-              <p className={styles.empty}>Nessun prodotto in questa sezione.</p>
+            {menuByStation.length === 0 && (
+              <p className={styles.empty}>Nessun prodotto disponibile per questo stand.</p>
             )}
           </div>
         </div>
