@@ -619,7 +619,6 @@ export function EventsPage() {
       <div className="page-shell">
         <div className={styles.header}>
           <div>
-            <a href="/dashboard" className={styles.backLink}>&larr; Dashboard</a>
             <span className="eyebrow">Gestione</span>
             <h1 className={styles.title}>Eventi</h1>
           </div>

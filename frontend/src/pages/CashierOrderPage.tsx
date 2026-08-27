@@ -309,7 +309,7 @@ export function CashierOrderPage() {
   return (
     <div className={styles.page}>
       <div className={styles.topBar}>
-        <Link to={`/admin/events/${eventId}/stands/${standId}/orders`} className={styles.backBtn}>&larr;</Link>
+        <Link to="/admin/dashboard" className={styles.backBtn}>&larr;</Link>
         <div className={styles.topInfo}>
           <span className={styles.topEvent}>{eventName}</span>
           <span className={styles.topStand}>{standName}</span>

@@ -33,6 +33,7 @@ import { EventMenuPage } from './pages/EventMenuPage'
 import { EventOrdersPage } from './pages/EventOrdersPage'
 import { EventReportPage } from './pages/EventReportPage'
 import { EventGalleryPage } from './pages/EventGalleryPage'
+import { PublicGalleryPage } from './pages/PublicGalleryPage'
 import { PhotoBoothPage } from './pages/PhotoBoothPage'
 import { PoiDetailPage } from './pages/PoiDetailPage'
 import { ReceiptPage } from './pages/ReceiptPage'
@@ -78,7 +79,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/stands/:standId', element: <EventStandMenuPage /> },
       { path: 'events/:eventId/stands/:standId/ordersqueue', element: <StandDisplayPage /> },
       { path: 'events/:eventId/contests', element: <EventContestsPage /> },
-      { path: 'events/:eventId/galleria', element: <EventGalleryPage /> },
+      { path: 'events/:eventId/galleria', element: <PublicGalleryPage /> },
       { path: 'events/:eventId/photo-booth', element: <PhotoBoothPage /> },
       { path: 'events/:eventId/slideshow', element: <SlideshowPage /> },
       { path: 'contest/:contestId', element: <ContestPage /> },
