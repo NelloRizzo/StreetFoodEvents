@@ -22,7 +22,7 @@ export function PublicLayout() {
   }, [location.pathname])
 
   const isSlideshow = location.pathname.includes('/slideshow')
-  const isCashier = /\/stands\/[^/]+\/order/.test(location.pathname) || /\/cashier/.test(location.pathname)
+  const isCashier = /\/stands\/[^/]+\/order$/.test(location.pathname) || /\/cashier/.test(location.pathname)
   const isDisplay = /\/stands\/[^/]+\/ordersqueue/.test(location.pathname)
 
   const hideChrome = isSlideshow || isCashier || isDisplay

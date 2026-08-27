@@ -2,10 +2,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
-import { createOrder, fetchOrders, fetchGiftStats, updateOrderStatus, type GiftStats, type Order } from '../lib/orders'
+import { createOrder, fetchOrders, fetchGiftStats, updateOrderStatus, cancelOrder, type GiftStats, type Order } from '../lib/orders'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
 import { GiftCounter } from '../components/GiftCounter'
 import type { UploadedImage } from '../lib/upload'
 import styles from './CashierOrderPage.module.scss'
@@ -77,6 +77,8 @@ export function CashierOrderPage() {
   const [creditAmount, setCreditAmount] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
+  const [successOrder, setSuccessOrder] = useState<Order | null>(null)
+  const [showVoidPrompt, setShowVoidPrompt] = useState(false)
   const [activeOrders, setActiveOrders] = useState<Order[]>([])
   const [giftStats, setGiftStats] = useState<GiftStats | null>(null)
 
@@ -282,6 +284,7 @@ export function CashierOrderPage() {
         isGift,
       })
       await updateOrderStatus(response.item.id, 'preparing')
+      setSuccessOrder(response.item)
       loadGiftStats()
       resetOrder()
     } catch (e) {
@@ -289,6 +292,67 @@ export function CashierOrderPage() {
     }
     setIsSubmitting(false)
   }
+
+  const handleVoid = async (reason?: string) => {
+    if (!successOrder) return
+    try {
+      await cancelOrder(successOrder.id, reason)
+      setSuccessOrder({ ...successOrder, status: 'cancelled', paymentStatus: 'refunded' })
+      setShowVoidPrompt(false)
+    } catch (e) {
+      setAlertMsg(e instanceof Error ? e.message : 'Errore durante lo storno')
+    }
+  }
+
+  function escHtml(s: string) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+  }
+
+  function printReceipt() {
+    if (!successOrder) return
+    const o = successOrder
+    const badge = eventCurrency ? currencyBadgeHtml(eventCurrency.currencyName) : '&euro;'
+    const itemsHtml = o.items.map((item) =>
+      `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escHtml(item.productName)} x${item.quantity}</span><span>${item.subtotal.toFixed(2)} ${badge}</span></div>`
+    ).join('')
+    const creditsHtml = o.creditAmountUsed > 0
+      ? `<div style="font-size:11px;color:#555;text-align:center;margin-top:0.25rem">Crediti: ${o.creditAmountUsed.toFixed(2)} ${badge}</div>`
+      : ''
+    const qrHtml = o.receiptQrCode
+      ? `<div style="display:flex;justify-content:center;margin:0.5rem 0"><img src="${o.receiptQrCode}" alt="QR" style="width:120px;height:120px;-webkit-print-color-adjust:exact;print-color-adjust:exact" /></div>`
+      : ''
+    const giftHtml = o.isGift
+      ? '<div style="text-align:center;font-weight:700;letter-spacing:0.15em;margin:0.5rem 0">OMAGGIO</div>'
+      : ''
+
+    const html = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Scontrino #${o.orderNumber}</title><style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-family:'Courier New',monospace;background:#fff;color:#000;font-size:14px}
+body{padding:2rem;max-width:320px;margin:0 auto}
+@media print{@page{margin:0}body{padding:1.5rem;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.header{display:grid;gap:0.2rem;text-align:center;margin-bottom:0.75rem}
+.header strong{font-size:17px}
+.order-number{font-size:44px;font-weight:900;text-align:center;margin:0.75rem 0}
+.items{padding:0.5rem 0;border-top:2px dashed #000;border-bottom:2px dashed #000}
+.total{display:flex;justify-content:space-between;font-size:17px;font-weight:700;margin-top:0.5rem}
+.footer{font-size:10px;text-align:center;color:#888;margin-top:0.75rem}
+</style></head><body>
+<div class="header"><strong>${escHtml(eventName)}</strong><span>${escHtml(standName)}</span></div>
+<div class="order-number">${o.isGift ? 'O' : '#'}${o.orderNumber}</div>
+${giftHtml}
+<div class="items">${itemsHtml}</div>
+<div class="total"><span>Totale</span><strong>${o.total.toFixed(2)} ${badge}</strong></div>
+${creditsHtml}
+${qrHtml}
+<div class="footer">${new Date().toLocaleString('it-IT')}</div>
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}</script>
+</body></html>`
+
+    const w = window.open('', '_blank', 'width=800,height=900')
+    if (w) { w.document.write(html); w.document.close() }
+  }
+
+  const resetSuccessModal = () => setSuccessOrder(null)
 
   if (isLoading) return null
   if (forbidden) return <div className={styles.page}><div className="page-shell"><p className={styles.empty}>Accesso negato.</p></div></div>
@@ -612,6 +676,83 @@ export function CashierOrderPage() {
           onClose={() => setShowScanner(false)}
         />
       )}
+
+      {successOrder && (
+        <div className={styles.overlay} onClick={resetSuccessModal}>
+          <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.confirmTitle}>Ordine creato</h2>
+            <div className={`${styles.confirmOrderNumber} ${successOrder.isGift ? styles.confirmOrderNumberGift : ''}`}>
+              {successOrder.isGift ? 'O' : '#'}{successOrder.orderNumber}
+            </div>
+            {successOrder.isGift && <span className={styles.giftBadge}>OMAGGIO</span>}
+            <div className={styles.confirmStand}>{standName}</div>
+            <div className={styles.confirmItems}>
+              {successOrder.items.map((item, idx) => (
+                <div key={idx} className={styles.confirmItem}>
+                  <span>{item.productName} x{item.quantity}</span>
+                  <span>
+                    {item.subtotal.toFixed(2)}
+                    {eventCurrency && (
+                      <CurrencyDisplay
+                        currencyName={eventCurrency.currencyName}
+                        currencySymbol={eventCurrency.currencySymbol}
+                      />
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className={styles.confirmTotal}>
+              <span>Totale</span>
+              <strong>
+                {successOrder.total.toFixed(2)}
+                {eventCurrency && (
+                  <CurrencyDisplay
+                    currencyName={eventCurrency.currencyName}
+                    currencySymbol={eventCurrency.currencySymbol}
+                  />
+                )}
+              </strong>
+            </div>
+            <div className={styles.confirmPayment}>
+              {successOrder.creditAmountUsed > 0
+                ? <>Pagato {successOrder.creditAmountUsed.toFixed(2)} con crediti</>
+                : 'Pagato in contanti'}
+            </div>
+            {successOrder.receiptQrCode && (
+              <div className={styles.qrSection}>
+                <img src={successOrder.receiptQrCode} alt="QR ricevuta" className={styles.qrImg} />
+                <a href={`/receipt/${successOrder.id}`} target="_blank" rel="noopener noreferrer" className={styles.qrLink}>
+                  Apri ricevuta
+                </a>
+              </div>
+            )}
+            <div className={styles.confirmActions}>
+              <button className={styles.printBtn} onClick={printReceipt}>
+                Stampa scontrino
+              </button>
+              {successOrder.status !== 'cancelled' && (
+                <button className={styles.voidBtn} onClick={() => setShowVoidPrompt(true)}>
+                  Storna ordine
+                </button>
+              )}
+              <button className={styles.confirmCloseBtn} onClick={resetSuccessModal}>
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        open={showVoidPrompt}
+        variant="prompt"
+        title="Storna ordine"
+        message="Inserisci il motivo dello storno:"
+        confirmLabel="Storna"
+        onConfirm={handleVoid}
+        onCancel={() => setShowVoidPrompt(false)}
+      />
 
       <ConfirmModal
         open={alertMsg !== null}

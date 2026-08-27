@@ -100,6 +100,16 @@
   font-size: 0.9rem;
 }
 
+.orderEvent {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-soft);
+  color: var(--color-brand-deep);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .statusBadge {
   padding: 0.2rem 0.6rem;
   border-radius: var(--radius-pill);

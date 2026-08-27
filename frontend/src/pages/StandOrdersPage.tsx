@@ -387,6 +387,7 @@ export function StandOrdersPage() {
             const allReady = totalItems > 0 && readyItems === totalItems
             const someReady = readyItems > 0 && !allReady
             const isPartialMode = partialOrderId === order.id
+            const orderEventName = events.find((e) => e.id === order.eventId)?.name
 
             return (
               <article key={order.id} className={`${styles.orderCard} ${allReady && order.status === 'preparing' ? styles.orderCardAllReady : ''}`}>
@@ -397,6 +398,9 @@ export function StandOrdersPage() {
                   <div className={styles.orderBadges}>
                     {order.isGift && (
                       <span className={styles.giftBadge}>OMAGGIO</span>
+                    )}
+                    {!filterEventId && orderEventName && (
+                      <span className={styles.orderEvent}>{orderEventName}</span>
                     )}
                     {order.customerName && (
                       <span className={styles.customerName}>{order.customerName}</span>

@@ -10,7 +10,7 @@ export function AdminLayout() {
   const location = useLocation()
 
   const isSlideshow = location.pathname.includes('/slideshow')
-  const isCashier = /\/stands\/[^/]+\/order/.test(location.pathname) || /\/cashier/.test(location.pathname)
+  const isCashier = /\/stands\/[^/]+\/order$/.test(location.pathname) || /\/cashier/.test(location.pathname)
   const isOrdersQueue = /\/ordersqueue/.test(location.pathname)
   const isStationQueue = /\/orders\/station\//.test(location.pathname)
   const isExchange = /\/events\/[^/]+\/exchange/.test(location.pathname)
