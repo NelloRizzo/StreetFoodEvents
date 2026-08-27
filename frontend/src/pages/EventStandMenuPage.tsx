@@ -537,7 +537,7 @@ export function EventStandMenuPage() {
                             <div className={styles.menuInfo}>
                               <strong className={styles.menuName}>{item.name}</strong>
                               {item.standName && (
-                                <span className={styles.menuIngredients}>Stand: {item.standName}</span>
+                                <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                               )}
                               {item.ingredients.length > 0 && (
                                 <span className={styles.menuIngredients}>{item.ingredients.join(', ')}</span>
@@ -575,7 +575,7 @@ export function EventStandMenuPage() {
                         <div className={styles.menuInfo}>
                           <strong className={styles.menuName}>{item.name}</strong>
                           {item.standName && (
-                            <span className={styles.menuIngredients}>Stand: {item.standName}</span>
+                            <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                           )}
                           {item.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>{item.ingredients.join(', ')}</span>

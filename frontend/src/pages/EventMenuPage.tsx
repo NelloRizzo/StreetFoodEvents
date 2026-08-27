@@ -45,6 +45,7 @@ type ProductModal = {
   price: number
   coverImage: UploadedImage | null
   standName: string
+  standNumber: number | null
 }
 
 const UNCATEGORIZED = 'Senza categoria'
@@ -195,6 +196,7 @@ export function EventMenuPage() {
                           price: product.price,
                           coverImage: product.coverImage,
                           standName: group.standName,
+                          standNumber: group.standNumber,
                         })}
                         role="button"
                         tabIndex={0}
@@ -210,6 +212,7 @@ export function EventMenuPage() {
                               price: product.price,
                               coverImage: product.coverImage,
                               standName: group.standName,
+                              standNumber: group.standNumber,
                             })
                           }
                         }}
@@ -270,6 +273,7 @@ export function EventMenuPage() {
                           price: product.price,
                           coverImage: product.coverImage,
                           standName: product.standName,
+                          standNumber: product.standNumber,
                         })}
                         role="button"
                         tabIndex={0}
@@ -285,6 +289,7 @@ export function EventMenuPage() {
                               price: product.price,
                               coverImage: product.coverImage,
                               standName: product.standName,
+                              standNumber: product.standNumber,
                             })
                           }
                         }}
@@ -303,7 +308,7 @@ export function EventMenuPage() {
                           )}
                         </div>
                         <div className={styles.menuRight}>
-                          <span className={styles.menuIngredients}>Stand: {product.standName}</span>
+                          <span className={styles.menuIngredients}>Stand: {product.standNumber != null ? `${product.standNumber} — ` : ''}{product.standName}</span>
                           {product.price > 0 && (
                             <span className={styles.menuPrice}>
                               {product.price.toFixed(2)}
@@ -345,7 +350,7 @@ export function EventMenuPage() {
                 {selectedItem.name}
                 {selectedItem.isFrozen && <span className={styles.frozenBadge}> *</span>}
               </h2>
-              <p className={styles.productIngredients}>Stand: {selectedItem.standName}</p>
+              <p className={styles.productIngredients}>Stand: {selectedItem.standNumber != null ? `${selectedItem.standNumber} — ` : ''}{selectedItem.standName}</p>
               {selectedItem.description && (
                 <p className={styles.productIngredients}>{selectedItem.description}</p>
               )}

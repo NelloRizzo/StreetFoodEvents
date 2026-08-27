@@ -420,41 +420,6 @@ export function PhotoBoothPage() {
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {frames.length > 0 && !captured && !eventDetail?.defaultFrameId && (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Scegli una cornice</h2>
-            <div className={styles.frameGrid}>
-              <button
-                className={`${styles.frameCard} ${selectedFrameId === null ? styles.frameActive : ''}`}
-                onClick={() => setSelectedFrameId(null)}
-              >
-                <div className={styles.framePreview}>
-                  <div className={styles.noFramePlaceholder}>
-                    <span className={styles.noFrameIcon}>&#10005;</span>
-                    <span className={styles.noFrameLabel}>Nessuna</span>
-                  </div>
-                </div>
-                <span className={styles.frameName}>Nessuna cornice</span>
-              </button>
-              {frames.map((frame) => (
-                <button
-                  key={frame.id}
-                  className={`${styles.frameCard} ${selectedFrameId === frame.id ? styles.frameActive : ''}`}
-                  onClick={() => setSelectedFrameId(frame.id)}
-                >
-                  <div className={styles.framePreview}>
-                    <img src={frame.image.url} alt={frame.name} />
-                  </div>
-                  <span className={styles.frameName}>{frame.name}</span>
-                </button>
-              ))}
-            </div>
-            <p className={styles.selectedFrameLabel}>
-              Cornice selezionata: <strong>{selectedFrameId === null ? 'Nessuna' : frames.find((f) => f.id === selectedFrameId)?.name ?? '—'}</strong>
-            </p>
-          </section>
-        )}
-
         {eventDetail?.defaultFrameId && !captured && (
           <p className={styles.selectedFrameLabel}>
             Cornice dell'evento: <strong>{frames.find((f) => f.id === eventDetail.defaultFrameId)?.name ?? 'attiva'}</strong>
