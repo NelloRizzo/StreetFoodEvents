@@ -35,8 +35,8 @@ export function StandOrdersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [forbidden, setForbidden] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>('')
-  const [filterEventId, setFilterEventId] = useState<string>(urlEventId ?? '')
   const [events, setEvents] = useState<{ id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }[]>([])
+  const effectiveEventId = urlEventId ?? ''
   const [standName, setStandName] = useState('')
   const [eventName, setEventName] = useState('')
   const [partialOrderId, setPartialOrderId] = useState<string | null>(null)
@@ -71,23 +71,23 @@ export function StandOrdersPage() {
     if (!standId) return
     const params: Record<string, string> = { standId, startDate, endDate }
     if (filterStatus) params.status = filterStatus
-    if (filterEventId) params.eventId = filterEventId
+    if (effectiveEventId) params.eventId = effectiveEventId
     const data = await fetchOrders(params)
     const filtered = filterStatus
       ? data.items
       : data.items.filter((o) => o.status !== 'completed' && o.status !== 'cancelled')
     setOrders(filtered)
     setIsLoading(false)
-  }, [standId, filterStatus, filterEventId, startDate, endDate])
+  }, [standId, filterStatus, effectiveEventId, startDate, endDate])
 
   useEffect(() => { void load() }, [load])
 
   useEffect(() => {
     if (!standId) return
-    fetchStandReport(standId, filterEventId || undefined, startDate, endDate)
+    fetchStandReport(standId, effectiveEventId || undefined, startDate, endDate)
       .then((r) => setReport(r))
       .catch(() => {})
-  }, [standId, filterEventId, startDate, endDate])
+  }, [standId, effectiveEventId, startDate, endDate])
 
   useEffect(() => {
     if (!urlEventId) {
@@ -144,13 +144,10 @@ export function StandOrdersPage() {
   if (forbidden) return <div className={styles.page}><div className="page-shell"><p className={styles.empty}>Accesso negato.</p></div></div>
   if (!standId) return null
 
-  const eventFilterDisabled = Boolean(urlEventId)
   const title = urlEventId && eventName ? `Ordini — ${eventName}` : 'Ordini dello stand'
   const newOrderLink = urlEventId
     ? `/admin/events/${urlEventId}/stands/${standId}/order`
-    : filterEventId
-      ? `/admin/events/${filterEventId}/stands/${standId}/order`
-      : ''
+    : ''
 
   const currencyFor = (eventId: string) => {
     const ev = events.find((e) => e.id === eventId)
@@ -188,10 +185,10 @@ export function StandOrdersPage() {
                 Nuovo ordine
               </button>
             )}
-            {(urlEventId || filterEventId) && (
+            {urlEventId && (
               <Link
                 className={styles.secondaryBtn}
-                to={`/events/${urlEventId ?? filterEventId}/stands/${standId}/ordersqueue`}
+                to={`/events/${urlEventId}/stands/${standId}/ordersqueue`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -214,21 +211,6 @@ export function StandOrdersPage() {
                 className={styles.dateInput}
               />
             </div>
-            <select
-              value={filterEventId}
-              onChange={(e) => { setFilterEventId(e.target.value); setIsLoading(true) }}
-              className={styles.filterSelect}
-              disabled={eventFilterDisabled}
-            >
-              {urlEventId ? (
-                <option value={urlEventId}>{eventName || 'Caricamento...'}</option>
-              ) : (
-                <option value="">Tutti gli eventi</option>
-              )}
-              {!urlEventId && events.map((ev) => (
-                <option key={ev.id} value={ev.id}>{ev.name}</option>
-              ))}
-            </select>
             <select
               value={filterStatus}
               onChange={(e) => { setFilterStatus(e.target.value); setIsLoading(true) }}
@@ -399,7 +381,7 @@ export function StandOrdersPage() {
                     {order.isGift && (
                       <span className={styles.giftBadge}>OMAGGIO</span>
                     )}
-                    {!filterEventId && orderEventName && (
+                    {!effectiveEventId && orderEventName && (
                       <span className={styles.orderEvent}>{orderEventName}</span>
                     )}
                     {order.customerName && (

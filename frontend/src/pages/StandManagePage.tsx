@@ -134,7 +134,7 @@ export function StandManagePage() {
       <section>
         <h2 className={styles.sectionTitle}>Operazioni</h2>
         <div className={manageStyles.cardsGrid}>
-          <Link className={manageStyles.actionCard} to={`/admin/stands/${standId}/orders`}>
+          <Link className={manageStyles.actionCard} to={selectedEvent ? `/admin/events/${selectedEvent.id}/stands/${standId}/orders` : `/admin/stands/${standId}/orders`}>
             <span className={manageStyles.actionIcon}>{'\u{1F4CB}'}</span>
             <span className={manageStyles.actionTitle}>Ordini</span>
             <span className={manageStyles.actionDesc}>Lista ordini dello stand e resoconti</span>
