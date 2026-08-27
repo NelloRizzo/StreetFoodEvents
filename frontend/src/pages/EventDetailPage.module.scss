@@ -346,6 +346,28 @@
   flex-shrink: 0;
 }
 
+.frameField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 22rem;
+}
+
+.frameLabel {
+  font-size: 0.82rem;
+  color: var(--color-ink-soft);
+}
+
+.frameSelect {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-soft);
+  font-size: 0.9rem;
+  color: var(--color-ink-strong);
+  max-width: 22rem;
+}
+
 .standMapToggle {
   display: inline-flex;
   align-items: center;

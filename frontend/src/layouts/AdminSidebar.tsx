@@ -142,6 +142,13 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
         { label: 'Prodotti', to: '/admin/products', icon: '\u{1F6D2}' },
         { label: 'Prodotti per evento', to: '/admin/event-products', icon: '\u{1F4E6}' },
         { label: 'Staff', to: '/admin/staff', icon: '\u{1F465}' },
+        ...(basePath
+          ? [
+              { label: 'Numerazione Stand', to: `${basePath}/stands-manage`, icon: '\u{1F3EA}' } as SidebarItem,
+              { label: 'Cornici Evento', to: `${basePath}/frames`, icon: '\u{1F5BC}' } as SidebarItem,
+              { label: 'Contest evento', to: `${basePath}/contest-manage`, icon: '\u{1F3C6}' } as SidebarItem,
+            ]
+          : []),
       ],
     },
     {

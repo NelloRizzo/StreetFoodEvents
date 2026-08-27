@@ -49,6 +49,8 @@ import { ContestPlayPage } from './pages/ContestPlayPage'
 import { ContestVerifyPage } from './pages/ContestVerifyPage'
 import { EventExchangePage } from './pages/EventExchangePage'
 import { EventContestManagePage } from './pages/EventContestManagePage'
+import { StandNumberingPage } from './pages/StandNumberingPage'
+import { EventFramesPage } from './pages/EventFramesPage'
 import { StandSettlementsPage } from './pages/StandSettlementsPage'
 import { SettlementsReportPage } from './pages/SettlementsReportPage'
 import { ContestDeliveryPage } from './pages/ContestDeliveryPage'
@@ -124,6 +126,8 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/galleria', element: <EventGalleryPage /> },
       { path: 'events/:eventId/photo-booth', element: <PhotoBoothPage /> },
       { path: 'events/:eventId/contest-manage', element: <EventContestManagePage /> },
+      { path: 'events/:eventId/stands-manage', element: <StandNumberingPage /> },
+      { path: 'events/:eventId/frames', element: <EventFramesPage /> },
       { path: 'events/:eventId/stands/:standId/orders', element: <StandOrdersPage /> },
       { path: 'events/:eventId/stands/:standId/order', element: <CashierOrderPage /> },
 
