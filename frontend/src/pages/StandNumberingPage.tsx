@@ -123,7 +123,7 @@ export function StandNumberingPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
-        <p className={styles.empty}>{eventName}</p>
+        <h1 className={styles.pageTitle}>Numerazione stand &mdash; {eventName || 'Caricamento...'}</h1>
 
         <section className={styles.standsSection}>
           <h2 className={styles.sectionTitle}>

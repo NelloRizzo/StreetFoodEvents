@@ -71,7 +71,7 @@ export function EventFramesPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
-        <p className={styles.empty}>{eventName}</p>
+        <h1 className={styles.pageTitle}>Cornici evento &mdash; {eventName || 'Caricamento...'}</h1>
 
         <section className={styles.standsSection}>
           <h2 className={styles.sectionTitle}>Cornice Photo Booth</h2>

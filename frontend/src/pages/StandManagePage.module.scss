@@ -73,11 +73,53 @@
   max-width: 520px;
 }
 
+.stationSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.combinedQueueLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--color-brand);
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background var(--ease-standard);
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-brand) 88%, #000);
+  }
+}
+
+.stationRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.stationCheckbox {
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-brand);
+  cursor: pointer;
+}
+
 .stationLink {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 1rem;
+  flex: 1;
   padding: 0.7rem 1rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-sm);

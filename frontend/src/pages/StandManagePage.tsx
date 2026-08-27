@@ -22,6 +22,7 @@ export function StandManagePage() {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [roles, setRoles] = useState<RoleInfo[]>([])
   const [selectedEventId, setSelectedEventId] = useState('')
+  const [selectedStations, setSelectedStations] = useState<string[]>([])
 
   useEffect(() => {
     if (!standId || !isAuthenticated) return
@@ -86,6 +87,14 @@ export function StandManagePage() {
           r.eventId === selectedEvent.id &&
           (r.slug === 'event-admin' || r.slug === 'event-cashier')
       ))
+
+  const toggleStation = (stationId: string) => {
+    setSelectedStations((prev) =>
+      prev.includes(stationId)
+        ? prev.filter((id) => id !== stationId)
+        : [...prev, stationId],
+    )
+  }
 
   if (loading) {
     return (
@@ -160,19 +169,39 @@ export function StandManagePage() {
 
       {eventOngoing && stations.length > 0 && (
         <section>
-          <h2 className={styles.sectionTitle}>Code postazioni</h2>
-          <div className={manageStyles.stationList}>
-            {stations.map((st) => (
+          <div className={manageStyles.stationSectionHeader}>
+            <h2 className={styles.sectionTitle}>Code postazioni</h2>
+            {selectedStations.length >= 2 && (
               <a
-                key={st.id}
-                className={manageStyles.stationLink}
-                href={`/orders/station/${st.id}`}
+                className={manageStyles.combinedQueueLink}
+                href={`/orders/station/${selectedStations[0]}?stations=${selectedStations.join(',')}${selectedEvent ? `&eventId=${selectedEvent.id}` : ''}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span>{'\u2699'} {st.name}</span>
-                <span className={manageStyles.stationHint}>display coda postazione</span>
+                {'\u{1F4CB}'} Coda combinata ({selectedStations.length})
               </a>
+            )}
+          </div>
+          <div className={manageStyles.stationList}>
+            {stations.map((st) => (
+              <div key={st.id} className={manageStyles.stationRow}>
+                <input
+                  type="checkbox"
+                  className={manageStyles.stationCheckbox}
+                  checked={selectedStations.includes(st.id)}
+                  onChange={() => toggleStation(st.id)}
+                  title="Seleziona per la coda combinata"
+                />
+                <a
+                  className={manageStyles.stationLink}
+                  href={`/orders/station/${st.id}${selectedEvent ? `?eventId=${selectedEvent.id}` : ''}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span>{'\u2699'} {st.name}</span>
+                  <span className={manageStyles.stationHint}>Display coda postazione</span>
+                </a>
+              </div>
             ))}
           </div>
         </section>
