@@ -222,6 +222,7 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - Build runs typecheck first (`tsc -b`).
 - Auth: `AuthContext` + `apiRequest` with `credentials: 'include'`.
 - Routing: `createBrowserRouter` in `src/router.tsx`.
+- Evento admin: `AdminEventContext` esposto da `AdminLayout` fornisce `selectedEventId`/`selectedEvent`/`events` a sidebar e pagine — MAI aggiungere una combo evento locale in una pagina admin (la selezione vive solo nella sidebar "Evento attivo"; cambia evento → sempre `/admin/dashboard`). Dettagli in ARCHITECTURE.md.
 
 ## Render deploy
 
@@ -230,6 +231,15 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Aug 2026 — evento admin centralizzato con AdminEventContext)
+### Completed
+- Nuovo `frontend/src/layouts/AdminEventContext.ts`: `AdminEventContext` + hook `useAdminEvent()` che espone `{ selectedEventId, selectedEvent, events }` a sidebar e pagine.
+- `AdminLayout` è l'unica sorgente di verità: carica gli eventi (`GET /api/events` senza `public`), li fornisce via `AdminEventContext.Provider`, delega `handleSelectEvent` ad `AdminSidebar`. Risoluzione `selectedEventId`: (1) evento nell'URL (solo `/admin/events/:id/...`), (2) `localStorage['adminSelectedEventId']`, (3) primo evento in corso (`endOfDay(endDate) >= now`), fallback `events[0]`.
+- `handleSelectEvent`: aggiorna context + `localStorage`; se il nuovo evento è DIVERSO da quello corrente → **navigate SEMPRE a `/admin/dashboard`** (mai rewrite URL sulla stessa pagina — StandDetailPage/StandManagePage mostrano tutti gli eventi dello stand e resterebbero incoerenti).
+- Combo locali rimosse (ora leggono `selectedEventId` dal context negli effect): `EventUsersPage`, `MenuPrintPage`, `StandDetailPage` (selettore azioni), `StandManagePage`, `UsageContractsPage` (filtro contratti), `EventProductsPage` (filtro prodotti). Le pagine che servono l'evento COMPLETO (currencyName, logo, coverImage, promo) mantengono un fetch locale `GET /events` SOLO per i dettagli — mai per la SELEZIONE.
+- Selettori evento che restano come campi di modulo (NON rimuovere): ruolo event-scope in `UserRolesPage`, form prodotto in `EventProductsPage`/`StandDetailPage`, evento nel form contratto. `NewOrderPage`/`OrdersPage` sono dead code (non in `router.tsx`) e non toccate.
+- Verifica: `npm run build` (tsc + vite) ✓, `vitest` 16 test ✓, lint senza errori NUOVI (`EventProductsPage` è stata ristrutturata per evitare un nuovo `set-state-in-effect`; restano solo quelli pre-esistenti).
 
 ## Session state (Aug 2026 — ordini omaggio + dashboard eventi terminati)
 ### Completed
