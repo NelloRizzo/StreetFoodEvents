@@ -152,3 +152,13 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **API**: `/api/audit-logs` con filtri (solo admin)
 - **Frontend**: pagina audit log con filtri
 - **Motivazione**: sicurezza, compliance, debugging
+
+### 16. App Locale Offline + Sync Remoto
+- **Descrizione**: deployment dell'app su laptop locale per eventi senza connessione internet
+- **Stack**: stesso backend Express+Mongoose, MongoDB locale (replica set single-node), frontend con `VITE_API_URL=http://127.0.0.1:4000/api`
+- **Sync engine**: endpoint `GET /sync/pull?since=<ts>` + `POST /sync/push` con batch di modifiche. `lastModifiedAt` + `syncVersion` su ogni model. Risoluzione conflitti LWW (last-write-wins)
+- **Storage media**: Cloudinary opzionale, multer con storage disco locale + endpoint statico per servire file
+- **Setup**: script `npm run setup:local` (avvia Mongo replica set, seed, backend, frontend)
+- **Limiti**: foto/video non sincronizzati (troppo pesanti); sessioni auth separate per local/remote; sync periodico (non real-time)
+- **Stimata**: ~750-950 righe (sync engine, lastModifiedAt, scripts, doc)
+- **Motivazione**: eventi in zone senza rete (fiere, manifesti, location isolate)
