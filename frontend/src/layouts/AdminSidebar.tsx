@@ -1,14 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
+import { useAdminEvent } from './AdminEventContext'
 import { Avatar } from '../components/Avatar'
 import styles from './AdminSidebar.module.scss'
-
-const EVENT_STORAGE_KEY = 'adminSelectedEventId'
-
-type EventItem = { id: string; name: string; endDate?: string | null }
 
 type MyStand = { id: string; name: string; eventIds: string[] }
 
@@ -17,6 +14,7 @@ type SidebarItem = { label: string; to: string; icon: string; external?: boolean
 type AdminSidebarProps = {
   isMobileOpen: boolean
   onMobileClose: () => void
+  onSelectEvent: (eventId: string) => void
 }
 
 type SidebarSection = {
@@ -24,29 +22,14 @@ type SidebarSection = {
   items: SidebarItem[]
 }
 
-export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps) {
+export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: AdminSidebarProps) {
   const { user, logout } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
-  const [events, setEvents] = useState<EventItem[]>([])
+  const { selectedEventId, selectedEvent, events } = useAdminEvent()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [myStands, setMyStands] = useState<MyStand[]>([])
-  const [now] = useState(() => Date.now())
-  const [manuallySelectedEventId, setManuallySelectedEventId] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(EVENT_STORAGE_KEY)
-    } catch {
-      return null
-    }
-  })
   const userMenuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    apiRequest<{ items: EventItem[] }>('/events')
-      .then((d) => setEvents(d.items))
-      .catch(() => {})
-  }, [])
 
   useEffect(() => {
     apiRequest<{ stands: MyStand[] }>('/auth/me/stands')
@@ -68,42 +51,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Evento attivo: 1) evento nell'URL (pagine event-scoped), 2) selezione manuale
-  // persistente, 3) default = primo evento in corso, altrimenti il primo della lista.
-  const urlEventId = location.pathname.match(/^\/admin\/events\/([a-f0-9]{24})(?:\/|$)/)?.[1] ?? null
-  const storedEventId =
-    manuallySelectedEventId && events.some((ev) => ev.id === manuallySelectedEventId)
-      ? manuallySelectedEventId
-      : null
-  const defaultEventId = useMemo(() => {
-    if (events.length === 0) return null
-    const ongoing = events.find((ev) => {
-      if (!ev.endDate) return false
-      const endOfDay = new Date(ev.endDate)
-      endOfDay.setHours(23, 59, 59, 999)
-      return endOfDay.getTime() >= now
-    })
-    return (ongoing ?? events[0]).id
-  }, [events, now])
-  const selectedEventId = urlEventId ?? storedEventId ?? defaultEventId
-
-  const selectedEvent = events.find((ev) => ev.id === selectedEventId) ?? null
   const basePath = selectedEvent ? `/admin/events/${selectedEvent.id}` : null
-
-  const handleSelectEvent = (eventId: string) => {
-    if (!eventId) return
-    setManuallySelectedEventId(eventId)
-    try {
-      localStorage.setItem(EVENT_STORAGE_KEY, eventId)
-    } catch { /* storage non disponibile */ }
-    if (
-      selectedEventId &&
-      eventId !== selectedEventId &&
-      location.pathname.startsWith(`/admin/events/${selectedEventId}/`)
-    ) {
-      navigate(location.pathname.replace(`/admin/events/${selectedEventId}/`, `/admin/events/${eventId}/`))
-    }
-  }
 
   const nameCollator = new Intl.Collator('it', { sensitivity: 'base' })
   const managedStands = selectedEventId
@@ -234,7 +182,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose }: AdminSidebarProps)
                 id="admin-event-picker"
                 className={styles.eventPickerSelect}
                 value={selectedEventId ?? ''}
-                onChange={(e) => handleSelectEvent(e.target.value)}
+                onChange={(e) => onSelectEvent(e.target.value)}
               >
                 {events.length === 0 && <option value="">Nessun evento</option>}
                 {events.map((ev) => (

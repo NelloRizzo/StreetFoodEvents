@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
+import { useAdminEvent } from '../layouts/AdminEventContext'
 import styles from './UsageContractsPage.module.scss'
 
 type EventItem = { id: string; name: string }
@@ -41,11 +42,11 @@ const emptyForm = {
 
 export function UsageContractsPage() {
   const { user } = useAuth()
+  const { selectedEventId } = useAdminEvent()
   const [contracts, setContracts] = useState<UsageContract[]>([])
   const [events, setEvents] = useState<EventItem[]>([])
   const [allUsers, setAllUsers] = useState<UserItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [filterEventId, setFilterEventId] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
@@ -68,12 +69,8 @@ export function UsageContractsPage() {
   }, [])
 
   useEffect(() => {
-    Promise.all([loadContracts(), loadRefs()]).finally(() => setIsLoading(false))
-  }, [loadContracts, loadRefs])
-
-  useEffect(() => {
-    loadContracts(filterEventId || undefined)
-  }, [filterEventId, loadContracts])
+    Promise.all([loadContracts(selectedEventId || undefined), loadRefs()]).finally(() => setIsLoading(false))
+  }, [loadContracts, loadRefs, selectedEventId])
 
   const openCreate = () => {
     setForm(emptyForm)
@@ -116,7 +113,7 @@ export function UsageContractsPage() {
         await apiRequest('/usage-contracts', { method: 'POST', bodyJson: body })
       }
       setShowForm(false)
-      await loadContracts(filterEventId || undefined)
+      await loadContracts(selectedEventId || undefined)
     } catch (e) {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante il salvataggio')
     }
@@ -127,7 +124,7 @@ export function UsageContractsPage() {
     if (!confirm('Eliminare questo contratto?')) return
     try {
       await apiRequest(`/usage-contracts/${id}`, { method: 'DELETE' })
-      await loadContracts(filterEventId || undefined)
+      await loadContracts(selectedEventId || undefined)
     } catch (e) {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante l\'eliminazione')
     }
@@ -137,7 +134,7 @@ export function UsageContractsPage() {
     const newStatus = c.status === 'active' ? 'suspended' : 'active'
     try {
       await apiRequest(`/usage-contracts/${c.id}`, { method: 'PATCH', bodyJson: { status: newStatus } })
-      await loadContracts(filterEventId || undefined)
+      await loadContracts(selectedEventId || undefined)
     } catch (e) {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante l\'aggiornamento')
     }
@@ -161,15 +158,11 @@ export function UsageContractsPage() {
 
         {alertMsg && <div className={styles.alert}>{alertMsg}</div>}
 
-        <div className={styles.filterBar}>
-          <label>Filtra per evento</label>
-          <select value={filterEventId} onChange={(e) => setFilterEventId(e.target.value)}>
-            <option value="">Tutti gli eventi</option>
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>{ev.name}</option>
-            ))}
-          </select>
-        </div>
+        {selectedEventId && (
+          <p className={styles.empty}>
+            Contratti per evento: {events.find((e) => e.id === selectedEventId)?.name ?? selectedEventId}
+          </p>
+        )}
 
         <div className={styles.list}>
           {contracts.length === 0 && <p className={styles.empty}>Nessun contratto trovato.</p>}

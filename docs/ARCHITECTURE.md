@@ -69,7 +69,11 @@ Considerazioni progettuali e decisioni architetturali.
 - **QR Code Pattern**: `qrcode` npm package → data URL → HTML puro per stampa
 - **Print Pattern**: `window.open()` + `document.write()` + `window.print()` per stampa senza conflitti CSS
 
-## Reports & aggregations
+## AdminEventContext — selezione evento centralizzata (admin)
+- **Pattern**: `AdminLayout` carica gli eventi (`GET /api/events` senza `public`) e fornisce via `AdminEventContext.Provider` `{ selectedEventId, selectedEvent, events }` a sidebar e pagine. `AdminSidebar` (combo "Evento attivo") e `AdminTopBar` consumano lo stesso context — mai due sorgenti di verità.
+- **Risoluzione `selectedEventId`**: (1) evento nell'URL (solo route `/admin/events/:eventId/...`), (2) `localStorage['adminSelectedEventId']`, (3) default primo evento in corso (`endOfDay(endDate) >= now`), fallback `events[0]`.
+- **`handleSelectEvent`**: salva in `localStorage`, aggiorna il context e **naviga SEMPRE a `/admin/dashboard`** quando l'evento scelto è diverso da quello corrente. Niente rewrite URL sulla stessa pagina: pagine come StandDetailPage/StandManagePage mostrano tutti gli eventi di uno stand, quindi si torna alla dashboard per evitare stati incoerenti col nuovo evento.
+- **Cosa NON fare**: NON aggiungere una propria combo/nuovo fetch eventi a una pagina admin fisica — il context arriva dall'alto e gli eventi context sono minimali (`{ id, name, endDate? }`). Se una pagina serve l'evento completo (currencyName, logo, coverImage, promo) il fetch locale `GET /events` per i DETTAGLI è lecito, ma la SELEZIONE dell'evento mai. Eccezioni legittime (selettori come campi di modulo, non come filtro pagina): form prodotto in `EventProductsPage`/`StandDetailPage`, assegnazione ruolo event-scope in `UserRolesPage`, evento nel form contratto.
 - **Stand report** (`GET /orders/report/stand/:standId`): aggregazione per singolo stand, usata in StandOrdersPage.
 - **Event report** (`GET /orders/report/event/:eventId`): aggregazione per tutti gli stand di un evento, con split contanti (`total - creditAmountUsed`) e crediti (`creditAmountUsed`).
 - **Permessi**: event report accessibile solo a ruoli `event-admin` e `event-cashier` (oltre a `platform-admin`).

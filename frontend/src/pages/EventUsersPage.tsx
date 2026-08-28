@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
+import { useAdminEvent } from '../layouts/AdminEventContext'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
@@ -36,10 +37,10 @@ type Transaction = {
 
 export function EventUsersPage() {
   const { user } = useAuth()
+  const { selectedEventId } = useAdminEvent()
   const [events, setEvents] = useState<Event[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [eventUsers, setEventUsers] = useState<EventUser[]>([])
-  const [selectedEventId, setSelectedEventId] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
   const [notes, setNotes] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -55,14 +56,17 @@ export function EventUsersPage() {
   const [showTxn, setShowTxn] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([
-      apiRequest<{ items: Event[] }>('/events'),
-      apiRequest<{ items: User[] }>('/users'),
-    ]).then(([eventsData, usersData]) => {
-      setEvents(eventsData.items)
-      setUsers(usersData.items)
-      setIsLoading(false)
-    })
+    apiRequest<{ items: Event[] }>('/events')
+      .then((d) => setEvents(d.items))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    apiRequest<{ items: User[] }>('/users')
+      .then((d) => {
+        setUsers(d.items)
+        setIsLoading(false)
+      })
   }, [])
 
   useEffect(() => {
@@ -156,15 +160,6 @@ export function EventUsersPage() {
             <span className="eyebrow">Gestione</span>
             <h1 className={styles.title}>Partecipanti evento</h1>
           </div>
-        </div>
-
-        <div className={styles.filters}>
-          <select value={selectedEventId} onChange={(e) => setSelectedEventId(e.target.value)}>
-            <option value="">Seleziona evento</option>
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>{ev.name}</option>
-            ))}
-          </select>
         </div>
 
         {selectedEventId && (

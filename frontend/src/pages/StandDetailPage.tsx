@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom'
 import { AliasManager } from '../components/AliasManager'
 import { apiRequest } from '../lib/api'
 import { useEventTheme } from '../features/theme/useEventTheme'
+import { useAdminEvent } from '../layouts/AdminEventContext'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { ImageUploader } from '../components/ImageUploader'
@@ -60,6 +61,7 @@ const emptyProductForm: ProductFormData = { eventId: '', productId: '', stationI
 
 export function StandDetailPage() {
   const { standId } = useParams<{ standId: string }>()
+  const { selectedEventId } = useAdminEvent()
   const [stand, setStand] = useState<Stand | null>(null)
   const [stations, setStations] = useState<Station[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -76,7 +78,6 @@ export function StandDetailPage() {
   const [productForm, setProductForm] = useState<ProductFormData>(emptyProductForm)
   const [showNewProductForm, setShowNewProductForm] = useState(false)
   const [newProductForm, setNewProductForm] = useState({ name: '', ingredients: '', price: '', coverImage: null as UploadedImage | null, gallery: [] as UploadedImage[] })
-  const [selectedActionEventId, setSelectedActionEventId] = useState('')
 
   const fetchStand = async () => {
     const data = await apiRequest<{ item: Stand }>(`/stands/${standId}`)
@@ -223,13 +224,6 @@ export function StandDetailPage() {
     }
   }, [eventProducts])
 
-  useEffect(() => {
-    if (stand && events.length > 0 && !selectedActionEventId) {
-      const first = stand.eventIds.find((id) => events.some((e) => e.id === id))
-      if (first) setSelectedActionEventId(first)
-    }
-  }, [stand, events, selectedActionEventId])
-
   const toggleProductStation = (stationId: string) => {
     setProductForm((prev) => ({
       ...prev,
@@ -305,8 +299,8 @@ export function StandDetailPage() {
   const eventName = (id: string) => events.find((e) => e.id === id)?.name ?? id
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? id
 
-  const filteredEventProducts = (selectedActionEventId
-    ? eventProducts.filter((ep) => ep.eventId === selectedActionEventId)
+  const filteredEventProducts = (selectedEventId
+    ? eventProducts.filter((ep) => ep.eventId === selectedEventId)
     : eventProducts
   )
     .slice()
@@ -335,7 +329,7 @@ export function StandDetailPage() {
               {isFavorite ? '\u2764' : '\u2661'}
             </button>
             <QRCodeDownload
-              apiPath={`/stands/${standId}/qrcode${selectedActionEventId ? `?eventId=${selectedActionEventId}` : ''}`}
+              apiPath={`/stands/${standId}/qrcode${selectedEventId ? `?eventId=${selectedEventId}` : ''}`}
               fileName={`stand-${stand.name}`}
             />
           </div>
@@ -344,25 +338,6 @@ export function StandDetailPage() {
         {stand.description && (
           <div className={styles.desc} dangerouslySetInnerHTML={{ __html: stand.description }} />
         )}
-
-        <div className={styles.actionSection}>
-          <div className={styles.actionRow}>
-            <label className={styles.actionLabel}>Evento</label>
-            <select
-              value={selectedActionEventId}
-              onChange={(e) => setSelectedActionEventId(e.target.value)}
-              className={styles.actionSelect}
-            >
-              {events.filter((ev) => stand.eventIds.includes(ev.id)).length === 0 && (
-                <option value="">Nessun evento</option>
-              )}
-              {events.filter((ev) => stand.eventIds.includes(ev.id)).map((ev) => (
-                <option key={ev.id} value={ev.id}>{ev.name}</option>
-              ))}
-            </select>
-          </div>
-
-        </div>
 
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Postazioni</h2>
@@ -586,7 +561,7 @@ export function StandDetailPage() {
                   )}
                 </div>
                 <div className={styles.productCardActions}>
-                  {selectedActionEventId && filteredEventProducts.length > 1 && (
+                  {selectedEventId && filteredEventProducts.length > 1 && (
                     <div className={styles.reorderBtns}>
                       <button
                         className={styles.reorderBtn}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../lib/api'
+import { useAdminEvent } from '../layouts/AdminEventContext'
 import { currencyBadgeHtml } from '../components/CurrencyDisplay'
 import styles from './MenuPrintPage.module.scss'
 
@@ -258,8 +259,8 @@ ${sectionsHtml}
 }
 
 export function MenuPrintPage() {
+  const { selectedEventId } = useAdminEvent()
   const [events, setEvents] = useState<EventRef[]>([])
-  const [selectedEventId, setSelectedEventId] = useState('')
   const [stands, setStands] = useState<Stand[]>([])
   const [selectedStandIds, setSelectedStandIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
@@ -358,20 +359,6 @@ export function MenuPrintPage() {
       <h1 className={styles.title}>Stampa menu</h1>
 
       <div className={styles.controls}>
-        <label className={styles.field}>
-          <span className={styles.label}>Evento</span>
-          <select
-            className={styles.select}
-            value={selectedEventId}
-            onChange={(e) => setSelectedEventId(e.target.value)}
-          >
-            <option value="">— Seleziona evento —</option>
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>{ev.name}</option>
-            ))}
-          </select>
-        </label>
-
         {selectedEventId && (
           <>
             <div className={styles.modeSwitch}>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
+import { useAdminEvent } from '../layouts/AdminEventContext'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CategorySelect } from '../components/CategorySelect'
 import styles from './EventProductsPage.module.scss'
@@ -35,6 +36,7 @@ type FormData = {
 const emptyForm: FormData = { eventId: '', standId: '', productId: '', stationIds: [], priceOverride: '', categoryIds: [] }
 
 export function EventProductsPage() {
+  const { selectedEventId } = useAdminEvent()
   const [items, setItems] = useState<EventProduct[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [stands, setStands] = useState<Stand[]>([])
@@ -45,7 +47,8 @@ export function EventProductsPage() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormData>(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const [filterEventId, setFilterEventId] = useState('')
+
+  const filterEventId = selectedEventId ?? ''
 
   const loadItems = async (eventId: string) => {
     try {
@@ -56,11 +59,13 @@ export function EventProductsPage() {
   }
 
   useEffect(() => {
-    apiRequest<{ items: EventProduct[] }>('/event-products')
+    apiRequest<{ items: EventProduct[] }>(`/event-products${filterEventId ? `?eventId=${filterEventId}` : ''}`)
       .then((d) => setItems(d.items))
       .catch(() => { /* ignore */ })
       .finally(() => setIsLoading(false))
+  }, [filterEventId])
 
+  useEffect(() => {
     Promise.all([
       apiRequest<{ items: Event[] }>('/events'),
       apiRequest<{ items: Stand[] }>('/stands'),
@@ -75,11 +80,6 @@ export function EventProductsPage() {
       })
       .catch(() => { /* not required */ })
   }, [])
-
-  const handleFilterEventChange = (eventId: string) => {
-    setFilterEventId(eventId)
-    void loadItems(eventId)
-  }
 
   const handleEventChange = (eventId: string) => {
     setForm({ ...emptyForm, eventId })
@@ -170,18 +170,6 @@ export function EventProductsPage() {
           <button className={styles.primaryBtn} onClick={openCreate}>
             Associa prodotto
           </button>
-        </div>
-
-        <div className={styles.filterBar}>
-          <label htmlFor="ep-filter-event">Filtra per evento</label>
-          <select id="ep-filter-event" value={filterEventId} onChange={(e) => handleFilterEventChange(e.target.value)}>
-            <option value="">Tutti gli eventi</option>
-            {[...events]
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map((ev) => (
-                <option key={ev.id} value={ev.id}>{ev.name}</option>
-              ))}
-          </select>
         </div>
 
         {showForm && (

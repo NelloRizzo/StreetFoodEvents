@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
+import { useAdminEvent } from '../layouts/AdminEventContext'
 import styles from './EventDetailPage.module.scss'
 import manageStyles from './StandManagePage.module.scss'
 
@@ -13,6 +14,7 @@ type StationItem = { id: string; name: string; standId: string | null; standName
 export function StandManagePage() {
   const { standId } = useParams<{ standId: string }>()
   const { isAuthenticated } = useAuth()
+  const { selectedEventId } = useAdminEvent()
   const [now] = useState(() => Date.now())
 
   const [loading, setLoading] = useState(true)
@@ -21,7 +23,6 @@ export function StandManagePage() {
   const [stations, setStations] = useState<StationItem[]>([])
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [roles, setRoles] = useState<RoleInfo[]>([])
-  const [selectedEventId, setSelectedEventId] = useState('')
   const [selectedStations, setSelectedStations] = useState<string[]>([])
 
   useEffect(() => {
@@ -47,15 +48,7 @@ export function StandManagePage() {
           )
         )
         if (cancelled) return
-        const validEvents = events.filter((ev): ev is StandEvent => ev !== null)
-        setStandEvents(validEvents)
-        const ongoing = validEvents.find((ev) => {
-          if (!ev.endDate) return false
-          const endOfDay = new Date(ev.endDate)
-          endOfDay.setHours(23, 59, 59, 999)
-          return endOfDay.getTime() >= now
-        })
-        setSelectedEventId(ongoing?.id ?? validEvents[0]?.id ?? '')
+        setStandEvents(events.filter((ev): ev is StandEvent => ev !== null))
       })
       .catch(() => {})
       .finally(() => {
@@ -64,7 +57,7 @@ export function StandManagePage() {
     return () => {
       cancelled = true
     }
-  }, [standId, isAuthenticated, now])
+  }, [standId, isAuthenticated])
 
   const isEventFinished = (eventId: string) => {
     const ev = standEvents.find((e) => e.id === eventId)
@@ -74,17 +67,16 @@ export function StandManagePage() {
     return endOfDay.getTime() < now
   }
 
-  const selectedEvent = standEvents.find((e) => e.id === selectedEventId) ?? null
-  const eventOngoing = selectedEvent ? !isEventFinished(selectedEvent.id) : false
+  const eventOngoing = selectedEventId ? !isEventFinished(selectedEventId) : false
 
   const canAccessCash =
-    !!selectedEvent &&
+    !!selectedEventId &&
     (isPlatformAdmin ||
       roles.some((r) => r.scope === 'stand' && r.standId === standId && r.slug === 'cashier') ||
       roles.some(
         (r) =>
           r.scope === 'event' &&
-          r.eventId === selectedEvent.id &&
+          r.eventId === selectedEventId &&
           (r.slug === 'event-admin' || r.slug === 'event-cashier')
       ))
 
@@ -108,63 +100,48 @@ export function StandManagePage() {
     <div className={`page-shell ${styles.page}`}>
       <h1 className={styles.pageTitle}>Gestione stand &mdash; {standName || '?'}</h1>
 
-      {standEvents.length > 0 && (
-        <div className={manageStyles.eventPickerRow}>
-          <label className={manageStyles.field}>
-            Evento
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-            >
-              {standEvents.map((ev) => (
-                <option key={ev.id} value={ev.id}>
-                  {ev.name}{isEventFinished(ev.id) ? ' — terminato' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-          {!eventOngoing && (
-            <p className={manageStyles.finishedNote}>
-              Evento terminato: cassa e code non sono più disponibili.
-            </p>
-          )}
-        </div>
+      {selectedEventId && !standEvents.some((ev) => ev.id === selectedEventId) && (
+        <p className={manageStyles.finishedNote}>
+          Lo stand non partecipa all&apos;evento selezionato.
+        </p>
       )}
 
-      <section>
-        <h2 className={styles.sectionTitle}>Operazioni</h2>
-        <div className={manageStyles.cardsGrid}>
-          <Link className={manageStyles.actionCard} to={selectedEvent ? `/admin/events/${selectedEvent.id}/stands/${standId}/orders` : `/admin/stands/${standId}/orders`}>
-            <span className={manageStyles.actionIcon}>{'\u{1F4CB}'}</span>
-            <span className={manageStyles.actionTitle}>Ordini</span>
-            <span className={manageStyles.actionDesc}>Lista ordini dello stand e resoconti</span>
-          </Link>
-
-          {selectedEvent && eventOngoing && canAccessCash && (
-            <Link
-              className={manageStyles.actionCard}
-              to={`/admin/events/${selectedEvent.id}/stands/${standId}/order`}
-            >
-              <span className={manageStyles.actionIcon}>{'\u{1F4B0}'}</span>
-              <span className={manageStyles.actionTitle}>Cassa</span>
-              <span className={manageStyles.actionDesc}>Crea ordini e incassa crediti</span>
+      {!isEventFinished(selectedEventId ?? '') && (
+        <section>
+          <h2 className={styles.sectionTitle}>Operazioni</h2>
+          <div className={manageStyles.cardsGrid}>
+            <Link className={manageStyles.actionCard} to={selectedEventId ? `/admin/events/${selectedEventId}/stands/${standId}/orders` : `/admin/stands/${standId}/orders`}>
+              <span className={manageStyles.actionIcon}>{'\u{1F4CB}'}</span>
+              <span className={manageStyles.actionTitle}>Ordini</span>
+              <span className={manageStyles.actionDesc}>Lista ordini dello stand e resoconti</span>
             </Link>
-          )}
 
-          {selectedEvent && eventOngoing && (
-            <a
-              className={manageStyles.actionCard}
-              href={`/events/${selectedEvent.id}/stands/${standId}/ordersqueue`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span className={manageStyles.actionIcon}>{'\u{1F441}'}</span>
-              <span className={manageStyles.actionTitle}>Coda ordini</span>
-              <span className={manageStyles.actionDesc}>Display pubblico degli ordini in lavorazione</span>
-            </a>
-          )}
-        </div>
-      </section>
+            {selectedEventId && eventOngoing && canAccessCash && (
+              <Link
+                className={manageStyles.actionCard}
+                to={`/admin/events/${selectedEventId}/stands/${standId}/order`}
+              >
+                <span className={manageStyles.actionIcon}>{'\u{1F4B0}'}</span>
+                <span className={manageStyles.actionTitle}>Cassa</span>
+                <span className={manageStyles.actionDesc}>Crea ordini e incassa crediti</span>
+              </Link>
+            )}
+
+            {selectedEventId && eventOngoing && (
+              <a
+                className={manageStyles.actionCard}
+                href={`/events/${selectedEventId}/stands/${standId}/ordersqueue`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className={manageStyles.actionIcon}>{'\u{1F441}'}</span>
+                <span className={manageStyles.actionTitle}>Coda ordini</span>
+                <span className={manageStyles.actionDesc}>Display pubblico degli ordini in lavorazione</span>
+              </a>
+            )}
+          </div>
+        </section>
+      )}
 
       {eventOngoing && stations.length > 0 && (
         <section>
@@ -173,7 +150,7 @@ export function StandManagePage() {
             {selectedStations.length >= 2 && (
               <a
                 className={manageStyles.combinedQueueLink}
-                href={`/orders/station/${selectedStations[0]}?stations=${selectedStations.join(',')}${selectedEvent ? `&eventId=${selectedEvent.id}` : ''}`}
+                href={`/orders/station/${selectedStations[0]}?stations=${selectedStations.join(',')}${selectedEventId ? `&eventId=${selectedEventId}` : ''}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -193,7 +170,7 @@ export function StandManagePage() {
                 />
                 <a
                   className={manageStyles.stationLink}
-                  href={`/orders/station/${st.id}${selectedEvent ? `?eventId=${selectedEvent.id}` : ''}`}
+                  href={`/orders/station/${st.id}${selectedEventId ? `?eventId=${selectedEventId}` : ''}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
