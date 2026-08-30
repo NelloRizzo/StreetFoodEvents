@@ -264,12 +264,45 @@
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-card);
   background: #fffaf2;
   color: var(--color-ink-strong);
+  font-family: inherit;
+}
+
+.allergenGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+
+.allergenCheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.allergenCheck input[type='checkbox'] {
+  accent-color: var(--color-brand);
+}
+
+.checkboxRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.checkboxRow input[type='checkbox'] {
+  accent-color: var(--color-brand);
 }
 
 .checkboxGroup {

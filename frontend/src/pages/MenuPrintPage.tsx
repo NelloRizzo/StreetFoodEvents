@@ -168,7 +168,8 @@ ${standsHtml}
 function categoryMenuFullHtml(
   event: EventRef,
   categories: string[],
-  products: MenuProduct[]
+  products: MenuProduct[],
+  selectedCategories?: Set<string>
 ): string {
   const eventLogo = event.logo
     ? `<img src="${esc(event.logo.url)}" alt="${esc(event.name)}" style="display:block;max-height:80px;margin:0 auto 0.5rem" />`
@@ -194,6 +195,7 @@ function categoryMenuFullHtml(
   const sections = Object.keys(byCategory)
     .map((cat) => ({ cat, items: byCategory[cat] }))
     .filter((s) => s.items.length > 0)
+    .filter((s) => (selectedCategories ? selectedCategories.has(s.cat) : true))
 
   const sectionsHtml = sections.map(({ cat, items }) => {
     const allergenBadge = '*'
@@ -266,6 +268,24 @@ export function MenuPrintPage() {
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [printMode, setPrintMode] = useState<'stand' | 'category'>('stand')
+  const [categories, setCategories] = useState<string[]>([])
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set())
+
+  const DEFAULT_CATEGORY = 'Senza categoria'
+
+  useEffect(() => {
+    if (printMode !== 'category') return
+    let cancelled = false
+    apiRequest<{ items: { label: string }[] }>('/categories')
+      .then((data) => {
+        if (cancelled) return
+        const labels = (data.items ?? []).map((c) => c.label)
+        setCategories(labels)
+        setSelectedCategoryIds(new Set([DEFAULT_CATEGORY, ...labels]))
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [printMode])
 
   useEffect(() => {
     apiRequest<{ items: EventRef[] }>('/events')
@@ -306,6 +326,23 @@ export function MenuPrintPage() {
     setSelectedStandIds(new Set())
   }
 
+  function toggleCategory(label: string) {
+    setSelectedCategoryIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
+  }
+
+  function selectAllCategories() {
+    setSelectedCategoryIds(new Set([DEFAULT_CATEGORY, ...categories]))
+  }
+
+  function deselectAllCategories() {
+    setSelectedCategoryIds(new Set())
+  }
+
   async function loadProducts(standId: string): Promise<EventProductItem[]> {
     const data = await apiRequest<{ items: EventProductItem[] }>(
       `/event-products?eventId=${selectedEventId}&standId=${standId}`
@@ -326,7 +363,7 @@ export function MenuPrintPage() {
           items: MenuProduct[]
         }>(`/events/${selectedEventId}/menu`)
         const products = data.items.filter((p) => selectedStandIds.has(p.standId))
-        const html = categoryMenuFullHtml(event, data.categories, products)
+        const html = categoryMenuFullHtml(event, data.categories, products, selectedCategoryIds)
         const w = window.open('', '_blank', 'width=900,height=800')
         if (w) {
           w.document.write(html)
@@ -404,10 +441,31 @@ export function MenuPrintPage() {
               </div>
             )}
 
+            {printMode === 'category' && (
+              <>
+                <div className={styles.standActions}>
+                  <button type="button" className={styles.smallBtn} onClick={selectAllCategories}>Seleziona tutte</button>
+                  <button type="button" className={styles.smallBtn} onClick={deselectAllCategories}>Deseleziona tutte</button>
+                </div>
+                <div className={styles.standList}>
+                  {[DEFAULT_CATEGORY, ...categories].map((label) => (
+                    <label key={label} className={styles.categoryRow}>
+                      <input
+                        type="checkbox"
+                        checked={selectedCategoryIds.has(label)}
+                        onChange={() => toggleCategory(label)}
+                      />
+                      <span className={styles.standName}>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+
             <button
               type="button"
               className={styles.printBtn}
-              disabled={selectedStandIds.size === 0 || generating}
+              disabled={selectedStandIds.size === 0 || (printMode === 'category' && selectedCategoryIds.size === 0) || generating}
               onClick={handlePrint}
             >
               {generating ? 'Generazione...' : `Stampa menu (${selectedStandIds.size} stand)`}

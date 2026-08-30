@@ -136,6 +136,27 @@
   color: #14261f;
 }
 
+.categoryRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.1s;
+
+  &:hover {
+    background: rgba(191, 90, 42, 0.06);
+  }
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #bf5a2a;
+  }
+}
+
 .standSlogan {
   font-size: 0.82rem;
   color: #587065;

@@ -14,6 +14,7 @@ import { PlatformPage } from './pages/PlatformPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 import { ProductsPage } from './pages/ProductsPage'
+import { CategoriesPage } from './pages/CategoriesPage'
 import { StaffPage } from './pages/StaffPage'
 import { UserRolesPage } from './pages/UserRolesPage'
 import { EventDetailPage } from './pages/EventDetailPage'
@@ -136,6 +137,7 @@ export const router = createBrowserRouter([
       { path: 'stands/:standId/manage', element: <StandManagePage /> },
       { path: 'stands/:standId/orders', element: <StandOrdersPage /> },
       { path: 'products', element: <ProductsPage /> },
+      { path: 'categories', element: <CategoriesPage /> },
       { path: 'event-products', element: <EventProductsPage /> },
       { path: 'event-users', element: <EventUsersPage /> },
       { path: 'favorites', element: <FavoritesPage /> },

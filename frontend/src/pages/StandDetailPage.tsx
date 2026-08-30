@@ -10,6 +10,7 @@ import { QRCodeDownload } from '../components/QRCodeDownload'
 import { ImageUploader } from '../components/ImageUploader'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { CategorySelect } from '../components/CategorySelect'
+import { ALLERGEN_OPTIONS } from '../lib/allergens'
 import type { UploadedImage } from '../lib/upload'
 import styles from './StandDetailPage.module.scss'
 
@@ -77,7 +78,16 @@ export function StandDetailPage() {
   const [showProductForm, setShowProductForm] = useState(false)
   const [productForm, setProductForm] = useState<ProductFormData>(emptyProductForm)
   const [showNewProductForm, setShowNewProductForm] = useState(false)
-  const [newProductForm, setNewProductForm] = useState({ name: '', ingredients: '', price: '', coverImage: null as UploadedImage | null, gallery: [] as UploadedImage[] })
+  const [newProductForm, setNewProductForm] = useState({
+    name: '',
+    description: '',
+    ingredients: '',
+    allergens: [] as string[],
+    isFrozen: false,
+    price: '',
+    coverImage: null as UploadedImage | null,
+    gallery: [] as UploadedImage[],
+  })
 
   const fetchStand = async () => {
     const data = await apiRequest<{ item: Stand }>(`/stands/${standId}`)
@@ -283,17 +293,29 @@ export function StandDetailPage() {
       method: 'POST',
       bodyJson: {
         name: newProductForm.name,
+        description: newProductForm.description.trim() || null,
         ingredients: newProductForm.ingredients.split(',').map((s) => s.trim()).filter(Boolean),
+        allergens: newProductForm.allergens,
+        isFrozen: newProductForm.isFrozen,
         price: Number(newProductForm.price),
         coverImage: newProductForm.coverImage,
         gallery: newProductForm.gallery,
       },
     })
     setShowNewProductForm(false)
-    setNewProductForm({ name: '', ingredients: '', price: '', coverImage: null, gallery: [] })
+    setNewProductForm({ name: '', description: '', ingredients: '', allergens: [], isFrozen: false, price: '', coverImage: null, gallery: [] })
     setProducts((prev) => [...prev, data.item])
     setShowProductForm(true)
     setProductForm({ ...emptyProductForm, productId: data.item.id })
+  }
+
+  const toggleNewAllergen = (value: string) => {
+    setNewProductForm((prev) => ({
+      ...prev,
+      allergens: prev.allergens.includes(value)
+        ? prev.allergens.filter((a) => a !== value)
+        : [...prev.allergens, value],
+    }))
   }
 
   const eventName = (id: string) => events.find((e) => e.id === id)?.name ?? id
@@ -431,9 +453,36 @@ export function StandDetailPage() {
                 <input id="np-name" value={newProductForm.name} onChange={(e) => setNewProductForm({ ...newProductForm, name: e.target.value })} required />
               </div>
               <div className={styles.field}>
+                <label htmlFor="np-desc">Descrizione</label>
+                <textarea id="np-desc" rows={2} value={newProductForm.description} onChange={(e) => setNewProductForm({ ...newProductForm, description: e.target.value })} placeholder="Descrizione breve del prodotto (opzionale)" />
+              </div>
+              <div className={styles.field}>
                 <label htmlFor="np-ingredients">Ingredienti (separati da virgola)</label>
                 <input id="np-ingredients" value={newProductForm.ingredients} onChange={(e) => setNewProductForm({ ...newProductForm, ingredients: e.target.value })} />
               </div>
+              <div className={styles.field}>
+                <label>Allergeni (Reg. UE 1169/2011)</label>
+                <div className={styles.allergenGrid}>
+                  {ALLERGEN_OPTIONS.map((opt) => (
+                    <label key={opt.value} className={styles.allergenCheck}>
+                      <input
+                        type="checkbox"
+                        checked={newProductForm.allergens.includes(opt.value)}
+                        onChange={() => toggleNewAllergen(opt.value)}
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <label className={styles.checkboxRow}>
+                <input
+                  type="checkbox"
+                  checked={newProductForm.isFrozen}
+                  onChange={(e) => setNewProductForm({ ...newProductForm, isFrozen: e.target.checked })}
+                />
+                <span>Prodotto congelato *</span>
+              </label>
               <div className={styles.field}>
                 <label htmlFor="np-price">Prezzo standard *</label>
                 <input id="np-price" type="number" step="0.01" min="0" value={newProductForm.price} onChange={(e) => setNewProductForm({ ...newProductForm, price: e.target.value })} required />

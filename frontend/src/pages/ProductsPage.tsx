@@ -1,31 +1,11 @@
 import { useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
+import { ALLERGEN_OPTIONS, ALLERGEN_LABELS } from '../lib/allergens'
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { ConfirmModal } from '../components/ConfirmModal'
 import styles from './ProductsPage.module.scss'
-
-const ALLERGEN_OPTIONS = [
-  { value: 'gluten', label: 'Glutine' },
-  { value: 'crustaceans', label: 'Crostacei' },
-  { value: 'eggs', label: 'Uova' },
-  { value: 'fish', label: 'Pesce' },
-  { value: 'peanuts', label: 'Arachidi' },
-  { value: 'soy', label: 'Soia' },
-  { value: 'milk', label: 'Latte' },
-  { value: 'tree-nuts', label: 'Frutta a guscio' },
-  { value: 'celery', label: 'Sedano' },
-  { value: 'mustard', label: 'Senape' },
-  { value: 'sesame', label: 'Sesamo' },
-  { value: 'sulphites', label: 'Solfiti' },
-  { value: 'lupins', label: 'Lupini' },
-  { value: 'molluscs', label: 'Molluschi' },
-]
-
-const ALLERGEN_LABELS: Record<string, string> = Object.fromEntries(
-  ALLERGEN_OPTIONS.map((o) => [o.value, o.label])
-)
 
 type Product = {
   id: string

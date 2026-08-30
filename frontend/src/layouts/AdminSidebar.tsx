@@ -89,6 +89,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
         { label: 'Stand', to: '/admin/stands', icon: '\u{1F3EA}' },
         { label: 'Prodotti', to: '/admin/products', icon: '\u{1F6D2}' },
         { label: 'Prodotti per evento', to: '/admin/event-products', icon: '\u{1F4E6}' },
+        { label: 'Categorie', to: '/admin/categories', icon: '\u{1F3F7}' },
         { label: 'Staff', to: '/admin/staff', icon: '\u{1F465}' },
         ...(basePath
           ? [
