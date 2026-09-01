@@ -30,6 +30,9 @@ app.use('/api/catalog', catalogRouter);
 app.use('/api/clients', clientsRouter);
 app.use('/api/sync', syncRouter);
 
+fs.mkdirSync(config.mediaDir, { recursive: true });
+app.use(config.assetsUrlPrefix, express.static(config.mediaDir));
+
 const publicDir = path.resolve(process.cwd(), 'public');
 if (fs.existsSync(publicDir)) {
     app.use(express.static(publicDir));

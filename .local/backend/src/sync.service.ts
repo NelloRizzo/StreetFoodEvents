@@ -15,6 +15,7 @@ import {
     UserModel
 } from './models';
 import { config } from './config';
+import { localizeEventImages, localizeStandImages, localizeProductImages } from './media.service';
 
 // ─── Ledger ───────────────────────────────────────────────────────────────────
 
@@ -145,6 +146,14 @@ export async function importFromRemote(eventId: string, standId: string, force: 
 
     const snapshot = await fetchRemoteSnapshot(eventId, standId);
 
+    // Localize remote images (download Cloudinary assets to local disk and
+    // rewrite url/publicId to the local static endpoint) before the wipe.
+    const event = snapshot.event ? await localizeEventImages(snapshot.event) : snapshot.event;
+    const stand = snapshot.stand ? await localizeStandImages(snapshot.stand) : snapshot.stand;
+    const products = await Promise.all(
+        (snapshot.products ?? []).map((p: any) => (p ? localizeProductImages(p) : p))
+    );
+
     const session = await mongoose.startSession();
     try {
         session.startTransaction();
@@ -163,14 +172,14 @@ export async function importFromRemote(eventId: string, standId: string, force: 
         await UserModel.deleteMany({}, { session });
 
         // insert snapshot (preserve remote _ids)
-        await EventModel.create([snapshot.event], { session });
-        await StandModel.create([snapshot.stand], { session });
+        await EventModel.create([event], { session });
+        await StandModel.create([stand], { session });
 
         if (snapshot.stations.length > 0) {
             await StationModel.insertMany(snapshot.stations.map((s: any) => ({ ...s, _id: new mongoose.Types.ObjectId(s._id) })), { session });
         }
-        if (snapshot.products.length > 0) {
-            await ProductModel.insertMany(snapshot.products.map((p: any) => ({ ...p, _id: new mongoose.Types.ObjectId(p._id) })), { session });
+        if (products.length > 0) {
+            await ProductModel.insertMany(products.map((p: any) => ({ ...p, _id: new mongoose.Types.ObjectId(p._id) })), { session });
         }
         if (snapshot.eventProducts.length > 0) {
             await EventProductModel.insertMany(
@@ -196,13 +205,13 @@ export async function importFromRemote(eventId: string, standId: string, force: 
         await session.endSession();
     }
 
-    await setMeta(eventId, standId, snapshot.event.name, snapshot.event.currencyName);
+    await setMeta(eventId, standId, event.name, event.currencyName);
 
     return {
         status: 'ok' as const,
-        eventName: snapshot.event.name,
-        standName: snapshot.stand.name,
-        productsCount: snapshot.products.length,
+        eventName: event.name,
+        standName: stand.name,
+        productsCount: products.length,
         stationsCount: snapshot.stations.length
     };
 }
@@ -289,6 +298,7 @@ function cleanForPush(doc: Record<string, unknown>): Record<string, unknown> {
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(doc)) {
         if (key === '__v' || key === 'createdAt') continue;
+        if (looksLikeImageDoc(value)) continue;
         if (value instanceof Date) out[key] = value.toISOString();
         else if (value && typeof value === 'object' && '_bsontype' in (value as any)) {
             out[key] = (value as any).toString();
@@ -297,4 +307,11 @@ function cleanForPush(doc: Record<string, unknown>): Record<string, unknown> {
         }
     }
     return out;
+}
+
+/** An image subdoc has the local `/assets/...` url — it must never reach the cloud. */
+function looksLikeImageDoc(value: unknown): boolean {
+    if (!value || typeof value !== 'object') return false;
+    const v = value as Record<string, unknown>;
+    return typeof v.url === 'string' && v.url.startsWith('/assets/');
 }
