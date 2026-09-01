@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import type { Client, MenuItem, Station } from '../lib/types';
+import type { Client, MenuItem, Station, StandCatalog } from '../lib/types';
 import { useMeta } from '../lib/MetaContext';
 
 interface CartLine {
@@ -23,6 +23,7 @@ export function Cassa() {
     const [payMethod, setPayMethod] = useState<'crediti' | 'contanti'>('contanti');
     const [log, setLog] = useState<string>('');
     const [loading, setLoading] = useState(true);
+    const [catalog, setCatalog] = useState<StandCatalog | null>(null);
 
     const eventId = meta?.eventId ?? '';
     const standId = meta?.standId ?? '';
@@ -35,6 +36,7 @@ export function Cassa() {
         setLoading(true);
         Promise.all([api.getCatalog(standId, eventId), api.getClients(eventId)])
             .then(([cat, cls]) => {
+                setCatalog(cat);
                 setItems(cat.items);
                 setStations(cat.stations);
                 const generic = cls.items.find((c) => c.userId === null);
@@ -124,7 +126,17 @@ export function Cassa() {
 
     return (
         <div style={styles.page}>
-            <h2>Cassa — {stationName('') || 'Stand'}</h2>
+            <div style={styles.header}>
+                {catalog?.coverImage ? (
+                    <img src={catalog.coverImage.url} alt={catalog.standName} style={styles.coverThumb} />
+                ) : null}
+                <div>
+                    <h2 style={{ margin: 0 }}>Cassa — {catalog?.standName || 'Stand'}</h2>
+                    {catalog?.eventName ? (
+                        <div style={{ fontSize: 13, color: '#555' }}>{catalog.eventName}</div>
+                    ) : null}
+                </div>
+            </div>
             <div style={styles.toolbar}>
                 <label>
                     Cliente:
@@ -159,9 +171,16 @@ export function Cassa() {
                     <h3>Prodotti</h3>
                     {items.map((item) => (
                         <div key={item.eventProductId} style={styles.product}>
-                            <div style={{ fontWeight: 600 }}>{item.name}</div>
-                            <div style={{ fontSize: 12, color: '#555' }}>
-                                {item.price.toFixed(2)} — {item.stationIds.map(stationName).join(', ')}
+                            <div style={styles.productRow}>
+                                {item.coverImage ? (
+                                    <img src={item.coverImage.url} alt={item.name} style={styles.productThumb} />
+                                ) : null}
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>{item.name}</div>
+                                    <div style={{ fontSize: 12, color: '#555' }}>
+                                        {item.price.toFixed(2)} {catalog?.currencyName ?? '€'} — {item.stationIds.map(stationName).join(', ')}
+                                    </div>
+                                </div>
                             </div>
                             <div style={{ marginTop: 4 }}>
                                 {item.stationIds.map((sid) => (
@@ -193,7 +212,9 @@ export function Cassa() {
                             <button onClick={() => changeQty(l.eventProductId, l.stationId, 1)} style={styles.btn}>+</button>
                         </div>
                     ))}
-                    <div style={styles.total}>Totale: {total.toFixed(2)}</div>
+                    <div style={styles.total}>
+                        Totale: {total.toFixed(2)} {catalog?.currencyName ?? '€'}
+                    </div>
                     <button onClick={submitOrder} disabled={cart.length === 0} style={{ ...styles.btnBig }}>
                         Crea ordine
                     </button>
@@ -208,6 +229,10 @@ export function Cassa() {
 const styles: Record<string, React.CSSProperties> = {
     page: { fontFamily: 'system-ui, sans-serif', padding: 16, maxWidth: 1100, margin: '0 auto' },
     center: { fontFamily: 'system-ui, sans-serif', padding: 40, textAlign: 'center' },
+    header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 },
+    coverThumb: { width: 56, height: 56, objectFit: 'cover', borderRadius: 8, background: '#eee' },
+    productRow: { display: 'flex', alignItems: 'center', gap: 10 },
+    productThumb: { width: 44, height: 44, objectFit: 'cover', borderRadius: 6, background: '#eee', flexShrink: 0 },
     toolbar: { display: 'flex', gap: 20, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' },
     input: { marginLeft: 8, padding: 6 },
     grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 },

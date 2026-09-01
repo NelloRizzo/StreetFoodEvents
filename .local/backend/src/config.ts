@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 export const config = {
-    port: Number(process.env.PORT ?? 4200),
+    port: Number(process.env.PORT ?? 4000),
     mongodbUri: process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/street-food-events-local?replicaSet=rs0',
     dbName: process.env.MONGODB_DB_NAME ?? 'street-food-events-local',
     machineId: process.env.MACHINE_ID ?? 'laptop-local-default',

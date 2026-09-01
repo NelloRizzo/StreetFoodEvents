@@ -211,9 +211,8 @@ Approccio implementato (diverso dal piano originario): **preservazione snapshot 
 
 Restano a fare (futuro):
 - Sync engine generico LWW (`lastModifiedAt` + `syncVersion`, `GET /sync/pull?since=<ts>`) — oggi il push è diff goal-selected per ordini/transazioni/contatori/saldi.
-- Align port locale: `config.ts` default 4200 vs Docker compose 4000.
 - Script unico `npm run setup:local`.
-- Doc operativa `REMOTE_URL`/`REMOTE_TOKEN`/`SYNC_API_TOKEN` (aggiunti a `.env.example`).
+- Il frontend locale non mostra ancora le immagini del menu nella coda pubblica (la cassa le mostra già).
 
 #### Media locale (SET 2026) — implementato
 Le immagini di evento/stand/prodotto dell'import vengono **scaricate in locale** e ripuntate all'endpoint statico locale (`/assets/*`), così il menu/mappa funzionano offline:

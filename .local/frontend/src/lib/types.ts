@@ -1,3 +1,9 @@
+export interface ImageLite {
+    url: string;
+    width: number;
+    height: number;
+}
+
 export interface MenuItem {
     eventProductId: string;
     productId: string;
@@ -6,6 +12,7 @@ export interface MenuItem {
     price: number;
     stationIds: string[];
     categoryIds: string[];
+    coverImage: ImageLite | null;
 }
 
 export interface Station {
@@ -16,7 +23,11 @@ export interface Station {
 export interface StandCatalog {
     standId: string;
     standName: string;
+    coverImage: ImageLite | null;
     eventId: string | null;
+    eventName: string | null;
+    currencyName: string | null;
+    currencySymbol: ImageLite | null;
     stations: Station[];
     items: MenuItem[];
 }

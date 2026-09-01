@@ -1,0 +1,46 @@
+# App Locale Offline — `.local/`
+
+Deployment dell'app su laptop per eventi senza connessione. Backend Express+Mongoose + MongoDB locale (replica set single-node) + frontend React servito statico.
+
+## Stack
+- `backend/` — API locale (Express + Mongoose, TypeScript, `tsx`)
+- `frontend/` — UI (React + Vite), buildata e copiata in `backend/public`
+- `docker-compose.yml` — container con MongoDB + seed + server su porta **4000**
+
+## Porte
+- API locale: **4000** (default). Override con `PORT`.
+- Frontend dev (vite): **5173**, proxy `/api` → `http://127.0.0.1:4000`.
+- Docker compose: `4000:4000`, `PORT=4000`.
+
+## Variabili d'ambiente (backend locale)
+| Var | Default | Descrizione |
+|---|---|---|
+| `PORT` | `4000` | Porta API |
+| `MONGODB_URI` | `mongodb://127.0.0.1:27017/street-food-events-local?replicaSet=rs0` | URI Mongo (richiede replica set `rs0`) |
+| `MACHINE_ID` | `laptop-local-default` | Identificativo macchina |
+| `REMOTE_URL` | (vuoto) | Base URL del backend cloud, es. `https://api.example.com/api` |
+| `REMOTE_TOKEN` | (vuoto) | Bearer token per le API `/api/sync` del cloud (deve combaciare con `SYNC_API_TOKEN` sul cloud) |
+| `MEDIA_DIR` | `<cwd>/.local-assets` | Cartella in cui vengono scaricate le immagini durante l'import |
+| `ASSETS_URL_PREFIX` | `/assets` | Prefisso URL dell'endpoint statico per le immagini locali |
+
+## Sync remoto
+1. Nel pannello **Sync** selezionare l'evento remoto → lo stand remoto.
+2. Se esistono modifiche locali non sincronizzate, il pannello richiede di **pushearle** (`/api/sync/push`) prima dell'import.
+3. **Import**: scarica lo snapshot remoto, sostituisce TUTTI i dati locali e **scarica in locale** le immagini di evento/stand/prodotto (puntate a `/assets/*`, cartella `MEDIA_DIR`). Le immagini locali non vengono MAI rimandate al cloud.
+
+### Configurazione cloud (sorgente di verità)
+Sul backend cloud va impostata la variabile `SYNC_API_TOKEN` (stessa value di `REMOTE_TOKEN` locale). Le API `/api/sync` sono accessibili solo con `Authorization: Bearer <token>`.
+
+## Comandi (backend locale)
+| Comando | Cosa |
+|---|---|
+| `npm run dev` | `tsx watch src/server.ts` |
+| `npm start` | `tsx src/server.ts` |
+| `npm run seed` | `tsx src/seed.ts` (seme demo) |
+| `npm run typecheck` | `tsc --noEmit` |
+
+## Comandi (frontend locale)
+| Comando | Cosa |
+|---|---|
+| `npm run dev` | vite dev (:5173) |
+| `npm run build` | `vite build` → `dist/` (poi copiare in `backend/public`) |
