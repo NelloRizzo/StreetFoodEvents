@@ -56,6 +56,8 @@ const envSchema = z.object({
     META_PAGE_ID: z.string().optional(),
     META_IG_USER_ID: z.string().optional(),
 
+    SYNC_API_TOKEN: z.string().optional(),
+
     STAND_DISPLAY_READY_TIMEOUT_MINUTES: z.coerce
         .number()
         .int()

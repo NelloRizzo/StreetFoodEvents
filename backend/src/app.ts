@@ -35,6 +35,7 @@ import { emailSubscriptionsRouter } from './routes/email-subscriptions.routes';
 import { exchangeRouter } from './routes/exchange.routes';
 import { usageContractsRouter } from './routes/usage-contracts.routes';
 import { categoriesRouter } from './routes/categories.routes';
+import { syncRouter } from './routes/sync.routes';
 
 export const app = express();
 
@@ -104,6 +105,7 @@ app.use('/api/events/:eventId/photos', eventPhotosRouter);
 app.use('/api/events/:eventId/social', eventSocialRouter);
 app.use('/api/photos', myPhotosRouter);
 app.use('/api/events/:eventId/frames', eventFramesRouter);
+app.use('/api/sync', syncRouter);
 
 app.use((req, res) => {
     return res.status(404).json({

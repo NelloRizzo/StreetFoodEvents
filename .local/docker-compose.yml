@@ -1,0 +1,17 @@
+services:
+  sandbox:
+    build: .
+    container_name: streetfood-events-local
+    environment:
+      - SEED=1
+      - PORT=4000
+      - MONGODB_URI=mongodb://127.0.0.1:27017/street-food-events-local?replicaSet=rs0
+      - MACHINE_ID=prototipo-demo
+    ports:
+      - "4000:4000"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo-data:

@@ -80,12 +80,50 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Frontend**: input coupon in cassa, gestione promozioni admin
 - **Motivazione**: marketing, fidelizzazione
 
-### 6. Multi-lingua (i18n)
-- **Descrizione**: supporto lingue multiple per interfaccia e contenuti
-- **Tecnologia**: react-intl o i18next
-- **Traduzioni**: IT (default), EN, DE, FR
-- **API**: campi localizzati su Event/Stand (name_it, name_en, ecc.)
-- **Motivazione**: internazionalizzazione eventi turistici
+### 6. Multi-lingua (i18n) — Piano dettagliato (Ago 2026)
+- **Scope**: solo pagine pubbliche; admin resta in italiano
+- **Lingue**: configurabili dall'admin (qualsiasi lingua)
+- **Due domini**: (A) UI strings (react-i18next) e (B) Contenuti tradotti (DB + Groq AI)
+
+#### UI Strings (react-i18next + i18next-browser-languagedetector)
+- **Pagine pubbliche** (~12): LandingPage, EventsPage, EventDetailPage, EventStandMenuPage, EventGalleryPage, SlideshowPage, EventMenuPage, LoginPage, RegisterPage, ActivationPage, AliasRedirectPage, NotFoundPage
+- **Componenti shared**: CookieConsentBanner, PublicHeader, PublicBottomBar, LanguageSelector (nuovo)
+- **Setup**: `frontend/src/i18n/index.ts`, `frontend/src/locales/{it,en}.json`, hook `useTranslation()`
+- **Detection**: localStorage → navigator.language → fallback `it`
+- **LanguageSelector**: dropdown nella navbar pubblica (solo pagine pubbliche)
+
+#### Content Multilingua (schema embedded + Groq)
+- **Schema Mongoose**: `nameTranslations: Map<String, String>` + `descriptionTranslations: Map<String, String>` su Event, Stand, EventProduct
+- **API**: `GET /api/events?lang=xx` ritorna contenuti tradotti con fallback a default
+- **Admin UI**: tabs linguistiche nei form Evento/Stand/Prodotto (una tab per lingua attiva)
+- **LanguagesPage** (sotto Platform): gestione lingue attive (codice, nome, flag, default)
+
+#### Groq AI Fallback (eager on-save)
+- **API**: `https://api.groq.com/openai/v1/chat/completions` (modello `llama-3.3-70b-versatile`, gratuito)
+- **Strategia**: quando l'admin salva un contenuto → Groq traduce in tutte le lingue attive automaticamente
+- **Admin**: può revisionare/correggere dopo; pulsante "Traduci in tutte le lingue"
+- **Cache**: traduzioni salvate in `*Translations` fields, accesso diretto (niente cache extra)
+
+#### Lingua visitatore
+- **Auto-detect**: Accept-Language del browser
+- **Selettore manuale**: dropdown opzionale nella PublicHeader
+- **localStorage**: salva preferenza per visite successive
+
+#### Tempistiche stimate
+| Fase | Giorni |
+|---|---|
+| Schema DB (aggiungere *Translations fields) | 1-2 |
+| Core i18next + locale files + detection | 2-3 |
+| LanguageSelector + PublicHeader | 1 |
+| API content con `?lang=` param | 2 |
+| Groq service + eager translate on save | 2-3 |
+| Admin UI: tabs linguistiche | 3-4 |
+| Admin LanguagesPage | 1-2 |
+| Public pages: sostituire hardcoded text | 3-4 |
+| Test + polish | 2 |
+| **TOTALE** | **~18-22 giorni** |
+
+- **Motivazione**: internazionalizzazione eventi turistici, accesso visitatori stranieri
 
 ### 7. Esportazione Dati
 - **Descrizione**: export ordini, transazioni, utenti in formati standard
@@ -162,3 +200,17 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Limiti**: foto/video non sincronizzati (troppo pesanti); sessioni auth separate per local/remote; sync periodico (non real-time)
 - **Stimata**: ~750-950 righe (sync engine, lastModifiedAt, scripts, doc)
 - **Motivazione**: eventi in zone senza rete (fiere, manifesti, location isolate)
+
+#### Stato (SET 2026) — primo step implementato, engine LWW su `lastModifiedAt` NON ancora fatto
+Approccio implementato (diverso dal piano originario): **preservazione snapshot via `_id`**, non sync engine generico:
+- Il backend cloud espone API di sola sincronizzazione **`/api/sync`** protette da **bearer token statico** (`SYNC_API_TOKEN` env): `GET /events`, `GET /events/:eventId/stands`, `GET /events/:eventId/stands/:standId` (snapshot completo evento+stand: event, stand, stations, products, eventProducts, eventUsers, counter), `POST /push` (ordini/transazioni/contatori/saldi event-user upsert con guardia LWW locale al posto di lastModifiedAt).
+- L'app locale (`.local/`) ha un pannello Sync: seleziona evento e stand remoto → **import** che SOSTITUISCE completamente i dati locali (wipe transazionale + insert preservando `_id`) con snapshot remoto. Se esistono dati locali non sincronizzati (`/pending/count` sul ledger), il pannello chiede di **pushare prima** (modale di conferma) per non perdere lavoro fatto offline.
+- Ledger locale `SyncLedger` traccia le operazioni locali pendenti; `LocalState` (doc `key: 'current'`) conserva l'evento/stand attivo corrente (con `eventName`/`currencyName`).
+- Frontend locale usa `MetaContext` (eventId/standId/currencyName dinamici da `/api/sync/meta`) al posto della `config.ts` hardcoded; `Cassa`/`CodaPostazioni`/`CodaPubblica` non sono più legate a `config`.
+- Auth server-to-server: token statico condiviso (niente OAuth/session); su cloud in `env.ts`, su locale in `.local/backend/src/config.ts` (`remoteUrl`/`remoteToken`).
+
+Restano a fare (futuro):
+- Sync engine generico LWW (`lastModifiedAt` + `syncVersion`, `GET /sync/pull?since=<ts>`) — oggi il push è diff goal-selected per ordini/transazioni/contatori/saldi.
+- Align port locale: `config.ts` default 4200 vs Docker compose 4000.
+- Script unico `npm run setup:local`; storage media locale opzionale.
+- Doc operativa `REMOTE_URL`/`REMOTE_TOKEN`/`SYNC_API_TOKEN` (aggiunti a `.env.example`).

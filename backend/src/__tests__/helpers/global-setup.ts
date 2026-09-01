@@ -8,6 +8,7 @@ const replSet = await MongoMemoryReplSet.create({
 const uri = replSet.getUri();
 process.env.MONGODB_URI = uri;
 process.env.MONGODB_DB_NAME = 'test';
+process.env.SYNC_API_TOKEN = process.env.SYNC_API_TOKEN ?? 'test-sync-token';
 
 export async function teardown() {
     await replSet.stop();
