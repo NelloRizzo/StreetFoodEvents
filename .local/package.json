@@ -1,0 +1,12 @@
+{
+    "name": "street-food-events-local-tools",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "setup:local": "node scripts/setup-local.mjs",
+        "local:up": "docker compose up --build",
+        "local:down": "docker compose down",
+        "seed": "npm --prefix backend run seed"
+    }
+}

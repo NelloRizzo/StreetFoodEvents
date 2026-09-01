@@ -211,7 +211,6 @@ Approccio implementato (diverso dal piano originario): **preservazione snapshot 
 
 Restano a fare (futuro):
 - Sync engine generico LWW (`lastModifiedAt` + `syncVersion`, `GET /sync/pull?since=<ts>`) — oggi il push è diff goal-selected per ordini/transazioni/contatori/saldi.
-- Script unico `npm run setup:local`.
 - Il frontend locale non mostra ancora le immagini del menu nella coda pubblica (la cassa le mostra già).
 
 #### Media locale (SET 2026) — implementato

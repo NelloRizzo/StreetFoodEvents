@@ -5,7 +5,7 @@ export const config = {
     mongodbUri: process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/street-food-events-local?replicaSet=rs0',
     dbName: process.env.MONGODB_DB_NAME ?? 'street-food-events-local',
     machineId: process.env.MACHINE_ID ?? 'laptop-local-default',
-    remoteUrl: process.env.REMOTE_URL ?? '',
+    remoteUrl: process.env.REMOTE_URL ?? 'https://streetfoodevents-api.onrender.com/api',
     remoteToken: process.env.REMOTE_TOKEN ?? '',
     mediaDir: process.env.MEDIA_DIR ?? path.resolve(process.cwd(), '.local-assets'),
     assetsUrlPrefix: process.env.ASSETS_URL_PREFIX ?? '/assets'

@@ -12,13 +12,38 @@ Deployment dell'app su laptop per eventi senza connessione. Backend Express+Mong
 - Frontend dev (vite): **5173**, proxy `/api` → `http://127.0.0.1:4000`.
 - Docker compose: `4000:4000`, `PORT=4000`.
 
+## Avvio rapido
+### Deploy (tutto-in-uno, consigliato)
+Un solo comando costruisce e avvia l'app completa (MongoDB replica set + seed + API + UI statica):
+```
+npm run local:up        # = docker compose up --build
+```
+Poi apri `http://localhost:4000`. Le variabili si impostano copiando `.env.example` → `.env`. Per fermare tutto: `npm run local:down`.
+
+#### Variabili di deploy (via `.env` accanto al compose)
+| Var | Default |
+|---|---|
+| `PORT` | `4000` |
+| `MACHINE_ID` | `prototipo-demo` |
+| `REMOTE_URL` | `https://streetfoodevents-api.onrender.com/api` |
+| `REMOTE_TOKEN` | (vuoto) |
+| `SEED` | `1` |
+| `ASSETS_URL_PREFIX` | `/assets` |
+
+### Sviluppo (senza Docker per l'app)
+Un MongoDB dedicato (via Docker) + seed + backend/frontend dev in un solo comando:
+```
+npm run setup:local
+```
+MongoDB gira nel container di `docker-compose.db.yml` (replica set `rs0`, porta 27017); backend su :4000 e frontend vite su :5173.
+
 ## Variabili d'ambiente (backend locale)
 | Var | Default | Descrizione |
 |---|---|---|
 | `PORT` | `4000` | Porta API |
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/street-food-events-local?replicaSet=rs0` | URI Mongo (richiede replica set `rs0`) |
 | `MACHINE_ID` | `laptop-local-default` | Identificativo macchina |
-| `REMOTE_URL` | (vuoto) | Base URL del backend cloud, es. `https://api.example.com/api` |
+| `REMOTE_URL` | `https://streetfoodevents-api.onrender.com/api` | Base URL del backend cloud, es. `https://streetfoodevents-api.onrender.com/api` |
 | `REMOTE_TOKEN` | (vuoto) | Bearer token per le API `/api/sync` del cloud (deve combaciare con `SYNC_API_TOKEN` sul cloud) |
 | `MEDIA_DIR` | `<cwd>/.local-assets` | Cartella in cui vengono scaricate le immagini durante l'import |
 | `ASSETS_URL_PREFIX` | `/assets` | Prefisso URL dell'endpoint statico per le immagini locali |

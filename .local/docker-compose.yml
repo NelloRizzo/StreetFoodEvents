@@ -1,17 +1,23 @@
 services:
-  sandbox:
+  app:
     build: .
     container_name: streetfood-events-local
     environment:
-      - SEED=1
-      - PORT=4000
+      - SEED=${SEED:-1}
+      - PORT=${PORT:-4000}
+      - MACHINE_ID=${MACHINE_ID:-prototipo-demo}
       - MONGODB_URI=mongodb://127.0.0.1:27017/street-food-events-local?replicaSet=rs0
-      - MACHINE_ID=prototipo-demo
+      - REMOTE_URL=${REMOTE_URL:-https://streetfoodevents-api.onrender.com/api}
+      - REMOTE_TOKEN=${REMOTE_TOKEN:-}
+      - MEDIA_DIR=/data/media
+      - ASSETS_URL_PREFIX=${ASSETS_URL_PREFIX:-/assets}
     ports:
-      - "4000:4000"
+      - "${PORT:-4000}:4000"
     volumes:
       - mongo-data:/data/db
+      - local-media:/data/media
     restart: unless-stopped
 
 volumes:
   mongo-data:
+  local-media:
