@@ -10,6 +10,11 @@ export function currencyInitial(name: string): string {
   return name.charAt(0).toUpperCase()
 }
 
+export function isBareCurrencySymbol(name: string): boolean {
+  if (!name) return false
+  return /^[^\p{L}\p{N}]$/u.test(name.trim())
+}
+
 export function CurrencyDisplay({
   currencyName,
   currencySymbol,

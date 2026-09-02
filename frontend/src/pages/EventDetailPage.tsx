@@ -6,7 +6,7 @@ import { type UploadedImage } from '../lib/upload'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
-import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import { CurrencyDisplay, isBareCurrencySymbol } from '../components/CurrencyDisplay'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { PhotoBoothModal } from './PhotoBoothModal'
 import styles from './EventDetailPage.module.scss'
@@ -229,7 +229,7 @@ export function EventDetailPage() {
         <div className={styles.infoRow}>
           <span className={styles.currencyBadge}>
             <CurrencyDisplay currencyName={event.currencyName} currencySymbol={event.currencySymbol} />
-            {event.currencyName}
+            {!isBareCurrencySymbol(event.currencyName) && event.currencyName}
           </span>
           {userBalance !== null && (
             <span className={styles.walletBadge}>
@@ -237,7 +237,9 @@ export function EventDetailPage() {
               <span className={styles.walletBalance}>
                 {userBalance.toLocaleString('it-IT')}
               </span>
-              <span className={styles.walletCurrency}>{event.currencyName}</span>
+              {!isBareCurrencySymbol(event.currencyName) && (
+                <span className={styles.walletCurrency}>{event.currencyName}</span>
+              )}
             </span>
           )}
         </div>

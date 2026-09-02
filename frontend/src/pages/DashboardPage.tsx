@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/auth-context'
 import { apiRequest } from '../lib/api'
 import type { UploadedImage } from '../lib/upload'
-import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import { CurrencyDisplay, isBareCurrencySymbol } from '../components/CurrencyDisplay'
 import styles from './DashboardPage.module.scss'
 
 type CurrencySymbol = UploadedImage | null
@@ -153,7 +153,9 @@ export function DashboardPage() {
                       <span className={styles.walletBalance}>
                         {wallet.balance.toLocaleString('it-IT')}
                       </span>
-                      <span className={styles.walletCurrency}>{event.currencyName}</span>
+                      {!isBareCurrencySymbol(event.currencyName) && (
+                        <span className={styles.walletCurrency}>{event.currencyName}</span>
+                      )}
                     </div>
                   ) : (
                     <span className={styles.noWallet}>
@@ -162,7 +164,9 @@ export function DashboardPage() {
                         currencySymbol={event.currencySymbol}
                       />
                       <span className={styles.walletBalance}>0</span>
-                      <span className={styles.walletCurrency}>{event.currencyName}</span>
+                      {!isBareCurrencySymbol(event.currencyName) && (
+                        <span className={styles.walletCurrency}>{event.currencyName}</span>
+                      )}
                     </span>
                   )}
 
