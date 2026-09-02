@@ -1,9 +1,6 @@
 # TODO — Street Food Events
 
-## Photo booth aperto a tutti + cornice di evento
-- ✅ IMPLEMENTATI (Ago 2026, vedi CHANGELOG): upload foto aperto a tutti (immagini anche anonime, video solo auth) e `defaultFrameId` su Event con applicazione automatica nel photo booth.
-
-### Pubblicazione social — analisi problematiche (ricerca Ago 2026)
+## Pubblicazione social — analisi problematiche (ricerca Ago 2026)
 Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-side) e hostate su Cloudinary con URL pubblico — requisito indispensabile: Meta fa fetch dell'immagine dall'URL passato.
 
 **Facebook**:
@@ -191,13 +188,4 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Frontend**: pagina audit log con filtri
 - **Motivazione**: sicurezza, compliance, debugging
 
-### 16. App Locale Offline + Sync Remoto
-- ✅ COMPLETATA (Set 2026, vedi CHANGELOG). Deployment su laptop per eventi senza rete. Il sync engine generico LWW (`lastModifiedAt` + `syncVersion`, `GET /sync/pull?since=<ts>`) è stato valutato e **scartato**: non serve perché (a) l'import è una tantum (snapshot wipe+insert), (b) il cloud non cambia durante l'offline, (c) i dati locali (ordini/transazioni) sono per-stand e non entrano in conflitto tra stand.
 
-#### Media locale (SET 2026) — implementato
-Le immagini di evento/stand/prodotto dell'import vengono **scaricate in locale** e ripuntate all'endpoint statico locale (`/assets/*`), così il menu/mappa funzionano offline:
-- `media.service.ts` (locale): `localizeImage`/`localizeImages` scaricano il file (fetch, stesso processo senza nuove dep), lo salvano in `MEDIA_DIR` (default `<cwd>/.local-assets`, già gitignorata) e riscrivono `url`/`publicId`/`bytes` sul modello — filename = sha1 del contenuto (idempotente: i file già presenti non vengono riscaricati, comportamento "cache"). Se il download fallisce l'URL remoto viene conservato (fallback). `localizeEventImages`/`localizeStandImages`/`localizeProductImages` applicano la localizzazione ai campi immagine di `Event` (`coverImage`, `logo`, `currencySymbol`, `gallery`), `Stand` (`coverImage`, `logo`, `gallery`) e `Product` (`coverImage`, `gallery`).
-- `importFromRemote` localizza event/stand/products PRIMA del wipe (download fuori dalla transazione).
-- `server.ts` espone `app.use(config.assetsUrlPrefix ?? '/assets', express.static(config.mediaDir))`.
-- **Le immagini locali NON vengono mai pushato al cloud**: `cleanForPush` scarta qualunque valore che assomigli a un image subdoc locale (`url` che inizia con `/assets/`). Inoltre il payload push (ordini/transazioni/contatori/saldi) non contiene comunque campi immagine.
-- Le immagini scaricate restano su disco come cache dopo il sync (NESSUN delete automatico).
