@@ -21,7 +21,7 @@ export const eventsRouter = Router();
 
 eventsRouter.get('/', asyncHandler(optionalAuthMiddleware), asyncHandler(listEvents));
 eventsRouter.get('/home', asyncHandler(authMiddleware), asyncHandler(homeEvents));
-eventsRouter.get('/:eventId', asyncHandler(getEventById));
+eventsRouter.get('/:eventId', asyncHandler(optionalAuthMiddleware), asyncHandler(getEventById));
 eventsRouter.get('/:eventId/qrcode', asyncHandler(eventQrCode));
 eventsRouter.get('/:eventId/menu-qrcode', asyncHandler(eventMenuQrCode));
 eventsRouter.get('/:eventId/menu', asyncHandler(eventMenu));

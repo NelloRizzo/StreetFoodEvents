@@ -198,8 +198,19 @@ export async function getEventById(req: Request, res: Response) {
         });
     }
 
+    let wallet: { balance: number } | null = null;
+    if (req.user) {
+        const eventUser = await EventUserModel.findOne({
+            eventId: event._id,
+            userId: req.user.id,
+            isActive: true
+        });
+        wallet = eventUser ? { balance: eventUser.balance } : null;
+    }
+
     return res.status(200).json({
-        item: toEventResponse(event)
+        item: toEventResponse(event),
+        wallet
     });
 }
 

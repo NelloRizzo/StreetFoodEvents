@@ -154,6 +154,30 @@
   flex-shrink: 0;
 }
 
+.walletBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-soft);
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.walletBalance {
+  font-weight: 700;
+}
+
+.walletCurrency {
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+
 /* ─── Descriptions ─── */
 
 .shortDesc {

@@ -74,6 +74,7 @@ export function EventDetailPage() {
   const [favLoading, setFavLoading] = useState(false)
   const [modal, setModal] = useState<{ open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }>({ open: false, variant: 'alert', title: '', message: '' })
   const [showPhotoBooth, setShowPhotoBooth] = useState(false)
+  const [userBalance, setUserBalance] = useState<number | null>(null)
   const themeData = useMemo(
     () =>
       event
@@ -95,12 +96,13 @@ export function EventDetailPage() {
     localStorage.setItem('lastEventId', eventId)
 
     Promise.all([
-      apiRequest<{ item: Event }>(`/events/${eventId}`),
+      apiRequest<{ item: Event; wallet?: { balance: number } | null }>(`/events/${eventId}`),
       apiRequest<{ items: Stand[] }>(`/stands?eventId=${eventId}`),
     ])
       .then(([eventData, standsData]) => {
         setEvent(eventData.item)
         setStands(standsData.items)
+        setUserBalance(eventData.wallet?.balance ?? null)
         setIsLoading(false)
       })
       .catch(() => setIsLoading(false))
@@ -229,6 +231,15 @@ export function EventDetailPage() {
             <CurrencyDisplay currencyName={event.currencyName} currencySymbol={event.currencySymbol} />
             {event.currencyName}
           </span>
+          {userBalance !== null && (
+            <span className={styles.walletBadge}>
+              <CurrencyDisplay currencyName={event.currencyName} currencySymbol={event.currencySymbol} />
+              <span className={styles.walletBalance}>
+                {userBalance.toLocaleString('it-IT')}
+              </span>
+              <span className={styles.walletCurrency}>{event.currencyName}</span>
+            </span>
+          )}
         </div>
 
         {/* Description */}
