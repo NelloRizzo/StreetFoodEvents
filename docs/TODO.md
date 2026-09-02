@@ -173,14 +173,7 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Frontend**: chat window, notifiche messaggi
 - **Motivazione**: supporto clienti, comunicazione diretta
 
-### 14. Gestione Ingredienti e Allergeni
-- **Descrizione**: tracciamento ingredienti per sicurezza alimentare
-- **Modello**: `Ingredient { name, allergens[] }`, `ProductIngredient { productId, ingredientId, quantity }`
-- **API**: CRUD ingredienti, allergeni, filtri per allergeni
-- **Frontend**: dettaglio prodotto con allergeni, filtri menu
-- **Motivazione**: compliance normativa, sicurezza
-
-### 15. Audit Log
+### 14. Audit Log
 - **Descrizione**: tracciamento modifiche critiche per sicurezza
 - **Modello**: `AuditLog { userId, action, entityType, entityId, changes, timestamp }`
 - **Middleware**: hook su operazioni CRUD sensibili
