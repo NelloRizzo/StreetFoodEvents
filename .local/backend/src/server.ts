@@ -7,7 +7,6 @@ import { config } from './config';
 import { connectDatabase } from './db';
 import { ordersRouter } from './routes/orders.routes';
 import { catalogRouter } from './routes/catalog.routes';
-import { clientsRouter } from './routes/clients.routes';
 import { syncRouter } from './routes/sync.routes';
 
 const app = express();
@@ -27,7 +26,6 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/orders', ordersRouter);
 app.use('/api/catalog', catalogRouter);
-app.use('/api/clients', clientsRouter);
 app.use('/api/sync', syncRouter);
 
 fs.mkdirSync(config.mediaDir, { recursive: true });
@@ -36,7 +34,10 @@ app.use(config.assetsUrlPrefix, express.static(config.mediaDir));
 const publicDir = path.resolve(process.cwd(), 'public');
 if (fs.existsSync(publicDir)) {
     app.use(express.static(publicDir));
-    app.get('*', (_req, res) => {
+    app.get('*', (req, res) => {
+        if (req.path.startsWith('/api/')) {
+            return res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
+        }
         res.sendFile(path.join(publicDir, 'index.html'));
     });
 }

@@ -32,6 +32,8 @@ services:
         sync: false
       - key: EMAIL_MESSAGE_TEMPLATE
         sync: false
+      - key: SYNC_API_TOKEN
+        sync: false
 
   # --- Frontend (SPA) ---
   - type: web

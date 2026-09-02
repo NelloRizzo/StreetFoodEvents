@@ -32,13 +32,6 @@ export interface StandCatalog {
     items: MenuItem[];
 }
 
-export interface Client {
-    id: string;
-    userId: string | null;
-    displayName: string;
-    balance: number;
-}
-
 export interface OrderItem {
     eventProductId: string;
     productId: string;

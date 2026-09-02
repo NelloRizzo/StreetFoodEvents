@@ -4,8 +4,7 @@ export const syncStatusValues = ['pending', 'synced', 'conflict'] as const;
 
 const syncLedgerSchema = new Schema(
     {
-        entityType: { type: String, required: true, enum: ['Order', 'EventUserTransaction', 'Counter'] },
-        remoteId: { type: Schema.Types.ObjectId, required: true },
+        entityType: { type: String, required: true, enum: ['Order', 'Counter'] },
         localId: { type: Schema.Types.ObjectId, required: true },
         machineId: { type: String, required: true },
         syncStatus: { type: String, enum: syncStatusValues, default: 'pending', index: true },
@@ -16,7 +15,7 @@ const syncLedgerSchema = new Schema(
     { versionKey: false }
 );
 
-syncLedgerSchema.index({ entityType: 1, remoteId: 1 }, { unique: true });
+syncLedgerSchema.index({ entityType: 1, localId: 1 }, { unique: true });
 syncLedgerSchema.index({ syncStatus: 1, lastModifiedAt: 1 });
 
 export type SyncLedger = InferSchemaType<typeof syncLedgerSchema>;

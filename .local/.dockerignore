@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+**/.local-assets
+**/.git
+**/*.log
+**/.env
+backend/public
+frontend/dist

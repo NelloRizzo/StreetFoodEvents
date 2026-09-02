@@ -10,20 +10,24 @@ RUN apt-get update && apt-get install -y gnupg curl && \
 
 WORKDIR /app
 
-# Backend cloud models (source of truth) — needed by backend-local imports
-COPY backend/package.json ./backend/package.json
-COPY backend/src ./backend/src
-COPY backend/tsconfig.json ./backend/tsconfig.json
-
-# Backend local
+# Backend locale
 COPY .local/backend/package.json ./backend-local/package.json
 COPY .local/backend/tsconfig.json ./backend-local/tsconfig.json
 COPY .local/backend/src ./backend-local/src
 
-RUN cd backend-local && npm install --omit=dev || npm install
+# Frontend locale — build statica
+COPY .local/frontend/package.json ./frontend/package.json
+COPY .local/frontend/tsconfig.json ./frontend/tsconfig.json
+COPY .local/frontend/vite.config.ts ./frontend/vite.config.ts
+COPY .local/frontend/index.html ./frontend/index.html
+COPY .local/frontend/src ./frontend/src
+RUN cd frontend && npm install && npm run build && mkdir -p ../backend-local/public && cp -r dist/* ../backend-local/public/
+
+# Install backend with full deps (tsx needed at runtime by entrypoint)
+RUN cd backend-local && npm install
 
 # Entrypoint: init replica set, run seed, start server
-COPY entrypoint.sh /entrypoint.sh
+COPY .local/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 4000 27017

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import type { Client, MenuItem, Station, StandCatalog } from '../lib/types';
+import type { MenuItem, Station, StandCatalog } from '../lib/types';
 import { useMeta } from '../lib/MetaContext';
 
 interface CartLine {
@@ -17,10 +17,8 @@ export function Cassa() {
     const { meta, loading: metaLoading } = useMeta();
     const [items, setItems] = useState<MenuItem[]>([]);
     const [stations, setStations] = useState<Station[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
     const [cart, setCart] = useState<CartLine[]>([]);
-    const [clientId, setClientId] = useState<string>('');
-    const [payMethod, setPayMethod] = useState<'crediti' | 'contanti'>('contanti');
+    const [isGift, setIsGift] = useState(false);
     const [log, setLog] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [catalog, setCatalog] = useState<StandCatalog | null>(null);
@@ -34,14 +32,11 @@ export function Cassa() {
             return;
         }
         setLoading(true);
-        Promise.all([api.getCatalog(standId, eventId), api.getClients(eventId)])
-            .then(([cat, cls]) => {
+        api.getCatalog(standId, eventId)
+            .then((cat) => {
                 setCatalog(cat);
                 setItems(cat.items);
                 setStations(cat.stations);
-                const generic = cls.items.find((c) => c.userId === null);
-                setClients(cls.items);
-                setClientId(generic?.id ?? cls.items[0]?.id ?? '');
                 setLoading(false);
             })
             .catch((e) => setLog(`Errore caricamento: ${e.message}`))
@@ -49,7 +44,6 @@ export function Cassa() {
     }, [eventId, standId, metaLoading]);
 
     const stationName = (id: string) => stations.find((s) => s.id === id)?.name ?? id;
-    const selectedClient = clients.find((c) => c.id === clientId);
 
     function addToCart(item: MenuItem, stationId: string) {
         setCart((prev) => {
@@ -92,22 +86,23 @@ export function Cassa() {
 
     async function submitOrder() {
         if (cart.length === 0) return;
-        const paymentOnCreate = payMethod === 'crediti' ? { creditAmount: total } : undefined;
         try {
             const res = await api.createOrder({
                 eventId,
                 standId,
-                customerId: clientId || undefined,
-                customerName: selectedClient?.displayName,
                 items: cart.map((l) => ({
                     eventProductId: l.eventProductId,
                     stationId: l.stationId,
                     quantity: l.quantity
                 })),
-                paymentOnCreate
+                paymentOnCreate: isGift ? undefined : {},
+                isGift: isGift || undefined
             });
-            setLog(`Ordine #${res.item.orderNumber} creato (${res.item.paymentStatus === 'paid' ? 'pagato' : 'da pagare'}) — totale €${res.item.total.toFixed(2)}`);
+            const prefix = res.item.isGift ? 'O' : '#';
+            const amount = res.item.isGift ? '0.00' : res.item.total.toFixed(2);
+            setLog(`Ordine ${prefix}${res.item.orderNumber} creato — ${amount} ${catalog?.currencyName ?? '€'} (${res.item.isGift ? 'omaggio' : 'incassato'})`);
             setCart([]);
+            setIsGift(false);
         } catch (e) {
             setLog(`Errore: ${(e as Error).message}`);
         }
@@ -138,32 +133,7 @@ export function Cassa() {
                 </div>
             </div>
             <div style={styles.toolbar}>
-                <label>
-                    Cliente:
-                    <select value={clientId} onChange={(e) => setClientId(e.target.value)} style={styles.input}>
-                        {clients.map((c) => (
-                            <option key={c.id} value={c.id}>
-                                {c.displayName} (saldo {c.balance})
-                            </option>
-                        ))}
-                    </select>
-                </label>
-                <div>
-                    Pagamento:{' '}
-                    {(['contanti', 'crediti'] as const).map((m) => (
-                        <button
-                            key={m}
-                            onClick={() => setPayMethod(m)}
-                            style={{
-                                ...styles.btn,
-                                ...(payMethod === m ? styles.btnActive : {}),
-                                fontSize: 13
-                            }}
-                        >
-                            {m}
-                        </button>
-                    ))}
-                </div>
+                <span style={{ color: '#555' }}>Pagamento contanti — moneta: {catalog?.currencyName ?? '€'}</span>
             </div>
 
             <div style={styles.grid}>
@@ -188,7 +158,6 @@ export function Cassa() {
                                         key={sid}
                                         onClick={() => addToCart(item, sid)}
                                         style={styles.btn}
-                                        disabled={!cart.some((l) => l.eventProductId === item.eventProductId && l.stationId === sid)}
                                     >
                                         + {stationName(sid)}
                                     </button>
@@ -212,11 +181,15 @@ export function Cassa() {
                             <button onClick={() => changeQty(l.eventProductId, l.stationId, 1)} style={styles.btn}>+</button>
                         </div>
                     ))}
+                    <label style={styles.giftToggle}>
+                        <input type="checkbox" checked={isGift} onChange={(e) => setIsGift(e.target.checked)} />
+                        Ordine omaggio
+                    </label>
                     <div style={styles.total}>
-                        Totale: {total.toFixed(2)} {catalog?.currencyName ?? '€'}
+                        Totale: {isGift ? '0.00' : total.toFixed(2)} {catalog?.currencyName ?? '€'}
                     </div>
-                    <button onClick={submitOrder} disabled={cart.length === 0} style={{ ...styles.btnBig }}>
-                        Crea ordine
+                    <button onClick={submitOrder} disabled={cart.length === 0} style={{ ...styles.btnBig, ...(isGift ? styles.btnBigGift : {}) }}>
+                        {isGift ? 'Crea ordine omaggio' : 'Crea ordine'}
                     </button>
                 </div>
             </div>
@@ -234,14 +207,14 @@ const styles: Record<string, React.CSSProperties> = {
     productRow: { display: 'flex', alignItems: 'center', gap: 10 },
     productThumb: { width: 44, height: 44, objectFit: 'cover', borderRadius: 6, background: '#eee', flexShrink: 0 },
     toolbar: { display: 'flex', gap: 20, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' },
-    input: { marginLeft: 8, padding: 6 },
     grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 },
     col: { border: '1px solid #ddd', borderRadius: 8, padding: 12 },
     product: { borderBottom: '1px solid #eee', padding: '8px 0' },
     cartLine: { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #eee' },
     total: { fontWeight: 700, margin: '12px 0', fontSize: 18 },
+    giftToggle: { display: 'flex', alignItems: 'center', gap: 6, margin: '12px 0', cursor: 'pointer' },
     btn: { padding: '4px 10px', border: '1px solid #ccc', borderRadius: 6, cursor: 'pointer', marginRight: 6 },
-    btnActive: { background: '#264137', color: '#fff', borderColor: '#264137' },
     btnBig: { background: '#264137', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 20px', fontSize: 16, cursor: 'pointer', width: '100%' },
+    btnBigGift: { background: '#c0392b' },
     log: { marginTop: 16, padding: 10, background: '#f4f4f4', borderRadius: 8 }
 };

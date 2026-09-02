@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type Request, type Response, type NextFunction } from 'express';
 import {
     getMeta,
     fetchRemoteEvents,
@@ -10,6 +10,19 @@ import {
 } from '../sync.service';
 
 export const syncRouter = Router();
+
+/**
+ * Wraps an async handler so that any rejection is forwarded to Express's error
+ * middleware instead of becoming an unhandled rejection that crashes the
+ * process (this happened when the remote sync API returned an error).
+ */
+function asyncHandler(
+    fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
+) {
+    return (req: Request, res: Response, next: NextFunction) => {
+        fn(req, res, next).catch(next);
+    };
+}
 
 async function handleGetMeta(_req: Request, res: Response) {
     const meta = await getMeta();
@@ -49,16 +62,14 @@ async function handlePendingCount(_req: Request, res: Response) {
 }
 
 async function handlePendingList(_req: Request, res: Response) {
-    const [orders, transactions, counters] = await Promise.all([
+    const [orders, counters] = await Promise.all([
         listPending('Order'),
-        listPending('EventUserTransaction'),
         listPending('Counter')
     ]);
     return res.status(200).json({
         orders: orders.length,
-        transactions: transactions.length,
         counters: counters.length,
-        total: orders.length + transactions.length + counters.length
+        total: orders.length + counters.length
     });
 }
 
@@ -67,12 +78,12 @@ async function handlePush(_req: Request, res: Response) {
     return res.status(200).json(result);
 }
 
-syncRouter.get('/meta', handleGetMeta);
-syncRouter.get('/remote/events', handleRemoteEvents);
-syncRouter.get('/remote/events/:eventId/stands', handleRemoteStands);
-syncRouter.post('/import', handleImport);
-syncRouter.get('/pending/count', handlePendingCount);
-syncRouter.get('/pending', handlePendingList);
-syncRouter.post('/push', handlePush);
+syncRouter.get('/meta', asyncHandler(handleGetMeta));
+syncRouter.get('/remote/events', asyncHandler(handleRemoteEvents));
+syncRouter.get('/remote/events/:eventId/stands', asyncHandler(handleRemoteStands));
+syncRouter.post('/import', asyncHandler(handleImport));
+syncRouter.get('/pending/count', asyncHandler(handlePendingCount));
+syncRouter.get('/pending', asyncHandler(handlePendingList));
+syncRouter.post('/push', asyncHandler(handlePush));
 
 export default syncRouter;

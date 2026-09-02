@@ -1,4 +1,39 @@
+import fs from 'node:fs';
 import path from 'node:path';
+
+/**
+ * Loads a `.env` file into process.env without any external dependency, unless
+ * the variable is already defined in the environment (real env wins, so
+ * docker-compose and shell exports take precedence).
+ */
+function loadDotenv(candidates: string[]) {
+    for (const candidate of candidates) {
+        try {
+            const content = fs.readFileSync(candidate, 'utf8');
+            for (const rawLine of content.split(/\r?\n/)) {
+                const line = rawLine.trim();
+                if (!line || line.startsWith('#')) continue;
+                const eq = line.indexOf('=');
+                if (eq === -1) continue;
+                const key = line.slice(0, eq).trim();
+                const value = line.slice(eq + 1).trim().replace(/^['"]|['"]$/g, '');
+                if (key && process.env[key] === undefined) {
+                    process.env[key] = value;
+                }
+            }
+            return;
+        } catch {
+            // try next candidate
+        }
+    }
+}
+
+const backendRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+loadDotenv([
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(backendRoot, '.env'),
+    path.resolve(backendRoot, '..', '.env')
+]);
 
 export const config = {
     port: Number(process.env.PORT ?? 4000),
@@ -10,10 +45,3 @@ export const config = {
     mediaDir: process.env.MEDIA_DIR ?? path.resolve(process.cwd(), '.local-assets'),
     assetsUrlPrefix: process.env.ASSETS_URL_PREFIX ?? '/assets'
 };
-
-export function bootMachineId(): string {
-    if (config.machineId === 'laptop-local-default' && process.env.MACHINE_ID) {
-        return process.env.MACHINE_ID;
-    }
-    return config.machineId;
-}

@@ -12,6 +12,35 @@ Deployment dell'app su laptop per eventi senza connessione. Backend Express+Mong
 - Frontend dev (vite): **5173**, proxy `/api` → `http://127.0.0.1:4000`.
 - Docker compose: `4000:4000`, `PORT=4000`.
 
+## Distribuzione pronta all'uso — `../distro/`
+L'immagine Docker già costruita è esportata in **`../distro/local-app.tar`** per installarla su un altro notebook senza compilare nulla (basta Docker Engine).
+
+> **⚠️ IMPORTANTE — mantenere aggiornata l'immagine `distro/`**
+> Ad **ogni modifica** ai sorgenti (backend `src`, frontend `src`, `Dockerfile`, `entrypoint.sh`, `docker-compose.yml`, `.env.example`) va **riesportata l'immagine**, altrimenti il notebook va in giro con una versione vecchia:
+> ```
+> docker compose up --build        # o: npm run local:up
+> docker save local-app -o ../distro/local-app.tar
+> ```
+> Il file `distro/local-app.tar` NON deve restare indietro rispetto al codice: se una modifica non viene ribuildata, fare distro = distribuire una regressione.
+>
+> **Per gli agenti AI**: dopo aver modificato un sorgente di `.local/` (o `Dockerfile`/`entrypoint.sh`/compose/.env.example) e averlo **verificato funzionante**, rigenerare in automatico l'immagine con i comandi qui sopra (da `.local/`: `docker save local-app -o ../distro/local-app.tar`) e segnalare SEMPRE all'utente nel riepilogo finale se `distro/local-app.tar` è stata rigenerata o se serve rigenerarla. Se la modifica non è verificata o l'utente chiede di saltare, NON rigenerare ma segnalarlo in modo evidente.
+
+### Installazione su notebook (Docker Engine)
+```
+# sul notebook
+docker load -i local-app.tar
+docker run -d --name streetfood-events-local \
+  -p 4000:4000 \
+  -e PORT=4000 -e MACHINE_ID=notebook-demo \
+  -e REMOTE_URL=https://streetfoodevents-api.onrender.com/api \
+  -e REMOTE_TOKEN=<condiviso con SYNC_API_TOKEN cloud> \
+  -e SEED=1 \
+  -v mongo-data:/data/db \
+  -v local-media:/data/media \
+  local-app
+```
+Poi apri `http://localhost:4000` e importa evento/stand dal pannello Sync (i volumi partono vuoti, il seed crea i dati demo di partenza).
+
 ## Avvio rapido
 ### Deploy (tutto-in-uno, consigliato)
 Un solo comando costruisce e avvia l'app completa (MongoDB replica set + seed + API + UI statica):

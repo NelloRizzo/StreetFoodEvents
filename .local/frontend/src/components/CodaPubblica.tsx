@@ -43,7 +43,7 @@ export function CodaPubblica() {
                 {orders.map((o) => (
                     <div key={o.id} style={styles.card}>
                         <div style={styles.cardHeader}>
-                            <span style={styles.badge}>#{o.orderNumber}</span>
+                            <span style={styles.badge}>{o.isGift ? 'O' : '#'}{o.orderNumber}</span>
                             {o.isGift && <span style={styles.gift}>OMAGGIO</span>}
                             <span style={styles.status}>{STATUS_LABEL[o.status] ?? o.status}</span>
                         </div>

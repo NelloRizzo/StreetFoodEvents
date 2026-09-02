@@ -1,4 +1,4 @@
-import type { Client, DisplayOrder, ImportResult, Meta, Order, PushResult, RemoteEvent, RemoteStand, StandCatalog } from './types';
+import type { DisplayOrder, ImportResult, Meta, Order, PushResult, RemoteEvent, RemoteStand, StandCatalog } from './types';
 
 const BASE = '/api';
 
@@ -17,7 +17,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
     getCatalog: (standId: string, eventId?: string) =>
         request<StandCatalog>(`/catalog/stand/${standId}/menu${eventId ? `?eventId=${eventId}` : ''}`),
-    getClients: (eventId: string) => request<{ items: Client[] }>(`/clients/event/${eventId}`),
     createOrder: (body: unknown) => request<{ item: Order }>(`/orders`, { method: 'POST', body: JSON.stringify(body) }),
     listOrders: (standId: string, extra = '') =>
         request<{ items: Order[] }>(`/orders?standId=${standId}${extra}`),
@@ -31,10 +30,10 @@ export const api = {
             method: 'PATCH',
             body: JSON.stringify({ stationId })
         }),
-    markItemReady: (orderId: string, eventProductId: string) =>
+    markItemReady: (orderId: string, eventProductId: string, stationId?: string) =>
         request<{ item: Order }>(`/orders/${orderId}/mark-item-ready`, {
             method: 'PATCH',
-            body: JSON.stringify({ eventProductId })
+            body: JSON.stringify({ eventProductId, stationId })
         }),
     cancelOrder: (orderId: string, reason?: string) =>
         request<{ item: Order }>(`/orders/${orderId}/cancel`, {

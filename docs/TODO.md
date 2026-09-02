@@ -192,25 +192,7 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Motivazione**: sicurezza, compliance, debugging
 
 ### 16. App Locale Offline + Sync Remoto
-- **Descrizione**: deployment dell'app su laptop locale per eventi senza connessione internet
-- **Stack**: stesso backend Express+Mongoose, MongoDB locale (replica set single-node), frontend con `VITE_API_URL=http://127.0.0.1:4000/api`
-- **Sync engine**: endpoint `GET /sync/pull?since=<ts>` + `POST /sync/push` con batch di modifiche. `lastModifiedAt` + `syncVersion` su ogni model. Risoluzione conflitti LWW (last-write-wins)
-- **Storage media**: Cloudinary opzionale, multer con storage disco locale + endpoint statico per servire file
-- **Setup**: script `npm run setup:local` (avvia Mongo replica set, seed, backend, frontend)
-- **Limiti**: foto/video non sincronizzati (troppo pesanti); sessioni auth separate per local/remote; sync periodico (non real-time)
-- **Stimata**: ~750-950 righe (sync engine, lastModifiedAt, scripts, doc)
-- **Motivazione**: eventi in zone senza rete (fiere, manifesti, location isolate)
-
-#### Stato (SET 2026) — primo step implementato, engine LWW su `lastModifiedAt` NON ancora fatto
-Approccio implementato (diverso dal piano originario): **preservazione snapshot via `_id`**, non sync engine generico:
-- Il backend cloud espone API di sola sincronizzazione **`/api/sync`** protette da **bearer token statico** (`SYNC_API_TOKEN` env): `GET /events`, `GET /events/:eventId/stands`, `GET /events/:eventId/stands/:standId` (snapshot completo evento+stand: event, stand, stations, products, eventProducts, eventUsers, counter), `POST /push` (ordini/transazioni/contatori/saldi event-user upsert con guardia LWW locale al posto di lastModifiedAt).
-- L'app locale (`.local/`) ha un pannello Sync: seleziona evento e stand remoto → **import** che SOSTITUISCE completamente i dati locali (wipe transazionale + insert preservando `_id`) con snapshot remoto. Se esistono dati locali non sincronizzati (`/pending/count` sul ledger), il pannello chiede di **pushare prima** (modale di conferma) per non perdere lavoro fatto offline.
-- Ledger locale `SyncLedger` traccia le operazioni locali pendenti; `LocalState` (doc `key: 'current'`) conserva l'evento/stand attivo corrente (con `eventName`/`currencyName`).
-- Frontend locale usa `MetaContext` (eventId/standId/currencyName dinamici da `/api/sync/meta`) al posto della `config.ts` hardcoded; `Cassa`/`CodaPostazioni`/`CodaPubblica` non sono più legate a `config`.
-- Auth server-to-server: token statico condiviso (niente OAuth/session); su cloud in `env.ts`, su locale in `.local/backend/src/config.ts` (`remoteUrl`/`remoteToken`).
-
-Restano a fare (futuro):
-- Sync engine generico LWW (`lastModifiedAt` + `syncVersion`, `GET /sync/pull?since=<ts>`) — oggi il push è diff goal-selected per ordini/transazioni/contatori/saldi.
+- ✅ COMPLETATA (Set 2026, vedi CHANGELOG). Deployment su laptop per eventi senza rete. Il sync engine generico LWW (`lastModifiedAt` + `syncVersion`, `GET /sync/pull?since=<ts>`) è stato valutato e **scartato**: non serve perché (a) l'import è una tantum (snapshot wipe+insert), (b) il cloud non cambia durante l'offline, (c) i dati locali (ordini/transazioni) sono per-stand e non entrano in conflitto tra stand.
 
 #### Media locale (SET 2026) — implementato
 Le immagini di evento/stand/prodotto dell'import vengono **scaricate in locale** e ripuntate all'endpoint statico locale (`/assets/*`), così il menu/mappa funzionano offline:

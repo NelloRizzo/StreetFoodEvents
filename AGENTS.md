@@ -18,6 +18,10 @@ I file di documentazione sono in `docs/`. Modifiche a questi file NON attivano u
 
 Two independent npm packages (`backend/`, `frontend/`). No monorepo tool. The `printer-agent/` package was removed (Jul 2026) — thermal printer connects directly to Windows cash register machine via `window.print()`. The `photo-point/` Python app was removed (Jul 2026) — photo booth functionality now lives in `frontend/src/pages/PhotoBoothPage.tsx`.
 
+App locale offline in `.local/` (backend+frontend+seed in un solo container, vedi `.local/README.md`). Distribuzione su notebook tramite immagine esportata in `distro/local-app.tar` (cartella **gitignorata**). **Regola operativa**: ad ogni modifica ai sorgenti di `.local/` (o `Dockerfile`/`entrypoint.sh`/compose), una volta verificato `docker compose up --build` (o `npm run local:up`), rieseguire `docker save local-app -o distro/local-app.tar` — mai lasciare l'immagine indietro rispetto al codice.
+
+**DO WHAT THE USER ASKED**: whenever a session touches a source file under `.local/` (or `Dockerfile`/`entrypoint.sh`/compose/.env.example) and the change is verified working, the agent MUST: (1) explicitly tell the user in the final summary that `distro/local-app.tar` needs regeneration (or was regenerated); (2) regenerate the image automatically by running `docker compose up --build` / `npm run local:up` followed by `docker save local-app -o ../distro/local-app.tar` (from `.local/`), unless the changes are still unverified or the user asks to skip. If a change makes the image stale without the agent regenerating it, note it prominently so the user can decide.
+
 ## Backend (`backend/`)
 
 Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Node ≥22.

@@ -5,14 +5,11 @@ import {
     CounterModel,
     EventModel,
     EventProductModel,
-    EventUserModel,
-    EventUserTransactionModel,
     LocalStateModel,
     OrderModel,
     ProductModel,
     StandModel,
-    StationModel,
-    UserModel
+    StationModel
 } from './models';
 import { config } from './config';
 import { localizeEventImages, localizeStandImages, localizeProductImages } from './media.service';
@@ -20,7 +17,7 @@ import { localizeEventImages, localizeStandImages, localizeProductImages } from 
 // ─── Ledger ───────────────────────────────────────────────────────────────────
 
 export async function registerSync(
-    entityType: 'Order' | 'EventUserTransaction' | 'Counter',
+    entityType: 'Order' | 'Counter',
     localId: Types.ObjectId,
     status: SyncStatus = 'pending'
 ) {
@@ -34,14 +31,14 @@ export async function registerSync(
     );
 }
 
-export async function markSynced(entityType: 'Order' | 'EventUserTransaction' | 'Counter', localId: Types.ObjectId) {
+export async function markSynced(entityType: 'Order' | 'Counter', localId: Types.ObjectId) {
     await SyncLedgerModel.updateOne(
         { entityType, localId },
         { $set: { syncStatus: 'synced', syncedAt: new Date(), lastModifiedAt: new Date() } }
     );
 }
 
-export async function listPending(entityType: 'Order' | 'EventUserTransaction' | 'Counter') {
+export async function listPending(entityType: 'Order' | 'Counter') {
     return SyncLedgerModel.find({ entityType, syncStatus: 'pending' })
         .sort({ lastModifiedAt: 1 })
         .lean();
@@ -160,16 +157,13 @@ export async function importFromRemote(eventId: string, standId: string, force: 
 
         // wipe all local business data
         await OrderModel.deleteMany({}, { session });
-        await EventUserTransactionModel.deleteMany({}, { session });
         await CounterModel.deleteMany({}, { session });
         await SyncLedgerModel.deleteMany({}, { session });
-        await EventUserModel.deleteMany({}, { session });
         await EventProductModel.deleteMany({}, { session });
         await ProductModel.deleteMany({}, { session });
         await StationModel.deleteMany({}, { session });
         await StandModel.deleteMany({}, { session });
         await EventModel.deleteMany({}, { session });
-        await UserModel.deleteMany({}, { session });
 
         // insert snapshot (preserve remote _ids)
         await EventModel.create([event], { session });
@@ -184,12 +178,6 @@ export async function importFromRemote(eventId: string, standId: string, force: 
         if (snapshot.eventProducts.length > 0) {
             await EventProductModel.insertMany(
                 snapshot.eventProducts.map((ep: any) => ({ ...ep, _id: new mongoose.Types.ObjectId(ep._id) })),
-                { session }
-            );
-        }
-        if (snapshot.eventUsers.length > 0) {
-            await EventUserModel.insertMany(
-                snapshot.eventUsers.map((eu: any) => ({ ...eu, _id: new mongoose.Types.ObjectId(eu._id) })),
                 { session }
             );
         }
@@ -220,19 +208,16 @@ export async function importFromRemote(eventId: string, standId: string, force: 
 
 export async function pushToRemote(): Promise<{ pushed: number; errors: string[] }> {
     const pendingOrders = await SyncLedgerModel.find({ entityType: 'Order', syncStatus: 'pending' }).lean();
-    const pendingTxns = await SyncLedgerModel.find({ entityType: 'EventUserTransaction', syncStatus: 'pending' }).lean();
     const pendingCounters = await SyncLedgerModel.find({ entityType: 'Counter', syncStatus: 'pending' }).lean();
 
-    if (pendingOrders.length === 0 && pendingTxns.length === 0 && pendingCounters.length === 0) {
+    if (pendingOrders.length === 0 && pendingCounters.length === 0) {
         return { pushed: 0, errors: [] };
     }
 
     const orderIds = pendingOrders.map((p) => p.localId);
-    const txnIds = pendingTxns.map((p) => p.localId);
 
-    const [orders, transactions, counters] = await Promise.all([
+    const [orders, counters] = await Promise.all([
         orderIds.length > 0 ? OrderModel.find({ _id: { $in: orderIds } }).lean() : Promise.resolve([]),
-        txnIds.length > 0 ? EventUserTransactionModel.find({ _id: { $in: txnIds } }).lean() : Promise.resolve([]),
         pendingCounters.length > 0
             ? Promise.all(
                   pendingCounters.map(async (pc) => {
@@ -243,23 +228,9 @@ export async function pushToRemote(): Promise<{ pushed: number; errors: string[]
             : Promise.resolve([])
     ]);
 
-    // build event user balances from transactions (collect affected eventUserIds)
-    const affectedEventUserIds = new Set<string>();
-    for (const txn of transactions) {
-        if (txn.eventUserId) affectedEventUserIds.add(txn.eventUserId.toString());
-    }
-    const eventUserBalances =
-        affectedEventUserIds.size > 0
-            ? await EventUserModel.find({ _id: { $in: [...affectedEventUserIds] } })
-                  .select('_id balance updatedAt')
-                  .lean()
-            : [];
-
     const body = {
         orders: orders.map(cleanForPush),
-        transactions: transactions.map(cleanForPush),
-        counters: counters.map(cleanForPush),
-        eventUserBalances: eventUserBalances.map(cleanForPush)
+        counters: counters.map(cleanForPush)
     };
 
     const errors: string[] = [];
@@ -282,7 +253,7 @@ export async function pushToRemote(): Promise<{ pushed: number; errors: string[]
         }
 
         // mark all as synced
-        const allLedgerIds = [...pendingOrders, ...pendingTxns, ...pendingCounters].map((l) => l._id);
+        const allLedgerIds = [...pendingOrders, ...pendingCounters].map((l) => l._id);
         if (allLedgerIds.length > 0) {
             await SyncLedgerModel.updateMany({ _id: { $in: allLedgerIds } }, { $set: { syncStatus: 'synced', syncedAt: new Date() } });
         }

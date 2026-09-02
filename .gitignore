@@ -38,6 +38,9 @@ uploads/
 # Cloudinary/local generated assets
 .local-assets/
 
+# Immagine Docker esportata per il deploy su notebook (rigenerare con docker save)
+distro/
+
 # OS files
 .DS_Store
 Thumbs.db

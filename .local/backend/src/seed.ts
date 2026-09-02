@@ -5,7 +5,6 @@ import {
     CounterModel,
     EventModel,
     EventProductModel,
-    EventUserModel,
     LocalStateModel,
     ProductModel,
     StandModel,
@@ -23,9 +22,7 @@ const OID = {
     product2: new Types.ObjectId('64b000000000000000000007'),
     product3: new Types.ObjectId('64b000000000000000000008'),
     product4: new Types.ObjectId('64b000000000000000000009'),
-    userCashier: new Types.ObjectId('000000000000000000000001'),
-    userClient1: new Types.ObjectId('000000000000000000000002'),
-    userClient2: new Types.ObjectId('000000000000000000000003')
+    userCashier: new Types.ObjectId('000000000000000000000001')
 };
 
 async function seedEvent() {
@@ -94,7 +91,7 @@ async function seedProducts() {
     console.log('[seed] Prodotti + EventProduct creati');
 }
 
-async function seedUsersAndClients() {
+async function seedCashierAndCounter() {
     const cashier = await UserModel.findById(OID.userCashier);
     if (!cashier) {
         await UserModel.create({
@@ -107,28 +104,12 @@ async function seedUsersAndClients() {
         });
     }
 
-    await EventUserModel.findOneAndUpdate(
-        { eventId: OID.event, userId: OID.userClient1 },
-        { $setOnInsert: { eventId: OID.event, userId: OID.userClient1, balance: 50, displayName: 'Mario Rossi', isActive: true } },
-        { upsert: true }
-    );
-    await EventUserModel.findOneAndUpdate(
-        { eventId: OID.event, userId: OID.userClient2 },
-        { $setOnInsert: { eventId: OID.event, userId: OID.userClient2, balance: 20, displayName: 'Giulia Bianchi', isActive: true } },
-        { upsert: true }
-    );
-    await EventUserModel.findOneAndUpdate(
-        { eventId: OID.event, userId: null },
-        { $setOnInsert: { eventId: OID.event, userId: null, displayName: 'Cliente Generico', balance: 0, isActive: true } },
-        { upsert: true }
-    );
-
     await CounterModel.findOneAndUpdate(
         { standId: OID.stand },
         { $setOnInsert: { standId: OID.stand, seq: 0 } },
         { upsert: true }
     );
-    console.log('[seed] Utenti + clienti + counter creati');
+    console.log('[seed] Cassiere + counter creati');
 }
 
 async function main() {
@@ -137,7 +118,7 @@ async function main() {
     await seedStand();
     await seedStations();
     await seedProducts();
-    await seedUsersAndClients();
+    await seedCashierAndCounter();
     await LocalStateModel.findOneAndUpdate(
         { key: 'current' },
         {

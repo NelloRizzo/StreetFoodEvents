@@ -1,8 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import mongoose, { Types } from 'mongoose';
 
-import { CounterModel, EventProductModel, EventUserModel, OrderModel, StandModel, StationModel } from '../models';
-import { createEventUserTransaction } from '../event-user-transactions.service';
+import { CounterModel, EventProductModel, OrderModel, StandModel, StationModel, ProductModel } from '../models';
 import { registerSync } from '../sync.service';
 
 export const ordersRouter = Router();
@@ -17,6 +16,7 @@ async function getNextOrderNumber(standId: string): Promise<number> {
         { $inc: { seq: 1 } },
         { upsert: true, new: true }
     );
+    await registerSync('Counter', counter._id as Types.ObjectId);
     return counter.seq;
 }
 
@@ -118,35 +118,6 @@ export async function createOrder(req: Request, res: Response) {
         const effectiveCustomerId = customerId ?? LOCAL_USER_ID;
         const effectiveCustomerName = customerName ?? null;
 
-        let creditAmount = 0;
-        let paymentTransactionId: Types.ObjectId | null = null;
-
-        if (paymentOnCreate && !isGift) {
-            if (typeof paymentOnCreate === 'object' && paymentOnCreate !== null) {
-                creditAmount = Math.max(0, Math.min(Number(paymentOnCreate.creditAmount) || 0, total));
-            } else {
-                creditAmount = total;
-            }
-
-            if (creditAmount > 0) {
-                const eventUser = await EventUserModel.findOne({ eventId, userId: effectiveCustomerId }).session(session);
-                if (!eventUser) throw new Error('User is not linked to this event');
-                if (!eventUser.isActive) throw new Error('User is not active for this event');
-                if (eventUser.balance < creditAmount) throw new Error('Insufficient event currency balance');
-
-                const txnResult = await createEventUserTransaction({
-                    eventUserId: eventUser._id,
-                    type: 'purchase',
-                    direction: 'debit',
-                    amount: creditAmount,
-                    description: `Ordine #${orderItems.length} articoli presso lo stand`,
-                    performedByUserId: LOCAL_USER_ID,
-                    session
-                });
-                paymentTransactionId = txnResult.transaction._id as Types.ObjectId;
-            }
-        }
-
         const orderNumber = await getNextOrderNumber(standId);
         const isPaidOnCreate = Boolean(paymentOnCreate) || isGift;
 
@@ -163,10 +134,10 @@ export async function createOrder(req: Request, res: Response) {
                     isGift,
                     items: orderItems,
                     total: isGift ? 0 : total,
-                    creditAmountUsed: isGift ? 0 : creditAmount,
+                    creditAmountUsed: 0,
                     paymentStatus: isPaidOnCreate ? 'paid' : 'unpaid',
                     paidAt: isPaidOnCreate ? new Date() : null,
-                    paymentTransactionId: isGift ? null : paymentTransactionId,
+                    paymentTransactionId: null,
                     performedByUserId: isPaidOnCreate ? LOCAL_USER_ID : null,
                     notes: notes ?? null,
                     cancelledAt: null,
@@ -179,7 +150,7 @@ export async function createOrder(req: Request, res: Response) {
         const order = created[0];
         if (!order) throw new Error('Failed to create order');
 
-        registerSync('Order', order._id);
+        await registerSync('Order', order._id);
 
         await session.commitTransaction();
 
@@ -269,6 +240,10 @@ export async function updateOrderStatus(req: Request, res: Response) {
     const order = await OrderModel.findById(orderId);
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
+    if (order.status === status) {
+        return res.status(200).json({ item: toOrderResponse(order) });
+    }
+
     const allowed = validTransitions[order.status];
     if (!allowed || !allowed.includes(status)) {
         return res.status(400).json({ message: `Cannot transition from ${order.status} to ${status}` });
@@ -292,7 +267,7 @@ export async function updateOrderStatus(req: Request, res: Response) {
         order.cancelReason = req.body.reason ?? null;
     }
     await order.save();
-    registerSync('Order', order._id);
+    await registerSync('Order', order._id);
     return res.status(200).json({ item: toOrderResponse(order) });
 }
 
@@ -306,42 +281,13 @@ export async function cancelOrder(req: Request, res: Response) {
         return res.status(400).json({ message: `Cannot cancel an order with status ${order.status}` });
     }
 
-    const session = await mongoose.startSession();
-    try {        session.startTransaction();
-        order.status = 'cancelled';
-        order.cancelledAt = new Date();
-        order.cancelReason = reason ?? null;
+    order.status = 'cancelled';
+    order.cancelledAt = new Date();
+    order.cancelReason = reason ?? null;
 
-        if (order.paymentStatus === 'paid' && order.creditAmountUsed > 0) {
-            const eventUser = await EventUserModel.findOne({
-                eventId: order.eventId,
-                userId: order.customerId ?? order.userId
-            }).session(session);
-            if (eventUser) {
-                await createEventUserTransaction({
-                    eventUserId: eventUser._id,
-                    type: 'refund',
-                    direction: 'credit',
-                    amount: order.creditAmountUsed,
-                    description: 'Rimborso ordine annullato',
-                    performedByUserId: LOCAL_USER_ID,
-                    referenceType: 'order',
-                    referenceId: order._id,
-                    session
-                });
-            }
-            order.paymentStatus = 'refunded';
-        }
-        await order.save({ session });
-        registerSync('Order', order._id);
-        await session.commitTransaction();
-        return res.status(200).json({ item: toOrderResponse(order) });
-    } catch (error) {
-        await session.abortTransaction();
-        throw error;
-    } finally {
-        await session.endSession();
-    }
+    await order.save();
+    await registerSync('Order', order._id);
+    return res.status(200).json({ item: toOrderResponse(order) });
 }
 
 export async function markStationReady(req: Request, res: Response) {
@@ -371,15 +317,16 @@ export async function markStationReady(req: Request, res: Response) {
         order.readyAt = new Date();
     }
     await order.save();
-    registerSync('Order', order._id);
+    await registerSync('Order', order._id);
     return res.status(200).json({ item: toOrderResponse(order) });
 }
 
 export async function markItemReady(req: Request, res: Response) {
     const orderId = req.params.orderId;
-    const { eventProductId } = req.body;
+    const { eventProductId, stationId } = req.body;
     if (!isValidObjectId(orderId)) return res.status(400).json({ message: 'Invalid order id' });
     if (!isValidObjectId(eventProductId)) return res.status(400).json({ message: 'Invalid eventProductId' });
+    if (stationId && !isValidObjectId(stationId)) return res.status(400).json({ message: 'Invalid station id' });
 
     const order = await OrderModel.findById(orderId);
     if (!order) return res.status(404).json({ message: 'Order not found' });
@@ -390,6 +337,7 @@ export async function markItemReady(req: Request, res: Response) {
     let found = false;
     for (const item of order.items) {
         if (item.eventProductId.toString() === eventProductId && !item.ready) {
+            if (stationId && item.stationId.toString() !== stationId) continue;
             item.ready = true;
             found = true;
             break;
@@ -403,7 +351,7 @@ export async function markItemReady(req: Request, res: Response) {
         order.readyAt = new Date();
     }
     await order.save();
-    registerSync('Order', order._id);
+    await registerSync('Order', order._id);
     return res.status(200).json({ item: toOrderResponse(order) });
 }
 

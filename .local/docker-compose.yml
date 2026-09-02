@@ -1,6 +1,8 @@
 services:
   app:
-    build: .
+    build:
+      context: ..
+      dockerfile: .local/Dockerfile
     container_name: streetfood-events-local
     environment:
       - SEED=${SEED:-1}
