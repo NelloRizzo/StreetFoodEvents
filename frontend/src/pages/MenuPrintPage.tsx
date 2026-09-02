@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { apiRequest } from '../lib/api'
 import { useAdminEvent } from '../layouts/AdminEventContext'
 import { currencyBadgeHtml } from '../components/CurrencyDisplay'
+import { ALLERGEN_LABELS } from '../lib/allergens'
 import styles from './MenuPrintPage.module.scss'
 
 type ImageData = { url: string; publicId: string; width: number; height: number; format: string; bytes: number }
@@ -97,7 +98,7 @@ function buildMenuHtml(
               ? `<p style="font-size:0.78rem;color:#587065;margin:0.25rem 0 0;line-height:1.4">${esc(ep.product.ingredients.join(', '))}</p>`
               : ''
             const allergens = ep.product.allergens.length > 0
-              ? `<p style="font-size:0.75rem;color:#c0392b;margin:0.15rem 0 0;font-weight:600">Allergeni: ${esc(ep.product.allergens.join(', '))}</p>`
+              ? `<p style="font-size:0.75rem;color:#c0392b;margin:0.15rem 0 0;font-weight:600">Allergeni: ${esc(ep.product.allergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(', '))}</p>`
               : ''
             const frozenBadge = ep.product.isFrozen
               ? '<span style="color:#2980b9;font-weight:900;margin-left:0.25rem">*</span>'
@@ -207,7 +208,7 @@ function categoryMenuFullHtml(
         ? `<p style="font-size:0.78rem;color:#587065;margin:0.25rem 0 0;line-height:1.4">${esc(p.ingredients.join(', '))}</p>`
         : ''
       const allergens = p.allergens.length > 0
-        ? `<p style="font-size:0.75rem;color:#c0392b;margin:0.15rem 0 0;font-weight:600">Allergeni: ${esc(p.allergens.join(', '))}</p>`
+        ? `<p style="font-size:0.75rem;color:#c0392b;margin:0.15rem 0 0;font-weight:600">Allergeni: ${esc(p.allergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(', '))}</p>`
         : ''
       const frozen = p.isFrozen
         ? `<span style="color:#2980b9;font-weight:900;margin-left:0.25rem">${allergenBadge}</span>`

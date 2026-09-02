@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import { ALLERGEN_LABELS } from '../lib/allergens'
 import type { UploadedImage } from '../lib/upload'
 import styles from './EventStandMenuPage.module.scss'
 
@@ -358,7 +359,7 @@ export function EventMenuPage() {
                 <p className={styles.productIngredients}><strong>Ingredienti:</strong> {selectedItem.ingredients.join(', ')}</p>
               )}
               {selectedItem.allergens.length > 0 && (
-                <p className={styles.productAllergens}><strong>Allergeni:</strong> {selectedItem.allergens.join(', ')}</p>
+                <p className={styles.productAllergens}><strong>Allergeni:</strong> {selectedItem.allergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(', ')}</p>
               )}
               {selectedItem.price > 0 && (
                 <span className={styles.productPrice}>

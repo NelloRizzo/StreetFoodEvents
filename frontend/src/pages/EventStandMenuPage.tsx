@@ -8,6 +8,7 @@ import { useAuth } from '../features/auth/auth-context'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import { ALLERGEN_LABELS } from '../lib/allergens'
 import type { UploadedImage } from '../lib/upload'
 import styles from './EventStandMenuPage.module.scss'
 
@@ -633,7 +634,7 @@ export function EventStandMenuPage() {
               )}
               {selectedItem.product.allergens.length > 0 && (
                 <p className={styles.productAllergens}>
-                  <strong>Allergeni:</strong> {selectedItem.product.allergens.join(', ')}
+                  <strong>Allergeni:</strong> {selectedItem.product.allergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(', ')}
                 </p>
               )}
               {(selectedItem.priceOverride ?? selectedItem.product.price) > 0 && (
