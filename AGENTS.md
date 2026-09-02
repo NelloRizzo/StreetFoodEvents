@@ -236,6 +236,12 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Set 2026 — saldo utente in pagina evento pubblica)
+### Completed
+- `GET /api/events/:eventId` ora usa `optionalAuthMiddleware` e, se `req.user` è presente, restituisce anche `wallet: { balance } | null` (saldo crediti dell'utente per quell'evento, via `EventUserModel`). `EventDetailPage` mostra un badge "saldo" con l'ammontare (o 0) nella moneta dell'evento accanto al badge moneta, solo per utenti autenticati (ai visitatori anonimi resta nascosto).
+- Verifica: backend typecheck ✓, 303 test ✓, frontend build ✓.
+- Nota: la modifica tocca solo `backend/` e `frontend/` cloud — NON `.local/`, quindi nessuna rigenerazione di `distro/local-app.tar` necessaria.
+
 ## Session state (Aug 2026 — evento admin centralizzato con AdminEventContext)
 ### Completed
 - Nuovo `frontend/src/layouts/AdminEventContext.ts`: `AdminEventContext` + hook `useAdminEvent()` che espone `{ selectedEventId, selectedEvent, events }` a sidebar e pagine.
