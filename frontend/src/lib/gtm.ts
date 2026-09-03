@@ -55,12 +55,14 @@ export function initGTM(consent: { analytics: boolean; ads: boolean }): void {
   const script = document.createElement('script')
   script.async = true
   script.src = `https://www.googletagmanager.com/gtm.js?id=${gtmId}`
+  script.onload = () => {
+    // Applica il consenso SOLO dopo che gtm.js è caricato, così il runtime GTM
+    // legge sempre lo stato `granted`/`denied` corretto quando elabora i tag.
+    updateConsent(consent)
+  }
   document.head.appendChild(script)
 
   initialized = true
-
-  // Applica il consenso già scelto dall'utente (se il banner è stato già gestito).
-  updateConsent(consent)
 }
 
 /** Aggiorna lo stato di consenso su GTM (Google Consent Mode v2). */
