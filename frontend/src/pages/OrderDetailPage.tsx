@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { fetchOrder, updateOrderStatus, cancelOrder, payOrder, markStationReady, type Order } from '../lib/orders'
+import { trackOrderStatusUpdate, trackStationReady, trackCashierPayment } from '../lib/analytics'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { apiRequest } from '../lib/api'
@@ -58,6 +59,13 @@ export function OrderDetailPage() {
   const handleStatus = async (status: string) => {
     if (!orderId) return
     await updateOrderStatus(orderId, status)
+    trackOrderStatusUpdate({
+      orderId,
+      eventId: order?.eventId,
+      standId: order?.standId,
+      fromStatus: order?.status,
+      toStatus: status,
+    })
     await load()
   }
 
@@ -71,6 +79,13 @@ export function OrderDetailPage() {
     setPayError('')
     try {
       await payOrder(orderId, creditPayAmount, useEventCredits || undefined)
+      trackCashierPayment({
+        orderId,
+        eventId: order?.eventId,
+        standId: order?.standId,
+        amount: order?.total ?? 0,
+        method: useEventCredits ? 'credit' : 'external',
+      })
       await load()
     } catch (err) {
       setPayError(err instanceof Error ? err.message : 'Errore durante il pagamento')
@@ -80,6 +95,13 @@ export function OrderDetailPage() {
   const handleStationReady = async (stationId: string) => {
     if (!orderId) return
     await markStationReady(orderId, stationId)
+    trackStationReady({
+      orderId,
+      eventId: order?.eventId,
+      standId: order?.standId,
+      stationId,
+      itemCount: order?.items.filter((i) => i.stationId === stationId && !i.ready).length ?? 0,
+    })
     await load()
   }
 

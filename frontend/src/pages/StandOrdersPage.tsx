@@ -16,6 +16,7 @@ import {
   type Order,
   type StandReport,
 } from '../lib/orders'
+import { trackOrderStatusUpdate } from '../lib/analytics'
 import styles from './StandOrdersPage.module.scss'
 
 const statusLabels: Record<string, string> = {
@@ -99,11 +100,27 @@ export function StandOrdersPage() {
 
   const handleComplete = async (orderId: string) => {
     await updateOrderStatus(orderId, 'completed')
+    const found = orders.find((o) => o.id === orderId)
+    trackOrderStatusUpdate({
+      orderId,
+      eventId: found?.eventId,
+      standId: found?.standId ?? standId,
+      fromStatus: found?.status,
+      toStatus: 'completed',
+    })
     await load()
   }
 
   const handleReady = async (orderId: string) => {
     await updateOrderStatus(orderId, 'ready')
+    const found = orders.find((o) => o.id === orderId)
+    trackOrderStatusUpdate({
+      orderId,
+      eventId: found?.eventId,
+      standId: found?.standId ?? standId,
+      fromStatus: found?.status,
+      toStatus: 'ready',
+    })
     await load()
   }
 

@@ -4,6 +4,7 @@ import { useParams, useSearchParams, Navigate } from 'react-router-dom'
 import { useAuth } from '../features/auth/auth-context'
 import { apiRequest } from '../lib/api'
 import { fetchOrders, markItemReady, type Order } from '../lib/orders'
+import { trackStationReady } from '../lib/analytics'
 import styles from './StationQueuePage.module.scss'
 
 function playBeep() {
@@ -88,6 +89,14 @@ export function StationQueuePage() {
   const handleItemReady = async (orderId: string, eventProductId: string) => {
     try {
       await markItemReady(orderId, eventProductId)
+      const found = orders.find((o) => o.id === orderId)
+      trackStationReady({
+        orderId,
+        eventId,
+        standId: found?.standId,
+        stationId,
+        itemCount: 1,
+      })
       void load()
     } catch { /* ignore */ }
   }

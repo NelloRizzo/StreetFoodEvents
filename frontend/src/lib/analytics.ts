@@ -15,24 +15,38 @@ export function analyticsEvent(
   })
 }
 
+export type OrderAnalyticsProduct = {
+  productName: string
+  quantity: number
+  unitPrice: number
+}
+
 /** Creazione/avvio di un ordine da parte di un cliente. */
 export function trackOrderCreated(params: {
   orderId?: string
   eventId?: string
   standId?: string
+  eventName?: string
+  standName?: string
   items: number
   total: number
   currencyName?: string
   isGift?: boolean
+  products?: OrderAnalyticsProduct[]
 }): void {
   analyticsEvent('sfe_order_created', {
     order_id: params.orderId ?? '',
     event_id: params.eventId ?? '',
     stand_id: params.standId ?? '',
+    event_name: params.eventName ?? '',
+    stand_name: params.standName ?? '',
     items: params.items,
     total: params.total,
     currency: params.currencyName ?? '',
     is_gift: Boolean(params.isGift),
+    product_names: (params.products ?? []).map((p) => p.productName).join('|'),
+    product_quantities: (params.products ?? []).map((p) => p.quantity).join('|'),
+    product_prices: (params.products ?? []).map((p) => p.unitPrice).join('|'),
   })
 }
 
@@ -67,3 +81,84 @@ export function trackPhotosEmailSent(params: { eventId?: string; count: number }
     photos_count: params.count,
   })
 }
+
+/** Ordine creato dalla cassa cassiere. */
+export function trackCashierOrderCreated(params: {
+  orderId?: string
+  eventId?: string
+  standId?: string
+  eventName?: string
+  standName?: string
+  items: number
+  total: number
+  currency?: string
+  isGift?: boolean
+  paidOnCreate: boolean
+}): void {
+  analyticsEvent('sfe_cashier_order_created', {
+    order_id: params.orderId ?? '',
+    event_id: params.eventId ?? '',
+    stand_id: params.standId ?? '',
+    event_name: params.eventName ?? '',
+    stand_name: params.standName ?? '',
+    items: params.items,
+    total: params.total,
+    currency: params.currency ?? '',
+    is_gift: Boolean(params.isGift),
+    paid_on_create: Boolean(params.paidOnCreate),
+  })
+}
+
+/** Incasso/pagamento di un ordine. */
+export function trackCashierPayment(params: {
+  orderId?: string
+  eventId?: string
+  standId?: string
+  amount: number
+  currency?: string
+  method?: string
+}): void {
+  analyticsEvent('sfe_cashier_payment', {
+    order_id: params.orderId ?? '',
+    event_id: params.eventId ?? '',
+    stand_id: params.standId ?? '',
+    amount: params.amount,
+    currency: params.currency ?? '',
+    payment_method: params.method ?? '',
+  })
+}
+
+/** Avanzamento di stato di un ordine (preparing/ready/completed). */
+export function trackOrderStatusUpdate(params: {
+  orderId?: string
+  eventId?: string
+  standId?: string
+  fromStatus?: string
+  toStatus: string
+}): void {
+  analyticsEvent('sfe_order_status_update', {
+    order_id: params.orderId ?? '',
+    event_id: params.eventId ?? '',
+    stand_id: params.standId ?? '',
+    from_status: params.fromStatus ?? '',
+    to_status: params.toStatus,
+  })
+}
+
+/** Preparazione postazione: articolo o intera postazione resa "pronta". */
+export function trackStationReady(params: {
+  orderId?: string
+  eventId?: string
+  standId?: string
+  stationId?: string
+  itemCount: number
+}): void {
+  analyticsEvent('sfe_station_ready', {
+    order_id: params.orderId ?? '',
+    event_id: params.eventId ?? '',
+    stand_id: params.standId ?? '',
+    station_id: params.stationId ?? '',
+    item_count: params.itemCount,
+  })
+}
+

@@ -22,7 +22,7 @@ Nota: i nomi evento GA4 consigliati sono identici ai nomi `sfe_*` inviati sul da
 
 ## Variabili di contesto (evento `context_set`)
 
-Pushate da `PublicLayout` ad ogni cambio rotta (vedi `frontend/src/lib/gtm.ts`):
+Pushate da `PublicLayout` e `AdminLayout` ad ogni cambio rotta (vedi `frontend/src/lib/gtm.ts`):
 
 | Chiave dataLayer | Tipo | Descrizione |
 |---|---|---|
@@ -43,12 +43,17 @@ Creazione di un ordine dal menu pubblico dello stand.
 | `order_id` | string | id ordine |
 | `event_id` | string | id evento |
 | `stand_id` | string | id stand |
+| `event_name` | string | **nome evento (leggibile)** |
+| `stand_name` | string | **nome stand (leggibile)** |
 | `items` | number | totale pezzi ordinati |
 | `total` | number | totale in valuta evento |
 | `currency` | string | nome moneta evento |
 | `is_gift` | boolean | true se ordine omaggio |
+| `product_names` | string | nomi prodotti, separati da `\|` (una per riga carrello) |
+| `product_quantities` | string | quantità per riga, separate da `\|` (stesso ordine di `product_names`) |
+| `product_prices` | string | prezzi unitari per riga, separati da `\|` (stesso ordine) |
 
-GA4: mappabile su `begin_checkout`/`purchase` se si vogliono standard e-commerce; qui dimensioni custom.
+GA4: mappabile su `begin_checkout`/`purchase` se si vogliono standard e-commerce; qui dimensioni custom. Per l'analisi per **stand/evento** usare `event_name` e `stand_name` come dimensioni; per i **prodotti** per stand sfruttare `product_names` (eventualmente splittato).
 
 ### `sfe_currency_exchange`
 Change valuta dalla cassa cambio (top-up o refund).
@@ -74,6 +79,56 @@ Invio di una o più foto via email dalla galleria.
 |---|---|---|
 | `event_id` | string | id evento |
 | `photos_count` | number | numero foto inviate |
+
+### `sfe_cashier_order_created`
+Ordine creato dalla cassa cassiere (`CashierOrderPage` / `EventCashierPage`).
+
+| Parametro | Tipo | Note |
+|---|---|---|
+| `order_id` | string | id ordine |
+| `event_id` | string | id evento |
+| `stand_id` | string | id stand |
+| `event_name` | string | nome evento (leggibile) |
+| `stand_name` | string | nome stand (leggibile) |
+| `items` | number | totale pezzi |
+| `total` | number | totale in valuta evento |
+| `currency` | string | nome moneta evento |
+| `is_gift` | boolean | true se omaggio |
+| `paid_on_create` | boolean | true se incassato alla creazione |
+
+### `sfe_cashier_payment`
+Incasso/pagamento di un ordine (`payOrder` in `OrderDetailPage`/`OrdersPage`).
+
+| Parametro | Tipo | Note |
+|---|---|---|
+| `order_id` | string | id ordine |
+| `event_id` | string | id evento |
+| `stand_id` | string | id stand |
+| `amount` | number | importo pagato |
+| `currency` | string | nome moneta evento |
+| `payment_method` | string | `credit` \| `external` |
+
+### `sfe_order_status_update`
+Avanzamento di stato di un ordine (`preparing`/`ready`/`completed`) da cassa/code/gestione ordini.
+
+| Parametro | Tipo | Note |
+|---|---|---|
+| `order_id` | string | id ordine |
+| `event_id` | string | id evento |
+| `stand_id` | string | id stand |
+| `from_status` | string | stato precedente (vuoto se sconosciuto) |
+| `to_status` | string | nuovo stato |
+
+### `sfe_station_ready`
+Preparazione postazione: articolo o intera postazione resa "pronta" (`markItemReady`/`markStationReady`).
+
+| Parametro | Tipo | Note |
+|---|---|---|
+| `order_id` | string | id ordine |
+| `event_id` | string | id evento |
+| `stand_id` | string | id stand |
+| `station_id` | string | id postazione |
+| `item_count` | number | numero articoli pronti in questa azione |
 
 ## Note operative
 - Gli eventi viaggiano SOLO sul dataLayer; i tag in GTM devono rispettare il **Consent Mode** (respeto `analytics_storage`): un evento non va inviato se il consenso analytics è negato.

@@ -212,7 +212,7 @@ export function EventStandMenuPage() {
   }
 
   const handleSubmit = async () => {
-    if (cart.length === 0 || !eventId || !standId) return
+    if (cart.length === 0 || !eventId || !standId || !event || !stand) return
     setIsSubmitting(true)
     try {
       const effectiveCredit = payWithCredits ? Math.min(creditAmount || total, total) : 0
@@ -231,9 +231,16 @@ export function EventStandMenuPage() {
         orderId: response.item.id,
         eventId,
         standId,
+        eventName: event.name,
+        standName: stand.name,
         items: cart.reduce((sum, c) => sum + c.quantity, 0),
         total,
         isGift: false,
+        products: cart.map((c) => ({
+          productName: c.productName,
+          quantity: c.quantity,
+          unitPrice: c.unitPrice,
+        })),
       })
       navigate('/orders')
     } catch (e) {

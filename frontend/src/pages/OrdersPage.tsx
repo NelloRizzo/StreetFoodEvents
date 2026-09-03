@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { fetchOrders, payOrder, cancelOrder, updateOrderStatus, type Order } from '../lib/orders'
+import { trackCashierPayment, trackOrderStatusUpdate } from '../lib/analytics'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import type { UploadedImage } from '../lib/upload'
@@ -79,6 +80,14 @@ export function OrdersPage() {
   const handlePay = async (orderId: string) => {
     try {
       await payOrder(orderId, 0)
+      const found = orders.find((o) => o.id === orderId)
+      trackCashierPayment({
+        orderId,
+        eventId: found?.eventId,
+        standId: found?.standId,
+        amount: found?.total ?? 0,
+        method: 'external',
+      })
       handleFilter()
     } catch (err) {
       setModal({ open: true, title: 'Errore pagamento', message: (err as { message?: string }).message || 'Impossibile completare il pagamento.' })
@@ -97,6 +106,14 @@ export function OrdersPage() {
   const handleStatus = async (orderId: string, status: string) => {
     try {
       await updateOrderStatus(orderId, status)
+      const found = orders.find((o) => o.id === orderId)
+      trackOrderStatusUpdate({
+        orderId,
+        eventId: found?.eventId,
+        standId: found?.standId,
+        fromStatus: found?.status,
+        toStatus: status,
+      })
       handleFilter()
     } catch (err) {
       setModal({ open: true, title: 'Errore', message: (err as { message?: string }).message || 'Impossibile aggiornare lo stato.' })

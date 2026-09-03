@@ -5,6 +5,9 @@ import { apiRequest } from '../lib/api'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminTopBar } from './AdminTopBar'
 import { AdminEventContext, type AdminEventContextValue } from './AdminEventContext'
+import { initGTM, trackPageView, setAnalyticsContext } from '../lib/gtm'
+import { getConsent } from '../lib/consent'
+import { useAuth } from '../features/auth/auth-context'
 import styles from './AdminLayout.module.scss'
 
 const EVENT_STORAGE_KEY = 'adminSelectedEventId'
@@ -13,6 +16,7 @@ export function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [events, setEvents] = useState<AdminEventContextValue['events']>([])
   const [manuallySelectedEventId, setManuallySelectedEventId] = useState<string | null>(() => {
@@ -30,7 +34,32 @@ export function AdminLayout() {
       .catch(() => {})
   }, [])
 
+  useEffect(() => {
+    const consent = getConsent()
+    if (consent) {
+      initGTM({ analytics: consent.analytics, ads: consent.ads })
+    }
+  }, [])
+
   const urlEventId = location.pathname.match(/^\/admin\/events\/([a-f0-9]{24})(?:\/|$)/)?.[1] ?? null
+  const urlStandId =
+    location.pathname.match(
+      /^(?:\/admin\/events\/[a-f0-9]{24}\/)?stands\/([a-f0-9]{24})(?:\/|$)/,
+    )?.[1] ??
+    location.pathname.match(/([a-f0-9]{24})\/ordersqueue$/)?.[1] ??
+    null
+
+  useEffect(() => {
+    trackPageView(location.pathname)
+
+    const isAdminUser = Boolean(user?.isPlatformAdmin || user?.isAdmin)
+    setAnalyticsContext({
+      role: isAdminUser ? 'admin' : user ? 'user' : 'guest',
+      eventId: urlEventId ?? undefined,
+      standId: urlStandId ?? undefined,
+    })
+  }, [location.pathname, urlEventId, urlStandId, user])
+
   const storedEventId =
     manuallySelectedEventId && events.some((ev) => ev.id === manuallySelectedEventId)
       ? manuallySelectedEventId

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { createOrder, cancelOrder, updateOrderStatus, fetchGiftStats, type GiftStats, type Order } from '../lib/orders'
+import { trackCashierOrderCreated } from '../lib/analytics'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
@@ -281,6 +282,18 @@ export function EventCashierPage() {
       setCreatedOrder({ ...response.item, status: 'preparing' })
       loadGiftStats()
       resetOrder()
+      trackCashierOrderCreated({
+        orderId: response.item.id,
+        eventId,
+        standId: selectedStandId,
+        eventName,
+        standName,
+        items: cart.reduce((sum, i) => sum + i.quantity, 0),
+        total,
+        currency: eventCurrency?.currencyName,
+        isGift,
+        paidOnCreate: !isGift,
+      })
     } catch (e) {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
     }

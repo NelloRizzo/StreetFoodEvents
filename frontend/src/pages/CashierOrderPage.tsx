@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { createOrder, fetchOrders, fetchGiftStats, updateOrderStatus, cancelOrder, type GiftStats, type Order } from '../lib/orders'
+import { trackCashierOrderCreated, trackOrderStatusUpdate } from '../lib/analytics'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
@@ -160,6 +161,7 @@ export function CashierOrderPage() {
   const handleDeliver = async (orderId: string) => {
     try {
       await updateOrderStatus(orderId, 'completed')
+      trackOrderStatusUpdate({ orderId, eventId, standId, toStatus: 'completed' })
       loadActiveOrders()
     } catch { setAlertMsg('Errore durante la consegna') }
   }
@@ -287,6 +289,18 @@ export function CashierOrderPage() {
       setSuccessOrder(response.item)
       loadGiftStats()
       resetOrder()
+      trackCashierOrderCreated({
+        orderId: response.item.id,
+        eventId,
+        standId,
+        eventName,
+        standName,
+        items: cart.reduce((sum, i) => sum + i.quantity, 0),
+        total,
+        currency: eventCurrency?.currencyName,
+        isGift,
+        paidOnCreate: !isGift,
+      })
     } catch (e) {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
     }

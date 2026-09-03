@@ -11,6 +11,7 @@ import {
   type Order,
   type EventReport,
 } from '../lib/orders'
+import { trackOrderStatusUpdate } from '../lib/analytics'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import type { UploadedImage } from '../lib/upload'
@@ -91,11 +92,27 @@ export function EventOrdersPage() {
 
   const handleComplete = async (orderId: string) => {
     await updateOrderStatus(orderId, 'completed')
+    const found = orders.find((o) => o.id === orderId)
+    trackOrderStatusUpdate({
+      orderId,
+      eventId: found?.eventId ?? eventId,
+      standId: found?.standId,
+      fromStatus: found?.status,
+      toStatus: 'completed',
+    })
     await load()
   }
 
   const handleReady = async (orderId: string) => {
     await updateOrderStatus(orderId, 'ready')
+    const found = orders.find((o) => o.id === orderId)
+    trackOrderStatusUpdate({
+      orderId,
+      eventId: found?.eventId ?? eventId,
+      standId: found?.standId,
+      fromStatus: found?.status,
+      toStatus: 'ready',
+    })
     await load()
   }
 
