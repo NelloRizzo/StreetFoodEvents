@@ -232,9 +232,8 @@ export function EventDetailPage() {
               <>Pagamento in Euro</>
             ) : (
               <>
-                Pagamento in
+                Pagamento in {event.currencyName}
                 <CurrencyDisplay currencyName={event.currencyName} currencySymbol={event.currencySymbol} />
-                {event.currencyName}
               </>
             )}
           </span>
