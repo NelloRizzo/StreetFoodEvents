@@ -52,6 +52,6 @@ services:
       - key: VITE_API_URL
         value: https://streetfoodevents-api.onrender.com/api
       - key: VITE_GTM_ID
-        sync: false
+        value: GTM-W39HB9Q9
       - key: VITE_PRIVACY_EMAIL
         sync: false
