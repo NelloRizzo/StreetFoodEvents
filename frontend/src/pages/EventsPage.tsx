@@ -647,8 +647,9 @@ export function EventsPage() {
               </div>
               <div className={styles.fieldRow}>
                 <div className={styles.field}>
-                  <label htmlFor="ev-currency">Nome moneta evento *</label>
-                  <input id="ev-currency" value={form.currencyName} onChange={(e) => setForm({ ...form, currencyName: e.target.value })} placeholder="es. StreetCoin" required />
+                  <label htmlFor="ev-currency">Nome moneta evento <em>(solo se moneta personalizzata)</em></label>
+                  <input id="ev-currency" value={form.currencyName} onChange={(e) => setForm({ ...form, currencyName: e.target.value })} placeholder="es. StreetCoin · lascia vuoto per €" />
+                  <span className={styles.fieldHint}>Vuoto = pagamenti in euro.</span>
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="ev-rate">Tasso di cambio (1 € = X moneta)</label>

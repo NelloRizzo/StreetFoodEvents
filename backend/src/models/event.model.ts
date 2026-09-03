@@ -97,7 +97,7 @@ const eventSchema = new Schema(
         },
         currencyName: {
             type: String,
-            required: true,
+            default: '€',
             trim: true,
             maxlength: 80
         },

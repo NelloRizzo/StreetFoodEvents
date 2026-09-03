@@ -251,7 +251,7 @@ export async function createEvent(req: Request, res: Response) {
         location,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        currencyName,
+        currencyName: currencyName?.trim() || '€',
         currencySymbol: currencySymbol ?? null,
         exchangeRate: exchangeRate ?? 1,
         themeBrand: themeBrand ?? null,
@@ -343,7 +343,7 @@ export async function updateEvent(req: Request, res: Response) {
     }
 
     if (currencyName !== undefined) {
-        event.currencyName = currencyName;
+        event.currencyName = currencyName?.trim() || '€';
     }
 
     if (currencySymbol !== undefined) {
