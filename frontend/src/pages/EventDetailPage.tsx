@@ -228,6 +228,7 @@ export function EventDetailPage() {
         {/* Info row */}
         <div className={styles.infoRow}>
           <span className={styles.currencyBadge}>
+            Pagamento in
             <CurrencyDisplay currencyName={event.currencyName} currencySymbol={event.currencySymbol} />
             {!isBareCurrencySymbol(event.currencyName) && event.currencyName}
           </span>
