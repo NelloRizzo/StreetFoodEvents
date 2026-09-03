@@ -101,7 +101,7 @@ export function PrivacyPage() {
         <h2 className={styles.sectionTitle}>Terze parti</h2>
         <ul className={styles.list}>
           <li><strong>Google AdMob</strong>: pubblicità nell'app Android (futuro).</li>
-          <li><strong>Google Analytics / Google Tag Manager</strong>: statistiche di navigazione (futuro, con consenso).</li>
+          <li><strong>Google Analytics / Google Tag Manager</strong>: statistiche di navigazione (con consenso, tramite Consent Mode v2).</li>
         </ul>
       </section>
 

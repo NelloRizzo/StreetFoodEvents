@@ -9,6 +9,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { ALLERGEN_LABELS } from '../lib/allergens'
+import { trackOrderCreated } from '../lib/analytics'
 import type { UploadedImage } from '../lib/upload'
 import styles from './EventStandMenuPage.module.scss'
 
@@ -215,7 +216,7 @@ export function EventStandMenuPage() {
     setIsSubmitting(true)
     try {
       const effectiveCredit = payWithCredits ? Math.min(creditAmount || total, total) : 0
-      await createOrder({
+      const response = await createOrder({
         eventId,
         standId,
         customerName: customerName || undefined,
@@ -225,6 +226,14 @@ export function EventStandMenuPage() {
           quantity: c.quantity,
         })),
         paymentOnCreate: effectiveCredit > 0 ? { creditAmount: effectiveCredit } : undefined,
+      })
+      trackOrderCreated({
+        orderId: response.item.id,
+        eventId,
+        standId,
+        items: cart.reduce((sum, c) => sum + c.quantity, 0),
+        total,
+        isGift: false,
       })
       navigate('/orders')
     } catch (e) {

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 
 import { ConfirmModal } from '../components/ConfirmModal'
 import { apiRequest } from '../lib/api'
+import { trackPhotosEmailSent } from '../lib/analytics'
 import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import styles from './EventGalleryPage.module.scss'
@@ -93,6 +94,10 @@ export function EventGalleryPage() {
         })
       }
       setEmailSent(true)
+      trackPhotosEmailSent({
+        eventId,
+        count: isBulk && bulkEmailIds ? bulkEmailIds.length : 1,
+      })
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Invio fallito'
       setEmailError(msg)

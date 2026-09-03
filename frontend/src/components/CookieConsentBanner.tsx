@@ -1,19 +1,20 @@
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { acceptAll, rejectAll, hasConsent } from '../lib/consent'
-import { initGTM } from '../lib/gtm'
+import { initGTM, updateConsent } from '../lib/gtm'
 
 export function CookieConsentBanner() {
   const [visible, setVisible] = useState(!hasConsent())
 
   const handleAccept = useCallback(() => {
     acceptAll()
-    initGTM()
+    initGTM({ analytics: true, ads: true })
     setVisible(false)
   }, [])
 
   const handleReject = useCallback(() => {
     rejectAll()
+    updateConsent({ analytics: false, ads: false })
     setVisible(false)
   }, [])
 

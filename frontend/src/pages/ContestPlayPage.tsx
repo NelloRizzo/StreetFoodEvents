@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 
 import { getContest, getContestLeaderboard, getParticipation, registerScan, completeParticipation } from '../lib/contests'
 import type { LeaderboardItem } from '../lib/contests'
+import { trackPoiScanned } from '../lib/analytics'
 import { QRScanner } from '../components/QRScanner'
 import { apiRequest } from '../lib/api'
 import styles from './ContestPlayPage.module.scss'
@@ -143,6 +144,7 @@ export function ContestPlayPage() {
         claimCode: result.claimCode ?? null,
       })
       setScanMessage({ ok: true, text: 'POI trovato!' })
+      trackPoiScanned({ contestId, participantId: participantIdLocal })
       setTimeout(() => setScanMessage(null), 2000)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Errore scansione'

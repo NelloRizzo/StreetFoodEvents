@@ -1,25 +1,36 @@
 import { useEffect } from 'react'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 
 import styles from './PublicLayout.module.scss'
 import { PublicHeader } from '../components/PublicHeader'
 import { PublicBottomBar } from '../components/PublicBottomBar'
 import { CookieConsentBanner } from '../components/CookieConsentBanner'
-import { initGTM, trackPageView } from '../lib/gtm'
-import { hasConsent } from '../lib/consent'
+import { initGTM, trackPageView, setAnalyticsContext } from '../lib/gtm'
+import { getConsent } from '../lib/consent'
+import { useAuth } from '../features/auth/auth-context'
 
 export function PublicLayout() {
   const location = useLocation()
+  const params = useParams<{ eventId?: string; standId?: string }>()
+  const { user } = useAuth()
 
   useEffect(() => {
-    if (hasConsent()) {
-      initGTM()
+    const consent = getConsent()
+    if (consent) {
+      initGTM({ analytics: consent.analytics, ads: consent.ads })
     }
   }, [])
 
   useEffect(() => {
     trackPageView(location.pathname)
-  }, [location.pathname])
+
+    const isAdminUser = Boolean(user?.isPlatformAdmin || user?.isAdmin)
+    setAnalyticsContext({
+      role: isAdminUser ? 'admin' : user ? 'user' : 'guest',
+      eventId: params.eventId,
+      standId: params.standId,
+    })
+  }, [location.pathname, params.eventId, params.standId, user])
 
   const isSlideshow = location.pathname.includes('/slideshow')
   const isCashier = /\/stands\/[^/]+\/order$/.test(location.pathname) || /\/cashier/.test(location.pathname)

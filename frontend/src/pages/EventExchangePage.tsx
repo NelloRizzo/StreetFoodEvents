@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
+import { trackCurrencyExchange } from '../lib/analytics'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useAuth } from '../features/auth/auth-context'
 import cambioStyles from './EventExchangePage.module.scss'
@@ -184,6 +185,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       setSelUserBalance(res.newBalance)
       setTopUpAmount('')
       setTopUpDesc('')
+      trackCurrencyExchange({ eventId, amount, type: 'topup' })
       const rate = balance?.exchangeRate ?? 1
       const credits = amount * rate
       setModal({ open: true, variant: 'alert', title: 'Carico completato', message: `Caricati €${amount.toFixed(2)} → ${credits.toFixed(2)} ${balance?.currencyName ?? 'crediti'}. Nuovo saldo: ${res.newBalance}` })
@@ -208,6 +210,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       setSelUserBalance(res.newBalance)
       setRefundAmount('')
       setRefundDesc('')
+      trackCurrencyExchange({ eventId, amount, type: 'refund' })
       const rate = balance?.exchangeRate ?? 1
       const real = amount / rate
       setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'} → €${real.toFixed(2)}. Nuovo saldo: ${res.newBalance}` })
