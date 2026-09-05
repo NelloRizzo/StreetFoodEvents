@@ -28,11 +28,20 @@ export type SocialMenuExportStand = {
   name: string
   slogan?: string | null
   logo: UploadedImage | null
+  coverImage: UploadedImage | null
 }
 
 export type SocialMenuExportMenuItem = {
   id: string
-  product: { name: string } | null
+  product: {
+    name: string
+    coverImage?: UploadedImage | null
+  } | null
+}
+
+type SocialProduct = {
+  name: string
+  coverImage: UploadedImage | null
 }
 
 type Props = {
@@ -70,12 +79,52 @@ function drawRoundRect(
   ctx.closePath()
 }
 
+function clipRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  ctx.save()
+  drawRoundRect(ctx, x, y, w, h, r)
+  ctx.clip()
+}
+
+function drawRoundedImage(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement | null,
+  x: number,
+  y: number,
+  size: number,
+  radius: number,
+) {
+  clipRoundRect(ctx, x, y, size, size, radius)
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(x, y, size, size)
+  if (img) {
+    const s = Math.max(size / img.width, size / img.height)
+    const w = img.width * s
+    const h = img.height * s
+    ctx.drawImage(img, x + (size - w) / 2, y + (size - h) / 2, w, h)
+  }
+  ctx.restore()
+  ctx.save()
+  drawRoundRect(ctx, x, y, size, size, radius)
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+  ctx.lineWidth = 3
+  ctx.stroke()
+  ctx.restore()
+}
+
 function drawCircleImage(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement | null,
   cx: number,
   cy: number,
   d: number,
+  initial: string,
 ) {
   ctx.save()
   ctx.beginPath()
@@ -89,14 +138,23 @@ function drawCircleImage(
     const w = img.width * s
     const h = img.height * s
     ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h)
+  } else {
+    ctx.clip()
+    ctx.fillStyle = '#f1ebde'
+    ctx.fill()
+    ctx.fillStyle = '#587065'
+    ctx.font = '700 52px "Segoe UI", Inter, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(initial.charAt(0).toUpperCase(), cx, cy + 2)
   }
   ctx.restore()
   ctx.save()
   ctx.beginPath()
   ctx.arc(cx, cy, d / 2, 0, Math.PI * 2)
   ctx.closePath()
-  ctx.strokeStyle = 'rgba(255,255,255,0.6)'
-  ctx.lineWidth = 6
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+  ctx.lineWidth = 5
   ctx.stroke()
   ctx.restore()
 }
@@ -128,7 +186,7 @@ async function generatePoster(
   ctx: CanvasRenderingContext2D,
   event: SocialMenuExportEvent,
   stand: SocialMenuExportStand,
-  productNames: string[],
+  products: SocialProduct[],
   qrImage: HTMLImageElement | null,
 ): Promise<void> {
   const W = POSTER_WIDTH
@@ -139,6 +197,18 @@ async function generatePoster(
   const surface = event.themeSurface ?? '#fffaf2'
   const highlight = event.themeHighlight ?? '#f4c978'
 
+  const bannerImg = stand.coverImage?.url
+    ? await loadImage(stand.coverImage.url, true)
+    : null
+  const logoSource = stand.logo?.url ?? stand.coverImage?.url ?? ''
+  const logoImg = await loadImage(logoSource, true)
+  const eventLogo = event.logo?.url ? await loadImage(event.logo.url, true) : null
+  const thumbs = await Promise.all(
+    products.map((p) =>
+      p.coverImage?.url ? loadImage(p.coverImage.url, true) : Promise.resolve(null),
+    ),
+  )
+
   ctx.save()
   ctx.fillStyle = surface
   ctx.fillRect(0, 0, W, H)
@@ -146,87 +216,93 @@ async function generatePoster(
   // ── Brand band (event) ──
   ctx.save()
   ctx.fillStyle = brand
-  ctx.fillRect(0, 0, W, 185)
+  ctx.fillRect(0, 0, W, 140)
 
-  const eventLogo = await loadImage(event.logo?.url ?? '', true)
   if (eventLogo) {
-    drawCircleImage(ctx, eventLogo, 105, 92, 96)
+    drawCircleImage(ctx, eventLogo, 92, 70, 76, event.name)
   }
-
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillStyle = '#ffffff'
-  ctx.font = '700 44px "Segoe UI", Inter, sans-serif'
-  const evNameLines = wrapText(ctx, event.name, W - 180 - 60, 1)
-  ctx.fillText(evNameLines[0] ?? '', 180, 80)
+  ctx.font = '700 40px "Segoe UI", Inter, sans-serif'
+  const evNameLines = wrapText(ctx, event.name, W - 165 - 40, 1)
+  ctx.fillText(evNameLines[0] ?? '', 165, 65)
 
   const dateRange = formatEventDateRange(event.startDate, event.endDate)
   if (dateRange) {
-    ctx.font = '600 30px "Segoe UI", Inter, sans-serif'
-    ctx.fillText(dateRange, 180, 132)
+    ctx.font = '600 28px "Segoe UI", Inter, sans-serif'
+    ctx.fillText(dateRange, 165, 108)
   }
   ctx.restore()
 
-  // ── Stand logo + name ──
-  const standLogo = await loadImage(stand.logo?.url ?? '', true)
-  drawCircleImage(ctx, standLogo, W / 2, 285, 180)
+  // ── Banner stand (se presente) ──
+  const bandBottom = 140
+  const bannerH = 220
+  if (bannerImg) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(0, bandBottom, W, bannerH)
+    ctx.clip()
+    const s = Math.max(W / bannerImg.width, bannerH / bannerImg.height)
+    const w = bannerImg.width * s
+    const h = bannerImg.height * s
+    ctx.drawImage(bannerImg, (W - w) / 2, bandBottom + (bannerH - h) / 2, w, h)
+    ctx.restore()
+  }
+
+  // ── Logo stand (sovrapposto al banner) ──
+  drawCircleImage(ctx, logoImg, W / 2, 360, 150, stand.name)
 
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillStyle = ink
-  ctx.font = '700 56px "Segoe UI", Inter, sans-serif'
-  const standNameLines = wrapText(ctx, stand.name, W - 220, 2)
+  ctx.font = '700 50px "Segoe UI", Inter, sans-serif'
+  const standNameLines = wrapText(ctx, stand.name, W - 240, 2)
   standNameLines.forEach((line, i) => {
-    ctx.fillText(line, W / 2, 440 + i * 66)
+    ctx.fillText(line, W / 2, 508 + i * 60)
   })
 
   if (stand.slogan) {
     ctx.fillStyle = inkSoft
-    ctx.font = 'italic 400 30px "Segoe UI", Inter, sans-serif'
-    const sloganLines = wrapText(ctx, stand.slogan, W - 260, 2)
+    ctx.font = 'italic 400 28px "Segoe UI", Inter, sans-serif'
+    const sloganLines = wrapText(ctx, stand.slogan, W - 280, 2)
     sloganLines.forEach((line, i) => {
-      ctx.fillText(line, W / 2, 570 + i * 38)
+      ctx.fillText(line, W / 2, 640 + i * 36)
     })
   }
 
   // ── Divider + "Il menu" ──
   ctx.fillStyle = highlight
-  ctx.fillRect(250, 642, W - 500, 5)
+  ctx.fillRect(250, 706, W - 500, 5)
   ctx.fillStyle = brand
-  ctx.font = '700 38px "Segoe UI", Inter, sans-serif'
-  ctx.fillText('Il menu', W / 2, 694)
+  ctx.font = '700 36px "Segoe UI", Inter, sans-serif'
+  ctx.fillText('Il menu', W / 2, 752)
 
-  // ── Products grid (no prices) ──
-  const MAX_PRODUCTS = 12
-  const list = productNames.slice(0, MAX_PRODUCTS)
-  const remainder = productNames.length - list.length
+  // ── Products grid (foto + nome, senza prezzo) ──
+  const MAX_PRODUCTS = 8
+  const list = products.slice(0, MAX_PRODUCTS)
+  const remainder = products.length - list.length
   const colWidth = 440
   const colX = [95, 545]
-  const maxRows = Math.ceil(list.length / 2)
-  const rowStartY = 740
-  const rowH = 70
+  const rowStartY = 788
+  const rowH = 80
+  const thumbSize = 58
 
-  ctx.font = '500 30px "Segoe UI", Inter, sans-serif'
-  ctx.fillStyle = ink
-
-  list.forEach((pname, i) => {
+  list.forEach((p, i) => {
     const row = Math.floor(i / 2)
     const col = i % 2
     const x = colX[col]
     const y = rowStartY + row * rowH
 
-    ctx.save()
-    ctx.fillStyle = brand
-    ctx.beginPath()
-    ctx.arc(x + 14, y + 8, 7, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.restore()
+    drawRoundedImage(ctx, thumbs[i], x, y + 4, thumbSize, 14)
 
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
-    const lines = wrapText(ctx, pname, colWidth - 44, 2)
+    ctx.font = '500 30px "Segoe UI", Inter, sans-serif'
+    ctx.fillStyle = ink
+    const lines = wrapText(ctx, p.name, colWidth - thumbSize - 20, 2)
     lines.forEach((line, li) => {
-      ctx.fillText(line, x + 34, y + li * 35)
+      ctx.fillText(line, x + thumbSize + 20, y + (li === 0 ? 10 : 44))
     })
   })
 
@@ -235,13 +311,13 @@ async function generatePoster(
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.font = 'italic 400 32px "Segoe UI", Inter, sans-serif'
-    ctx.fillText('Il menu è in preparazione', W / 2, 900)
+    ctx.fillText('Il menu è in preparazione', W / 2, 970)
   } else if (remainder > 0) {
     ctx.fillStyle = brand
-    ctx.font = '600 30px "Segoe UI", Inter, sans-serif'
+    ctx.font = '600 28px "Segoe UI", Inter, sans-serif'
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
-    ctx.fillText(`+ ${remainder} altri`, colX[0] + 34, rowStartY + maxRows * rowH)
+    ctx.fillText(`+ ${remainder} altri`, colX[0] + thumbSize + 20, rowStartY + 4 * rowH)
   }
 
   // ── Bottom: location/date box + QR ──
@@ -249,7 +325,7 @@ async function generatePoster(
 
   ctx.save()
   ctx.fillStyle = brand
-  drawRoundRect(ctx, 95, 1170, 700, 120, 24)
+  drawRoundRect(ctx, 95, 1160, 700, 118, 24)
   ctx.fill()
   ctx.restore()
 
@@ -258,25 +334,25 @@ async function generatePoster(
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   if (locLabel) {
-    ctx.font = '700 36px "Segoe UI", Inter, sans-serif'
-    ctx.fillText(locLabel, 150, 1210)
+    ctx.font = '700 34px "Segoe UI", Inter, sans-serif'
+    ctx.fillText(locLabel, 150, 1200)
   }
   if (dateRange) {
-    ctx.font = '500 32px "Segoe UI", Inter, sans-serif'
-    ctx.fillText(dateRange, 150, locLabel ? 1255 : 1230)
+    ctx.font = '500 30px "Segoe UI", Inter, sans-serif'
+    ctx.fillText(dateRange, 150, locLabel ? 1244 : 1220)
   }
   ctx.restore()
 
   if (qrImage) {
-    const qrSize = 150
-    const qx = 830
-    const qy = 1160
+    const qrSize = 118
+    const qx = W - 95 - qrSize
+    const qy = 1156
     ctx.save()
     ctx.fillStyle = '#ffffff'
     drawRoundRect(ctx, qx, qy, qrSize, qrSize, 16)
     ctx.fill()
     ctx.clip()
-    ctx.drawImage(qrImage, qx + 6, qy + 6, qrSize - 12, qrSize - 12)
+    ctx.drawImage(qrImage, qx + 5, qy + 5, qrSize - 10, qrSize - 10)
     ctx.restore()
 
     ctx.save()
@@ -287,10 +363,10 @@ async function generatePoster(
     ctx.restore()
 
     ctx.fillStyle = brand
-    ctx.font = '600 24px "Segoe UI", Inter, sans-serif'
+    ctx.font = '600 22px "Segoe UI", Inter, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('Menu dello stand', qx + qrSize / 2, qy + qrSize + 22)
+    ctx.fillText('Menu dello stand', qx + qrSize / 2, qy + qrSize + 20)
   }
 
   ctx.restore()
@@ -303,10 +379,15 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
   const [copied, setCopied] = useState(false)
   const [captionText, setCaptionText] = useState<string | null>(null)
 
-  const productNames = useMemo(
-    () => menuItems.map((m) => m.product?.name ?? '').filter(Boolean),
-    [menuItems],
-  )
+  const products = useMemo<SocialProduct[]>(() => {
+    const out: SocialProduct[] = []
+    for (const m of menuItems) {
+      if (m.product?.name) out.push({ name: m.product.name, coverImage: m.product.coverImage ?? null })
+    }
+    return out
+  }, [menuItems])
+
+  const productNames = useMemo(() => products.map((p) => p.name), [products])
 
   const menuUrl = useMemo(() => {
     const base = typeof window !== 'undefined' ? window.location.origin : ''
@@ -347,7 +428,7 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
         canvas.height = POSTER_HEIGHT
         const ctx = canvas.getContext('2d')
         if (!ctx) return
-        await generatePoster(ctx, event, stand, productNames, qrImg)
+        await generatePoster(ctx, event, stand, products, qrImg)
         if (cancelled) return
         setPosterUrl(canvas.toDataURL('image/png'))
       } catch {
@@ -361,7 +442,7 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
     return () => {
       cancelled = true
     }
-  }, [open, event, stand, productNames])
+  }, [open, event, stand, products])
 
   useEffect(() => {
     if (open) {
@@ -429,7 +510,8 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
 
             <h2 className={styles.title}>Esporta per social</h2>
             <p className={styles.hint}>
-              Poster con il menu dello stand, logo dell&apos;evento e QR per raggiungere la pagina.
+              Poster con banner e logo dello stand, prodotti, logo dell&apos;evento e QR per
+              raggiungere la pagina.
             </p>
 
             <div className={styles.grid}>
