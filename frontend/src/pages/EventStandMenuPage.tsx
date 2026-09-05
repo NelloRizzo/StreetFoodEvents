@@ -7,6 +7,7 @@ import { useEventTheme } from '../features/theme/useEventTheme'
 import { useAuth } from '../features/auth/auth-context'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { QRCodeDownload } from '../components/QRCodeDownload'
+import { SocialMenuExport } from '../components/SocialMenuExport'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { ALLERGEN_LABELS } from '../lib/allergens'
 import { trackOrderCreated } from '../lib/analytics'
@@ -52,6 +53,11 @@ type CategoryMenuItem = {
 type Event = {
   id: string
   name: string
+  logo: UploadedImage | null
+  startDate: string
+  endDate: string
+  location?: { label?: string | null; city?: string | null } | null
+  shortDescription?: string | null
   currencyName: string
   currencySymbol: UploadedImage | null
   themeBrand: string | null
@@ -98,6 +104,8 @@ export function EventStandMenuPage() {
   const [viewMode, setViewMode] = useState<'stand' | 'category'>('stand')
   const [categoryItems, setCategoryItems] = useState<CategoryMenuItem[]>([])
   const [categoryLabels, setCategoryLabels] = useState<string[]>([])
+  const [socialOpen, setSocialOpen] = useState(false)
+  const [canExportSocial, setCanExportSocial] = useState(false)
 
   const total = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
 
@@ -146,6 +154,27 @@ export function EventStandMenuPage() {
   useEffect(() => {
     if (user) setCustomerName(`${user.firstName} ${user.lastName}`)
   }, [user])
+
+  useEffect(() => {
+    if (!user || !eventId || !standId) return
+    let cancelled = false
+    const check = async () => {
+      if (user.isPlatformAdmin || user.adminEventIds?.includes(eventId)) {
+        if (!cancelled) setCanExportSocial(true)
+        return
+      }
+      try {
+        const data = await apiRequest<{ stands: { id: string }[] }>('/auth/me/stands')
+        if (!cancelled) setCanExportSocial(data.stands.some((s) => s.id === standId))
+      } catch {
+        if (!cancelled) setCanExportSocial(false)
+      }
+    }
+    void check()
+    return () => {
+      cancelled = true
+    }
+  }, [user, eventId, standId])
 
   useEffect(() => {
     if (viewMode !== 'category' || !eventId) return
@@ -320,10 +349,21 @@ export function EventStandMenuPage() {
             )}
           </div>
           {viewMode === 'stand' && (
-            <QRCodeDownload
-              apiPath={`/stands/${standId}/qrcode?eventId=${eventId}`}
-              fileName={`menu-${stand.name}`}
-            />
+            <div className={styles.headerActions}>
+              {canExportSocial && user && (
+                <button
+                  type="button"
+                  className={styles.socialBtn}
+                  onClick={() => setSocialOpen(true)}
+                >
+                  Esporta social
+                </button>
+              )}
+              <QRCodeDownload
+                apiPath={`/stands/${standId}/qrcode?eventId=${eventId}`}
+                fileName={`menu-${stand.name}`}
+              />
+            </div>
           )}
         </div>
 
@@ -682,6 +722,15 @@ export function EventStandMenuPage() {
             </div>
           </div>
         </div>
+      )}
+      {socialOpen && (
+        <SocialMenuExport
+          open={socialOpen}
+          event={event}
+          stand={stand}
+          menuItems={menuItems}
+          onClose={() => setSocialOpen(false)}
+        />
       )}
       {alertMsg && (
         <ConfirmModal
