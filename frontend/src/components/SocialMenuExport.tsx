@@ -226,13 +226,7 @@ async function generatePoster(
   ctx.fillStyle = '#ffffff'
   ctx.font = '700 40px "Segoe UI", Inter, sans-serif'
   const evNameLines = wrapText(ctx, event.name, W - 165 - 40, 1)
-  ctx.fillText(evNameLines[0] ?? '', 165, 65)
-
-  const dateRange = formatEventDateRange(event.startDate, event.endDate)
-  if (dateRange) {
-    ctx.font = '600 28px "Segoe UI", Inter, sans-serif'
-    ctx.fillText(dateRange, 165, 108)
-  }
+  ctx.fillText(evNameLines[0] ?? '', 165, 70)
   ctx.restore()
 
   // ── Banner stand (se presente) ──
@@ -321,6 +315,7 @@ async function generatePoster(
   }
 
   // ── Bottom: location/date box + QR ──
+  const dateRange = formatEventDateRange(event.startDate, event.endDate)
   const locLabel = (event.location?.city ?? event.location?.label ?? '').trim()
 
   ctx.save()
