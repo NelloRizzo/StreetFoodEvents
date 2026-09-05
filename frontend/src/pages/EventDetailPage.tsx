@@ -20,6 +20,13 @@ type UploadedImg = {
   bytes: number
 }
 
+type UploadedDoc = {
+  url: string
+  format: string
+  bytes: number
+  originalName: string
+}
+
 type Event = {
   id: string
   name: string
@@ -32,6 +39,7 @@ type Event = {
   longDescription: string | null
   coverImage: UploadedImg | null
   logo: UploadedImg | null
+  regulationDocument: UploadedDoc | null
   gallery: UploadedImg[]
   themeBrand: string | null
   themeText: string | null
@@ -215,6 +223,17 @@ export function EventDetailPage() {
             <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
               Galleria
             </Link>
+            {event.regulationDocument && (
+              <a
+                href={event.regulationDocument.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                className={styles.actionBtnOutline}
+              >
+                Regolamento
+              </a>
+            )}
             <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
               Scatta foto
             </button>

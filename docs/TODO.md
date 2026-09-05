@@ -1,5 +1,10 @@
 # TODO — Street Food Events
 
+## Adesione Stand a Manifestazione (design, non implementata)
+- Flusso in cui il **gestore dello stand** aderisce a una manifestazione producendo: nome stand, banner (consigliato 1080×220), logo (consigliato), elenco prodotti con prezzo + foto (consigliata) + ingredienti e allergeni, conferma requisiti HACCP, pagamento del **prezzo di partecipazione**, versamento **caparra non rimborsabile**, accettazione dell'uso di eventuale **moneta custom** e accettazione delle **regole** con **clausola di esclusione** in caso di inosservanza.
+- **Oggi**: solo il **modulo cartaceo stampabile** (per uso carta) in `docs/ADESIONE_STAND.md`; la versione **elettronica** (wizard in app, modello `StandAdhesion`, API, stati) è da implementare.
+- Dipendenze per la versione elettronica: ruolo `stand-owner` e Payment Gateway (per pagamenti online) non ancora implementati.
+
 ## Pubblicazione social — analisi problematiche (ricerca Ago 2026)
 Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-side) e hostate su Cloudinary con URL pubblico — requisito indispensabile: Meta fa fetch dell'immagine dall'URL passato.
 

@@ -4,8 +4,9 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/auth-context'
 import { apiRequest } from '../lib/api'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
-import { type UploadedImage } from '../lib/upload'
+import { type UploadedDocument, type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
+import { DocumentUploader } from '../components/DocumentUploader'
 import { RichEditor } from '../components/RichEditor'
 import { useItalianComuni, searchComuni, getProvinces, getProvinceName, getProvinceSigla } from '../lib/italian-comuni'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -37,6 +38,7 @@ type EventItem = {
   longDescription: string | null
   coverImage: UploadedImage | null
   logo: UploadedImage | null
+  regulationDocument: UploadedDocument | null
   gallery: UploadedImage[]
   themeBrand: string | null
   themeText: string | null
@@ -75,6 +77,7 @@ type EventFormData = {
   longDescription: string
   coverImage: UploadedImage | null
   logo: UploadedImage | null
+  regulationDocument: UploadedDocument | null
   gallery: UploadedImage[]
   themeBrand: string
   themeText: string
@@ -110,6 +113,7 @@ const emptyForm: EventFormData = {
   longDescription: '',
   coverImage: null,
   logo: null,
+  regulationDocument: null,
   gallery: [],
   themeBrand: '',
   themeText: '',
@@ -405,6 +409,7 @@ export function EventsPage() {
       longDescription: ev.longDescription ?? '',
       coverImage: ev.coverImage,
       logo: ev.logo,
+      regulationDocument: ev.regulationDocument,
       gallery: ev.gallery,
       themeBrand: ev.themeBrand ?? '',
       themeText: ev.themeText ?? '',
@@ -469,6 +474,7 @@ export function EventsPage() {
       longDescription: form.longDescription || null,
       coverImage: form.coverImage,
       logo: form.logo,
+      regulationDocument: form.regulationDocument,
       gallery: form.gallery,
       themeBrand: form.themeBrand || null,
       themeText: form.themeText || null,
@@ -914,6 +920,12 @@ export function EventsPage() {
                 value={form.gallery}
                 onChange={(data) => setForm({ ...form, gallery: data as UploadedImage[] })}
                 label="Galleria"
+              />
+              <DocumentUploader
+                type="event"
+                value={form.regulationDocument}
+                onChange={(data) => setForm({ ...form, regulationDocument: data })}
+                label="Regolamento della manifestazione (PDF, opzionale)"
               />
             </fieldset>
 

@@ -1,5 +1,5 @@
 import type { AuthUser } from '@/types/auth-user';
-import type { UploadedImage } from '@/types/uploaded-image';
+import type { UploadedDocument, UploadedImage } from '@/types/uploaded-image';
 
 declare global {
     namespace Express {
@@ -7,6 +7,7 @@ declare global {
             user?: AuthUser;
             uploadedImage?: UploadedImage;
             uploadedGallery?: UploadedImage[];
+            uploadedDocument?: UploadedDocument;
         }
     }
 }

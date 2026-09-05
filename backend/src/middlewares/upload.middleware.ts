@@ -38,3 +38,19 @@ export const multerMediaUpload = multer({
         cb(null, true);
     }
 });
+
+const allowedDocumentMimeTypes = ['application/pdf'];
+
+export const multerDocumentUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 20 * 1024 * 1024
+    },
+    fileFilter: (_req, file, cb) => {
+        if (!allowedDocumentMimeTypes.includes(file.mimetype)) {
+            return cb(new Error('Invalid document format'));
+        }
+
+        cb(null, true);
+    }
+});

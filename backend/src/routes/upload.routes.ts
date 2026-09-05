@@ -1,14 +1,16 @@
 import { Router } from 'express';
 
 import {
+    deleteDocumentHandler,
     deleteGalleryHandler,
     deleteImageHandler,
+    uploadDocumentHandler,
     uploadGalleryHandler,
     uploadImageHandler
 } from '../controllers/upload.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
-import { multerImageUpload } from '../middlewares/upload.middleware';
-import { uploadImageBuffer } from '../services/cloudinary-upload.service';
+import { multerDocumentUpload, multerImageUpload } from '../middlewares/upload.middleware';
+import { uploadDocumentBuffer, uploadImageBuffer } from '../services/cloudinary-upload.service';
 import { asyncHandler } from '../utils/async-handler';
 
 const typeFolderMap: Record<string, string> = {
@@ -63,5 +65,21 @@ uploadRouter.post(
     asyncHandler(uploadGalleryHandler)
 );
 
+uploadRouter.post(
+    '/document',
+    multerDocumentUpload.single('document'),
+    asyncHandler(async (req, res, next) => {
+        if (!req.file) {
+            res.status(400).json({ message: 'document is required' });
+            return;
+        }
+
+        req.uploadedDocument = await uploadDocumentBuffer(req.file, resolveFolder(req));
+        next();
+    }),
+    asyncHandler(uploadDocumentHandler)
+);
+
 uploadRouter.delete('/image', asyncHandler(deleteImageHandler));
 uploadRouter.delete('/gallery', asyncHandler(deleteGalleryHandler));
+uploadRouter.delete('/document', asyncHandler(deleteDocumentHandler));

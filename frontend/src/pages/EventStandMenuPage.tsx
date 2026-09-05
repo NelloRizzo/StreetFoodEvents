@@ -60,6 +60,7 @@ type Event = {
   shortDescription?: string | null
   currencyName: string
   currencySymbol: UploadedImage | null
+  exchangeRate: number | null
   themeBrand: string | null
   themeText: string | null
   themeSurface: string | null

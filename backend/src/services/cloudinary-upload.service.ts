@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 import type { UploadApiOptions, UploadApiResponse } from 'cloudinary';
 import { cloudinary } from '@/config/cloudinary';
-import type { UploadedImage, UploadedVideo } from '@/types/uploaded-image';
+import type { UploadedDocument, UploadedImage, UploadedVideo } from '@/types/uploaded-image';
 
 function uploadBufferToCloudinary(
     buffer: Buffer,
@@ -68,12 +68,34 @@ export async function uploadVideoBuffer(
     };
 }
 
-export async function deleteMedia(publicId: string, resourceType: 'image' | 'video'): Promise<void> {
+export async function uploadDocumentBuffer(
+    file: Express.Multer.File,
+    folder: string
+): Promise<UploadedDocument> {
+    const result = await uploadBufferToCloudinary(file.buffer, {
+        folder,
+        resource_type: 'raw'
+    });
+
+    return {
+        url: result.secure_url,
+        publicId: result.public_id,
+        format: result.format ?? 'pdf',
+        bytes: result.bytes ?? 0,
+        originalName: file.originalname || 'documento.pdf'
+    };
+}
+
+export async function deleteMedia(publicId: string, resourceType: 'image' | 'video' | 'raw'): Promise<void> {
     await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 }
 
 export async function deleteImage(publicId: string): Promise<void> {
     await deleteMedia(publicId, 'image');
+}
+
+export async function deleteRaw(publicId: string): Promise<void> {
+    await deleteMedia(publicId, 'raw');
 }
 
 export async function deleteVideo(publicId: string): Promise<void> {

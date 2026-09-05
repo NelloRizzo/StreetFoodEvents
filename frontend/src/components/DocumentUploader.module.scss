@@ -1,0 +1,123 @@
+.wrapper {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.label {
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.dropZone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 6rem;
+  padding: 1rem;
+  border: 2px dashed var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.6);
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+
+.dropZone:hover,
+.dropZone:focus-visible {
+  border-color: var(--color-brand);
+  background: rgba(191, 90, 42, 0.06);
+}
+
+.dragOver {
+  border-color: var(--color-brand);
+  background: rgba(191, 90, 42, 0.1);
+}
+
+.uploading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.hint {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.fileCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.fileMain {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.fileName {
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileName:hover {
+  color: var(--color-brand);
+}
+
+.fileMeta {
+  color: var(--color-ink-soft);
+  font-size: 0.8rem;
+}
+
+.fileActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.openBtn {
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--color-line-strong);
+  color: var(--color-ink-strong);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.openBtn:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.removeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-line-strong);
+  background: transparent;
+  color: var(--color-ink-soft);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 180ms ease, border-color 180ms ease;
+}
+
+.removeBtn:hover {
+  color: #b3261e;
+  border-color: #b3261e;
+}

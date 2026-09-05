@@ -2,12 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { apiRequest } from '../lib/api'
-import { buildSocialMenuCaption, formatEventDateRange } from '../lib/socialMenu'
+import {
+  buildSocialMenuCaption,
+  formatCredits,
+  formatEventDateRange,
+  formatMonetaLine,
+} from '../lib/socialMenu'
 import type { UploadedImage } from '../lib/upload'
 import styles from './SocialMenuExport.module.scss'
 
 const POSTER_WIDTH = 1080
 const POSTER_HEIGHT = 1350
+const INCLUDE_PRICES_KEY = 'sfe-social-include-prices'
 
 export type SocialMenuExportEvent = {
   id: string
@@ -17,6 +23,8 @@ export type SocialMenuExportEvent = {
   endDate: string
   location?: { label?: string | null; city?: string | null } | null
   shortDescription?: string | null
+  currencyName: string
+  exchangeRate?: number | null
   themeBrand?: string | null
   themeText?: string | null
   themeSurface?: string | null
@@ -35,13 +43,16 @@ export type SocialMenuExportMenuItem = {
   id: string
   product: {
     name: string
+    price: number
     coverImage?: UploadedImage | null
   } | null
+  priceOverride: number | null
 }
 
 type SocialProduct = {
   name: string
   coverImage: UploadedImage | null
+  price: number
 }
 
 type Props = {
@@ -188,6 +199,7 @@ async function generatePoster(
   stand: SocialMenuExportStand,
   products: SocialProduct[],
   qrImage: HTMLImageElement | null,
+  includePrices: boolean,
 ): Promise<void> {
   const W = POSTER_WIDTH
   const H = POSTER_HEIGHT
@@ -196,6 +208,8 @@ async function generatePoster(
   const inkSoft = event.themeText ?? '#587065'
   const surface = event.themeSurface ?? '#fffaf2'
   const highlight = event.themeHighlight ?? '#f4c978'
+  const currencyName = (event.currencyName ?? '').trim() || '€'
+  const monetaLine = formatMonetaLine(event.currencyName, event.exchangeRate)
 
   const bannerImg = stand.coverImage?.url
     ? await loadImage(stand.coverImage.url, true)
@@ -233,14 +247,17 @@ async function generatePoster(
   const bandBottom = 140
   const bannerH = 220
   if (bannerImg) {
+    // contenuto: intero, senza ritaglio (object-fit: contain)
+    const s = Math.min(W / bannerImg.width, bannerH / bannerImg.height)
+    const w = bannerImg.width * s
+    const h = bannerImg.height * s
+    const bx = (W - w) / 2
+    const by = bandBottom + (bannerH - h) / 2
     ctx.save()
     ctx.beginPath()
     ctx.rect(0, bandBottom, W, bannerH)
     ctx.clip()
-    const s = Math.max(W / bannerImg.width, bannerH / bannerImg.height)
-    const w = bannerImg.width * s
-    const h = bannerImg.height * s
-    ctx.drawImage(bannerImg, (W - w) / 2, bandBottom + (bannerH - h) / 2, w, h)
+    ctx.drawImage(bannerImg, bx, by, w, h)
     ctx.restore()
   }
 
@@ -272,21 +289,33 @@ async function generatePoster(
   ctx.font = '700 36px "Segoe UI", Inter, sans-serif'
   ctx.fillText('Il menu', W / 2, 752)
 
-  // ── Products grid (foto + nome, senza prezzo) ──
+  // ── Moneta evento (legenda, solo con prezzi e moneta non-euro) ──
+  const showMonetaLine = includePrices && monetaLine != null
+  if (showMonetaLine) {
+    ctx.fillStyle = inkSoft
+    ctx.font = 'italic 400 26px "Segoe UI", Inter, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(monetaLine, W / 2, 790)
+  }
+
+  // ── Products grid (foto + nome, prezzo opzionale) ──
   const MAX_PRODUCTS = 8
   const list = products.slice(0, MAX_PRODUCTS)
   const remainder = products.length - list.length
   const colWidth = 440
   const colX = [95, 545]
-  const rowStartY = 788
+  const rowStartY = showMonetaLine ? 818 : 788
   const rowH = 80
   const thumbSize = 58
+  const priceColW = 150
 
   list.forEach((p, i) => {
     const row = Math.floor(i / 2)
     const col = i % 2
     const x = colX[col]
     const y = rowStartY + row * rowH
+    const hasPrice = includePrices && (p.price ?? 0) > 0
 
     drawRoundedImage(ctx, thumbs[i], x, y + 4, thumbSize, 14)
 
@@ -294,10 +323,18 @@ async function generatePoster(
     ctx.textBaseline = 'top'
     ctx.font = '500 30px "Segoe UI", Inter, sans-serif'
     ctx.fillStyle = ink
-    const lines = wrapText(ctx, p.name, colWidth - thumbSize - 20, 2)
+    const lines = wrapText(ctx, p.name, colWidth - thumbSize - 20 - (hasPrice ? priceColW : 0), 2)
     lines.forEach((line, li) => {
       ctx.fillText(line, x + thumbSize + 20, y + (li === 0 ? 10 : 44))
     })
+
+    if (hasPrice) {
+      ctx.fillStyle = brand
+      ctx.font = '700 26px "Segoe UI", Inter, sans-serif'
+      ctx.textAlign = 'right'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(`${formatCredits(p.price)} ${currencyName}`, x + colWidth - 8, y + 32)
+    }
   })
 
   if (list.length === 0) {
@@ -373,16 +410,35 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
   const [generating, setGenerating] = useState(true)
   const [copied, setCopied] = useState(false)
   const [captionText, setCaptionText] = useState<string | null>(null)
+  const [includePrices, setIncludePrices] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(INCLUDE_PRICES_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(INCLUDE_PRICES_KEY, includePrices ? '1' : '0')
+    } catch {
+      /* localStorage non disponibile */
+    }
+  }, [includePrices])
 
   const products = useMemo<SocialProduct[]>(() => {
     const out: SocialProduct[] = []
     for (const m of menuItems) {
-      if (m.product?.name) out.push({ name: m.product.name, coverImage: m.product.coverImage ?? null })
+      if (m.product?.name) {
+        out.push({
+          name: m.product.name,
+          coverImage: m.product.coverImage ?? null,
+          price: m.priceOverride ?? m.product.price ?? 0,
+        })
+      }
     }
     return out
   }, [menuItems])
-
-  const productNames = useMemo(() => products.map((p) => p.name), [products])
 
   const menuUrl = useMemo(() => {
     const base = typeof window !== 'undefined' ? window.location.origin : ''
@@ -399,10 +455,13 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
         endDate: event.endDate,
         location: event.location?.city ?? event.location?.label ?? null,
         eventTagline: event.shortDescription ?? null,
-        productNames,
+        products,
         menuUrl,
+        includePrices,
+        currencyName: event.currencyName ?? null,
+        exchangeRate: event.exchangeRate ?? null,
       }),
-    [stand.name, stand.slogan, event.name, event.startDate, event.endDate, event.location, event.shortDescription, productNames, menuUrl],
+    [stand.name, stand.slogan, event.name, event.startDate, event.endDate, event.location, event.shortDescription, products, menuUrl, includePrices, event.currencyName, event.exchangeRate],
   )
 
   useEffect(() => {
@@ -423,7 +482,7 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
         canvas.height = POSTER_HEIGHT
         const ctx = canvas.getContext('2d')
         if (!ctx) return
-        await generatePoster(ctx, event, stand, products, qrImg)
+        await generatePoster(ctx, event, stand, products, qrImg, includePrices)
         if (cancelled) return
         setPosterUrl(canvas.toDataURL('image/png'))
       } catch {
@@ -437,7 +496,7 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
     return () => {
       cancelled = true
     }
-  }, [open, event, stand, products])
+  }, [open, event, stand, products, includePrices])
 
   useEffect(() => {
     if (open) {
@@ -508,6 +567,24 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
               Poster con banner e logo dello stand, prodotti, logo dell&apos;evento e QR per
               raggiungere la pagina.
             </p>
+
+            <div className={styles.optionsRow}>
+              <label className={styles.optionsLabel}>
+                <input
+                  type="checkbox"
+                  checked={includePrices}
+                  onChange={(e) => setIncludePrices(e.target.checked)}
+                />
+                <span>
+                  Includi i prezzi (nella moneta dell&apos;evento)
+                  {includePrices && event.currencyName?.trim() ? (
+                    <em className={styles.optionsNote}>
+                      {event.currencyName.trim()} — cambio con €
+                    </em>
+                  ) : null}
+                </span>
+              </label>
+            </div>
 
             <div className={styles.grid}>
               <div className={styles.posterCol}>

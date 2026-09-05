@@ -11,6 +11,14 @@ export type UploadedImage = {
   bytes: number
 }
 
+export type UploadedDocument = {
+  url: string
+  publicId: string
+  format: string
+  bytes: number
+  originalName: string
+}
+
 async function uploadFile<T>(path: string, file: File, fieldName: string, type?: string): Promise<T> {
   const formData = new FormData()
   formData.append(fieldName, file)
@@ -60,6 +68,18 @@ export async function uploadGallery(files: File[], type?: string): Promise<Uploa
 
 export async function deleteImage(publicId: string): Promise<void> {
   await apiRequest('/upload/image', {
+    method: 'DELETE',
+    bodyJson: { publicId },
+  })
+}
+
+export async function uploadDocument(file: File, type?: string): Promise<UploadedDocument> {
+  const data = await uploadFile<{ item: UploadedDocument }>('/upload/document', file, 'document', type)
+  return data.item
+}
+
+export async function deleteDocument(publicId: string): Promise<void> {
+  await apiRequest('/upload/document', {
     method: 'DELETE',
     bodyJson: { publicId },
   })

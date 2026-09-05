@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 
-import { deleteImage, deleteImages } from '../services/cloudinary-upload.service';
+import { deleteImage, deleteImages, deleteRaw } from '../services/cloudinary-upload.service';
 
 export async function uploadImageHandler(req: Request, res: Response) {
     if (!req.uploadedImage) {
@@ -17,6 +17,34 @@ export async function uploadImageHandler(req: Request, res: Response) {
 export async function uploadGalleryHandler(req: Request, res: Response) {
     return res.status(200).json({
         items: req.uploadedGallery ?? []
+    });
+}
+
+export async function uploadDocumentHandler(req: Request, res: Response) {
+    if (!req.uploadedDocument) {
+        return res.status(400).json({
+            message: 'No document uploaded'
+        });
+    }
+
+    return res.status(200).json({
+        item: req.uploadedDocument
+    });
+}
+
+export async function deleteDocumentHandler(req: Request, res: Response) {
+    const { publicId } = req.body;
+
+    if (!publicId || typeof publicId !== 'string') {
+        return res.status(400).json({
+            message: 'publicId is required'
+        });
+    }
+
+    await deleteRaw(publicId);
+
+    return res.status(200).json({
+        success: true
     });
 }
 

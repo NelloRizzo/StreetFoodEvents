@@ -82,6 +82,7 @@ function toEventResponse(event: {
     longDescription?: string | null;
     coverImage?: unknown | null;
     logo?: unknown | null;
+    regulationDocument?: unknown | null;
     gallery?: unknown[];
     cashPaymentsEnabled?: boolean | null;
     unifiedCashierEnabled?: boolean | null;
@@ -112,6 +113,7 @@ function toEventResponse(event: {
         longDescription: event.longDescription ?? null,
         coverImage: event.coverImage ?? null,
         logo: event.logo ?? null,
+        regulationDocument: event.regulationDocument ?? null,
         gallery: event.gallery ?? [],
         cashPaymentsEnabled: event.cashPaymentsEnabled ?? true,
         unifiedCashierEnabled: event.unifiedCashierEnabled ?? false,
@@ -233,6 +235,7 @@ export async function createEvent(req: Request, res: Response) {
         coverImage,
         logo,
         gallery,
+        regulationDocument,
         cashPaymentsEnabled,
         unifiedCashierEnabled,
         slideshowTitle,
@@ -263,6 +266,7 @@ export async function createEvent(req: Request, res: Response) {
         longDescription: sanitizeHtmlContent(longDescription),
         coverImage: coverImage ?? null,
         logo: logo ?? null,
+        regulationDocument: regulationDocument ?? null,
         gallery: gallery ?? [],
         cashPaymentsEnabled: cashPaymentsEnabled ?? true,
         unifiedCashierEnabled: unifiedCashierEnabled ?? false,
@@ -313,6 +317,7 @@ export async function updateEvent(req: Request, res: Response) {
         coverImage,
         logo,
         gallery,
+        regulationDocument,
         cashPaymentsEnabled,
         unifiedCashierEnabled,
         slideshowTitle,
@@ -388,6 +393,10 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (logo !== undefined) {
         event.logo = logo;
+    }
+
+    if (regulationDocument !== undefined) {
+        event.regulationDocument = regulationDocument;
     }
 
     if (gallery !== undefined) {

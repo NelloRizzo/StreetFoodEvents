@@ -46,7 +46,38 @@
 .hint {
   font-size: 0.85rem;
   color: var(--color-ink-soft);
-  margin: 0 0 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.optionsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.optionsLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--color-ink-strong);
+  cursor: pointer;
+}
+
+.optionsLabel input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--color-brand);
+  cursor: pointer;
+}
+
+.optionsNote {
+  display: block;
+  font-style: italic;
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+  margin-top: 0.1rem;
 }
 
 .grid {

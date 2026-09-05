@@ -1,6 +1,7 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
 
 import { imageSchema } from './schemas/image.schema';
+import { documentSchema } from './schemas/document.schema';
 import { locationSchema } from './schemas/location.schema';
 
 const feeBandSchema = new Schema(
@@ -157,6 +158,10 @@ const eventSchema = new Schema(
         },
         logo: {
             type: imageSchema,
+            default: null
+        },
+        regulationDocument: {
+            type: documentSchema,
             default: null
         },
         gallery: {

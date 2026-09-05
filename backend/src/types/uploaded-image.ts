@@ -16,3 +16,11 @@ export type UploadedVideo = {
     bytes: number;
     duration: number;
 };
+
+export type UploadedDocument = {
+    url: string;
+    publicId: string;
+    format: string;
+    bytes: number;
+    originalName: string;
+};
