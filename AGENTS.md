@@ -236,6 +236,13 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Set 2026 — esportazione social moneta + regolamento PDF su evento)
+### Completed
+- **Regolamento PDF su evento**: `Event.regulationDocument` (subdocumento `document.schema`, default null) caricabile in `EventsPage`; endpoint `POST /api/upload/document` (solo `application/pdf`, 20 MB, Cloudinary `resource_type: 'raw'`) e `DELETE /api/upload/document`. Pulsante "Scarica Regolamento" nella hero di `EventDetailPage` (solo se presente) che scarica con nome **`regolamento-<manifestazione>-<anno>.pdf`** — **GOTCHA**: un `<a download>` cross-origin su Cloudinary NON forza il nome; usare `fetch`→`blob`→`URL.createObjectURL`→anchor `download` (fallback `window.open`).
+- **Esportazione social**: il nome della moneta appare SOLO nella riga "Moneta evento: NOME (1 NOME = €)"; nei prezzi di poster+caption si usa il **logo della moneta** (`currencySymbol.url`) o l'**iniziale in un circoletto unicode** (`Ⓣ`, U+24B6.. via `circledInitialText`); simboli nudi ('€', 'euro') restano testo. La **descrizione evento nella caption è ripulita dai tag HTML** (`stripHtml` in `lib/socialMenu.ts`).
+- Documentazione: `docs/ADESIONE_STAND.md` Sezione E — Energia elettrica (un solo punto luce; esigenze aggiuntive elencate nel modulo con potenza kW/kWh; contributo a carico dello stand); `docs/regolamenti/notti-cilentane-2027.md` aggiornato.
+- Verifica: backend non toccato; frontend build (tsc+vite) ✓, 41 test vitest ✓, lint solo warning pre-esistenti. Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria.
+
 ## Session state (Set 2026 — saldo utente in pagina evento pubblica)
 ### Completed
 - `GET /api/events/:eventId` ora usa `optionalAuthMiddleware` e, se `req.user` è presente, restituisce anche `wallet: { balance } | null` (saldo crediti dell'utente per quell'evento, via `EventUserModel`). `EventDetailPage` mostra un badge "saldo" con l'ammontare (o 0) nella moneta dell'evento accanto al badge moneta, solo per utenti autenticati (ai visitatori anonimi resta nascosto).

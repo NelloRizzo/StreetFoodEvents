@@ -23,6 +23,14 @@ Considerazioni progettuali e decisioni architetturali.
 - **Pagina React dentro AppLayout** per la selezione (evento → stand checkbox), poi finestra HTML puro per la stampa A3 landscape.
 - `@page { size: A3 landscape; margin: 1cm }` + `page-break-before: always` tra stand.
 
+### Download file con nome forzato (cross-origin)
+- **Problema**: un `<a href="https://res.cloudinary.com/..." download="nome.pdf">` NON forza il nome del file quando l'URL è **cross-origin** — i browser (Chrome in testa) ignorano l'attributo `download` e usano il filename originale del server. Vale per i documenti `raw` di Cloudinary come per le immagini.
+- **Pattern adottato** (pulsante "Scarica Regolamento" in `EventDetailPage`, funzione `downloadRegulation`): `fetch(doc.url)` → `res.blob()` → `URL.createObjectURL(blob)` → crea un `<a>` temporaneo in `document.body` con `anchor.download = nome-desiderato` → `click()` → rimozione e `URL.revokeObjectURL`. Funziona perché ora l'URL è same-origin (object URL) e il `download` viene rispettato.
+- **Prerequisito CORS**: Cloudinary serve le risposte con `Access-Control-Allow-Origin: *`, quindi la fetch cross-origin funziona dal browser (stesso requisito già usato dalle immagini del poster social).
+- **Fallback**: se la `fetch` fallisce (blob nella cache, rete, o futuro hosting non-CORS), `catch` → `window.open(doc.url, '_blank', 'noopener,noreferrer')` per non perdere l'accesso al documento.
+- **Nome file**: `regolamento-<nome-evento-normalizzato>-<anno-inizio>.pdf` — normalizzazione ASCII (`normalize('NFD')` + rimozione diacritici + `[^a-zA-Z0-9_-]` → `-`, lowercase, ripiegamento `-+`/trim).
+- **Cosa NON fare**: NON affidarsi solo all'attributo `download` su URL Cloudinary cross-origin per forzare il nome; NON usare `<a target="_blank">` come unica modalità quando serve scaricare il file col nome giusto.
+
 ## Map & Location
 - **Per-event stand locations**: array `locations[{ eventId, location }]` sul modello Stand per supportare posizioni diverse per ogni evento.
 - **MapPicker**: componente Leaflet riutilizzabile con marker draggabile SVG custom brand `#bf5a2a`.
