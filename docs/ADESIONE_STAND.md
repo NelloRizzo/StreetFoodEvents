@@ -72,7 +72,25 @@ Il sottoscritto dichiara di essere in possesso dei seguenti requisiti (barrare):
 
 ---
 
-## Sezione E — Prezzo di partecipazione
+## Sezione E — Energia elettrica
+
+L'organizzazione mette a disposizione dello stand **un solo punto luce** dedicato all'illuminazione dell'area interna dello stand.
+
+Eventuali **esigenze elettriche aggiuntive** (macchinari, frigoriferi, cucine, ecc.) devono essere **elencate nel modulo**, con indicazione della **potenza assorbita (kW/kWh)**; l'attivazione è subordinata alla disponibilità tecnica e all'accordo sull'eventuale **contributo economico a carico dello stand**, non inclusa nel prezzo di partecipazione.
+
+| Campo | Valore |
+|---|---|
+| Alimentazione richiesta | [ ] Solo punto luce base (nessuna esigenza aggiuntiva) |
+| Esigenze elettriche aggiuntive (attrezzatura) | _________________________________________ |
+| Potenza assorbita (kW/kWh) | __________________ |
+| Tipo allaccio richiesto | _________________________________________ |
+| Contributo concordato (a carico dello stand) | € ____________ [ ] nessuno |
+| Accettazione condizioni energia (firma) | ______________________ |
+| Data | ____ / ____ / ________ |
+
+---
+
+## Sezione F — Prezzo di partecipazione
 
 | Campo | Valore |
 |---|---|
@@ -92,7 +110,7 @@ Il sottoscritto dichiara di essere in possesso dei seguenti requisiti (barrare):
 
 ---
 
-## Sezione F — Caparra non rimborsabile
+## Sezione G — Caparra non rimborsabile
 
 | Campo | Valore |
 |---|---|
@@ -111,7 +129,7 @@ Il sottoscritto dichiara di essere in possesso dei seguenti requisiti (barrare):
 
 ---
 
-## Sezione G — Regolamento e clausola di esclusione
+## Sezione H — Regolamento e clausola di esclusione
 
 Il sottoscritto dichiara di avere letto, compreso e **accettato integralmente** il regolamento della manifestazione (orari, montaggio/smontaggio, pulizia, gestione rifiuti, rumore, divieti, postazioni) di cui alla versione *__________* (data ____ / ____ / ________).
 
@@ -127,7 +145,7 @@ Il sottoscritto dichiara di avere letto, compreso e **accettato integralmente** 
 
 ---
 
-## Sezione H — Esito dell'organizzatore (da NON compilare dal richiedente)
+## Sezione I — Esito dell'organizzatore (da NON compilare dal richiedente)
 
 | Esito | [ ] Approvata  [ ] Da integrare  [ ] Rifiutata  [ ] Esclusa |
 |---|---|

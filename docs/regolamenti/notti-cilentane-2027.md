@@ -22,7 +22,8 @@ Il presente regolamento disciplina la partecipazione degli **stand** (di seguito
 1. L'accesso all'area è consentito **esclusivamente** nei giorni e orari indicati dall'Organizzatore con apposito programma (montaggio/smontaggio).
 2. Il montaggio dell'area assegnata deve terminare prima dell'apertura al pubblico, nelle modalità e tempistiche comunicate.
 3. Lo smontaggio si effettua solo a manifestazione conclusa e comunque entro i termini comunicati.
-4. Ogni stand deve mantenersi **autonomo** per energia/acqua nella misura stabilita dall'Organizzatore (nessun allaccio non autorizzato).
+4. L'Organizzatore fornisce n. 1 punto luce per ogni stand a coprire esclusivamente l'illuminazione dell'area interna dello stand stesso.
+5. Ogni stand deve mantenersi **autonomo** per energia/acqua nella misura stabilita dall'Organizzatore (nessun allaccio non autorizzato). Possono essere messe a disposizione convenzioni per utilizzo di forniture specifiche a seguito di esplicita richiesta da parte dello stand.
 
 ## Art. 4 — spazio assegnato e divieti
 1. L'espositore opera **esclusivamente nel posto assegnato** (numero stand, mappa); è vietata ogni occupazione di spazi extra senza autorizzazione.
