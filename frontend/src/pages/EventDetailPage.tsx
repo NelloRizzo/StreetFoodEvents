@@ -8,6 +8,7 @@ import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { CurrencyDisplay, isBareCurrencySymbol } from '../components/CurrencyDisplay'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
+import { trackStandClick } from '../lib/analytics'
 import { PhotoBoothModal } from './PhotoBoothModal'
 import styles from './EventDetailPage.module.scss'
 
@@ -336,6 +337,14 @@ export function EventDetailPage() {
                     key={stand.id}
                     to={`/events/${eventId}/stands/${stand.id}`}
                     className={styles.standCard}
+                    onClick={() => trackStandClick({
+                      eventId,
+                      standId: stand.id,
+                      standName: stand.name,
+                      standNumber: standNumber(stand),
+                      standType: stand.type,
+                      section: 'event_detail',
+                    })}
                   >
                     {stand.coverImage?.url || stand.logo?.url ? (
                       <div className={styles.standCover}>

@@ -130,6 +130,41 @@ Preparazione postazione: articolo o intera postazione resa "pronta" (`markItemRe
 | `station_id` | string | id postazione |
 | `item_count` | number | numero articoli pronti in questa azione |
 
+### `sfe_event_click`
+Click su un evento (card nella home).
+
+| Parametro | Tipo | Note |
+|---|---|---|
+| `event_id` | string | id evento |
+| `event_name` | string | nome evento (leggibile) |
+| `section` | string | `home` \| `home_past` |
+
+### `sfe_stand_click`
+Click su uno stand (card nel dettaglio evento, chip nel menu, link nel menu evento, marker in mappa).
+
+| Parametro | Tipo | Note |
+|---|---|---|
+| `event_id` | string | id evento |
+| `stand_id` | string | id stand |
+| `stand_name` | string | nome stand (leggibile) |
+| `stand_number` | number | numero progressivo stand per evento (vuoto se assente) |
+| `stand_type` | string | `food` \| `artigianato` \| `divertimento` (solo dove disponibile) |
+| `section` | string | `event_detail` \| `event_map` \| `stand_menu_chip` \| `event_menu_stand` |
+
+### `sfe_product_click`
+Click su un prodotto (apertura dettaglio modal nel menu, oppure aggiunta al carrello).
+
+| Parametro | Tipo | Note |
+|---|---|---|
+| `event_id` | string | id evento |
+| `stand_id` | string | id stand |
+| `product_id` | string | id prodotto (solo dove disponibile) |
+| `event_product_id` | string | id collegamento prodotto–evento |
+| `product_name` | string | nome prodotto |
+| `price` | number | prezzo in valuta evento |
+| `stand_name` | string | nome stand |
+| `section` | string | `stand_menu` \| `event_menu_stand` \| `event_menu_category` \| `add_to_cart` |
+
 ## Note operative
 - Gli eventi viaggiano SOLO sul dataLayer; i tag in GTM devono rispettare il **Consent Mode** (respeto `analytics_storage`): un evento non va inviato se il consenso analytics è negato.
 - NON pushare PII (email, nomi) nei parametri.

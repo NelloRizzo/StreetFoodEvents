@@ -10,7 +10,7 @@ import { QRCodeDownload } from '../components/QRCodeDownload'
 import { SocialMenuExport } from '../components/SocialMenuExport'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { ALLERGEN_LABELS } from '../lib/allergens'
-import { trackOrderCreated } from '../lib/analytics'
+import { trackOrderCreated, trackStandClick, trackProductClick } from '../lib/analytics'
 import type { UploadedImage } from '../lib/upload'
 import styles from './EventStandMenuPage.module.scss'
 
@@ -209,6 +209,17 @@ export function EventStandMenuPage() {
     if (!product || item.stationIds.length === 0) return
     const unitPrice = item.priceOverride ?? product.price
 
+    trackProductClick({
+      eventId,
+      standId,
+      productId: product.id,
+      eventProductId: item.id,
+      productName: product.name,
+      price: unitPrice,
+      standName: stand?.name ?? '',
+      section: 'add_to_cart',
+    })
+
     setCart((prev) => {
       const existing = prev.find((c) => c.eventProductId === item.id)
       if (existing) {
@@ -298,7 +309,19 @@ export function EventStandMenuPage() {
                     key={s.id}
                     to={`/events/${eventId}/stands/${s.id}`}
                     className={`${styles.standChip} ${isActive ? styles.standChipActive : ''}`}
-                    onClick={() => { if (!isActive) { setCart([]); setViewMode('stand') } }}
+                    onClick={() => {
+                      if (!isActive) {
+                        trackStandClick({
+                          eventId,
+                          standId: s.id,
+                          standName: s.name,
+                          standNumber: num?.number ?? null,
+                          section: 'stand_menu_chip',
+                        })
+                        setCart([])
+                        setViewMode('stand')
+                      }
+                    }}
                   >
                     {(s.logo ?? s.coverImage) && (
                       <img src={(s.logo ?? s.coverImage)!.url} alt="" className={styles.standChipImg} />
@@ -388,12 +411,34 @@ export function EventStandMenuPage() {
                       <div
                         key={item.id}
                         className={styles.menuCard}
-                        onClick={() => setSelectedItem(item)}
+                        onClick={() => {
+                          trackProductClick({
+                            eventId,
+                            standId,
+                            productId: product?.id,
+                            eventProductId: item.id,
+                            productName: product?.name,
+                            price,
+                            standName: stand.name,
+                            section: 'stand_menu',
+                          })
+                          setSelectedItem(item)
+                        }}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
+                            trackProductClick({
+                              eventId,
+                              standId,
+                              productId: product?.id,
+                              eventProductId: item.id,
+                              productName: product?.name,
+                              price,
+                              standName: stand.name,
+                              section: 'stand_menu',
+                            })
                             setSelectedItem(item)
                           }
                         }}

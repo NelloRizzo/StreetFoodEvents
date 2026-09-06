@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
+import { trackEventClick } from '../lib/analytics'
 import homeStyles from './HomePage.module.scss'
 
 type UploadedImage = {
@@ -72,7 +73,12 @@ export function HomePage() {
 
           <div className={homeStyles.eventGrid}>
             {upcomingEvents.map((event) => (
-              <Link key={event.id} to={`/events/${event.id}`} className={homeStyles.eventCard}>
+              <Link
+                key={event.id}
+                to={`/events/${event.id}`}
+                className={homeStyles.eventCard}
+                onClick={() => trackEventClick({ eventId: event.id, eventName: event.name, section: 'home' })}
+              >
                 {event.coverImage?.url && (
                   <div className={homeStyles.cardCover}>
                     <img src={event.coverImage.url} alt="" />
@@ -117,7 +123,12 @@ export function HomePage() {
               <h2 className={homeStyles.pastTitle}>Eventi terminati</h2>
               <div className={homeStyles.pastList}>
                 {finishedEvents.map((event) => (
-                  <Link key={event.id} to={`/events/${event.id}`} className={homeStyles.pastItem}>
+                  <Link
+                    key={event.id}
+                    to={`/events/${event.id}`}
+                    className={homeStyles.pastItem}
+                    onClick={() => trackEventClick({ eventId: event.id, eventName: event.name, section: 'home_past' })}
+                  >
                     {event.logo?.url && (
                       <img className={homeStyles.pastLogo} src={event.logo.url} alt="" />
                     )}

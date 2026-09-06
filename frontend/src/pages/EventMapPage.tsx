@@ -4,6 +4,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 import { apiRequest } from '../lib/api'
+import { trackStandClick } from '../lib/analytics'
 import styles from './EventMapPage.module.scss'
 
 type EventData = {
@@ -203,6 +204,19 @@ export function EventMapPage() {
       const number = s.numbers?.find((n) => n.eventId === eventId)?.number ?? null
       const marker = L.marker([lat, lng], { icon: createStandIcon(number, s.type ?? null) })
         .bindPopup(`<strong>${number != null ? `${number}. ` : ''}${s.name}</strong><br/><a href="/events/${eventId}/stands/${s.id}">Vai allo stand</a>`)
+      marker.on('popupopen', () => {
+        const anchor = marker.getPopup()?.getElement()?.querySelector('a')
+        anchor?.addEventListener('click', () => {
+          trackStandClick({
+            eventId,
+            standId: s.id,
+            standName: s.name,
+            standNumber: number,
+            standType: s.type,
+            section: 'event_map',
+          })
+        })
+      })
       markers.push(marker)
     })
 

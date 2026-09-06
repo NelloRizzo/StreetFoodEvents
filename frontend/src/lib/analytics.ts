@@ -21,6 +21,61 @@ export type OrderAnalyticsProduct = {
   unitPrice: number
 }
 
+/** Click su un evento (card nella home o lista). */
+export function trackEventClick(params: {
+  eventId?: string
+  eventName?: string
+  section?: string
+}): void {
+  analyticsEvent('sfe_event_click', {
+    event_id: params.eventId ?? '',
+    event_name: params.eventName ?? '',
+    section: params.section ?? '',
+  })
+}
+
+/** Click su uno stand (card, chip o marker in mappa). */
+export function trackStandClick(params: {
+  eventId?: string
+  standId?: string
+  standName?: string
+  standNumber?: number | null
+  standType?: string
+  section?: string
+}): void {
+  analyticsEvent('sfe_stand_click', {
+    event_id: params.eventId ?? '',
+    stand_id: params.standId ?? '',
+    stand_name: params.standName ?? '',
+    stand_number: params.standNumber ?? '',
+    stand_type: params.standType ?? '',
+    section: params.section ?? '',
+  })
+}
+
+/** Click su un prodotto (apertura dettaglio modal nel menu). */
+export function trackProductClick(params: {
+  eventId?: string
+  standId?: string
+  productId?: string
+  eventProductId?: string
+  productName?: string
+  price?: number
+  standName?: string
+  section?: string
+}): void {
+  analyticsEvent('sfe_product_click', {
+    event_id: params.eventId ?? '',
+    stand_id: params.standId ?? '',
+    product_id: params.productId ?? '',
+    event_product_id: params.eventProductId ?? '',
+    product_name: params.productName ?? '',
+    price: params.price ?? '',
+    stand_name: params.standName ?? '',
+    section: params.section ?? '',
+  })
+}
+
 /** Creazione/avvio di un ordine da parte di un cliente. */
 export function trackOrderCreated(params: {
   orderId?: string

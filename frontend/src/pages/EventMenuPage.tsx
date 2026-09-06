@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { ALLERGEN_LABELS } from '../lib/allergens'
+import { trackStandClick, trackProductClick } from '../lib/analytics'
 import type { UploadedImage } from '../lib/upload'
 import styles from './EventStandMenuPage.module.scss'
 
@@ -179,7 +180,16 @@ export function EventMenuPage() {
                     {group.standNumber !== null && (
                       <span className={styles.standChipNum}>{group.standNumber}</span>
                     )}
-                    <Link to={`/events/${eventId}/stands/${group.standId}`}>
+                    <Link
+                      to={`/events/${eventId}/stands/${group.standId}`}
+                      onClick={() => trackStandClick({
+                        eventId,
+                        standId: group.standId,
+                        standName: group.standName,
+                        standNumber: group.standNumber,
+                        section: 'event_menu_stand',
+                      })}
+                    >
                       {group.standName}
                     </Link>
                   </h2>
@@ -188,22 +198,42 @@ export function EventMenuPage() {
                       <div
                         key={product.eventProductId}
                         className={styles.menuCard}
-                        onClick={() => setSelectedItem({
-                          name: product.name,
-                          description: product.description,
-                          ingredients: product.ingredients,
-                          allergens: product.allergens,
-                          isFrozen: product.isFrozen,
-                          price: product.price,
-                          coverImage: product.coverImage,
-                          standName: group.standName,
-                          standNumber: group.standNumber,
-                        })}
+                        onClick={() => {
+                          trackProductClick({
+                            eventId,
+                            standId: product.standId,
+                            eventProductId: product.eventProductId,
+                            productName: product.name,
+                            price: product.price,
+                            standName: product.standName,
+                            section: 'event_menu_stand',
+                          })
+                          setSelectedItem({
+                            name: product.name,
+                            description: product.description,
+                            ingredients: product.ingredients,
+                            allergens: product.allergens,
+                            isFrozen: product.isFrozen,
+                            price: product.price,
+                            coverImage: product.coverImage,
+                            standName: group.standName,
+                            standNumber: group.standNumber,
+                          })
+                        }}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
+                            trackProductClick({
+                              eventId,
+                              standId: product.standId,
+                              eventProductId: product.eventProductId,
+                              productName: product.name,
+                              price: product.price,
+                              standName: product.standName,
+                              section: 'event_menu_stand',
+                            })
                             setSelectedItem({
                               name: product.name,
                               description: product.description,
@@ -265,22 +295,42 @@ export function EventMenuPage() {
                       <div
                         key={`${group.label}-${product.standId}-${product.eventProductId}`}
                         className={styles.menuCard}
-                        onClick={() => setSelectedItem({
-                          name: product.name,
-                          description: product.description,
-                          ingredients: product.ingredients,
-                          allergens: product.allergens,
-                          isFrozen: product.isFrozen,
-                          price: product.price,
-                          coverImage: product.coverImage,
-                          standName: product.standName,
-                          standNumber: product.standNumber,
-                        })}
+                        onClick={() => {
+                          trackProductClick({
+                            eventId,
+                            standId: product.standId,
+                            eventProductId: product.eventProductId,
+                            productName: product.name,
+                            price: product.price,
+                            standName: product.standName,
+                            section: 'event_menu_category',
+                          })
+                          setSelectedItem({
+                            name: product.name,
+                            description: product.description,
+                            ingredients: product.ingredients,
+                            allergens: product.allergens,
+                            isFrozen: product.isFrozen,
+                            price: product.price,
+                            coverImage: product.coverImage,
+                            standName: product.standName,
+                            standNumber: product.standNumber,
+                          })
+                        }}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
+                            trackProductClick({
+                              eventId,
+                              standId: product.standId,
+                              eventProductId: product.eventProductId,
+                              productName: product.name,
+                              price: product.price,
+                              standName: product.standName,
+                              section: 'event_menu_category',
+                            })
                             setSelectedItem({
                               name: product.name,
                               description: product.description,
