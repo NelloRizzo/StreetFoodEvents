@@ -150,6 +150,37 @@ export function EventDetailPage() {
     setFavLoading(false)
   }
 
+  const downloadRegulation = async () => {
+    const doc = event?.regulationDocument
+    if (!doc) return
+
+    try {
+      const res = await fetch(doc.url)
+      if (!res.ok) throw new Error('fetch failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      const cleanName = (event?.name ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .toLowerCase()
+      const year = Number.isNaN(new Date(event?.startDate ?? '').getFullYear())
+        ? new Date().getFullYear()
+        : new Date(event.startDate).getFullYear()
+      anchor.href = url
+      anchor.download = `regolamento-${cleanName}-${year}.pdf`
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      URL.revokeObjectURL(url)
+    } catch {
+      window.open(doc.url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
   const standNumber = (stand: Stand) =>
     stand.numbers?.find((n) => n.eventId === eventId)?.number ?? null
 
@@ -224,15 +255,13 @@ export function EventDetailPage() {
               Galleria
             </Link>
             {event.regulationDocument && (
-              <a
-                href={event.regulationDocument.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
+              <button
+                type="button"
+                onClick={() => void downloadRegulation()}
                 className={styles.actionBtnOutline}
               >
                 Scarica Regolamento
-              </a>
+              </button>
             )}
             <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
               Scatta foto
