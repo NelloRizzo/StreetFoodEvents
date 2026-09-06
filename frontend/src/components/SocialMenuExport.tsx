@@ -4,9 +4,11 @@ import { createPortal } from 'react-dom'
 import { apiRequest } from '../lib/api'
 import {
   buildSocialMenuCaption,
+  currencyInitial,
   formatCredits,
   formatEventDateRange,
   formatMonetaLine,
+  isBareCurrencySymbol,
 } from '../lib/socialMenu'
 import type { UploadedImage } from '../lib/upload'
 import styles from './SocialMenuExport.module.scss'
@@ -24,6 +26,7 @@ export type SocialMenuExportEvent = {
   location?: { label?: string | null; city?: string | null } | null
   shortDescription?: string | null
   currencyName: string
+  currencySymbol?: UploadedImage | null
   exchangeRate?: number | null
   themeBrand?: string | null
   themeText?: string | null
@@ -170,6 +173,42 @@ function drawCircleImage(
   ctx.restore()
 }
 
+function drawCurrencyGlyph(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  d: number,
+  img: HTMLImageElement | null,
+  initial: string,
+  brand: string,
+) {
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(cx, cy, d / 2, 0, Math.PI * 2)
+  ctx.closePath()
+  ctx.fillStyle = '#ffffff'
+  ctx.fill()
+  if (img) {
+    ctx.clip()
+    const s = Math.max(d / img.width, d / img.height)
+    const w = img.width * s
+    const h = img.height * s
+    ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h)
+  } else {
+    ctx.fillStyle = brand
+    ctx.font = '700 18px "Segoe UI", Inter, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(initial, cx, cy + 1)
+  }
+  ctx.beginPath()
+  ctx.arc(cx, cy, d / 2, 0, Math.PI * 2)
+  ctx.strokeStyle = brand
+  ctx.lineWidth = 2
+  ctx.stroke()
+  ctx.restore()
+}
+
 function wrapText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -210,6 +249,8 @@ async function generatePoster(
   const highlight = event.themeHighlight ?? '#f4c978'
   const currencyName = (event.currencyName ?? '').trim() || '€'
   const monetaLine = formatMonetaLine(event.currencyName, event.exchangeRate)
+  const currencyBareSymbol = isBareCurrencySymbol(event.currencyName) ? currencyName : null
+  const currencyGlyphInitial = currencyInitial(event.currencyName)
 
   const bannerImg = stand.coverImage?.url
     ? await loadImage(stand.coverImage.url, true)
@@ -217,6 +258,7 @@ async function generatePoster(
   const logoSource = stand.logo?.url ?? stand.coverImage?.url ?? ''
   const logoImg = await loadImage(logoSource, true)
   const eventLogo = event.logo?.url ? await loadImage(event.logo.url, true) : null
+  const currencyImg = event.currencySymbol?.url ? await loadImage(event.currencySymbol.url, true) : null
   const thumbs = await Promise.all(
     products.map((p) =>
       p.coverImage?.url ? loadImage(p.coverImage.url, true) : Promise.resolve(null),
@@ -333,7 +375,24 @@ async function generatePoster(
       ctx.font = '700 26px "Segoe UI", Inter, sans-serif'
       ctx.textAlign = 'right'
       ctx.textBaseline = 'middle'
-      ctx.fillText(`${formatCredits(p.price)} ${currencyName}`, x + colWidth - 8, y + 32)
+      const rightX = x + colWidth - 8
+
+      if (currencyBareSymbol) {
+        ctx.fillText(`${formatCredits(p.price)} ${currencyBareSymbol}`, rightX, y + 32)
+      } else {
+        const glyphSize = 30
+        const gap = 7
+        ctx.fillText(formatCredits(p.price), rightX - gap - glyphSize, y + 32)
+        drawCurrencyGlyph(
+          ctx,
+          rightX - glyphSize / 2,
+          y + 32,
+          glyphSize,
+          currencyImg,
+          currencyGlyphInitial,
+          brand,
+        )
+      }
     }
   })
 
@@ -444,6 +503,8 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
     const base = typeof window !== 'undefined' ? window.location.origin : ''
     return `${base}/events/${event.id}/stands/${stand.id}`
   }, [event.id, stand.id])
+
+  const monetaNote = formatMonetaLine(event.currencyName, event.exchangeRate)
 
   const caption = useMemo(
     () =>
@@ -577,10 +638,8 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
                 />
                 <span>
                   Includi i prezzi (nella moneta dell&apos;evento)
-                  {includePrices && event.currencyName?.trim() ? (
-                    <em className={styles.optionsNote}>
-                      {event.currencyName.trim()} — cambio con €
-                    </em>
+                  {includePrices && monetaNote ? (
+                    <em className={styles.optionsNote}>{monetaNote}</em>
                   ) : null}
                 </span>
               </label>

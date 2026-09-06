@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildSocialMenuCaption,
+  circledInitialText,
+  formatCurrencyInline,
   formatEventDateRange,
   formatCredits,
   formatMonetaLine,
+  isBareCurrencySymbol,
   isEuroCurrency,
+  stripHtml,
 } from '../../lib/socialMenu'
 
 describe('formatEventDateRange', () => {
@@ -68,6 +72,40 @@ describe('formatMonetaLine / isEuroCurrency', () => {
   })
 })
 
+describe('formatCurrencyInline / circledInitialText', () => {
+  it('keeps the bare symbol as-is', () => {
+    expect(formatCurrencyInline('€')).toBe('€')
+    expect(formatCurrencyInline('$')).toBe('$')
+    expect(isBareCurrencySymbol('€')).toBe(true)
+    expect(isBareCurrencySymbol('Token')).toBe(false)
+  })
+
+  it('shows the euro symbol for the literal "euro" name', () => {
+    expect(formatCurrencyInline('euro')).toBe('€')
+  })
+
+  it('renders the initial in a circled glyph for named currencies', () => {
+    expect(formatCurrencyInline('Token')).toBe('Ⓣ')
+    expect(circledInitialText('Token')).toBe('Ⓣ')
+    expect(circledInitialText('Zloty')).toBe('Ⓩ')
+  })
+})
+
+describe('stripHtml', () => {
+  it('removes tags and collapses whitespace', () => {
+    expect(stripHtml('<p>Ciao <strong>mondo</strong></p>')).toBe('Ciao mondo')
+  })
+
+  it('decodes common entities', () => {
+    expect(stripHtml('Pane &amp; salumi')).toBe('Pane & salumi')
+  })
+
+  it('handles null and empty input', () => {
+    expect(stripHtml(null)).toBe('')
+    expect(stripHtml('')).toBe('')
+  })
+})
+
 describe('buildSocialMenuCaption', () => {
   const base = {
     standName: 'Panino d\'Oro',
@@ -122,16 +160,17 @@ describe('buildSocialMenuCaption', () => {
     expect(caption).toContain('Vieni a trovarci!')
   })
 
-  it('includes prices with the currency when includePrices is on', () => {
+  it('includes prices with the currency glyph when includePrices is on', () => {
     const caption = buildSocialMenuCaption({
       ...base,
       includePrices: true,
       currencyName: 'Token',
       exchangeRate: 5,
     })
-    expect(caption).toContain('• Panino con porchetta 12 Token')
-    expect(caption).toContain('• Tris di arrosticini 10 Token')
+    expect(caption).toContain('• Panino con porchetta 12 Ⓣ')
+    expect(caption).toContain('• Tris di arrosticini 10 Ⓣ')
     expect(caption).toContain('Moneta evento: Token (1 Token = 0,20 €)')
+    expect(caption).not.toContain('12 Token')
   })
 
   it('uses the euro symbol for prices without a named currency', () => {
@@ -152,6 +191,16 @@ describe('buildSocialMenuCaption', () => {
     })
     expect(caption).toContain('• Omaggio')
     expect(caption).toContain('• Coffe break')
-    expect(caption).not.toContain('0 Token')
+    expect(caption).not.toContain('0 Ⓣ')
+  })
+
+  it('strips html from the event tagline', () => {
+    const caption = buildSocialMenuCaption({
+      ...base,
+      eventTagline: '<p>Un <strong>fine settimana</strong> di gusto&nbsp;fino a tardi</p>',
+    })
+    expect(caption).toContain('Un fine settimana di gusto fino a tardi')
+    expect(caption).not.toContain('<')
+    expect(caption).not.toContain('>')
   })
 })

@@ -34,6 +34,49 @@ export function isEuroCurrency(currencyName: string | null | undefined): boolean
   return /^[^\p{L}\p{N}]$/u.test(t)
 }
 
+export function isBareCurrencySymbol(currencyName: string | null | undefined): boolean {
+  return /^[^\p{L}\p{N}]$/u.test((currencyName ?? '').trim())
+}
+
+export function currencyInitial(currencyName: string | null | undefined): string {
+  return (currencyName ?? '').trim().charAt(0).toUpperCase()
+}
+
+const CIRCLED_A_CODE = 0x24b6 // Ⓐ
+
+export function circledInitialText(currencyName: string | null | undefined): string {
+  const ch = currencyInitial(currencyName)
+  const code = ch.charCodeAt(0)
+  if (code >= 0x41 && code <= 0x5a) {
+    return String.fromCharCode(CIRCLED_A_CODE + (code - 0x41))
+  }
+  return `(${ch})`
+}
+
+export function formatCurrencyInline(currencyName: string | null | undefined): string {
+  const trimmed = (currencyName ?? '').trim()
+  if (!trimmed) return '€'
+  if (isBareCurrencySymbol(currencyName)) {
+    return trimmed
+  }
+  const t = trimmed.toLowerCase()
+  if (t === 'euro' || t === 'euros') return '€'
+  return circledInitialText(currencyName)
+}
+
+export function stripHtml(html: string | null | undefined): string {
+  return (html ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function formatCredits(price: number): string {
   const rounded = Math.round(price * 100) / 100
   return Number.isInteger(rounded)
@@ -87,9 +130,10 @@ export function buildSocialMenuCaption(input: SocialMenuCaptionInput): string {
   const dateRange = formatEventDateRange(input.startDate, input.endDate)
   if (dateRange) lines.push(dateRange)
 
-  if (input.eventTagline?.trim()) lines.push(input.eventTagline.trim())
+  const tagline = stripHtml(input.eventTagline)
+  if (tagline) lines.push(tagline)
 
-  const currency = (input.currencyName ?? '').trim() || '€'
+  const currency = formatCurrencyInline(input.currencyName)
   const products = input.products
     .map((p) => ({ name: p.name.trim(), price: p.price }))
     .filter((p) => p.name.length > 0)

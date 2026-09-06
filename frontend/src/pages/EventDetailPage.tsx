@@ -231,7 +231,7 @@ export function EventDetailPage() {
                 download
                 className={styles.actionBtnOutline}
               >
-                Regolamento
+                Scarica Regolamento
               </a>
             )}
             <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
