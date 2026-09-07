@@ -1,7 +1,7 @@
 import sanitizeHtml from 'sanitize-html';
 
 const allowedTags = [
-    'p', 'br', 'strong', 'em', 'u', 's',
+    'p', 'br', 'strong', 'em', 'u', 's', 'mark',
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'ul', 'ol', 'li',
     'blockquote', 'pre', 'code',

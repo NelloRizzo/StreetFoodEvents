@@ -116,10 +116,12 @@ function currencySection(event: Event): GeneratedSection {
             : `<strong>${circledInitial(customName)}</strong>`
         : '';
 
+    const highlightedName = customName ? `<mark><strong>${esc(customName)}</strong></mark>` : '';
+
     const body = customName
         ? [
             `<p>L'evento utilizza una <strong>moneta custom</strong> rappresentata dal seguente <strong>logo</strong>:</p>`,
-            `<p>${badge} <strong>${esc(customName)}</strong></p>`,
+            `<p>${badge} ${highlightedName}</p>`,
             `<p>I prezzi del menu e i pagamenti dei clienti sono espressi in tale moneta: cambio <strong>1 \u20AC = ${Number(event.exchangeRate ?? 1)} crediti</strong>. Il sottoscritto ne <strong>prende atto e accetta</strong> l'utilizzo di tale moneta.</p>`
         ].join('')
         : `<p>L'evento non prevede moneta custom (pagamenti in euro).</p>`;

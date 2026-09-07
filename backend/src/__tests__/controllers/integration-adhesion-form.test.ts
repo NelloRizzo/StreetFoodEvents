@@ -118,6 +118,7 @@ describe('Integration — Adhesion Form', () => {
 
         const currency = item.sections.find((s: { slug: string }) => s.slug === 'currency');
         expect(currency.generatedFrom).toBe('currency');
+        expect(currency.content).toContain('<mark><strong>StreetCoin</strong></mark>');
         expect(currency.content).toContain('StreetCoin');
         expect(currency.content).toContain('1 \u20AC = 2 crediti');
 
@@ -187,6 +188,7 @@ describe('Integration — Adhesion Form', () => {
 
         const currency = res.body.item.sections.find((s: { slug: string }) => s.slug === 'currency');
         expect(currency.content).toContain('<img src="https://cdn.example.com/streetcoin.png"');
+        expect(currency.content).toContain('<mark><strong>StreetCoin</strong></mark>');
         expect(currency.content).toContain('StreetCoin');
         expect(currency.content).toContain('1 \u20AC = 2 crediti');
 
@@ -195,9 +197,9 @@ describe('Integration — Adhesion Form', () => {
             .set('Cookie', `sid=${sessionToken}`)
             .send({ sections: [{ slug: 'currency', title: currency.title, content: currency.content }] });
         expect(patch.status).toBe(200);
-        expect(patch.body.item.sections.find((s: { slug: string }) => s.slug === 'currency').content).toContain(
-            '<img src="https://cdn.example.com/streetcoin.png"'
-        );
+        const patchedContent = patch.body.item.sections.find((s: { slug: string }) => s.slug === 'currency').content;
+        expect(patchedContent).toContain('<img src="https://cdn.example.com/streetcoin.png"');
+        expect(patchedContent).toContain('<mark><strong>StreetCoin</strong></mark>');
     });
 
     it('rejects unauthenticated and unauthorized writes', async () => {

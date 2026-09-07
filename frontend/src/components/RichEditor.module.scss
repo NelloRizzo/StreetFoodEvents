@@ -120,6 +120,13 @@
   text-decoration: underline;
 }
 
+.editor mark {
+  background: #ffe9b8;
+  color: inherit;
+  padding: 0 0.15rem;
+  border-radius: 2px;
+}
+
 .editor img {
   max-width: 100%;
   height: auto;

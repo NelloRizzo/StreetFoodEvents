@@ -1,6 +1,7 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
+import Highlight from '@tiptap/extension-highlight'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import { useCallback } from 'react'
@@ -26,6 +27,7 @@ export function RichEditor({ value, onChange, placeholder, maxLength }: RichEdit
         inline: false,
         allowBase64: false,
       }),
+      Highlight,
       Link.configure({
         openOnClick: false,
         HTMLAttributes: { rel: 'nofollow', target: '_blank' },
@@ -100,6 +102,14 @@ export function RichEditor({ value, onChange, placeholder, maxLength }: RichEdit
           title="Barrato"
         >
           <span style={{ textDecoration: 'line-through' }}>S</span>
+        </button>
+        <button
+          type="button"
+          className={`${styles.toolBtn} ${editor.isActive('highlight') ? styles.toolBtnActive : ''}`}
+          onClick={() => editor.chain().focus().toggleHighlight().run()}
+          title="Evidenzia"
+        >
+          <span style={{ backgroundColor: '#ffe082', padding: '0 0.2rem', borderRadius: 2 }}>H</span>
         </button>
 
         <span className={styles.separator} />
