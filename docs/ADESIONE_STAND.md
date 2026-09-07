@@ -74,13 +74,14 @@ Il sottoscritto dichiara di essere in possesso dei seguenti requisiti (barrare):
 
 ## Sezione E — Energia elettrica
 
-L'organizzazione mette a disposizione dello stand **un solo punto luce** dedicato all'illuminazione dell'area interna dello stand.
+L'organizzazione mette a disposizione dello stand un **punto luce base** dedicato all'illuminazione dell'area interna dello stand, il cui costo è indicato nella tabella sottostante (barrare **gratuito** se incluso nel prezzo di partecipazione).
 
-Eventuali **esigenze elettriche aggiuntive** (macchinari, frigoriferi, cucine, ecc.) devono essere **elencate nel modulo**, con indicazione della **potenza assorbita (kW/kWh)**; l'attivazione è subordinata alla disponibilità tecnica e all'accordo sull'eventuale **contributo economico a carico dello stand**, non inclusa nel prezzo di partecipazione.
+Eventuali **esigenze elettriche aggiuntive** (macchinari, frigoriferi, cucine, ecc.) devono essere **elencate nel modulo**, con indicazione della **potenza assorbita (kW/kWh)**; l'attivazione è subordinata alla disponibilità tecnica e all'accordo sull'eventuale **contributo economico a carico dello stand**, non incluso nel prezzo di partecipazione.
 
 | Campo | Valore |
 |---|---|
 | Alimentazione richiesta | [ ] Solo punto luce base (nessuna esigenza aggiuntiva) |
+| **Costo punto luce base** | € ____________ [ ] gratuito |
 | Esigenze elettriche aggiuntive (attrezzatura) | _________________________________________ |
 | Potenza assorbita (kW/kWh) | __________________ |
 | Tipo allaccio richiesto | _________________________________________ |
@@ -90,7 +91,27 @@ Eventuali **esigenze elettriche aggiuntive** (macchinari, frigoriferi, cucine, e
 
 ---
 
-## Sezione F — Prezzo di partecipazione
+## Sezione F — Commissioni sugli incassi
+
+L'organizzatore applica una **commissione sugli incassi** dello stand secondo le fasce indicate nella definizione dell'evento; con la firma di accettazione lo stand ne **prende atto e le accetta**. Se non sono previste commissioni, barrare la casella "nessuna commissione".
+
+| Fascia | Importo lordo massimo (€) | Commissione % | Quota fissa (€) |
+|---|---|---|---|
+| 1 | ____________ | ____________ % | ____________ |
+| 2 | ____________ | ____________ % | ____________ |
+| 3 | ____________ | ____________ % | ____________ |
+| 4 | ____________ | ____________ % | ____________ |
+
+- [ ] **Nessuna commissione sugli incassi**
+
+| | |
+|---|---|
+| Accettazione commissioni (firma) | ______________________ |
+| Data | ____ / ____ / ________ |
+
+---
+
+## Sezione G — Prezzo di partecipazione
 
 | Campo | Valore |
 |---|---|
@@ -110,7 +131,7 @@ Eventuali **esigenze elettriche aggiuntive** (macchinari, frigoriferi, cucine, e
 
 ---
 
-## Sezione G — Caparra non rimborsabile
+## Sezione H — Caparra non rimborsabile
 
 | Campo | Valore |
 |---|---|
@@ -129,7 +150,7 @@ Eventuali **esigenze elettriche aggiuntive** (macchinari, frigoriferi, cucine, e
 
 ---
 
-## Sezione H — Regolamento e clausola di esclusione
+## Sezione I — Regolamento e clausola di esclusione
 
 Il sottoscritto dichiara di avere letto, compreso e **accettato integralmente** il regolamento della manifestazione (orari, montaggio/smontaggio, pulizia, gestione rifiuti, rumore, divieti, postazioni) di cui alla versione *__________* (data ____ / ____ / ________).
 
@@ -145,7 +166,7 @@ Il sottoscritto dichiara di avere letto, compreso e **accettato integralmente** 
 
 ---
 
-## Sezione I — Esito dell'organizzatore (da NON compilare dal richiedente)
+## Sezione J — Esito dell'organizzatore (da NON compilare dal richiedente)
 
 | Esito | [ ] Approvata  [ ] Da integrare  [ ] Rifiutata  [ ] Esclusa |
 |---|---|

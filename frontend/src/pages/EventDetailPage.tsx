@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
@@ -84,6 +84,8 @@ export function EventDetailPage() {
   const [modal, setModal] = useState<{ open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }>({ open: false, variant: 'alert', title: '', message: '' })
   const [showPhotoBooth, setShowPhotoBooth] = useState(false)
   const [userBalance, setUserBalance] = useState<number | null>(null)
+  const [adesioneMenuOpen, setAdesioneMenuOpen] = useState(false)
+  const adesioneMenuRef = useRef<HTMLDivElement>(null)
   const themeData = useMemo(
     () =>
       event
@@ -133,6 +135,16 @@ export function EventDetailPage() {
       })
       .catch(() => {})
   }, [eventId])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (adesioneMenuRef.current && !adesioneMenuRef.current.contains(e.target as Node)) {
+        setAdesioneMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const toggleFavorite = async () => {
     if (!eventId || favLoading) return
@@ -255,18 +267,54 @@ export function EventDetailPage() {
             <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
               Galleria
             </Link>
-            {event.regulationDocument && (
-              <button
-                type="button"
-                onClick={() => void downloadRegulation()}
-                className={styles.actionBtnOutline}
-              >
-                Scarica Regolamento
-              </button>
-            )}
             <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
               Scatta foto
             </button>
+            {event.regulationDocument && (
+              <div className={styles.actionDropdown} ref={adesioneMenuRef}>
+                <button
+                  type="button"
+                  className={styles.actionDropdownTrigger}
+                  onClick={() => setAdesioneMenuOpen((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={adesioneMenuOpen}
+                >
+                  Adesione Stand
+                  <span className={styles.actionDropdownCaret} aria-hidden="true">▾</span>
+                </button>
+                {adesioneMenuOpen && (
+                  <div className={styles.actionDropdownMenu} role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.actionDropdownItem}
+                      onClick={() => {
+                        setAdesioneMenuOpen(false)
+                        void downloadRegulation()
+                      }}
+                    >
+                      Scarica Regolamento
+                    </button>
+                    <Link
+                      role="menuitem"
+                      className={styles.actionDropdownItem}
+                      to={`/events/${eventId}/adhesion-form`}
+                      onClick={() => setAdesioneMenuOpen(false)}
+                    >
+                      Scarica modulo di adesione
+                    </Link>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.actionDropdownItem}
+                      onClick={() => setAdesioneMenuOpen(false)}
+                    >
+                      Compila modulo di adesione
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} label="QR Evento" />
             <QRCodeDownload apiPath={`/events/${eventId}/menu-qrcode`} fileName={`menu-${event.name}`} label="QR Menu" />
           </div>

@@ -497,10 +497,16 @@ export function EventsPage() {
     }
 
     if (editingId) {
-      await apiRequest(`/events/${editingId}`, {
+      const data = await apiRequest<{ item: EventItem; adhesionFormStale?: boolean }>(`/events/${editingId}`, {
         method: 'PATCH',
         bodyJson,
       })
+
+      if (data.adhesionFormStale) {
+        setAlertMsg(
+          'L\u2019evento è stato modificato: il modulo di adesione potrebbe risultare obsoleto. Rigeneralo dalla relativa pagina di gestione.'
+        )
+      }
     } else {
       await apiRequest('/events', {
         method: 'POST',
@@ -1157,6 +1163,9 @@ export function EventsPage() {
                 <button className={styles.textBtn} onClick={() => openDuplicate(ev)}>
                   Duplica
                 </button>
+                <Link className={styles.textBtn} to={`/admin/events/${ev.id}/adhesion-form`}>
+                  Adesione
+                </Link>
                 <button className={styles.textBtn} onClick={() => setExpandedEventId(expandedEventId === ev.id ? null : ev.id)}>
                   {expandedEventId === ev.id ? 'Chiudi stand' : 'Stand'}
                 </button>

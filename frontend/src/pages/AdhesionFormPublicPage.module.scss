@@ -1,0 +1,158 @@
+.standalone {
+  background: #f5f0eb;
+  min-height: 100vh;
+  padding: 1rem 0 3rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.backLink {
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.printBtn {
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-pill);
+  border: 2px solid #bf5a2a;
+  background: #bf5a2a;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.88;
+  }
+}
+
+.sheet {
+  background: #fff;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 18mm 16mm;
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.12);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 2px solid rgba(38, 65, 55, 0.25);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.6rem;
+  color: #14261f;
+  line-height: 1.15;
+}
+
+.subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: #587065;
+}
+
+.section {
+  margin-bottom: 1.75rem;
+  break-inside: avoid;
+}
+
+.sectionTitle {
+  font-size: 1.05rem;
+  color: #14261f;
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(191, 90, 42, 0.25);
+}
+
+.sectionBody {
+  font-size: 0.95rem;
+  color: #2c2c2c;
+  line-height: 1.55;
+
+  p {
+    margin: 0 0 0.5rem;
+  }
+
+  ul,
+  ol {
+    margin: 0.25rem 0 0.75rem;
+    padding-left: 1.4rem;
+  }
+
+  li {
+    margin-bottom: 0.3rem;
+  }
+
+  strong {
+    color: #14261f;
+  }
+}
+
+.footer {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(38, 65, 55, 0.25);
+  text-align: center;
+  font-size: 0.9rem;
+  color: #14261f;
+
+  p {
+    margin: 0.35rem 0;
+  }
+}
+
+.signatureLine {
+  margin-top: 2rem !important;
+  color: #587065;
+}
+
+.notFound {
+  max-width: 36rem;
+  margin: 12vh auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+  color: var(--color-ink);
+}
+
+@media print {
+  .standalone {
+    background: #fff;
+    padding: 0;
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .sheet {
+    box-shadow: none;
+    padding: 0;
+    max-width: none;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 1.6cm 1.4cm;
+  }
+}

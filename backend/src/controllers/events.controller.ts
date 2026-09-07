@@ -8,6 +8,7 @@ import { FavoriteModel } from '../models/favorite.model';
 import { RoleModel } from '../models/role.model';
 import { UserRoleModel } from '../models/user-role.model';
 import { sanitizeHtmlContent } from '../utils/html-sanitizer';
+import { computeEventFingerprint, markAdhesionFormStaleIfChanged } from '../services/adhesion-form.service';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -441,9 +442,15 @@ export async function updateEvent(req: Request, res: Response) {
 
     await event.save();
 
-    return res.status(200).json({
+    const response: { item: ReturnType<typeof toEventResponse>; adhesionFormStale?: boolean } = {
         item: toEventResponse(event)
-    });
+    };
+
+    if (await markAdhesionFormStaleIfChanged(eventId, computeEventFingerprint(event))) {
+        response.adhesionFormStale = true;
+    }
+
+    return res.status(200).json(response);
 }
 
 export async function eventQrCode(req: Request, res: Response) {

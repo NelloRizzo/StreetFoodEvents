@@ -60,6 +60,8 @@ import { DocumentsPage } from './pages/DocumentsPage'
 import { ProductGuidePage } from './pages/ProductGuidePage'
 import { RicevutaLiquidazionePage } from './pages/RicevutaLiquidazionePage'
 import { InformativaPrivacyPage } from './pages/InformativaPrivacyPage'
+import { AdhesionFormPublicPage } from './pages/AdhesionFormPublicPage'
+import { AdhesionFormManagePage } from './pages/AdhesionFormManagePage'
 import { ParamRedirect } from './components/ParamRedirect'
 
 export const router = createBrowserRouter([
@@ -118,6 +120,7 @@ export const router = createBrowserRouter([
 
       /* Event-scoped admin */
       { path: 'events/:eventId/cashier', element: <EventCashierPage /> },
+      { path: 'events/:eventId/adhesion-form', element: <AdhesionFormManagePage /> },
       { path: 'events/:eventId/orders', element: <EventOrdersPage /> },
       { path: 'events/:eventId/report', element: <EventReportPage /> },
       { path: 'events/:eventId/exchange', element: <EventExchangePage /> },
@@ -163,4 +166,5 @@ export const router = createBrowserRouter([
   { path: 'flyer', element: <FlyerPage /> },
   { path: 'show/:entityType/:alias', element: <AliasRedirectPage /> },
   { path: 'attiva/:token', element: <ActivationPage /> },
+  { path: 'events/:eventId/adhesion-form', element: <AdhesionFormPublicPage /> },
 ])

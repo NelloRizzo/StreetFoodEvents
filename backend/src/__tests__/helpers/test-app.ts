@@ -26,6 +26,7 @@ import { contestsRouter } from '../../routes/contests.routes';
 import { myPhotosRouter } from '../../routes/my-photos.routes';
 import { eventSocialRouter } from '../../routes/social.routes';
 import { syncRouter } from '../../routes/sync.routes';
+import { adhesionFormRouter } from '../../routes/adhesion-form.routes';
 
 export function createTestApp() {
     const app = express();
@@ -62,6 +63,7 @@ export function createTestApp() {
     app.use('/api/contests', contestsRouter);
     app.use('/api/photos', myPhotosRouter);
     app.use('/api/events/:eventId/social', eventSocialRouter);
+    app.use('/api/events/:eventId/adhesion-form', adhesionFormRouter);
     app.use('/api/sync', syncRouter);
 
     app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -28,7 +28,8 @@ const collectionsToClear = [
     'contestpois',
     'contests',
     'contestparticipations',
-    'categories'
+    'categories',
+    'adhesionforms'
 ];
 
 beforeAll(async () => {

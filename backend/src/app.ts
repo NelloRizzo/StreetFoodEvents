@@ -23,6 +23,7 @@ import { uploadRouter } from './routes/upload.routes';
 import { userRolesRouter } from './routes/user-roles.routes';
 import { userStationsRouter } from './routes/user-stations.routes';
 import { usersRouter } from './routes/users.routes';
+import { adhesionFormRouter } from './routes/adhesion-form.routes';
 import { aliasesRouter, resolveRouter } from './routes/aliases.routes';
 import { eventFramesRouter } from './routes/event-frames.routes';
 import { eventPhotosRouter } from './routes/event-photos.routes';
@@ -105,6 +106,7 @@ app.use('/api/events/:eventId/photos', eventPhotosRouter);
 app.use('/api/events/:eventId/social', eventSocialRouter);
 app.use('/api/photos', myPhotosRouter);
 app.use('/api/events/:eventId/frames', eventFramesRouter);
+app.use('/api/events/:eventId/adhesion-form', adhesionFormRouter);
 app.use('/api/sync', syncRouter);
 
 app.use((req, res) => {
