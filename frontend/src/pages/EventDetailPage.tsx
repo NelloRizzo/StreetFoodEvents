@@ -211,7 +211,7 @@ export function EventDetailPage() {
   return (
     <div className={styles.page}>
       {/* Hero */}
-      <section className={styles.hero}>
+      <section className={`${styles.hero} ${adesioneMenuOpen ? styles.heroMenuOpen : ''}`}>
         {event.coverImage?.url ? (
           <img src={event.coverImage.url} alt="" className={styles.heroCover} />
         ) : (
