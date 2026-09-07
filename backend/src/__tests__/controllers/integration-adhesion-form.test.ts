@@ -120,7 +120,7 @@ describe('Integration — Adhesion Form', () => {
         expect(currency.generatedFrom).toBe('currency');
         expect(currency.content).toContain('<mark><strong>StreetCoin</strong></mark>');
         expect(currency.content).toContain('StreetCoin');
-        expect(currency.content).toContain('1 \u20AC = 2 crediti');
+        expect(currency.content).toContain('1 \u20AC = 2 StreetCoin');
 
         const fees = item.sections.find((s: { slug: string }) => s.slug === 'fees');
         expect(fees.generatedFrom).toBe('fees');
@@ -190,7 +190,7 @@ describe('Integration — Adhesion Form', () => {
         expect(currency.content).toContain('<img src="https://cdn.example.com/streetcoin.png"');
         expect(currency.content).toContain('<mark><strong>StreetCoin</strong></mark>');
         expect(currency.content).toContain('StreetCoin');
-        expect(currency.content).toContain('1 \u20AC = 2 crediti');
+        expect(currency.content).toContain('1 \u20AC = 2 StreetCoin');
 
         const patch = await request(app)
             .patch(`/api/events/${event._id}/adhesion-form`)
