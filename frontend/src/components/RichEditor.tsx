@@ -1,5 +1,6 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import Image from '@tiptap/extension-image'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import { useCallback } from 'react'
@@ -21,6 +22,10 @@ export function RichEditor({ value, onChange, placeholder, maxLength }: RichEdit
         horizontalRule: false,
       }),
       Underline,
+      Image.configure({
+        inline: false,
+        allowBase64: false,
+      }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: { rel: 'nofollow', target: '_blank' },
@@ -50,6 +55,13 @@ export function RichEditor({ value, onChange, placeholder, maxLength }: RichEdit
       return
     }
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+  }, [editor])
+
+  const setImage = useCallback(() => {
+    if (!editor) return
+    const url = window.prompt('URL immagine')
+    if (url === null) return
+    editor.chain().focus().setImage({ src: url }).run()
   }, [editor])
 
   if (!editor) return null
@@ -145,6 +157,14 @@ export function RichEditor({ value, onChange, placeholder, maxLength }: RichEdit
           title="Link"
         >
           🔗
+        </button>
+        <button
+          type="button"
+          className={styles.toolBtn}
+          onClick={setImage}
+          title="Immagine (URL)"
+        >
+          🖼
         </button>
       </div>
 

@@ -96,12 +96,32 @@ function headerSection(event: Event): GeneratedSection {
     };
 }
 
+function circledInitial(text: string): string {
+    const ch = (text ?? '').trim().charAt(0).toUpperCase();
+    const code = ch.charCodeAt(0);
+    if (code >= 0x41 && code <= 0x5a) {
+        return String.fromCharCode(0x24b6 + (code - 0x41));
+    }
+    return `(${ch})`;
+}
+
 function currencySection(event: Event): GeneratedSection {
     const bare = isBareCurrencySymbol(event.currencyName);
     const customName = bare ? null : (event.currencyName?.trim() || null);
+    const symbolUrl = (event.currencySymbol as { url?: string } | null)?.url ?? null;
+
+    const badge = customName
+        ? symbolUrl
+            ? `<img src="${esc(symbolUrl)}" alt="moneta ${esc(customName)}" width="72" />`
+            : `<strong>${circledInitial(customName)}</strong>`
+        : '';
 
     const body = customName
-        ? `<p>L'evento utilizza una <strong>moneta custom</strong>: ${esc(customName)} con cambio <strong>1 \u20AC = ${Number(event.exchangeRate ?? 1)} crediti</strong>. Il sottoscritto <strong>accetta</strong> che i prezzi del menu e i pagamenti dei clienti siano espressi in tale moneta.</p>`
+        ? [
+            `<p>L'evento utilizza una <strong>moneta custom</strong> rappresentata dal seguente <strong>logo</strong>:</p>`,
+            `<p>${badge} <strong>${esc(customName)}</strong></p>`,
+            `<p>I prezzi del menu e i pagamenti dei clienti sono espressi in tale moneta: cambio <strong>1 \u20AC = ${Number(event.exchangeRate ?? 1)} crediti</strong>. Il sottoscritto ne <strong>prende atto e accetta</strong> l'utilizzo di tale moneta.</p>`
+        ].join('')
         : `<p>L'evento non prevede moneta custom (pagamenti in euro).</p>`;
 
     return {

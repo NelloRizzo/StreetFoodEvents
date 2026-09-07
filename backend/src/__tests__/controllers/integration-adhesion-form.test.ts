@@ -142,6 +142,64 @@ describe('Integration — Adhesion Form', () => {
         expect(res.body.item.sections).toHaveLength(11);
     });
 
+    it('highlights the currency name and embeds its logo', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Logo Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-09-01'),
+            endDate: new Date('2026-09-07'),
+            currencyName: 'StreetCoin',
+            exchangeRate: 2,
+            currencySymbol: {
+                url: 'https://cdn.example.com/streetcoin.png',
+                publicId: 'streetcoin',
+                width: 128,
+                height: 128,
+                format: 'png',
+                bytes: 2048
+            },
+            cashPaymentsEnabled: true
+        });
+
+        const adminRole = await RoleModel.create({
+            name: 'Event Admin',
+            scope: 'event',
+            slug: 'event-admin',
+            permissions: ['events:read', 'events:update'],
+            isSystem: true,
+            isActive: true
+        });
+
+        await UserRoleModel.create({
+            userId: user._id,
+            roleId: adminRole._id,
+            eventId: event._id,
+            isActive: true
+        });
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/adhesion-form/generate`)
+            .set('Cookie', `sid=${sessionToken}`);
+        expect(res.status).toBe(201);
+
+        const currency = res.body.item.sections.find((s: { slug: string }) => s.slug === 'currency');
+        expect(currency.content).toContain('<img src="https://cdn.example.com/streetcoin.png"');
+        expect(currency.content).toContain('StreetCoin');
+        expect(currency.content).toContain('1 \u20AC = 2 crediti');
+
+        const patch = await request(app)
+            .patch(`/api/events/${event._id}/adhesion-form`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ sections: [{ slug: 'currency', title: currency.title, content: currency.content }] });
+        expect(patch.status).toBe(200);
+        expect(patch.body.item.sections.find((s: { slug: string }) => s.slug === 'currency').content).toContain(
+            '<img src="https://cdn.example.com/streetcoin.png"'
+        );
+    });
+
     it('rejects unauthenticated and unauthorized writes', async () => {
         const env = await setupAdhesionEnvironment();
         const { sessionToken: plainToken } = await createAuthSession();

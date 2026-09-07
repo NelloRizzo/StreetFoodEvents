@@ -5,11 +5,13 @@ const allowedTags = [
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'ul', 'ol', 'li',
     'blockquote', 'pre', 'code',
-    'a'
+    'a',
+    'img'
 ];
 
 const allowedAttributes: Record<string, string[]> = {
-    a: ['href', 'target', 'rel']
+    a: ['href', 'target', 'rel'],
+    img: ['src', 'alt', 'width', 'height']
 };
 
 export function sanitizeHtmlContent(input: string | undefined | null): string | null {

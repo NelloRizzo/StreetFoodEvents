@@ -120,6 +120,11 @@
   text-decoration: underline;
 }
 
+.editor img {
+  max-width: 100%;
+  height: auto;
+}
+
 .editor p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
