@@ -23,15 +23,6 @@ const POLL_MS = 2 * 60_000
 const PHOTOS_PER_PAGE = 8
 const ROTATE_OPTIONS = [5, 10, 15, 20, 30] as const
 
-function luminance(hex: string): number {
-  const c = hex.replace('#', '')
-  if (c.length < 6) return 0
-  const r = parseInt(c.slice(0, 2), 16)
-  const g = parseInt(c.slice(2, 4), 16)
-  const b = parseInt(c.slice(4, 6), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255
-}
-
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr]
   for (let i = copy.length - 1; i > 0; i--) {
@@ -53,7 +44,6 @@ export function SlideshowPage() {
   const [announceImageUrl, setAnnounceImageUrl] = useState<string | null>(null)
   const [announceText, setAnnounceText] = useState('')
   const [announceVisible, setAnnounceVisible] = useState(true)
-  const [announceColor, setAnnounceColor] = useState('#000000')
   const titleRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const announceUrlRef = useRef<string | null>(null)
@@ -249,27 +239,20 @@ export function SlideshowPage() {
           {Array.from({ length: PHOTOS_PER_PAGE - batch.length }).map((_, i) => (
             <div key={`empty-${i}`} className={styles.photo} style={{ background: 'transparent' }} />
           ))}
+          {announceVisible && (announceImageUrl || announceText.trim()) && (
+            <div className={styles.announceCard}>
+              {announceImageUrl && (
+                <img src={announceImageUrl} alt="" className={styles.announceImage} />
+              )}
+              {announceText.trim() && (
+                <p className={styles.announceText}>{announceText}</p>
+              )}
+            </div>
+          )}
         </div>
       ) : eventData?.coverImage?.url ? (
         <img src={eventData.coverImage.url} alt="" className={styles.coverFull} />
       ) : null}
-
-      {announceVisible && (announceImageUrl || announceText.trim()) && (
-        <div
-          className={styles.announceCard}
-          style={{
-            background: announceColor,
-            color: luminance(announceColor) > 0.6 ? '#111' : '#fff',
-          }}
-        >
-          {announceImageUrl && (
-            <img src={announceImageUrl} alt="" className={styles.announceImage} />
-          )}
-          {announceText.trim() && (
-            <p className={styles.announceText}>{announceText}</p>
-          )}
-        </div>
-      )}
 
       {panelOpen && (
         <div className={styles.panelBackdrop} onClick={() => setPanelOpen(false)} />
@@ -338,19 +321,6 @@ export function SlideshowPage() {
               onChange={(e) => setAnnounceText(e.target.value)}
               placeholder="Scrivi il testo dell'annuncio..."
             />
-
-            <div className={styles.panelColorRow}>
-              <label className={styles.panelLabel} htmlFor="announceColor" style={{ marginTop: 0 }}>
-                Colore sfondo
-              </label>
-              <input
-                id="announceColor"
-                type="color"
-                className={styles.panelColorInput}
-                value={announceColor}
-                onChange={(e) => setAnnounceColor(e.target.value)}
-              />
-            </div>
 
             <label className={styles.panelToggle}>
               <input
