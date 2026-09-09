@@ -63,53 +63,6 @@
   letter-spacing: 0.12em;
 }
 
-.headerRight {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.4rem;
-}
-
-.fontControls {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.fontBtn {
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: 0.5rem;
-  border: 2px solid #475569;
-  background: #334155;
-  color: #f1f5f9;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, border-color 0.2s;
-
-  &:hover:not(:disabled) {
-    background: #475569;
-    border-color: #64748b;
-  }
-
-  &:disabled {
-    opacity: 0.35;
-    cursor: default;
-  }
-}
-
-.fontScaleLabel {
-  min-width: 3rem;
-  text-align: center;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #94a3b8;
-}
-
 .empty {
   flex: 1;
   display: flex;
@@ -174,7 +127,7 @@
 }
 
 .orderNumber {
-  font-size: calc(3rem * var(--font-scale));
+  font-size: 3rem;
   font-weight: 800;
   line-height: 1;
   color: #f8fafc;
@@ -203,7 +156,7 @@
 .statusBadge {
   padding: 0.45rem 0.9rem;
   border-radius: 999px;
-  font-size: calc(0.95rem * var(--font-scale));
+  font-size: 0.95rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -227,7 +180,7 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: calc(1.2rem * var(--font-scale));
+  font-size: 1.2rem;
 }
 
 .itemQty {
@@ -242,7 +195,7 @@
 }
 
 .itemStation {
-  font-size: calc(0.9rem * var(--font-scale));
+  font-size: 0.9rem;
   color: #94a3b8;
   flex-shrink: 0;
 }
@@ -255,7 +208,7 @@
 .itemDone {
   color: #22c55e;
   font-weight: 800;
-  font-size: calc(1.3rem * var(--font-scale));
+  font-size: 1.3rem;
   flex-shrink: 0;
 }
 
@@ -286,7 +239,7 @@
   }
 
   .orderNumber {
-    font-size: calc(2.4rem * var(--font-scale));
+    font-size: 2.4rem;
   }
 
   .footer {
