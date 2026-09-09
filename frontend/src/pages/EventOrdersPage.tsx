@@ -30,6 +30,29 @@ const today = () => new Date().toISOString().split('T')[0]
 
 type StandInfo = { id: string; name: string }
 
+function csvCell(value: string | number): string {
+  const str = String(value)
+  return str.includes(',') || str.includes('"') || str.includes('\n')
+    ? `"${str.replace(/"/g, '""')}"`
+    : str
+}
+
+function downloadCsv(filename: string, content: string) {
+  const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  URL.revokeObjectURL(url)
+}
+
+function sanitizeFilename(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]+/g, '-') || 'report'
+}
+
 export function EventOrdersPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const [orders, setOrders] = useState<Order[]>([])
@@ -144,6 +167,54 @@ export function EventOrdersPage() {
     })
   }
 
+  const handleExportCsv = () => {
+    if (!eventId || !report) return
+    const rate = report.exchangeRate || 1
+    const eur = (n: number) => (n / rate).toFixed(2)
+    const stands = filterStandId
+      ? report.stands.filter((s) => s.standId === filterStandId)
+      : report.stands
+    const products = filterStandId
+      ? report.productQuantities.filter((p) => p.standId === filterStandId)
+      : report.productQuantities
+
+    const lines: string[] = [
+      `Resoconto incassi - ${report.eventName}`,
+      `Periodo,${new Date(startDate + 'T00:00:00').toLocaleDateString('it-IT')} - ${new Date(endDate + 'T00:00:00').toLocaleDateString('it-IT')}`,
+      ``,
+      `RIEPILOGO`,
+      `Stand,Ordini totali,Pagati,Omaggi,Lordo (EUR),Contanti (EUR),Crediti (EUR),Rimborsi (EUR),Ordini sospesi,Importo sospeso (EUR)`,
+      ...stands.map((s) => [
+        csvCell(s.standName),
+        s.totalOrders,
+        s.paidOrders,
+        s.giftOrders,
+        eur(s.totalRevenue),
+        eur(s.cashRevenue),
+        eur(s.creditRevenue),
+        eur(s.refundedAmount),
+        s.pendingOrders,
+        eur(s.pendingAmount),
+      ].join(',')),
+      ``,
+      `PRODOTTI VENDUTI`,
+      `Stand,Prodotto,Quantita,Omaggi,Ricavi (EUR)`,
+      ...products.map((p) => [
+        csvCell(p.standName),
+        csvCell(p.productName),
+        p.quantity,
+        p.giftQuantity,
+        eur(p.revenue),
+      ].join(',')),
+    ]
+
+    const standSlug = filterStandId ? sanitizeFilename(stands[0]?.standName ?? 'stand') : 'tutti-gli-stand'
+    downloadCsv(
+      `incassi-${standSlug}-${sanitizeFilename(report.eventName)}-${startDate}-${endDate}.csv`,
+      lines.join('\r\n'),
+    )
+  }
+
   if (isLoading) return null
   if (forbidden) return <div className={styles.page}><div className="page-shell"><p className={styles.empty}>Accesso negato.</p></div></div>
   if (!eventId) return null
@@ -164,6 +235,13 @@ export function EventOrdersPage() {
             <Link className={styles.secondaryBtn} to={`/admin/events/${eventId}/report`}>
               Report
             </Link>
+            <button
+              className={styles.secondaryBtn}
+              onClick={handleExportCsv}
+              disabled={!report || report.stands.length === 0}
+            >
+              Esporta CSV
+            </button>
             <div className={styles.dateGroup}>
               <label className={styles.dateLabel}>Da</label>
               <input
