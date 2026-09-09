@@ -432,9 +432,8 @@
 .announceCard {
   position: absolute;
   left: 1rem;
-  bottom: 1rem;
+  bottom: 3.6rem;
   max-width: 32rem;
-  background: rgba(0, 0, 0, 0.72);
   border-radius: 10px;
   padding: 1rem 1.25rem;
   display: flex;
@@ -443,6 +442,7 @@
   backdrop-filter: blur(4px);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   pointer-events: none;
+  z-index: 4;
 }
 
 .announceImage {
@@ -454,10 +454,28 @@
 }
 
 .announceText {
-  color: #fff;
+  color: inherit;
   font-size: 1.35rem;
   font-weight: 700;
   line-height: 1.35;
   margin: 0;
   white-space: pre-wrap;
+}
+
+.panelColorRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.panelColorInput {
+  width: 3rem;
+  height: 2.2rem;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
 }
