@@ -40,11 +40,46 @@ export function SlideshowPage() {
   const [rotateSec, setRotateSec] = useState<number>(10)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [announceImageUrl, setAnnounceImageUrl] = useState<string | null>(null)
+  const [announceText, setAnnounceText] = useState('')
+  const [announceVisible, setAnnounceVisible] = useState(true)
   const titleRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const announceUrlRef = useRef<string | null>(null)
   const allRef = useRef<Photo[]>([])
   const refreshRef = useRef<() => void>(() => {})
 
   const closeModal = useCallback(() => setSelectedPhoto(null), [])
+
+  useEffect(() => {
+    return () => {
+      if (announceUrlRef.current) URL.revokeObjectURL(announceUrlRef.current)
+    }
+  }, [])
+
+  const handleAnnounceImage = (file: File) => {
+    if (!file.type.startsWith('image/')) return
+    const url = URL.createObjectURL(file)
+    if (announceUrlRef.current) URL.revokeObjectURL(announceUrlRef.current)
+    announceUrlRef.current = url
+    setAnnounceImageUrl(url)
+    setAnnounceVisible(true)
+  }
+
+  const removeAnnounceImage = () => {
+    if (announceUrlRef.current) {
+      URL.revokeObjectURL(announceUrlRef.current)
+      announceUrlRef.current = null
+    }
+    setAnnounceImageUrl(null)
+  }
+
+  const clearAnnounce = () => {
+    removeAnnounceImage()
+    setAnnounceText('')
+    setAnnounceVisible(false)
+  }
 
   async function saveTitle(value: string) {
     if (!eventId) return
@@ -171,6 +206,13 @@ export function SlideshowPage() {
             </button>
           ))}
         </div>
+        <button
+          className={`${styles.panelToggleBtn} ${panelOpen ? styles.panelToggleActive : ''}`}
+          onClick={() => setPanelOpen((v) => !v)}
+          title={panelOpen ? 'Nascondi pannello' : 'Annuncio personalizzato'}
+        >
+          {panelOpen ? 'Chiudi' : 'Annuncio'}
+        </button>
       </div>
 
       {hasPhotos ? (
@@ -197,10 +239,118 @@ export function SlideshowPage() {
           {Array.from({ length: PHOTOS_PER_PAGE - batch.length }).map((_, i) => (
             <div key={`empty-${i}`} className={styles.photo} style={{ background: 'transparent' }} />
           ))}
+          {announceVisible && (announceImageUrl || announceText.trim()) && (
+            <div className={styles.announceCard}>
+              {announceImageUrl && (
+                <img src={announceImageUrl} alt="" className={styles.announceImage} />
+              )}
+              {announceText.trim() && (
+                <p className={styles.announceText}>{announceText}</p>
+              )}
+            </div>
+          )}
         </div>
       ) : eventData?.coverImage?.url ? (
         <img src={eventData.coverImage.url} alt="" className={styles.coverFull} />
       ) : null}
+
+      {panelOpen && (
+        <div className={styles.panelBackdrop} onClick={() => setPanelOpen(false)} />
+      )}
+      <aside className={`${styles.panel} ${panelOpen ? styles.panelOpen : ''}`}>
+        {panelOpen && (
+          <div className={styles.panelBody}>
+            <div className={styles.panelHeader}>
+              <span className={styles.panelTitle}>Annuncio personalizzato</span>
+              <button className={styles.panelCloseBtn} onClick={() => setPanelOpen(false)}>
+                &times;
+              </button>
+            </div>
+
+            <label className={styles.panelLabel}>Immagine</label>
+            {announceImageUrl ? (
+              <div className={styles.panelThumbWrap}>
+                <img src={announceImageUrl} alt="Anteprima annuncio" className={styles.panelThumb} />
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={styles.panelDrop}
+                onClick={() => imageInputRef.current?.click()}
+              >
+                Scegli un&apos;immagine
+              </button>
+            )}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleAnnounceImage(file)
+                e.target.value = ''
+              }}
+            />
+            {announceImageUrl && (
+              <div className={styles.panelRowActions}>
+                <button
+                  type="button"
+                  className={styles.panelSmallBtn}
+                  onClick={() => imageInputRef.current?.click()}
+                >
+                  Cambia
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.panelSmallBtn} ${styles.panelSmallBtnDanger}`}
+                  onClick={removeAnnounceImage}
+                >
+                  Rimuovi immagine
+                </button>
+              </div>
+            )}
+
+            <label className={styles.panelLabel} htmlFor="announceText">Testo</label>
+            <textarea
+              id="announceText"
+              className={styles.panelTextarea}
+              rows={4}
+              maxLength={300}
+              value={announceText}
+              onChange={(e) => setAnnounceText(e.target.value)}
+              placeholder="Scrivi il testo dell'annuncio..."
+            />
+
+            <label className={styles.panelToggle}>
+              <input
+                type="checkbox"
+                checked={announceVisible}
+                onChange={(e) => setAnnounceVisible(e.target.checked)}
+              />
+              <span>Mostra sul display</span>
+            </label>
+
+            <div className={styles.panelActions}>
+              <button
+                type="button"
+                className={styles.panelBtn}
+                onClick={() => setPanelOpen(false)}
+              >
+                Chiudi
+              </button>
+              <button
+                type="button"
+                className={`${styles.panelBtn} ${styles.panelBtnDanger}`}
+                onClick={clearAnnounce}
+                disabled={!announceImageUrl && !announceText}
+              >
+                Pulisci
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
 
       <div className={styles.footer}>
         Se vedi una tua foto segna il suo numero e recati al Welcome Point per ottenerla

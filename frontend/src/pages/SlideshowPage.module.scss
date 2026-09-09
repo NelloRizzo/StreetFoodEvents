@@ -205,3 +205,259 @@
   background: #111;
   color: #fff;
 }
+
+.panelToggleBtn {
+  flex-shrink: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.08);
+  color: #111;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.panelToggleBtn:hover {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.panelToggleActive {
+  background: #c43d3d;
+  color: #fff;
+}
+
+.panelBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 5;
+}
+
+.panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(22rem, 90vw);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
+  z-index: 6;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+}
+
+.panelOpen {
+  transform: translateX(0);
+}
+
+.panelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem 1.5rem;
+  color: #111;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.panelTitle {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.panelCloseBtn {
+  border: none;
+  background: rgba(0, 0, 0, 0.08);
+  color: #111;
+  font-size: 1.3rem;
+  line-height: 1;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panelCloseBtn:hover {
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.panelLabel {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+  margin-top: 0.4rem;
+}
+
+.panelDrop {
+  border: 1.5px dashed #aaa;
+  background: #f7f7f7;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.panelDrop:hover {
+  background: #eee;
+  border-color: #888;
+}
+
+.panelThumbWrap {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 6rem;
+  max-height: 12rem;
+  border: 1px solid #ddd;
+}
+
+.panelThumb {
+  max-width: 100%;
+  max-height: 12rem;
+  object-fit: contain;
+  display: block;
+}
+
+.panelRowActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.panelSmallBtn {
+  flex: 1;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #111;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.panelSmallBtn:hover {
+  background: #f0f0f0;
+}
+
+.panelSmallBtnDanger {
+  color: #c43d3d;
+  border-color: #e4a8a8;
+}
+
+.panelTextarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: #111;
+  box-sizing: border-box;
+}
+
+.panelTextarea:focus {
+  outline: 2px solid rgba(0, 0, 0, 0.25);
+}
+
+.panelToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.2rem;
+}
+
+.panelActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.panelBtn {
+  flex: 1;
+  border: none;
+  background: #111;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.panelBtn:hover:not(:disabled) {
+  background: #333;
+}
+
+.panelBtnDanger {
+  background: #c43d3d;
+}
+
+.panelBtnDanger:hover:not(:disabled) {
+  background: #a52e2e;
+}
+
+.panelBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.announceCard {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  max-width: 32rem;
+  background: rgba(0, 0, 0, 0.72);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.announceImage {
+  max-width: 100%;
+  max-height: 24vh;
+  object-fit: contain;
+  border-radius: 6px;
+  display: block;
+}
+
+.announceText {
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0;
+  white-space: pre-wrap;
+}
