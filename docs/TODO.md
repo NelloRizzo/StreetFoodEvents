@@ -1,4 +1,9 @@
 # TODO — Street Food Events
+- aggiornare gli eventi GTM in maniera da registrare anche i coupon
+- aggiungere ruolo stand-admin (tutti i permessi su uno stand)
+- i nuovi utenti possono svolgere operazioni di admin
+- dopo il logoff deve andare nella home pubblica
+- nei ruoli utente deve essere presentata anche l'email (per distinguere omonimie)
 
 ## Adesione Stand a Manifestazione
 - Flusso in cui il **gestore dello stand** aderisce a una manifestazione producendo: nome stand, banner (consigliato 1080×220), logo (consigliato), elenco prodotti con prezzo + foto (consigliata) + ingredienti e allergeni, conferma requisiti HACCP, pagamento del **prezzo di partecipazione**, versamento **caparra non rimborsabile**, accettazione dell'uso di eventuale **moneta custom**, accettazione delle **regole** con **clausola di esclusione** in caso di inosservanza, e indicazione delle **esigenze elettriche** (l'organizzazione fornisce un solo punto luce per l'illuminazione interna; le esigenze aggiuntive — attrezzatura, potenza in kW/kWh, tipo allaccio — vanno elencate e comportano un contributo economico concordato a carico dello stand, campo firma+data) con accettazione delle condizioni energia.
