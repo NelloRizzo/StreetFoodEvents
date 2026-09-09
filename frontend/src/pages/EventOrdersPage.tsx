@@ -328,6 +328,7 @@ export function EventOrdersPage() {
                   <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Lordo</th>
                   <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Crediti</th>
                   <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Esterni</th>
+                  <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Sconti</th>
                 </tr>
               </thead>
               <tbody>
@@ -347,6 +348,10 @@ export function EventOrdersPage() {
                       {(s.cashRevenue / (report.exchangeRate ?? 1)).toFixed(2)}
                       {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
                     </td>
+                    <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right', color: '#c0392b' }}>
+                      {(s.discountAmount / (report.exchangeRate ?? 1)).toFixed(2)}
+                      {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+                    </td>
                   </tr>
                 ))}
                 <tr style={{ borderTop: '2px solid #ddd', fontWeight: 700, backgroundColor: 'rgba(191,90,42,0.06)' }}>
@@ -362,6 +367,10 @@ export function EventOrdersPage() {
                   </td>
                   <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right' }}>
                     {(report.totals.cashRevenue / (report.exchangeRate ?? 1)).toFixed(2)}
+                    {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
+                  </td>
+                  <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right', color: '#c0392b' }}>
+                    {(report.totals.discountAmount / (report.exchangeRate ?? 1)).toFixed(2)}
                     {eventCurrency && <CurrencyDisplay currencyName={eventCurrency.currencyName} currencySymbol={eventCurrency.currencySymbol} />}
                   </td>
                 </tr>

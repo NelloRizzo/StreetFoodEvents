@@ -34,6 +34,12 @@ export type Order = {
   notes: string | null
   cancelledAt: string | null
   cancelReason: string | null
+  promotionId: string | null
+  promotionCode: string | null
+  promotionType: string | null
+  promotionDiscountType: string | null
+  discountAmount: number
+  freeUnits: number
   createdAt: string
   updatedAt: string
   receiptQrCode?: string | null
@@ -52,7 +58,25 @@ export type CreateOrderInput = {
   }>
   paymentOnCreate?: boolean | { creditAmount: number }
   isGift?: boolean
+  promotionCode?: string
   notes?: string
+}
+
+export type ReportCoupon = {
+  promotionId: string
+  code: string
+  title: string | null
+  type: string
+  presentations: number
+  discountAmount: number
+  freeUnits: number
+  valueAmount: number
+}
+
+export type ReportCoupons = {
+  totalAppliedOrders: number
+  totalDiscountAmount: number
+  byPromotion: ReportCoupon[]
 }
 
 export type StandReport = {
@@ -70,9 +94,11 @@ export type StandReport = {
     cashRevenue: number
     totalExternalRevenue: number
     totalRefunded: number
+    discountAmount: number
   }
   statusBreakdown: Array<{ status: string; count: number }>
   productQuantities: Array<{ productId: string; productName: string; quantity: number; giftQuantity: number; revenue: number }>
+  coupons: ReportCoupons
   orders: Order[]
   pendingOrders: Order[]
 }
@@ -86,6 +112,7 @@ export type EventReportStand = {
   totalRevenue: number
   cashRevenue: number
   creditRevenue: number
+  discountAmount: number
   pendingOrders: number
   pendingAmount: number
   refundedAmount: number
@@ -112,10 +139,12 @@ export type EventReport = {
     totalRevenue: number
     cashRevenue: number
     creditRevenue: number
+    discountAmount: number
     pendingOrders: number
     pendingAmount: number
     refundedAmount: number
   }
+  coupons: ReportCoupons
   productQuantities: Array<{
     standId: string
     standName: string

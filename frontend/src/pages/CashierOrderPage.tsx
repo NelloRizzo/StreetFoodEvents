@@ -3,9 +3,11 @@ import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { createOrder, fetchOrders, fetchGiftStats, updateOrderStatus, cancelOrder, type GiftStats, type Order } from '../lib/orders'
+import type { AppliedCoupon } from '../lib/promotions'
 import { trackCashierOrderCreated, trackOrderStatusUpdate } from '../lib/analytics'
 import { QRScanner } from '../components/QRScanner'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { CouponPanel } from '../components/CouponPanel'
 import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
 import { GiftCounter } from '../components/GiftCounter'
 import type { UploadedImage } from '../lib/upload'
@@ -82,6 +84,7 @@ export function CashierOrderPage() {
   const [showVoidPrompt, setShowVoidPrompt] = useState(false)
   const [activeOrders, setActiveOrders] = useState<Order[]>([])
   const [giftStats, setGiftStats] = useState<GiftStats | null>(null)
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null)
 
   const [notesModal, setNotesModal] = useState<NotesModalState>({
     open: false,
@@ -263,11 +266,22 @@ export function CashierOrderPage() {
     setIsGift(false)
     setPayWithCredits(false)
     setCreditAmount(0)
+    setCoupon(null)
     setCart([])
   }
 
   const handleSubmit = async () => {
     if (cart.length === 0) return
+    if (
+      coupon &&
+      coupon.item.type === 'discount' &&
+      coupon.item.discountType === 'percent' &&
+      payWithCredits &&
+      creditAmount > 0
+    ) {
+      setAlertMsg('Impossibile applicare uno sconto percentuale a un pagamento in crediti')
+      return
+    }
     setIsSubmitting(true)
     try {
       const effectiveCredit = isGift ? 0 : payWithCredits ? Math.min(creditAmount || total, total) : 0
@@ -283,6 +297,7 @@ export function CashierOrderPage() {
           notes: i.notes || undefined,
         })),
         paymentOnCreate: isGift ? undefined : { creditAmount: effectiveCredit },
+        promotionCode: coupon && !isGift ? coupon.code : undefined,
         isGift,
       })
       await updateOrderStatus(response.item.id, 'preparing')
@@ -332,6 +347,12 @@ export function CashierOrderPage() {
     const creditsHtml = o.creditAmountUsed > 0
       ? `<div style="font-size:11px;color:#555;text-align:center;margin-top:0.25rem">Crediti: ${o.creditAmountUsed.toFixed(2)} ${badge}</div>`
       : ''
+    const discountHtml = o.discountAmount > 0
+      ? `<div style="display:flex;justify-content:space-between;font-size:14px"><span>Sconto${o.promotionCode ? ` (${escHtml(o.promotionCode)})` : ''}</span><span>-${o.discountAmount.toFixed(2)} ${badge}</span></div>`
+      : ''
+    const giftUnitsHtml = o.freeUnits > 0
+      ? `<div style="font-size:11px;color:#555;text-align:center;margin-top:0.25rem">Prodotti in omaggio: ${o.freeUnits}</div>`
+      : ''
     const qrHtml = o.receiptQrCode
       ? `<div style="display:flex;justify-content:center;margin:0.5rem 0"><img src="${o.receiptQrCode}" alt="QR" style="width:120px;height:120px;-webkit-print-color-adjust:exact;print-color-adjust:exact" /></div>`
       : ''
@@ -355,6 +376,8 @@ body{padding:2rem;max-width:320px;margin:0 auto}
 <div class="order-number">${o.isGift ? 'O' : '#'}${o.orderNumber}</div>
 ${giftHtml}
 <div class="items">${itemsHtml}</div>
+${giftUnitsHtml}
+${discountHtml}
 <div class="total"><span>Totale</span><strong>${o.total.toFixed(2)} ${badge}</strong></div>
 ${creditsHtml}
 ${qrHtml}
@@ -600,6 +623,25 @@ ${qrHtml}
                 </div>
               )}
 
+              {!isGift && (
+                <CouponPanel
+                  eventId={eventId!}
+                  standId={standId!}
+                  currencyName={eventCurrency?.currencyName}
+                  coupon={coupon}
+                  onChange={setCoupon}
+                  onAlert={setAlertMsg}
+                  payWithCredits={payWithCredits}
+                  creditAmount={creditAmount}
+                  lines={cart.map((i) => ({
+                    eventProductId: i.eventProductId,
+                    quantity: i.quantity,
+                    unitPrice: i.unitPrice,
+                    subtotal: i.unitPrice * i.quantity,
+                  }))}
+                />
+              )}
+
               <button
                 className={`${styles.submitBtn} ${isGift ? styles.submitBtnGift : ''}`}
                 onClick={handleSubmit}
@@ -716,6 +758,25 @@ ${qrHtml}
                 </div>
               ))}
             </div>
+            {successOrder.freeUnits > 0 && (
+              <div className={styles.confirmDiscount}>
+                <span>Prodotti in omaggio: {successOrder.freeUnits}</span>
+              </div>
+            )}
+            {successOrder.discountAmount > 0 && (
+              <div className={styles.confirmDiscount}>
+                <span>Sconto{successOrder.promotionCode ? ` (${successOrder.promotionCode})` : ''}</span>
+                <strong>
+                  &minus;{successOrder.discountAmount.toFixed(2)}
+                  {eventCurrency && (
+                    <CurrencyDisplay
+                      currencyName={eventCurrency.currencyName}
+                      currencySymbol={eventCurrency.currencySymbol}
+                    />
+                  )}
+                </strong>
+              </div>
+            )}
             <div className={styles.confirmTotal}>
               <span>Totale</span>
               <strong>

@@ -275,3 +275,35 @@ Considerazioni progettuali e decisioni architetturali.
   - Pagina GESTIONE `AdhesionFormManagePage` su `/admin/events/:eventId/adhesion-form` (solo event-admin/platform-admin): genera/rigenera/salva (PATCH con TUTTE le sezioni), elimina con ConfirmModal, banner giallo "obsoleto" quando `stale`; ogni sezione ha titolo editabile + `RichEditor` (remount via `editorVersion` quando cambia sezione selezionata); badge "Auto dall'evento" (GUIDED) / "Manuale". Link "Adesione" su ogni card evento in `EventsPage` (Gestione).
   - **Alert stale da `EventsPage`**: la PATCH evento (edit) ora legge `data.adhesionFormStale` dalla risposta: se `true` mostra un avviso che invita a rigenerare il modulo dalla pagina di gestione.
 - **GOTCHA**: il contenuto del modulo è HTML; quando si salva PATCH il client manda `{ sections: [...] }` con le stesse `slug`/`title`/`content` che ha ricevuto (mai nuovo slug), altrimenti 400. Non usare `content` proveniente da utenti non fidati senza sanitizer.
+
+## Promozioni e Coupon (Set 2026)
+
+### Modello e tipi
+- **`Promotion`** (collezione `promotions`): `eventId`, `code` (unique per codice normalizzato uppercase), `title`, `type` (`discount` | `product` | `value`), `standId` (null = tutti gli stand), `isActive`, `expiresAt`, `maxPresentations` (limite totale, null = illimitato) e `perUserLimit` (limite per cliente). Campi specifici per tipo:
+  - `discount`: `discountType` (`percent` | `fixed`, default `percent`) + `discountValue` (percentuale 1-100 oppure importo in crediti).
+  - `product`: `eventProductId` (prodotto del menu dell'evento) + `formula { paid, total }` (null = regalo semplice; 2x1 = {1,2}, 3x2 = {2,3}) + `formulaMaxFree` (cap pezzi gratis per presentazione, null = illimitato).
+  - `value`: `valueAmount` (importo del buono in crediti, riscattabile sul wallet del cliente).
+- **`PromotionUsage`** (collezione `promotionusages`): una riga per utilizzo del coupon — `promotionId`, `code`, `eventId`, `orderId`, `eventUserId`, `type`, `discountAmount`, `freeUnits`, `valueAmount`, `appliedBy`. Storico per report e per il conteggio per-user.
+
+### Regole di consumo
+- Ogni **ordine** con coupon applicato = **1 presentazione** (`usedCount++`, incrementato in `consumePromotion`) — NON restituita se l'ordine viene annullato.
+- `maxPresentations` = limitazioni per presentazione TOTALE; `perUserLimit` = limite per cliente, verificato contando i `PromotionUsage` per `promotionId` + `eventUserId`.
+- Le formule valgono su un prodotto specifico: nel riepilogo si accoppiano le righe con `eventProductId === coupon.eventProductId`; `freeUnits = floor(quantity/total) * (total - paid)` con cap `formulaMaxFree` sulla presentazione; il resto non multiplo si paga per intero.
+- **Sconto percentuale vs crediti**: uno sconto `percent` NON puo` essere usato in un pagamento in crediti (sarebbe un doppio sconto ambiguo). Blocco **server** in `createOrder`/`payOrder` (PromotionError) e guardia **client** in `handleSubmit` delle due cacce.
+
+### API
+- `/api/events/:eventId/promotions` (CRUD, `event-admin`/`platform-admin`), `GET /:promotionId/qrcode`, `GET /:promotionId/usage`, `POST /validate` (auth, restituisce `{ valid, item }` o `{ valid:false, message }`), `POST /redeem-value` (riscatto buono valore — accredita crediti al cliente con `EventUserTransaction` `type: 'promotion'` `direction: 'credit'`). DELETE rifiutato se il coupon ha gi� `usedCount > 0` (disattivare invece di eliminare per conservare lo storico).
+- Il QR codifica il `code` del coupon (`qrcode.toDataURL(code)`), incluso nella lista `GET /promotions` e scaricabile.
+
+### Gestione quantita` (GOTCHAS importanti)
+- **Express 5 + `Router({ mergeParams: true })`**: ogni sub-router montato sotto `/api/events/:eventId/...` (promotions, photos, frames, social, adhesion-form) DEVE usare `Router({ mergeParams: true })`, altrimenti `req.params` risulta vuoto `{}` e `req.params.eventId` e` `undefined`.
+- **Filtri campo-vs-campo con `$expr`**: un filtro che confronta due path numerici dello stesso documento (es. promozioni non esaurite: `maxPresentations > usedCount`) NON si scrive `{ maxPresentations: { $gt: '$usedCount' } }` (causa `Cast to Number failed for value "$usedCount"` perché` Mongo cerca di castare la STRINGA `$usedCount` a numero). Si usa `$expr` con array: `{ $expr: { $or: [ { $eq: ['$maxPresentations', null] }, { $gt: ['$maxPresentations', '$usedCount'] } ] } }`.
+- **Per-user limit**: serve che il `PromotionUsage` degli ORDINI abbia `eventUserId` valorizzato. In `createOrder` si risolve l'EventUser con `EventUserModel.findOne({ eventId, userId: effectiveCustomerId })` (il cliente puo` essere anonimo senza userId → `eventUserId: null`).
+
+### Report
+- Report event/stand includono `coupons = { totalAppliedOrders, totalDiscountAmount, byPromotion: [{ promotionId, code, title, type, presentations, discountAmount, freeUnits, valueAmount }] }` e `discountAmount` nei `totals`/`summary`. Gli importi sconto NON riducono il fatturato lordo (restano una misura separata informativa).
+
+### Frontend
+- Componente riusabile `CouponPanel` (input codice + scan QR via `QRScanner` 7 `validatePromotionCode`; anteprima sconto speculare al server con `computeCouponDiscount`; buoni valore mostrano info + link a Cambio Valuta senza riscatto inline - manca una rotta "lista eventUsers per evento" accessibile senza permessi exchange). Le due cacce lo montano dentro il blocco carrello (nascosto quando `isGift`).
+- Pagina admin `/admin/events/:eventId/promotions`: lista con QR inline + download (`QRCodeDownload`-like via `<a download>` su object URL generato da fetch), form condizionale per tipo, storico utilizzi (`fetchPromotionUsage`), attiva/disattiva. Voce in `AdminSidebar` (Gestione).
+- Ricevute (stampa inclusa) e modale di conferma cassa mostrano le righe "Sconto (CODE) -X" e "Prodotti in omaggio: N" dai campi `discountAmount`/`freeUnits` dell'ordine.

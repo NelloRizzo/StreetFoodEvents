@@ -116,6 +116,41 @@ const orderSchema = new Schema(
             default: false,
             index: true
         },
+        promotionId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Promotion',
+            default: null,
+            index: true
+        },
+        promotionCode: {
+            type: String,
+            trim: true,
+            uppercase: true,
+            default: null,
+            maxlength: 40
+        },
+        promotionType: {
+            type: String,
+            enum: ['discount', 'product'],
+            default: null
+        },
+        promotionDiscountType: {
+            type: String,
+            enum: ['percent', 'fixed'],
+            default: null
+        },
+        discountAmount: {
+            type: Number,
+            required: true,
+            default: 0,
+            min: 0
+        },
+        freeUnits: {
+            type: Number,
+            required: true,
+            default: 0,
+            min: 0
+        },
         items: {
             type: [orderItemSchema],
             required: true,

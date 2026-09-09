@@ -293,6 +293,20 @@ export function StandOrdersPage() {
                   <span className={styles.reportStatLabel}>Prodotti omaggio</span>
                 </div>
               )}
+              {report.summary.discountAmount > 0 && (
+                <div className={styles.reportStat}>
+                  <span className={`${styles.reportStatValue} ${styles.reportRefunded}`}>
+                   &euro;{(report.summary.discountAmount / (report.exchangeRate ?? 1)).toFixed(2)}
+                  </span>
+                  <span className={styles.reportStatLabel}>Sconti</span>
+                </div>
+              )}
+              {report.coupons.totalAppliedOrders > 0 && (
+                <div className={styles.reportStat}>
+                  <span className={styles.reportStatValue}>{report.coupons.totalAppliedOrders}</span>
+                  <span className={styles.reportStatLabel}>Coupon</span>
+                </div>
+              )}
             </div>
           </div>
         )}

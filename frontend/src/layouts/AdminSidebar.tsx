@@ -96,6 +96,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
               { label: 'Numerazione Stand', to: `${basePath}/stands-manage`, icon: '\u{1F3EA}' } as SidebarItem,
               { label: 'Cornici Evento', to: `${basePath}/frames`, icon: '\u{1F5BC}' } as SidebarItem,
               { label: 'Contest evento', to: `${basePath}/contest-manage`, icon: '\u{1F3C6}' } as SidebarItem,
+              { label: 'Promozioni e Coupon', to: `${basePath}/promotions`, icon: '\u{1F3AB}' } as SidebarItem,
             ]
           : []),
       ],

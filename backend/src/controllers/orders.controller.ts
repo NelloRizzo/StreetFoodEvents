@@ -16,6 +16,14 @@ import { StandSettlementModel } from '../models/stand-settlement.model';
 import { RoleModel } from '../models/role.model';
 import { UserRoleModel } from '../models/user-role.model';
 import { env } from '../config/env';
+import {
+    computePromotionDiscount,
+    consumePromotion,
+    findActivePromotionByCode,
+    PromotionError,
+    validatePromotion
+} from '../services/promotions.service';
+import { PromotionUsageModel, PromotionModel } from '../models/promotion.model';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -46,6 +54,12 @@ function toOrderResponse(order: {
     total: number;
     creditAmountUsed: number;
     paymentStatus: string;
+    promotionId?: Types.ObjectId | null;
+    promotionCode?: string | null;
+    promotionType?: string | null;
+    promotionDiscountType?: string | null;
+    discountAmount?: number | null;
+    freeUnits?: number | null;
     paidAt?: Date | null;
     paymentTransactionId?: Types.ObjectId | null;
     performedByUserId?: Types.ObjectId | null;
@@ -81,6 +95,12 @@ function toOrderResponse(order: {
         total: order.total,
         creditAmountUsed: order.creditAmountUsed,
         paymentStatus: order.paymentStatus,
+        promotionId: order.promotionId?.toString() ?? null,
+        promotionCode: order.promotionCode ?? null,
+        promotionType: order.promotionType ?? null,
+        promotionDiscountType: order.promotionDiscountType ?? null,
+        discountAmount: order.discountAmount ?? 0,
+        freeUnits: order.freeUnits ?? 0,
         paidAt: order.paidAt ?? null,
         paymentTransactionId: order.paymentTransactionId?.toString() ?? null,
         performedByUserId: order.performedByUserId?.toString() ?? null,
@@ -356,6 +376,8 @@ export async function getOrderReceipt(req: Request, res: Response) {
             })),
             total: order.total,
             creditAmountUsed: order.creditAmountUsed,
+            discountAmount: order.discountAmount ?? 0,
+            promotionCode: order.promotionCode ?? null,
             receiptQrCode,
             createdAt: order.createdAt,
         },
@@ -485,6 +507,50 @@ export async function createOrder(req: Request, res: Response) {
         const effectiveCustomerId = customerId ?? req.user.id;
         const effectiveCustomerName = customerName ?? null;
 
+        let appliedPromotion: {
+            _id: Types.ObjectId;
+            code: string;
+            type: 'discount' | 'product';
+            discountType: 'percent' | 'fixed' | null;
+            discountAmount: number;
+            freeUnits: number;
+        } | null = null;
+
+        const promotionCodeBody = req.body.promotionCode;
+        if (typeof promotionCodeBody === 'string' && promotionCodeBody.trim() !== '') {
+            if (isGift) {
+                throw new PromotionError('Un ordine omaggio non può avere un coupon');
+            }
+
+            const promotion = await findActivePromotionByCode(promotionCodeBody, eventId, session);
+            if (!promotion) {
+                throw new PromotionError('Coupon non trovato per questo evento');
+            }
+
+            await validatePromotion(promotion, {
+                eventId,
+                standId,
+                customerUserId: effectiveCustomerId,
+                session
+            });
+
+            if (promotion.type === 'value') {
+                throw new PromotionError('I buoni valore si riscattano sul portafoglio, non su un ordine');
+            }
+
+            const computation = computePromotionDiscount(promotion, orderItems);
+            total = Math.round((total - computation.discountAmount) * 100) / 100;
+
+            appliedPromotion = {
+                _id: new Types.ObjectId(promotion._id.toString()),
+                code: promotion.code,
+                type: promotion.type,
+                discountType: promotion.type === 'discount' ? (promotion.discountType ?? 'percent') : null,
+                discountAmount: computation.discountAmount,
+                freeUnits: computation.freeUnits
+            };
+        }
+
         let creditAmount = 0;
         let paymentTransactionId: Types.ObjectId | null = null;
 
@@ -493,6 +559,15 @@ export async function createOrder(req: Request, res: Response) {
                 creditAmount = Math.max(0, Math.min(Number(paymentOnCreate.creditAmount) || 0, total));
             } else {
                 creditAmount = total;
+            }
+
+            if (
+                appliedPromotion &&
+                appliedPromotion.type === 'discount' &&
+                appliedPromotion.discountType === 'percent' &&
+                creditAmount > 0
+            ) {
+                throw new PromotionError('Impossibile applicare uno sconto percentuale a un pagamento in crediti');
             }
 
             if (!event.cashPaymentsEnabled && !event.unifiedCashierEnabled && creditAmount < total) {
@@ -549,6 +624,12 @@ export async function createOrder(req: Request, res: Response) {
                     total: isGift ? 0 : total,
                     creditAmountUsed: isGift ? 0 : creditAmount,
                     paymentStatus: isPaidOnCreate ? 'paid' : 'unpaid',
+                    promotionId: appliedPromotion?._id ?? null,
+                    promotionCode: appliedPromotion?.code ?? null,
+                    promotionType: appliedPromotion?.type ?? null,
+                    promotionDiscountType: appliedPromotion?.discountType ?? null,
+                    discountAmount: appliedPromotion?.discountAmount ?? 0,
+                    freeUnits: appliedPromotion?.freeUnits ?? 0,
                     paidAt: isPaidOnCreate ? new Date() : null,
                     paymentTransactionId: isGift ? null : paymentTransactionId,
                     performedByUserId: isPaidOnCreate ? req.user.id : null,
@@ -564,6 +645,36 @@ export async function createOrder(req: Request, res: Response) {
 
         if (!order) {
             throw new Error('Failed to create order');
+        }
+
+        if (appliedPromotion) {
+            const usageEventUser = effectiveCustomerId
+                ? await EventUserModel.findOne({ eventId, userId: effectiveCustomerId })
+                    .select('_id')
+                    .session(session)
+                : null;
+
+            const consumed = await consumePromotion(appliedPromotion._id, session);
+            if (!consumed) {
+                throw new PromotionError('Il coupon ha esaurito le presentazioni disponibili');
+            }
+
+            await PromotionUsageModel.create(
+                [
+                    {
+                        promotionId: appliedPromotion._id,
+                        code: appliedPromotion.code,
+                        eventId,
+                        orderId: order._id,
+                        eventUserId: usageEventUser?._id ?? null,
+                        type: appliedPromotion.type,
+                        discountAmount: appliedPromotion.discountAmount,
+                        freeUnits: appliedPromotion.freeUnits,
+                        appliedBy: req.user.id
+                    }
+                ],
+                { session }
+            );
         }
 
         await session.commitTransaction();
@@ -766,6 +877,16 @@ export async function payOrder(req: Request, res: Response) {
         req.body.creditAmount !== undefined ? Number(req.body.creditAmount) : order.total,
         order.total
     ));
+
+    if (
+        order.promotionType === 'discount' &&
+        order.promotionDiscountType === 'percent' &&
+        creditAmount > 0
+    ) {
+        return res.status(400).json({
+            message: 'Impossibile applicare uno sconto percentuale a un pagamento in crediti'
+        });
+    }
 
     const useEventCredits = req.body.useEventCredits === true;
 
@@ -1143,6 +1264,11 @@ export async function resetEventOrders(req: Request, res: Response) {
         const ordersRes = await OrderModel.deleteMany({ eventId: eventObjectId }).session(session);
         const txnRes = await EventUserTransactionModel.deleteMany({ eventId: eventObjectId }).session(session);
         const settlementRes = await StandSettlementModel.deleteMany({ eventId: eventObjectId }).session(session);
+        const promoUsageRes = await PromotionUsageModel.deleteMany({ eventId: eventObjectId }).session(session);
+        await PromotionModel.updateMany(
+            { eventId: eventObjectId },
+            { $set: { usedCount: 0 } }
+        ).session(session);
         const walletRes = await EventUserModel.updateMany(
             { eventId: eventObjectId },
             { $set: { balance: 0 } }
@@ -1158,7 +1284,7 @@ export async function resetEventOrders(req: Request, res: Response) {
         await session.commitTransaction();
 
         return res.status(200).json({
-            message: `Reset completo: ${ordersRes.deletedCount} ordini, ${txnRes.deletedCount} transazioni, ${settlementRes.deletedCount} liquidazioni eliminati, ${walletRes.modifiedCount} portafogli azzerati, contatori resettati per ${standIds.length} stand`
+            message: `Reset completo: ${ordersRes.deletedCount} ordini, ${txnRes.deletedCount} transazioni, ${settlementRes.deletedCount} liquidazioni eliminati, ${promoUsageRes.deletedCount} utilizzi coupon e contatori coupon azzerati, ${walletRes.modifiedCount} portafogli azzerati, contatori resettati per ${standIds.length} stand`
         });
     } catch (error) {
         await session.abortTransaction();
@@ -1334,6 +1460,15 @@ export async function getEventReport(req: Request, res: Response) {
                         $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$creditAmountUsed', 0]
                     }
                 },
+                discountAmount: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $ne: ['$isGift', true] }] },
+                            { $ifNull: ['$discountAmount', 0] },
+                            0
+                        ]
+                    }
+                },
                 pendingOrders: {
                     $sum: {
                         $cond: [
@@ -1397,6 +1532,7 @@ export async function getEventReport(req: Request, res: Response) {
         totalRevenue: row.totalRevenue,
         cashRevenue: row.totalRevenue - row.creditRevenue,
         creditRevenue: row.creditRevenue,
+        discountAmount: row.discountAmount,
         pendingOrders: row.pendingOrders,
         pendingAmount: row.pendingAmount,
         refundedAmount: row.refundedAmount,
@@ -1414,6 +1550,7 @@ export async function getEventReport(req: Request, res: Response) {
         totalRevenue: acc.totalRevenue + s.totalRevenue,
         cashRevenue: acc.cashRevenue + s.cashRevenue,
         creditRevenue: acc.creditRevenue + s.creditRevenue,
+        discountAmount: acc.discountAmount + s.discountAmount,
         pendingOrders: acc.pendingOrders + s.pendingOrders,
         pendingAmount: acc.pendingAmount + s.pendingAmount,
         refundedAmount: acc.refundedAmount + s.refundedAmount
@@ -1424,10 +1561,78 @@ export async function getEventReport(req: Request, res: Response) {
         totalRevenue: 0,
         cashRevenue: 0,
         creditRevenue: 0,
+        discountAmount: 0,
         pendingOrders: 0,
         pendingAmount: 0,
         refundedAmount: 0
     });
+
+    const couponOrderAgg = await OrderModel.aggregate([
+        { $match: { ...matchFilter, status: { $ne: 'cancelled' }, promotionId: { $ne: null } } },
+        {
+            $group: {
+                _id: '$promotionId',
+                presentations: { $sum: 1 },
+                discountAmount: { $sum: { $ifNull: ['$discountAmount', 0] } },
+                freeUnits: { $sum: { $ifNull: ['$freeUnits', 0] } }
+            }
+        }
+    ]);
+
+    const couponValueAgg = await PromotionUsageModel.aggregate([
+        { $match: { eventId: new Types.ObjectId(eventId), type: 'value' } },
+        {
+            $group: {
+                _id: '$promotionId',
+                presentations: { $sum: 1 },
+                valueAmount: { $sum: { $ifNull: ['$valueAmount', 0] } }
+            }
+        }
+    ]);
+
+    const couponIds = [
+        ...couponOrderAgg.map((row) => row._id.toString()),
+        ...couponValueAgg.map((row) => row._id.toString())
+    ].filter((id, index, arr) => id !== 'null' && arr.indexOf(id) === index);
+
+    const promotions = couponIds.length > 0
+        ? await PromotionModel.find({ _id: { $in: couponIds.map((id) => new Types.ObjectId(id)) } })
+            .select('code title type')
+            .lean()
+        : [];
+    const promotionMap = new Map(promotions.map((p) => [p._id.toString(), p]));
+
+    const orderByPromotion = new Map(couponOrderAgg.map((row) => [
+        row._id.toString(),
+        { promotionId: row._id.toString(), presentations: row.presentations, discountAmount: row.discountAmount, freeUnits: row.freeUnits }
+    ]));
+    const valueByPromotion = new Map(couponValueAgg.map((row) => [
+        row._id.toString(),
+        { promotionId: row._id.toString(), presentations: row.presentations, valueAmount: row.valueAmount }
+    ]));
+
+    const byPromotion = [...new Set([...orderByPromotion.keys(), ...valueByPromotion.keys()])].map((id) => {
+        const promo = promotionMap.get(id);
+        const orderAgg = orderByPromotion.get(id);
+        const valueAgg = valueByPromotion.get(id);
+
+        return {
+            promotionId: id,
+            code: promo?.code ?? 'sconosciuto',
+            title: promo?.title ?? null,
+            type: promo?.type ?? (valueAgg ? 'value' : 'discount'),
+            presentations: (orderAgg?.presentations ?? 0) + (valueAgg?.presentations ?? 0),
+            discountAmount: orderAgg?.discountAmount ?? 0,
+            freeUnits: orderAgg?.freeUnits ?? 0,
+            valueAmount: valueAgg?.valueAmount ?? 0
+        };
+    });
+
+    const coupons = {
+        totalAppliedOrders: couponOrderAgg.reduce((sum, row) => sum + row.presentations, 0),
+        totalDiscountAmount: couponOrderAgg.reduce((sum, row) => sum + row.discountAmount, 0),
+        byPromotion
+    };
 
     return res.status(200).json({
         eventId,
@@ -1439,6 +1644,7 @@ export async function getEventReport(req: Request, res: Response) {
         exchangeRate: event.exchangeRate ?? 1,
         stands,
         totals,
+        coupons,
         productQuantities: productQuantities.map((row) => ({
             standId: row._id.standId.toString(),
             standName: standMap.get(row._id.standId.toString()) ?? 'Stand sconosciuto',
@@ -1518,6 +1724,15 @@ export async function getStandReport(req: Request, res: Response) {
                         ]
                     }
                 },
+                discountAmount: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $ne: ['$isGift', true] }] },
+                            { $ifNull: ['$discountAmount', 0] },
+                            0
+                        ]
+                    }
+                },
                 totalRefunded: {
                     $sum: {
                         $cond: [
@@ -1573,6 +1788,44 @@ export async function getStandReport(req: Request, res: Response) {
         .sort({ createdAt: -1 })
         .limit(50);
 
+    const couponStandAgg = await OrderModel.aggregate([
+        { $match: { ...matchFilter, status: { $ne: 'cancelled' }, promotionId: { $ne: null } } },
+        {
+            $group: {
+                _id: '$promotionId',
+                presentations: { $sum: 1 },
+                discountAmount: { $sum: { $ifNull: ['$discountAmount', 0] } },
+                freeUnits: { $sum: { $ifNull: ['$freeUnits', 0] } }
+            }
+        }
+    ]);
+
+    const standPromotionIds = couponStandAgg.map((row) => row._id.toString()).filter((id, index, arr) => arr.indexOf(id) === index);
+    const standPromotions = standPromotionIds.length > 0
+        ? await PromotionModel.find({ _id: { $in: standPromotionIds.map((id) => new Types.ObjectId(id)) } })
+            .select('code title type')
+            .lean()
+        : [];
+    const standPromotionMap = new Map(standPromotions.map((p) => [p._id.toString(), p]));
+
+    const coupons = {
+        totalAppliedOrders: couponStandAgg.reduce((sum, row) => sum + row.presentations, 0),
+        totalDiscountAmount: couponStandAgg.reduce((sum, row) => sum + row.discountAmount, 0),
+        byPromotion: couponStandAgg.map((row) => {
+            const promo = standPromotionMap.get(row._id.toString());
+            return {
+                promotionId: row._id.toString(),
+                code: promo?.code ?? 'sconosciuto',
+                title: promo?.title ?? null,
+                type: promo?.type ?? 'discount',
+                presentations: row.presentations,
+                discountAmount: row.discountAmount,
+                freeUnits: row.freeUnits,
+                valueAmount: 0
+            };
+        })
+    };
+
     return res.status(200).json({
         standId,
         eventId: eventId ?? null,
@@ -1587,8 +1840,10 @@ export async function getStandReport(req: Request, res: Response) {
             totalCreditRevenue: summary?.totalCreditRevenue ?? 0,
             cashRevenue: (summary?.totalRevenue ?? 0) - (summary?.totalCreditRevenue ?? 0),
             totalExternalRevenue: (summary?.totalRevenue ?? 0) - (summary?.totalCreditRevenue ?? 0),
-            totalRefunded: summary?.totalRefunded ?? 0
+            totalRefunded: summary?.totalRefunded ?? 0,
+            discountAmount: summary?.discountAmount ?? 0
         },
+        coupons,
         statusBreakdown: statusBreakdown.map((s) => ({
             status: s._id,
             count: s.count

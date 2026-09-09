@@ -6,7 +6,8 @@ export const transactionTypeValues = [
     'refund',
     'adjustment',
     'transfer-in',
-    'transfer-out'
+    'transfer-out',
+    'promotion'
 ] as const;
 
 export const transactionDirectionValues = ['credit', 'debit'] as const;

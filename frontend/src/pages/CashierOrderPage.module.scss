@@ -777,6 +777,22 @@
   color: #4caf50;
 }
 
+.confirmDiscount {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4caf50;
+  gap: 0.15em;
+}
+
+.confirmDiscount strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
+}
+
 .confirmPayment {
   font-size: 0.85rem;
   font-weight: 600;

@@ -22,7 +22,7 @@ function saveCashBasis(eventId: string, basis: number) {
   localStorage.setItem(CASH_BASIS_KEY + eventId, JSON.stringify({ basis, updatedAt: new Date().toISOString() }))
 }
 
-function StandRow({ stand, isTotal, showCash, showCredits, rate }: { stand: EventReportStand; isTotal?: boolean; showCash: boolean; showCredits: boolean; rate: number }) {
+function StandRow({ stand, isTotal, showCash, showCredits, showDiscount, rate }: { stand: EventReportStand; isTotal?: boolean; showCash: boolean; showCredits: boolean; showDiscount: boolean; rate: number }) {
   return (
     <tr className={isTotal ? styles.tableTotals : undefined}>
       <td className={styles.standName}>{stand.standName}</td>
@@ -30,6 +30,7 @@ function StandRow({ stand, isTotal, showCash, showCredits, rate }: { stand: Even
       <td className={styles.num}>{fmt(stand.totalRevenue, rate)}</td>
       {showCash && <td className={`${styles.num} ${styles.totalCash}`}>{fmt(stand.cashRevenue, rate)}</td>}
       {showCredits && <td className={`${styles.num} ${styles.totalCredits}`}>{fmt(stand.creditRevenue, rate)}</td>}
+      {showDiscount && <td className={`${styles.num} ${styles.totalDiscount}`}>{fmt(stand.discountAmount, rate)}</td>}
       <td className={styles.num}>{stand.pendingOrders}</td>
       <td className={styles.num}>{fmt(stand.pendingAmount, rate)}</td>
       <td className={styles.num}>{fmt(stand.refundedAmount, rate)}</td>
@@ -93,6 +94,7 @@ export function EventReportPage() {
   if (!eventId || !report) return null
 
   const hasCredits = report.stands.some((s) => s.creditRevenue > 0)
+  const hasDiscount = report.stands.some((s) => s.discountAmount > 0)
   const hasCash = report.cashPaymentsEnabled
   const rate = report.exchangeRate ?? 1
   const stands = selectedStandId
@@ -217,6 +219,18 @@ export function EventReportPage() {
                   <span className={styles.totalValue}>{fmt(report.totals.refundedAmount, rate)}</span>
                 </div>
               )}
+              {report.totals.discountAmount > 0 && (
+                <div className={styles.totalItem}>
+                  <span className={styles.totalLabel}>Sconti</span>
+                  <span className={`${styles.totalValue} ${styles.totalDiscount}`}>{fmt(report.totals.discountAmount, rate)}</span>
+                </div>
+              )}
+              {report.coupons.totalAppliedOrders > 0 && (
+                <div className={styles.totalItem}>
+                  <span className={styles.totalLabel}>Coupon</span>
+                  <span className={styles.totalValue}>{report.coupons.totalAppliedOrders}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -234,6 +248,7 @@ export function EventReportPage() {
                       <th className={styles.num}>Totale</th>
                       {hasCash && <th className={styles.num}>Contanti</th>}
                       {hasCredits && <th className={styles.num}>Crediti</th>}
+                      {hasDiscount && <th className={styles.num}>Sconti</th>}
                       <th className={styles.num}>Pendenti</th>
                       <th className={styles.num}>Da incassare</th>
                       <th className={styles.num}>Rimborsato</th>
@@ -242,7 +257,7 @@ export function EventReportPage() {
                   </thead>
                   <tbody>
                     {stands.map((stand) => (
-                      <StandRow key={stand.standId} stand={stand} showCash={hasCash} showCredits={hasCredits} rate={rate} />
+                      <StandRow key={stand.standId} stand={stand} showCash={hasCash} showCredits={hasCredits} showDiscount={hasDiscount} rate={rate} />
                     ))}
                     <StandRow
                       stand={{
@@ -256,12 +271,13 @@ export function EventReportPage() {
                               totalRevenue: acc.totalRevenue + s.totalRevenue,
                               cashRevenue: acc.cashRevenue + s.cashRevenue,
                               creditRevenue: acc.creditRevenue + s.creditRevenue,
+                              discountAmount: acc.discountAmount + s.discountAmount,
                               pendingOrders: acc.pendingOrders + s.pendingOrders,
                               pendingAmount: acc.pendingAmount + s.pendingAmount,
                               refundedAmount: acc.refundedAmount + s.refundedAmount,
                             }), {
                               totalOrders: 0, paidOrders: 0, giftOrders: 0, totalRevenue: 0,
-                              cashRevenue: 0, creditRevenue: 0, pendingOrders: 0,
+                              cashRevenue: 0, creditRevenue: 0, discountAmount: 0, pendingOrders: 0,
                               pendingAmount: 0, refundedAmount: 0,
                             })
                           : report.totals),
@@ -270,6 +286,7 @@ export function EventReportPage() {
                       isTotal
                       showCash={hasCash}
                       showCredits={hasCredits}
+                      showDiscount={hasDiscount}
                       rate={rate}
                     />
                   </tbody>
@@ -315,6 +332,39 @@ export function EventReportPage() {
               </div>
             )}
           </div>
+          {report.coupons.byPromotion.length > 0 && (
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>Coupon applicati</div>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Codice</th>
+                      <th>Tipo</th>
+                      <th className={styles.num}>Presentazioni</th>
+                      <th className={styles.num}>Sconto</th>
+                      <th className={styles.num}>Gratis</th>
+                      <th className={styles.num}>Buoni valore</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.coupons.byPromotion.map((c) => (
+                      <tr key={c.promotionId}>
+                        <td className={styles.standName}>
+                          {c.title ? `${c.title} (${c.code})` : c.code}
+                        </td>
+                        <td>{c.type === 'value' ? 'Buono valore' : c.type === 'product' ? 'Prodotto' : 'Sconto'}</td>
+                        <td className={styles.num}>{c.presentations}</td>
+                        <td className={`${styles.num} ${styles.totalDiscount}`}>{fmt(c.discountAmount, rate)}</td>
+                        <td className={styles.num}>{c.freeUnits}</td>
+                        <td className={styles.num}>{fmt(c.valueAmount, rate)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

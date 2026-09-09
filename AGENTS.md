@@ -206,6 +206,20 @@ Pubblicazione Meta: account UNICO della piattaforma via env opzionali `META_PAGE
 | GET | `/api/email-subscriptions` | platform-admin | Lista iscrizioni (paginata, filtrabile per eventId/isActive/search) |
 | DELETE | `/api/email-subscriptions/:id` | platform-admin | Cancella iscrizione |
 
+### API routes — Promozioni e Coupon
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/events/:eventId/promotions` | event-admin / platform-admin | Lista coupon dell'evento (QR inline incluso) |
+| POST | `/api/events/:eventId/promotions` | event-admin / platform-admin | Crea coupon (code, type discount/product/value, formula, maxPresentations, perUserLimit, expiresAt, standId) |
+| PATCH | `/api/events/:eventId/promotions/:promotionId` | event-admin / platform-admin | Modifica coupon (o `isActive` per attiva/disattiva) |
+| DELETE | `/api/events/:eventId/promotions/:promotionId` | event-admin / platform-admin | Elimina coupon (400 se già usato: disattivare per conservare lo storico) |
+| GET | `/api/events/:eventId/promotions/:promotionId/qrcode` | event-admin / platform-admin | QR del codice coupon (data URL) |
+| GET | `/api/events/:eventId/promotions/:promotionId/usage` | event-admin / platform-admin | Storico utilizzi (max 200) |
+| POST | `/api/events/:eventId/promotions/validate` | auth | Valida un codice: `{ valid, item }` o `{ valid:false, message }` |
+| POST | `/api/events/:eventId/promotions/redeem-value` | auth (cassa) | Riscatta buono valore accreditando crediti al cliente (body `{ code, eventUserId }`) |
+
+Tipi coupon: `discount` (sconto `%` o `fixed` in crediti), `product` (prodotto in omaggio / formula `formula {paid,total}` con `formulaMaxFree`), `value` (buono valore al riscatto). **Gli sconti percentuali NON si applicano ai pagamenti in crediti** (blocco server+client). Nella cassa: componente `CouponPanel` (input + scan QR) su `CashierOrderPage`/`EventCashierPage`; gestione in `/admin/events/:eventId/promotions`. Report: `coupons` per promozione + `discountAmount` nei totali. Gotcha: router nidificato usa `Router({ mergeParams: true })`; filtri campo-vs-campo numerici con `$expr`.
+
 ## Frontend (`frontend/`)
 
 React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
@@ -235,6 +249,12 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Set 2026 — promozioni e coupon)
+### Completed
+- Sistema **Promozioni e Coupon** completo (backend + frontend): tre tipi di coupon applicabili in cassa via input manuale o **QR scan** — `discount` (sconto `%` o `fixed` in crediti, mai su pagamenti in crediti per la versione percentuale, blocco server+client), `product` (prodotto del menu omaggio — semplici o con **formula** 2x1/3x2 via `formula { paid, total }` e cap `formulaMaxFree`; ogni ordine = 1 presentazione `maxPresentations`, non restituita se l'ordine viene annullato) e `value` (buono valore riscattato accreditando crediti al cliente). Modelli `Promotion` + `PromotionUsage`. API `/api/events/:eventId/promotions` (`Router({ mergeParams: true })`). Integrazione in `createOrder`/`payOrder` con campi `promotionId/promotionCode/discountAmount/freeUnits` sull'ordine, report con sezione `coupons` + `discountAmount`. Frontend: `CouponPanel` nelle due cacce, pagina `/admin/events/:eventId/promotions`, sezione coupon nei report e righe Sconto/Omaggi su ricevuta e modale conferma.
+- **GOTCHAS applicati**: Express 5 sub-router su `/api/events/:eventId/...` con `mergeParams: true`; filtri campo-vs-campo numerici con `$expr` (mai `{ field: { $gt: '$other' } }`); per-user limit richiede `eventUserId` sui `PromotionUsage` (risolto in `createOrder`).
+- Verifica: backend typecheck ✓, **341 test ✓** (incl. `integration-promotions.test.ts`, 27 test), frontend build (tsc+vite) ✓, 41 test vitest ✓, lint senza errori NUOVI (backend da 36 a 33 errori solo per rimozione degli unused-import miei; i restanti 33 sono pre-esistenti). COMMIT precedente "Revert feat(slideshow)" esiste. Solo cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria** (`.local/` non toccato).
 
 ## Session state (Set 2026 — esportazione social moneta + regolamento PDF su evento)
 ### Completed

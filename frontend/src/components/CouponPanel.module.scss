@@ -1,0 +1,139 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px dashed rgba(38, 65, 55, 0.5);
+  border-radius: 10px;
+  background: rgba(38, 65, 55, 0.06);
+}
+
+.title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #264137;
+}
+
+.form {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.input {
+  flex: 1;
+  min-width: 140px;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #c9d4ce;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: #fff;
+}
+
+.checkBtn,
+.scanBtn {
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.7rem;
+}
+
+.checkBtn {
+  background: #264137;
+  color: #fff;
+}
+
+.checkBtn:disabled {
+  opacity: 0.6;
+}
+
+.scanBtn {
+  background: #e8efe9;
+  color: #264137;
+}
+
+.notice {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.8rem;
+  color: #b23b3b;
+}
+
+.applied {
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  background: rgba(76, 175, 80, 0.12);
+  border: 1px solid rgba(76, 175, 80, 0.45);
+}
+
+.appliedConflict {
+  background: rgba(211, 47, 47, 0.1);
+  border-color: rgba(211, 47, 47, 0.5);
+}
+
+.appliedRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.appliedLabel {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e3a2b;
+}
+
+.appliedValue {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2e7d32;
+  white-space: nowrap;
+}
+
+.removeBtn {
+  border: none;
+  background: transparent;
+  color: #b23b3b;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0.2rem;
+}
+
+.conflict {
+  margin: 0.35rem 0 0;
+  font-size: 0.76rem;
+  color: #b23b3b;
+}
+
+.valueBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(21, 101, 192, 0.08);
+  border: 1px solid rgba(21, 101, 192, 0.35);
+}
+
+.valueLabel {
+  font-size: 0.83rem;
+  color: #0d3a63;
+}
+
+.exchangeLink {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1565c0;
+  text-decoration: none;
+}
+
+.exchangeLink:hover {
+  text-decoration: underline;
+}

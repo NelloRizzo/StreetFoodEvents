@@ -75,13 +75,6 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Frontend**: stelle valutazione, form commento, top-rated stand
 - **Motivazione**: quality control, gamification
 
-### 5. Promozioni e Coupon
-- **Descrizione**: sistema sconti e promozioni per eventi/stand
-- **Modello**: `Promotion { code, discountType, discountValue, eventId, standId, expiresAt, usageLimit }`
-- **API**: validazione coupon, applicazione sconto, storico utilizzi
-- **Frontend**: input coupon in cassa, gestione promozioni admin
-- **Motivazione**: marketing, fidelizzazione
-
 ### 6. Multi-lingua (i18n) — Piano dettagliato (Ago 2026)
 - **Scope**: solo pagine pubbliche; admin resta in italiano
 - **Lingue**: configurabili dall'admin (qualsiasi lingua)
