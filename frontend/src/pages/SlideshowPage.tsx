@@ -23,6 +23,15 @@ const POLL_MS = 2 * 60_000
 const PHOTOS_PER_PAGE = 8
 const ROTATE_OPTIONS = [5, 10, 15, 20, 30] as const
 
+function luminance(hex: string): number {
+  const c = hex.replace('#', '')
+  if (c.length < 6) return 0
+  const r = parseInt(c.slice(0, 2), 16)
+  const g = parseInt(c.slice(2, 4), 16)
+  const b = parseInt(c.slice(4, 6), 16)
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+}
+
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr]
   for (let i = copy.length - 1; i > 0; i--) {
@@ -45,7 +54,6 @@ export function SlideshowPage() {
   const [announceText, setAnnounceText] = useState('')
   const [announceVisible, setAnnounceVisible] = useState(true)
   const [announceColor, setAnnounceColor] = useState('#000000')
-  const [announceTextColor, setAnnounceTextColor] = useState('#ffffff')
   const titleRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const announceUrlRef = useRef<string | null>(null)
@@ -251,7 +259,7 @@ export function SlideshowPage() {
           className={styles.announceCard}
           style={{
             background: announceColor,
-            color: announceTextColor,
+            color: luminance(announceColor) > 0.6 ? '#111' : '#fff',
           }}
         >
           {announceImageUrl && (
@@ -341,18 +349,6 @@ export function SlideshowPage() {
                 className={styles.panelColorInput}
                 value={announceColor}
                 onChange={(e) => setAnnounceColor(e.target.value)}
-              />
-            </div>
-            <div className={styles.panelColorRow}>
-              <label className={styles.panelLabel} htmlFor="announceTextColor" style={{ marginTop: 0 }}>
-                Colore testo
-              </label>
-              <input
-                id="announceTextColor"
-                type="color"
-                className={styles.panelColorInput}
-                value={announceTextColor}
-                onChange={(e) => setAnnounceTextColor(e.target.value)}
               />
             </div>
 
