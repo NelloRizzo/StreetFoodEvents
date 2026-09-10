@@ -123,6 +123,8 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
                   { label: 'Cornici Evento', to: `${basePath}/frames`, icon: '\u{1F5BC}' } as SidebarItem,
                   { label: 'Contest evento', to: `${basePath}/contest-manage`, icon: '\u{1F3C6}' } as SidebarItem,
                   { label: 'Promozioni e Coupon', to: `${basePath}/promotions`, icon: '\u{1F3AB}' } as SidebarItem,
+                  { label: 'Adesione stand', to: `${basePath}/stand-adhesion`, icon: '\u{1F4DD}' } as SidebarItem,
+                  { label: 'Adesioni da approvare', to: `${basePath}/adhesions`, icon: '\u{1F4CB}' } as SidebarItem,
                   { label: 'Stampa Menu', to: '/admin/menu-print', icon: '\u{1F5A8}' } as SidebarItem,
                 ]
               : []),

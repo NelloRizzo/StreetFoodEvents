@@ -111,6 +111,16 @@ const eventSchema = new Schema(
             default: 1,
             min: 0.01
         },
+        participationFee: {
+            type: Number,
+            min: 0,
+            default: null
+        },
+        deposit: {
+            type: Number,
+            min: 0,
+            default: null
+        },
         themeBrand: {
             type: String,
             trim: true,

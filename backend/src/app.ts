@@ -38,6 +38,7 @@ import { usageContractsRouter } from './routes/usage-contracts.routes';
 import { categoriesRouter } from './routes/categories.routes';
 import { syncRouter } from './routes/sync.routes';
 import { promotionsRouter } from './routes/promotions.routes';
+import { standAdhesionsRouter } from './routes/stand-adhesions.routes';
 
 export const app = express();
 
@@ -110,6 +111,7 @@ app.use('/api/events/:eventId/frames', eventFramesRouter);
 app.use('/api/events/:eventId/adhesion-form', adhesionFormRouter);
 app.use('/api/sync', syncRouter);
 app.use('/api/events/:eventId/promotions', promotionsRouter);
+app.use('/api/events/:eventId/adhesions', standAdhesionsRouter);
 
 app.use((req, res) => {
     return res.status(404).json({

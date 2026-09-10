@@ -33,6 +33,8 @@ type EventItem = {
   endDate: string
   currencyName: string
   exchangeRate: number
+  participationFee: number | null
+  deposit: number | null
   url: string | null
   shortDescription: string | null
   longDescription: string | null
@@ -72,6 +74,8 @@ type EventFormData = {
   endDate: string
   currencyName: string
   exchangeRate: string
+  participationFee: string
+  deposit: string
   url: string
   shortDescription: string
   longDescription: string
@@ -108,6 +112,8 @@ const emptyForm: EventFormData = {
   endDate: '',
   currencyName: '',
   exchangeRate: '1',
+  participationFee: '',
+  deposit: '',
   url: '',
   shortDescription: '',
   longDescription: '',
@@ -404,6 +410,8 @@ export function EventsPage() {
       endDate: ev.endDate.slice(0, 10),
       currencyName: ev.currencyName,
       exchangeRate: String(ev.exchangeRate ?? 1),
+      participationFee: ev.participationFee != null ? String(ev.participationFee) : '',
+      deposit: ev.deposit != null ? String(ev.deposit) : '',
       url: ev.url ?? '',
       shortDescription: ev.shortDescription ?? '',
       longDescription: ev.longDescription ?? '',
@@ -469,6 +477,8 @@ export function EventsPage() {
       endDate: form.endDate,
       currencyName: form.currencyName,
       exchangeRate: form.exchangeRate ? Number(form.exchangeRate) : 1,
+      participationFee: form.participationFee ? Number(form.participationFee) : null,
+      deposit: form.deposit ? Number(form.deposit) : null,
       url: form.url || null,
       shortDescription: form.shortDescription || null,
       longDescription: form.longDescription || null,
@@ -1075,6 +1085,39 @@ export function EventsPage() {
               >
                 + Aggiungi taglio
               </button>
+            </fieldset>
+
+            <fieldset className={styles.fieldset}>
+              <legend className={styles.legend}>Partecipazione stand</legend>
+              <p className={styles.fieldHint}>
+                Importi informativi per il wizard di adesione stand (in euro). Il pagamento non avviene sulla piattaforma.
+              </p>
+              <div className={styles.fieldRow}>
+                <div className={styles.field}>
+                  <label htmlFor="ev-fee">Quota di partecipazione (EUR)</label>
+                  <input
+                    id="ev-fee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.participationFee}
+                    onChange={(e) => setForm({ ...form, participationFee: e.target.value })}
+                    placeholder="es. 150"
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="ev-deposit">Caparra (EUR)</label>
+                  <input
+                    id="ev-deposit"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.deposit}
+                    onChange={(e) => setForm({ ...form, deposit: e.target.value })}
+                    placeholder="es. 300"
+                  />
+                </div>
+              </div>
             </fieldset>
 
             <div className={styles.formActions}>

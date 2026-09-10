@@ -303,14 +303,14 @@ export function EventDetailPage() {
                     >
                       Scarica modulo di adesione
                     </Link>
-                    <button
-                      type="button"
+                    <Link
                       role="menuitem"
                       className={styles.actionDropdownItem}
+                      to={`/admin/events/${eventId}/stand-adhesion`}
                       onClick={() => setAdesioneMenuOpen(false)}
                     >
                       Compila modulo di adesione
-                    </button>
+                    </Link>
                   </div>
                 )}
               </div>

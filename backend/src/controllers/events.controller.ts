@@ -74,6 +74,8 @@ function toEventResponse(event: {
     currencyName: string;
     currencySymbol?: unknown | null;
     exchangeRate?: number | null;
+    participationFee?: number | null;
+    deposit?: number | null;
     themeBrand?: string | null;
     themeText?: string | null;
     themeSurface?: string | null;
@@ -105,6 +107,8 @@ function toEventResponse(event: {
         currencyName: event.currencyName,
         currencySymbol: event.currencySymbol ?? null,
         exchangeRate: event.exchangeRate ?? 1,
+        participationFee: event.participationFee ?? null,
+        deposit: event.deposit ?? null,
         themeBrand: event.themeBrand ?? null,
         themeText: event.themeText ?? null,
         themeSurface: event.themeSurface ?? null,
@@ -226,6 +230,8 @@ export async function createEvent(req: Request, res: Response) {
         currencyName,
         currencySymbol,
         exchangeRate,
+        participationFee,
+        deposit,
         themeBrand,
         themeText,
         themeSurface,
@@ -258,6 +264,8 @@ export async function createEvent(req: Request, res: Response) {
         currencyName: currencyName?.trim() || '€',
         currencySymbol: currencySymbol ?? null,
         exchangeRate: exchangeRate ?? 1,
+        participationFee: participationFee ?? null,
+        deposit: deposit ?? null,
         themeBrand: themeBrand ?? null,
         themeText: themeText ?? null,
         themeSurface: themeSurface ?? null,
@@ -308,6 +316,8 @@ export async function updateEvent(req: Request, res: Response) {
         currencyName,
         currencySymbol,
         exchangeRate,
+        participationFee,
+        deposit,
         themeBrand,
         themeText,
         themeSurface,
@@ -358,6 +368,14 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (exchangeRate !== undefined) {
         event.exchangeRate = exchangeRate;
+    }
+
+    if (participationFee !== undefined) {
+        event.participationFee = participationFee;
+    }
+
+    if (deposit !== undefined) {
+        event.deposit = deposit;
     }
 
     if (themeBrand !== undefined) {
@@ -618,6 +636,8 @@ export async function duplicateEvent(req: Request, res: Response) {
         currencyName: source.currencyName,
         currencySymbol: source.currencySymbol ?? null,
         exchangeRate: source.exchangeRate ?? 1,
+        participationFee: source.participationFee ?? null,
+        deposit: source.deposit ?? null,
         themeBrand: source.themeBrand ?? null,
         themeText: source.themeText ?? null,
         themeSurface: source.themeSurface ?? null,

@@ -1,0 +1,263 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  margin: 0.1rem 0 0.2rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: 0.95rem;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.statusBadge {
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid var(--color-line);
+}
+
+.status_draft {
+  background: rgba(127, 140, 141, 0.12);
+  color: #2c3e50;
+}
+
+.status_submitted {
+  background: rgba(243, 156, 18, 0.15);
+  color: #a2690b;
+}
+
+.status_approved {
+  background: rgba(39, 174, 96, 0.15);
+  color: #1e8449;
+}
+
+.status_rejected {
+  background: rgba(192, 57, 43, 0.12);
+  color: #b03a2e;
+}
+
+.reviewNote {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(52, 152, 219, 0.4);
+  background: rgba(52, 152, 219, 0.08);
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.hint {
+  max-width: 68ch;
+  color: var(--color-ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(39, 174, 96, 0.5);
+  background: rgba(39, 174, 96, 0.1);
+  color: #1e8449;
+  margin-bottom: 1rem;
+  cursor: pointer;
+}
+
+.errorMsg {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(192, 57, 43, 0.5);
+  background: rgba(192, 57, 43, 0.08);
+  color: #b03a2e;
+  margin-bottom: 1rem;
+}
+
+.form {
+  margin-top: 1rem;
+}
+
+.fieldset {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 1rem 1.25rem 1.25rem;
+  margin: 0 0 1.25rem;
+}
+
+.fieldset[disabled] {
+  opacity: 0.72;
+}
+
+.legend {
+  font-weight: 800;
+  color: var(--color-brand-deep);
+  padding: 0 0.35rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.85rem;
+}
+
+.fieldRow {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  & > .field {
+    flex: 1;
+    min-width: 12rem;
+  }
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+}
+
+.field em {
+  font-weight: 400;
+  color: var(--color-ink-soft);
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.checkLabel {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+}
+
+.checkLabel input {
+  margin-top: 0.25rem;
+  accent-color: var(--color-brand-deep);
+}
+
+.checkChip {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: var(--color-surface);
+}
+
+.checkChip input {
+  accent-color: var(--color-brand-deep);
+}
+
+.allergenRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.productBox {
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.feeBox {
+  background: var(--color-brand-soft);
+  border-radius: var(--radius-card);
+  padding: 1rem;
+}
+
+.feeLine {
+  margin-bottom: 0.5rem;
+  font-size: 0.98rem;
+}
+
+.primaryBtn {
+  padding: 0.55rem 1.25rem;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--color-brand-deep);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.secondaryBtn {
+  padding: 0.55rem 1.25rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-brand-deep);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.removeBtn {
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(192, 57, 43, 0.4);
+  background: none;
+  color: #b03a2e;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}

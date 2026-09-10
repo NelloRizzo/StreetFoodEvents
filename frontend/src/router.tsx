@@ -63,6 +63,8 @@ import { RicevutaLiquidazionePage } from './pages/RicevutaLiquidazionePage'
 import { InformativaPrivacyPage } from './pages/InformativaPrivacyPage'
 import { AdhesionFormPublicPage } from './pages/AdhesionFormPublicPage'
 import { AdhesionFormManagePage } from './pages/AdhesionFormManagePage'
+import { StandAdhesionWizardPage } from './pages/StandAdhesionWizardPage'
+import { AdhesionsManagePage } from './pages/AdhesionsManagePage'
 import { ParamRedirect } from './components/ParamRedirect'
 
 export const router = createBrowserRouter([
@@ -132,6 +134,8 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/stands-manage', element: <StandNumberingPage /> },
       { path: 'events/:eventId/frames', element: <EventFramesPage /> },
       { path: 'events/:eventId/promotions', element: <EventPromotionsPage /> },
+      { path: 'events/:eventId/stand-adhesion', element: <StandAdhesionWizardPage /> },
+      { path: 'events/:eventId/adhesions', element: <AdhesionsManagePage /> },
       { path: 'events/:eventId/stands/:standId/orders', element: <StandOrdersPage /> },
       { path: 'events/:eventId/stands/:standId/order', element: <CashierOrderPage /> },
 
