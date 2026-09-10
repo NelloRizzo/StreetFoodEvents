@@ -307,3 +307,28 @@ Considerazioni progettuali e decisioni architetturali.
 - Componente riusabile `CouponPanel` (input codice + scan QR via `QRScanner` 7 `validatePromotionCode`; anteprima sconto speculare al server con `computeCouponDiscount`; buoni valore mostrano info + link a Cambio Valuta senza riscatto inline - manca una rotta "lista eventUsers per evento" accessibile senza permessi exchange). Le due cacce lo montano dentro il blocco carrello (nascosto quando `isGift`).
 - Pagina admin `/admin/events/:eventId/promotions`: lista con QR inline + download (`QRCodeDownload`-like via `<a download>` su object URL generato da fetch), form condizionale per tipo, storico utilizzi (`fetchPromotionUsage`), attiva/disattiva. Voce in `AdminSidebar` (Gestione).
 - Ricevute (stampa inclusa) e modale di conferma cassa mostrano le righe "Sconto (CODE) -X" e "Prodotti in omaggio: N" dai campi `discountAmount`/`freeUnits` dell'ordine.
+
+## Sync remoto — password per stand (Set 2026)
+
+### Autenticazione a due livelli
+- **Gate infrastrutturale**: `SYNC_API_TOKEN` globale (env) protege TUTTE le API `/api/sync` (`Authorization: Bearer`). È il "client autorizzato".
+- **Autorizzazione per entità**: la **password di sincronizzazione per-stand** (`Stand.syncPasswordHash`, hash argon2, min 8 max 128 char) autorizza il notebook a importare QUELLO stand e a pusherare LE SUE modifiche. Inviata nell'header **`X-Sync-Password`** su snapshot e push.
+- Root cause della scelta "per stand" (non per evento): ogni stand ha un operatore autonomo sul proprio notebook; una password di evento sarebbe condivisa tra stand concorrenti. Revoca semplice: il platform/event-admin cambia/rimuove la password → i notebook con la vecchia non si sincronizzano più.
+
+### Semantica errori della password
+- **403** = stand NON ha password configurata ("Password di sincronizzazione non configurata per questo stand"); **401** = password mancante o errata ("Password di sincronizzazione non valida"). Distinte per non confondere l'operatore (403 = problema di configurazione remota, 401 = password sbagliata).
+- `GET /api/stands` e la lista remota `/sync/events/:eventId/stands` espongono `syncEnabled: Boolean(syncPasswordHash)` (senza la password) così l'UI locale marca gli stand pronti e blocca l'import di stand con sync disabilitata.
+
+### Gestione password
+- `PATCH /api/stands/:standId/sync-password` (guard `hasRole(['platform-admin','event-admin'])` — gli stand-admin NON possono). Body `{ syncPassword }`: stringa >= 8 → argon2.hash e salva; stringa vuota/null/undefined → azzera (hash → null). Risposta `{ item: { id, syncPasswordSet } }` (bool), MAI l'hash.
+- **UI solo cloud** in `StandManagePage` (sezione "Sincronizzazione app locale (notebook)"), visibile a platform-admin o event-admin dell'evento selezionato. Il valore della password NON è mai esposto in chiaro — solo lo stato attiva/non attiva.
+
+### Lato app locale (`.local/`)
+- `LocalState.syncPassword` memorizza la password in **plaintext sul device dell'operatore** (necessaria per i push successivi; la UI non la mostra mai, solo `hasSyncPassword` dal meta). Salvata automaticamente al primo import riuscito; endpooint locale `POST /api/sync/password` per salvarla a priori (usata in push senza re-import).
+- Il push locale invia `body.standId` (l'`remoteStandId` dell'import) + header `X-Sync-Password`; senza stand importato o senza password il push locale non parte (`errors` con messaggio chiaro nel pannello Sync).
+- **GOTCHA**: cambiare password sul cloud NON invalida un notebook già importato (continuerebbe a pusherare con la vecchia? NO — il push fallisce con 401 e il messaggio d'errore appare nel pannello; il `SyncLedger` resta `pending` finché l'operatore non salva la nuova password dal `POST /api/sync/password`).
+- **GOTCHA**: `getSyncSnapshot` NON deve mai rispondere con `syncPasswordHash` (strip via clone+delete). Risolverlo col `delete (standSafe as any).syncPasswordHash` evita il lint `no-unused-vars` di un `_destructure`.
+
+### GOTCHAS visti nella pratica
+- **Mai** passare la password nella query string o nei log; solo header.
+- Validazione password SOLO al momento dell'impostazione (argon2 lato server); confronto in `verifyStandSyncPassword` con `argon2.verify` asincrono — dentro `pushSyncChanges` va fatto PRIMA di iniziare gli upsert (nessun dato scritto se la password è errata).

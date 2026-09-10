@@ -78,12 +78,16 @@ MongoDB gira nel container di `docker-compose.db.yml` (replica set `rs0`, porta 
 | `ASSETS_URL_PREFIX` | `/assets` | Prefisso URL dell'endpoint statico per le immagini locali |
 
 ## Sync remoto
-1. Nel pannello **Sync** selezionare l'evento remoto → lo stand remoto.
-2. Se esistono modifiche locali non sincronizzate, il pannello richiede di **pushearle** (`/api/sync/push`) prima dell'import.
-3. **Import**: scarica lo snapshot remoto, sostituisce TUTTI i dati locali e **scarica in locale** le immagini di evento/stand/prodotto (puntate a `/assets/*`, cartella `MEDIA_DIR`). Le immagini locali non vengono MAI rimandate al cloud.
+1. **Prerequisito**: nel sistema **remoto** (cloud), per ogni stand da importare, l'admin di piattaforma o di evento imposta la **password di sincronizzazione** (Gestione stand → "Sincronizzazione app locale (notebook)"). Gli sono mostrati con `🔒`/`sync non configurata` nel pannello Sync.
+2. Nel pannello **Sync** selezionare l'evento remoto → lo stand remoto (quelli senza sync configurata non sono importabili).
+3. Se lo stand è protetto, inserire la **password di sincronizzazione** (oppure salvarla con "Salva password" la prima volta; viene riusata per i push successivi e **non** mostrata in chiaro nel pannello).
+4. Se esistono modifiche locali non sincronizzate, il pannello richiede di **pushearle** (`/api/sync/push`) prima dell'import.
+5. **Import**: scarica lo snapshot remoto, sostituisce TUTTI i dati locali e **scarica in locale** le immagini di evento/stand/prodotto (puntate a `/assets/*`, cartella `MEDIA_DIR`). Le immagini locali non vengono MAI rimandate al cloud.
 
 ### Configurazione cloud (sorgente di verità)
-Sul backend cloud va impostata la variabile `SYNC_API_TOKEN` (stessa value di `REMOTE_TOKEN` locale). Le API `/api/sync` sono accessibili solo con `Authorization: Bearer <token>`.
+Sul backend cloud vanno impostate:
+- `SYNC_API_TOKEN` (stessa value di `REMOTE_TOKEN` locale) — gate infrastrutturale per TUTTE le API `/api/sync` (`Authorization: Bearer <token>`);
+- la **password di sincronizzazione per-stand** (impostabile da web, non via env) — passata dall'app locale nell'header `X-Sync-Password` nello snapshot e nel push. Le API `/api/sync` sono accessibili solo con `Authorization: Bearer <token>`.
 
 ## Comandi (backend locale)
 | Comando | Cosa |
