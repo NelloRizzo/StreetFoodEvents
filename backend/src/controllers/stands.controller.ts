@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
+import * as argon2 from 'argon2';
 import * as qrcode from 'qrcode';
 
 import { StandModel } from '../models/stand.model';
@@ -35,6 +36,7 @@ function toStandResponse(stand: {
     coverImage?: unknown | null;
     logo?: unknown | null;
     gallery?: unknown[];
+    syncPasswordHash?: string | null;
     createdAt: Date;
     updatedAt: Date;
 }) {
@@ -59,6 +61,7 @@ function toStandResponse(stand: {
         coverImage: stand.coverImage ?? null,
         logo: stand.logo ?? null,
         gallery: stand.gallery ?? [],
+        syncPasswordSet: stand.syncPasswordHash != null,
         createdAt: stand.createdAt,
         updatedAt: stand.updatedAt
     };
@@ -316,6 +319,47 @@ export async function updateStand(req: Request, res: Response) {
 
     return res.status(200).json({
         item: toStandResponse(stand)
+    });
+}
+
+export async function setStandSyncPassword(req: Request, res: Response) {
+    const standId = req.params.standId;
+
+    if (!isValidObjectId(standId)) {
+        return res.status(400).json({
+            message: 'Invalid stand id'
+        });
+    }
+
+    const stand = await StandModel.findById(standId);
+
+    if (!stand) {
+        return res.status(404).json({
+            message: 'Stand not found'
+        });
+    }
+
+    const { syncPassword } = req.body ?? {};
+
+    if (syncPassword === undefined || syncPassword === null || syncPassword === '') {
+        stand.syncPasswordHash = null;
+    } else if (typeof syncPassword === 'string') {
+        if (syncPassword.length < 8 || syncPassword.length > 128) {
+            return res.status(400).json({
+                message: 'La password di sincronizzazione deve contenere almeno 8 caratteri'
+            });
+        }
+        stand.syncPasswordHash = await argon2.hash(syncPassword);
+    } else {
+        return res.status(400).json({
+            message: 'syncPassword deve essere una stringa'
+        });
+    }
+
+    await stand.save();
+
+    return res.status(200).json({
+        item: { id: stand._id.toString(), syncPasswordSet: stand.syncPasswordHash != null }
     });
 }
 

@@ -110,6 +110,10 @@ const standSchema = new Schema(
         gallery: {
             type: [imageSchema],
             default: []
+        },
+        syncPasswordHash: {
+            type: String,
+            default: null
         }
     },
     {

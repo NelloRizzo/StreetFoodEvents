@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import * as argon2 from 'argon2';
 import type { Request, Response } from 'express';
 
 import { env } from '../config/env';
@@ -32,6 +33,34 @@ export function syncAuthMiddleware(req: Request, res: Response, next: () => void
         return res.status(401).json({ message: 'Sync token non valido' });
     }
     return next();
+}
+
+function toSyncPassword(req: Request): string | null {
+    const value = req.headers['x-sync-password'];
+    if (typeof value !== 'string' || value.length === 0) return null;
+    return value;
+}
+
+/**
+ * Verifies the per-stand sync password. Returns null when valid, otherwise the
+ * HTTP status to answer with: 403 when the stand has no password configured,
+ * 401 when the provided password is missing or wrong.
+ */
+async function verifyStandSyncPassword(
+    stand: { syncPasswordHash?: string | null },
+    req: Request
+): Promise<number | null> {
+    if (!stand.syncPasswordHash) return 403;
+    const provided = toSyncPassword(req);
+    if (!provided) return 401;
+    const valid = await argon2.verify(stand.syncPasswordHash, provided);
+    return valid ? null : 401;
+}
+
+function syncPasswordError(status: number): string {
+    return status === 403
+        ? 'Password di sincronizzazione non configurata per questo stand'
+        : 'Password di sincronizzazione non valida';
 }
 
 function toEventLite(event: { _id: Types.ObjectId | string; name: string; startDate: Date; endDate: Date; currencyName: string; exchangeRate?: number }) {
@@ -68,7 +97,8 @@ export async function listSyncStands(req: Request, res: Response) {
                 id: stand._id.toString(),
                 name: stand.name,
                 type: stand.type,
-                number: numberEntry?.number ?? null
+                number: numberEntry?.number ?? null,
+                syncEnabled: stand.syncPasswordHash != null
             };
         })
         .sort((a, b) => (a.number ?? Number.MAX_SAFE_INTEGER) - (b.number ?? Number.MAX_SAFE_INTEGER));
@@ -93,6 +123,11 @@ export async function getSyncSnapshot(req: Request, res: Response) {
         return res.status(400).json({ message: 'Stand does not belong to the event' });
     }
 
+    const passwordStatus = await verifyStandSyncPassword(stand, req);
+    if (passwordStatus) {
+        return res.status(passwordStatus).json({ message: syncPasswordError(passwordStatus) });
+    }
+
     const [stations, eventProducts, eventUsers, counter] = await Promise.all([
         StationModel.find({ standId: stand._id }).lean(),
         EventProductModel.find({ eventId: new Types.ObjectId(eventId), standId: stand._id }).lean(),
@@ -103,9 +138,12 @@ export async function getSyncSnapshot(req: Request, res: Response) {
     const productIds = eventProducts.map((ep: { productId: Types.ObjectId }) => ep.productId);
     const products = await ProductModel.find({ _id: { $in: productIds } }).lean();
 
+    const standSafe = { ...stand };
+    delete (standSafe as { syncPasswordHash?: string }).syncPasswordHash;
+
     return res.status(200).json({
         event,
-        stand,
+        stand: standSafe,
         stations,
         products,
         eventProducts,
@@ -116,11 +154,23 @@ export async function getSyncSnapshot(req: Request, res: Response) {
 
 export async function pushSyncChanges(req: Request, res: Response) {
     const body: {
+        standId?: string;
         orders?: Array<Record<string, unknown>>;
         transactions?: Array<Record<string, unknown>>;
         counters?: Array<Record<string, unknown>>;
         eventUserBalances?: Array<Record<string, unknown>>;
     } = req.body ?? {};
+
+    if (!body.standId || !isValidObjectId(body.standId)) {
+        return res.status(400).json({ message: 'standId richiesto' });
+    }
+    const stand = await StandModel.findById(body.standId).lean();
+    if (!stand) return res.status(404).json({ message: 'Stand not found' });
+
+    const passwordStatus = await verifyStandSyncPassword(stand, req);
+    if (passwordStatus) {
+        return res.status(passwordStatus).json({ message: syncPasswordError(passwordStatus) });
+    }
 
     const results = { orders: 0, transactions: 0, counters: 0, eventUserBalances: 0 };
 

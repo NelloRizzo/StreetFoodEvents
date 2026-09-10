@@ -1,6 +1,7 @@
 import * as argon2 from 'argon2';
 import type { Express } from 'express';
 import request from 'supertest';
+import { Types } from 'mongoose';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/config/cloudinary', () => ({
@@ -25,7 +26,7 @@ import {
     getSessionExpiryDate,
     hashSessionToken
 } from '../../utils/session';
-import { assignPlatformAdmin } from '../helpers/factory';
+import { assignPlatformAdmin, assignRole } from '../helpers/factory';
 import { createTestApp } from '../helpers/test-app';
 
 let app: Express;
@@ -50,6 +51,17 @@ async function createAuthSession() {
     });
 
     return { user, sessionToken };
+}
+
+async function createSessionFor(user: { _id: Types.ObjectId }) {
+    const sessionToken = generateSessionToken();
+    await SessionModel.create({
+        userId: user._id,
+        tokenHash: hashSessionToken(sessionToken),
+        expiresAt: getSessionExpiryDate(),
+        lastActivityAt: new Date()
+    });
+    return sessionToken;
 }
 
 describe('Stands API', () => {
@@ -381,5 +393,83 @@ describe('Stands API', () => {
 
         const found = await StandModel.findById(stand._id);
         expect(found).toBeNull();
+    });
+
+    it('sets a stand sync password', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+        const stand = await StandModel.create({ name: 'Syncable' });
+
+        const res = await request(app)
+            .patch(`/api/stands/${stand._id}/sync-password`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ syncPassword: 'sync-pass-123' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.item.syncPasswordSet).toBe(true);
+        const after = await StandModel.findById(stand._id).lean();
+        expect(after?.syncPasswordHash).toBeTruthy();
+        expect(after?.syncPasswordHash).not.toBe('sync-pass-123');
+    });
+
+    it('clears a stand sync password', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+        const stand = await StandModel.create({ name: 'Syncable', syncPasswordHash: 'hash' });
+
+        const res = await request(app)
+            .patch(`/api/stands/${stand._id}/sync-password`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ syncPassword: '' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.item.syncPasswordSet).toBe(false);
+        const after = await StandModel.findById(stand._id).lean();
+        expect(after?.syncPasswordHash).toBeNull();
+    });
+
+    it('rejects an invalid sync password', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+        const stand = await StandModel.create({ name: 'Syncable' });
+
+        const res = await request(app)
+            .patch(`/api/stands/${stand._id}/sync-password`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ syncPassword: 'short' });
+
+        expect(res.status).toBe(400);
+    });
+
+    it('requires auth to set the sync password', async () => {
+        app = createTestApp();
+        const stand = await StandModel.create({ name: 'Syncable' });
+
+        const res = await request(app)
+            .patch(`/api/stands/${stand._id}/sync-password`)
+            .send({ syncPassword: 'sync-pass-123' });
+
+        expect(res.status).toBe(401);
+    });
+
+    it('rejects a stand-admin setting the sync password', async () => {
+        app = createTestApp();
+        const stand = await StandModel.create({ name: 'Syncable' });
+        const user = await UserModel.create({
+            firstName: 'Stand',
+            lastName: 'Admin',
+            email: `standadmin-${Date.now()}@test.com`,
+            passwordHash: await argon2.hash('Password123!'),
+            isActive: true
+        });
+        await assignRole(user._id, 'stand-admin', 'stand', { standId: stand._id });
+        const sessionToken = await createSessionFor(user);
+
+        const res = await request(app)
+            .patch(`/api/stands/${stand._id}/sync-password`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ syncPassword: 'sync-pass-123' });
+
+        expect(res.status).toBe(403);
     });
 });

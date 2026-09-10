@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import request from 'supertest';
 import { Types } from 'mongoose';
+import * as argon2 from 'argon2';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/config/cloudinary', () => ({
@@ -28,8 +29,10 @@ import { createTestApp } from '../helpers/test-app';
 let app: Express;
 
 const TOKEN = { Authorization: 'Bearer test-sync-token' };
+const SYNC_PASSWORD = 'sync-pass-123';
+const PWD = { 'X-Sync-Password': SYNC_PASSWORD };
 
-async function seedEventWithStand() {
+async function seedEventWithStand(password = true) {
     const event = await EventModel.create({
         name: 'Sync Event',
         location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
@@ -42,7 +45,8 @@ async function seedEventWithStand() {
         type: 'food',
         name: 'Sync Stand',
         eventIds: [event._id],
-        numbers: [{ eventId: event._id, number: 1, showOnMap: true }]
+        numbers: [{ eventId: event._id, number: 1, showOnMap: true }],
+        ...(password ? { syncPasswordHash: await argon2.hash(SYNC_PASSWORD) } : {})
     });
     const station = await StationModel.create({ standId: stand._id, name: 'Cucina', sequenceOrder: 0 });
     const product = await ProductModel.create({ name: 'Panino', price: 5 });
@@ -83,15 +87,17 @@ describe('Sync API', () => {
         expect(res.body.items.length).toBe(1);
         expect(res.body.items[0].id).toBe(stand._id.toString());
         expect(res.body.items[0].number).toBe(1);
+        expect(res.body.items[0].syncEnabled).toBe(true);
     });
 
-    it('returns full snapshot for event+stand', async () => {
+    it('returns full snapshot for event+stand with the sync password', async () => {
         app = createTestApp();
         const { event, stand, ep } = await seedEventWithStand();
 
         const res = await request(app)
             .get(`/api/sync/events/${event._id}/stands/${stand._id}`)
-            .set(TOKEN);
+            .set(TOKEN)
+            .set(PWD);
 
         expect(res.status).toBe(200);
         expect(res.body.event.name).toBe('Sync Event');
@@ -100,6 +106,39 @@ describe('Sync API', () => {
         expect(res.body.eventProducts.length).toBe(1);
         expect(res.body.eventProducts[0]._id).toBe(ep._id.toString());
         expect(res.body.counter.seq).toBe(0);
+        expect(res.body.stand.syncPasswordHash).toBeUndefined();
+    });
+
+    it('rejects a snapshot without the sync password', async () => {
+        app = createTestApp();
+        const { event, stand } = await seedEventWithStand();
+
+        const res = await request(app).get(`/api/sync/events/${event._id}/stands/${stand._id}`).set(TOKEN);
+        expect(res.status).toBe(401);
+        expect(res.body.message).toBe('Password di sincronizzazione non valida');
+    });
+
+    it('rejects a snapshot with the wrong sync password', async () => {
+        app = createTestApp();
+        const { event, stand } = await seedEventWithStand();
+
+        const res = await request(app)
+            .get(`/api/sync/events/${event._id}/stands/${stand._id}`)
+            .set(TOKEN)
+            .set('X-Sync-Password', 'wrong-password');
+        expect(res.status).toBe(401);
+    });
+
+    it('rejects a snapshot for a stand without a configured sync password', async () => {
+        app = createTestApp();
+        const { event, stand } = await seedEventWithStand(false);
+
+        const res = await request(app)
+            .get(`/api/sync/events/${event._id}/stands/${stand._id}`)
+            .set(TOKEN)
+            .set(PWD);
+        expect(res.status).toBe(403);
+        expect(res.body.message).toBe('Password di sincronizzazione non configurata per questo stand');
     });
 
     it('rejects a stand that does not belong to the event', async () => {
@@ -126,7 +165,7 @@ describe('Sync API', () => {
         expect(res.status).toBe(400);
     });
 
-    it('pushes orders and counters', async () => {
+    it('pushes orders and counters with the sync password', async () => {
         app = createTestApp();
         const { event, stand, product, ep } = await seedEventWithStand();
         const orderId = new Types.ObjectId();
@@ -134,7 +173,9 @@ describe('Sync API', () => {
         const res = await request(app)
             .post('/api/sync/push')
             .set(TOKEN)
+            .set(PWD)
             .send({
+                standId: stand._id.toString(),
                 orders: [
                     {
                         _id: orderId.toString(),
@@ -180,5 +221,34 @@ describe('Sync API', () => {
         expect(await OrderModel.findById(orderId)).not.toBeNull();
         const counter = await CounterModel.findOne({ standId: stand._id }).lean();
         expect(counter?.seq).toBe(5);
+    });
+
+    it('rejects push without standId', async () => {
+        app = createTestApp();
+        const res = await request(app).post('/api/sync/push').set(TOKEN).set(PWD).send({ orders: [] });
+        expect(res.status).toBe(400);
+    });
+
+    it('rejects push without the sync password', async () => {
+        app = createTestApp();
+        const { stand } = await seedEventWithStand();
+
+        const res = await request(app)
+            .post('/api/sync/push')
+            .set(TOKEN)
+            .send({ standId: stand._id.toString(), orders: [] });
+        expect(res.status).toBe(401);
+    });
+
+    it('rejects push with the wrong sync password', async () => {
+        app = createTestApp();
+        const { stand } = await seedEventWithStand();
+
+        const res = await request(app)
+            .post('/api/sync/push')
+            .set(TOKEN)
+            .set('X-Sync-Password', 'wrong-password')
+            .send({ standId: stand._id.toString(), orders: [] });
+        expect(res.status).toBe(401);
     });
 });
