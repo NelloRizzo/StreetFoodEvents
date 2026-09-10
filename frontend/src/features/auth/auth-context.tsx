@@ -83,11 +83,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }
 
   const logout = async () => {
-    await apiRequest<{ success: boolean }>('/auth/logout', {
-      method: 'POST',
-    })
-
-    setUser(null)
+    try {
+      await apiRequest<{ success: boolean }>('/auth/logout', {
+        method: 'POST',
+      })
+    } finally {
+      setUser(null)
+      window.location.assign('/')
+    }
   }
 
   const value = useMemo<AuthContextValue>(
