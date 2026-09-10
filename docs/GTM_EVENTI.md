@@ -130,6 +130,19 @@ Preparazione postazione: articolo o intera postazione resa "pronta" (`markItemRe
 | `station_id` | string | id postazione |
 | `item_count` | number | numero articoli pronti in questa azione |
 
+### `sfe_coupon_applied`
+Coupon validato e applicato in cassa (`CouponPanel` nelle cassa cassiere/stand). Non include i buoni valore (tipo `value`), che vengono solo mostrati e riscattati altrove.
+
+| Parametro | Tipo | Note |
+|---|---|---|
+| `event_id` | string | id evento |
+| `stand_id` | string | id stand |
+| `code` | string | codice coupon |
+| `coupon_type` | string | `discount` \| `product` |
+| `discount_type` | string | `percent` \| `fixed` (solo coupon sconto) |
+| `discount_amount` | number | sconto in valuta evento (0 se non calcolabile lato client) |
+| `free_units` | number | pezzi gratis (solo coupon prodotto) |
+
 ### `sfe_event_click`
 Click su un evento (card nella home).
 

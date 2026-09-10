@@ -200,6 +200,27 @@ export function trackOrderStatusUpdate(params: {
   })
 }
 
+/** Coupon applicato in cassa (validazione riuscita). */
+export function trackCouponApplied(params: {
+  eventId?: string
+  standId?: string
+  code?: string
+  type?: string
+  discountType?: string | null
+  discountAmount?: number
+  freeUnits?: number
+}): void {
+  analyticsEvent('sfe_coupon_applied', {
+    event_id: params.eventId ?? '',
+    stand_id: params.standId ?? '',
+    code: params.code ?? '',
+    coupon_type: params.type ?? '',
+    discount_type: params.discountType ?? '',
+    discount_amount: params.discountAmount ?? 0,
+    free_units: params.freeUnits ?? 0,
+  })
+}
+
 /** Preparazione postazione: articolo o intera postazione resa "pronta". */
 export function trackStationReady(params: {
   orderId?: string

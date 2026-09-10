@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { trackCouponApplied } from '../lib/analytics'
 import {
   computeCouponDiscount,
   couponDescription,
@@ -55,6 +56,13 @@ export function CouponPanel({
           setCode('')
         } else {
           onChange({ code: res.item.code, item: res.item })
+          trackCouponApplied({
+            eventId,
+            standId,
+            code: res.item.code,
+            type: res.item.type,
+            discountType: res.item.discountType,
+          })
           setCode('')
         }
       } else {
