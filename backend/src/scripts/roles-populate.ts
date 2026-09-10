@@ -47,6 +47,28 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     permissions: permissions.filter((permission) => permission !== 'roles:disable'),
   });
 
+  const standAdminRole = await upsertRole({
+    name: 'Stand Admin',
+    slug: 'stand-admin',
+    scope: 'stand',
+    description: 'Gestisce completamente un singolo stand: configurazione, menu, ordini e pagamenti.',
+    permissions: [
+      'stands:read',
+      'stands:update',
+      'menu:read',
+      'menu:create',
+      'menu:update',
+      'menu:delete',
+      'orders:read',
+      'orders:create',
+      'orders:update',
+      'orders:cancel',
+      'payments:read',
+      'payments:create',
+      'payments:refund',
+    ],
+  });
+
   const cashierRole = await upsertRole({
     name: 'Cashier',
     slug: 'cashier',
@@ -111,7 +133,7 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     permissions: ['exchanges:read', 'exchanges:create', 'payments:read', 'payments:create', 'payments:refund'],
   });
 
-  if (!platformAdminRole || !eventAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole || !photoAdminRole || !photoPrintRole || !contestAdminRole || !exchangeAdminRole) {
+  if (!platformAdminRole || !eventAdminRole || !standAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole || !photoAdminRole || !photoPrintRole || !contestAdminRole || !exchangeAdminRole) {
     throw new Error('Failed to seed roles');
   }
 
@@ -138,6 +160,7 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
   return {
     platformAdminRole,
     eventAdminRole,
+    standAdminRole,
     cashierRole,
     kitchenRole,
     eventCashierRole,

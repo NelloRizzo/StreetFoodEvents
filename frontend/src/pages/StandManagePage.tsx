@@ -72,7 +72,12 @@ export function StandManagePage() {
   const canAccessCash =
     !!selectedEventId &&
     (isPlatformAdmin ||
-      roles.some((r) => r.scope === 'stand' && r.standId === standId && r.slug === 'cashier') ||
+      roles.some(
+        (r) =>
+          r.scope === 'stand' &&
+          r.standId === standId &&
+          (r.slug === 'cashier' || r.slug === 'stand-admin')
+      ) ||
       roles.some(
         (r) =>
           r.scope === 'event' &&

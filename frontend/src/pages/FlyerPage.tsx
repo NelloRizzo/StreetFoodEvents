@@ -230,6 +230,7 @@ export function FlyerPage() {
         { icon: '\u{1F510}', name: 'platform-admin', desc: 'Accesso completo a tutti gli eventi, utenti e configurazioni.' },
         { icon: '\u{1F468}\u{200D}\u{1F4BB}', name: 'event-admin', desc: 'Gestisce evento, POI, stand e operatori della manifestazione.' },
         { icon: '\u{1F9FE}', name: 'event-cashier', desc: 'Cassa unica per tutto l\'evento, crea ordini per qualsiasi stand.' },
+        { icon: '\u{1F3E0}', name: 'stand-admin', desc: 'Gestione completa di un singolo stand: menu, ordini e pagamenti.' },
         { icon: '\u{1F4B5}', name: 'stand-cashier', desc: 'Cassa stand, gestisce ordini e pagamenti.' },
         { icon: '\u{1F373}', name: 'station-attendant', desc: 'Vista coda postazione, segnala piatti pronti.' },
         { icon: '\u{2705}', name: 'stand-pickup', desc: 'Conferma solo la consegna degli ordini allo stand.' },
