@@ -60,6 +60,7 @@ import {
     getSessionExpiryDate,
     hashSessionToken
 } from '../../utils/session';
+import { assignPlatformAdmin } from '../helpers/factory';
 import { createTestApp } from '../helpers/test-app';
 
 let app: Express;
@@ -160,7 +161,8 @@ describe('Integration: event photos with videos', () => {
     it('sets and clears defaultFrameId on the event via PATCH and exposes it publicly', async () => {
         app = createTestApp();
         const event = await createEvent();
-        const { sessionToken } = await createAuthSession();
+        const { user, sessionToken } = await createAuthSession();
+        await assignPlatformAdmin(user._id);
 
         const initial = await request(app).get(`/api/events/${event._id}`);
         expect(initial.status).toBe(200);

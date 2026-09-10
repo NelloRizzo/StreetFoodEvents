@@ -28,11 +28,12 @@ import {
     getSessionExpiryDate,
     hashSessionToken
 } from '../../utils/session';
+import { assignPlatformAdmin } from '../helpers/factory';
 import { createTestApp } from '../helpers/test-app';
 
 let app: Express;
 
-async function createAuthSession() {
+async function createAuthSession(opts: { platformAdmin?: boolean } = {}) {
     const user = await UserModel.create({
         firstName: 'Int',
         lastName: 'Tester',
@@ -40,6 +41,10 @@ async function createAuthSession() {
         passwordHash: await argon2.hash('Password123!'),
         isActive: true
     });
+
+    if (opts.platformAdmin) {
+        await assignPlatformAdmin(user._id);
+    }
 
     const sessionToken = generateSessionToken();
     await SessionModel.create({
@@ -76,7 +81,7 @@ async function createRoleWithUser(
 }
 
 describe('Integration: role-based access across controllers', () => {
-    it('user with no role can list user-roles (auth-only endpoint)', async () => {
+    it('user with no admin role cannot list user-roles (platform-admin only)', async () => {
         app = createTestApp();
         const { sessionToken } = await createAuthSession();
 
@@ -84,13 +89,47 @@ describe('Integration: role-based access across controllers', () => {
             .get('/api/user-roles')
             .set('Cookie', `sid=${sessionToken}`);
 
+        expect(res.status).toBe(403);
+    });
+
+    it('platform-admin can list user-roles', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession({ platformAdmin: true });
+
+        const res = await request(app)
+            .get('/api/user-roles')
+            .set('Cookie', `sid=${sessionToken}`);
+
         expect(res.status).toBe(200);
-        expect(res.body.items).toEqual([]);
+        expect(res.body.items).toHaveLength(1);
+        expect(res.body.items[0].roleId.slug).toBe('platform-admin');
+    });
+
+    it('user with no admin role cannot create a role assignment', async () => {
+        app = createTestApp();
+        const { sessionToken, user } = await createAuthSession();
+
+        const role = await RoleModel.create({
+            name: 'Role X',
+            slug: 'role-x',
+            scope: 'event',
+            permissions: ['manage']
+        });
+
+        const res = await request(app)
+            .post('/api/user-roles')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                userId: user._id.toString(),
+                roleId: role._id.toString()
+            });
+
+        expect(res.status).toBe(403);
     });
 
     it('creates a role assignment and verifies it via filter', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { user, sessionToken } = await createAuthSession({ platformAdmin: true });
 
         const event = await EventModel.create({
             name: 'Integration Event',
@@ -107,14 +146,16 @@ describe('Integration: role-based access across controllers', () => {
             .set('Cookie', `sid=${sessionToken}`);
 
         expect(res.status).toBe(200);
-        expect(res.body.items).toHaveLength(1);
-        expect(String(res.body.items[0].roleId._id ?? res.body.items[0].roleId)).toBe(role._id.toString());
-        expect(res.body.items[0].isActive).toBe(true);
+        expect(res.body.items).toHaveLength(2);
+        const eventAdminAssignment = res.body.items.find((item: { roleId: { slug: string } }) => item.roleId.slug === 'event-admin');
+        expect(eventAdminAssignment).toBeDefined();
+        expect(String(eventAdminAssignment.roleId._id ?? eventAdminAssignment.roleId)).toBe(role._id.toString());
+        expect(eventAdminAssignment.isActive).toBe(true);
     });
 
     it('toggle disables role and reactivation re-enables it', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { user, sessionToken } = await createAuthSession({ platformAdmin: true });
 
         const event = await EventModel.create({
             name: 'Toggle Event',
@@ -144,7 +185,7 @@ describe('Integration: role-based access across controllers', () => {
 
     it('deletes a role assignment and confirms removal', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { user, sessionToken } = await createAuthSession({ platformAdmin: true });
 
         const event = await EventModel.create({
             name: 'Delete Event',
@@ -167,7 +208,7 @@ describe('Integration: role-based access across controllers', () => {
 
     it('filters user roles by eventId', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { user, sessionToken } = await createAuthSession({ platformAdmin: true });
 
         const eventA = await EventModel.create({
             name: 'Event A',

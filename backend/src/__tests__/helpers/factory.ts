@@ -1,6 +1,45 @@
 import { Types } from 'mongoose';
 
 import type { AuthUser } from '../../types/auth-user';
+import { RoleModel } from '../../models/role.model';
+import { UserRoleModel } from '../../models/user-role.model';
+
+export async function assignRole(
+    userId: Types.ObjectId,
+    slug: string,
+    scope: 'platform' | 'event' | 'stand',
+    opts: { eventId?: Types.ObjectId | null; standId?: Types.ObjectId | null } = {}
+) {
+    let role = await RoleModel.findOne({ slug, scope });
+    if (!role) {
+        role = await RoleModel.create({
+            name: slug,
+            slug,
+            scope,
+            description: slug,
+            permissions: [],
+            isSystem: false,
+            isActive: true
+        });
+    }
+    await UserRoleModel.create({
+        userId,
+        roleId: role._id,
+        eventId: opts.eventId ?? null,
+        standId: opts.standId ?? null,
+        assignedBy: null,
+        isActive: true
+    });
+    return role;
+}
+
+export async function assignPlatformAdmin(userId: Types.ObjectId) {
+    return assignRole(userId, 'platform-admin', 'platform');
+}
+
+export async function assignEventAdmin(userId: Types.ObjectId, eventId: Types.ObjectId) {
+    return assignRole(userId, 'event-admin', 'event', { eventId });
+}
 
 export function createTestUser(overrides: Partial<{
     firstName: string;

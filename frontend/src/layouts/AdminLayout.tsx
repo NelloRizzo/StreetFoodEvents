@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { AdminSidebar } from './AdminSidebar'
@@ -16,7 +16,7 @@ export function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
 
   const [events, setEvents] = useState<AdminEventContextValue['events']>([])
   const [manuallySelectedEventId, setManuallySelectedEventId] = useState<string | null>(() => {
@@ -101,6 +101,14 @@ export function AdminLayout() {
   const isExchange = /\/events\/[^/]+\/exchange/.test(location.pathname)
 
   const hideChrome = isSlideshow || isCashier || isOrdersQueue || isStationQueue || isExchange
+
+  if (isLoading) {
+    return null
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location }} />
+  }
 
   return (
     <AdminEventContext.Provider value={contextValue}>

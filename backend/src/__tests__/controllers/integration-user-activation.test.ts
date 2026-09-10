@@ -21,6 +21,7 @@ import {
     getSessionExpiryDate,
     hashSessionToken
 } from '../../utils/session';
+import { assignPlatformAdmin } from '../helpers/factory';
 import { createTestApp } from '../helpers/test-app';
 
 let app: Express;
@@ -33,6 +34,8 @@ async function createPlatformAdmin() {
         passwordHash: await argon2.hash('Password123!'),
         isActive: true
     });
+
+    await assignPlatformAdmin(user._id);
 
     const sessionToken = generateSessionToken();
     await SessionModel.create({

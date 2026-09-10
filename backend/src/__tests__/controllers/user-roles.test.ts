@@ -26,6 +26,7 @@ import {
     getSessionExpiryDate,
     hashSessionToken
 } from '../../utils/session';
+import { assignPlatformAdmin } from '../helpers/factory';
 import { createTestApp } from '../helpers/test-app';
 
 let app: Express;
@@ -39,6 +40,8 @@ async function createAuthSession() {
         isActive: true
     });
 
+    await assignPlatformAdmin(user._id);
+
     const sessionToken = generateSessionToken();
     await SessionModel.create({
         userId: user._id,
@@ -51,7 +54,7 @@ async function createAuthSession() {
 }
 
 describe('UserRoles API', () => {
-    it('lists user roles (empty)', async () => {
+    it('lists user roles (only the platform-admin assignment)', async () => {
         app = createTestApp();
         const { sessionToken } = await createAuthSession();
 
@@ -60,7 +63,8 @@ describe('UserRoles API', () => {
             .set('Cookie', `sid=${sessionToken}`);
 
         expect(res.status).toBe(200);
-        expect(res.body.items).toEqual([]);
+        expect(res.body.items).toHaveLength(1);
+        expect(res.body.items[0].roleId.slug).toBe('platform-admin');
     });
 
     it('creates a user role', async () => {
@@ -196,7 +200,9 @@ describe('UserRoles API', () => {
             .set('Cookie', `sid=${sessionToken}`);
 
         expect(res.status).toBe(200);
-        expect(res.body.items).toHaveLength(1);
+        expect(res.body.items).toHaveLength(2);
+        const roleAAssignment = res.body.items.find((item: { roleId: { slug: string } }) => item.roleId.slug === 'role-a');
+        expect(roleAAssignment).toBeDefined();
     });
 
     it('toggles user role', async () => {

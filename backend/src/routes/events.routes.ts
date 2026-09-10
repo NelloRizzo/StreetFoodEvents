@@ -15,6 +15,7 @@ import {
 } from '../controllers/events.controller';
 import { listEventUsersByEvent } from '../controllers/event-users.controller';
 import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.middleware';
+import { hasRole } from '../middlewares/role.middleware';
 import { asyncHandler } from '../utils/async-handler';
 
 export const eventsRouter = Router();
@@ -27,9 +28,9 @@ eventsRouter.get('/:eventId/menu-qrcode', asyncHandler(eventMenuQrCode));
 eventsRouter.get('/:eventId/menu', asyncHandler(eventMenu));
 eventsRouter.get('/:eventId/contests-qrcode', asyncHandler(eventContestsQrCode));
 
-eventsRouter.post('/', asyncHandler(authMiddleware), asyncHandler(createEvent));
-eventsRouter.post('/:eventId/duplicate', asyncHandler(authMiddleware), asyncHandler(duplicateEvent));
-eventsRouter.patch('/:eventId', asyncHandler(authMiddleware), asyncHandler(updateEvent));
-eventsRouter.delete('/:eventId', asyncHandler(authMiddleware), asyncHandler(deleteEvent));
+eventsRouter.post('/', asyncHandler(authMiddleware), asyncHandler(hasRole(['platform-admin', 'event-admin'])), asyncHandler(createEvent));
+eventsRouter.post('/:eventId/duplicate', asyncHandler(authMiddleware), asyncHandler(hasRole(['platform-admin', 'event-admin'])), asyncHandler(duplicateEvent));
+eventsRouter.patch('/:eventId', asyncHandler(authMiddleware), asyncHandler(hasRole(['platform-admin', 'event-admin'])), asyncHandler(updateEvent));
+eventsRouter.delete('/:eventId', asyncHandler(authMiddleware), asyncHandler(hasRole(['platform-admin', 'event-admin'])), asyncHandler(deleteEvent));
 
 eventsRouter.get('/:eventId/users', asyncHandler(authMiddleware), asyncHandler(listEventUsersByEvent));

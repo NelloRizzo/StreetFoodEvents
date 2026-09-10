@@ -37,7 +37,7 @@ export function hasRole(
             userId: req.user.id,
             isActive: true,
             ...(eventId ? { $or: [{ eventId }, { eventId: { $exists: false } }, { eventId: null }] } : {}),
-            ...(standId ? { standId } : {})
+            ...(standId ? { $or: [{ standId }, { standId: { $exists: false } }, { standId: null }] } : {})
         }).populate({
             path: 'roleId',
             match: {

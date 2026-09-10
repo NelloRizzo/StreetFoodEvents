@@ -26,6 +26,7 @@ import {
     setSessionCookie
 } from '../../utils/session';
 import { createTestApp } from '../helpers/test-app';
+import { assignPlatformAdmin } from '../helpers/factory';
 import { EventModel } from '../../models/event.model';
 import { RoleModel } from '../../models/role.model';
 import { UserRoleModel } from '../../models/user-role.model';
@@ -79,6 +80,7 @@ describe('Events API', () => {
             passwordHash: await argon2.hash('Password123!'),
             isActive: true
         });
+        await assignPlatformAdmin(user._id);
 
         const sessionToken = generateSessionToken();
         await SessionModel.create({
@@ -121,6 +123,7 @@ describe('Events API', () => {
             passwordHash: await argon2.hash('Password123!'),
             isActive: true
         });
+        await assignPlatformAdmin(user._id);
 
         const sessionToken = generateSessionToken();
         await SessionModel.create({
@@ -157,6 +160,7 @@ describe('Events API', () => {
             passwordHash: await argon2.hash('Password123!'),
             isActive: true
         });
+        await assignPlatformAdmin(user._id);
 
         const sessionToken = generateSessionToken();
         await SessionModel.create({
@@ -417,6 +421,7 @@ describe('Events API', () => {
             passwordHash: await argon2.hash('Password123!'),
             isActive: true
         });
+        await assignPlatformAdmin(user._id);
 
         const sessionToken = generateSessionToken();
         await SessionModel.create({

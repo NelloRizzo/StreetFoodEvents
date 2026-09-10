@@ -7,11 +7,13 @@ import {
   toggleUserRole,
 } from '../controllers/user-roles.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { hasRole } from '../middlewares/role.middleware';
 import { asyncHandler } from '../utils/async-handler';
 
 export const userRolesRouter = Router();
 
 userRolesRouter.use(asyncHandler(authMiddleware));
+userRolesRouter.use(asyncHandler(hasRole('platform-admin')));
 
 userRolesRouter.get('/', asyncHandler(listUserRoles));
 userRolesRouter.post('/', asyncHandler(createUserRole));
