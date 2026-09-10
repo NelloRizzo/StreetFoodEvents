@@ -56,6 +56,7 @@ export interface Meta {
     eventName: string | null;
     currencyName: string | null;
     importedAt: Date | null;
+    hasSyncPassword: boolean;
     hasPending: boolean;
     pendingCount: number;
 }
@@ -69,9 +70,18 @@ export async function getMeta(): Promise<Meta> {
         eventName: state?.eventName ?? null,
         currencyName: state?.currencyName ?? null,
         importedAt: state?.importedAt ?? null,
+        hasSyncPassword: Boolean(state?.syncPassword),
         hasPending: pendingCount > 0,
         pendingCount
     };
+}
+
+export async function setSyncPassword(password: string | null) {
+    await LocalStateModel.findOneAndUpdate(
+        { key: 'current' },
+        { $set: { syncPassword: password?.trim() ? password.trim() : null } },
+        { upsert: true }
+    );
 }
 
 export async function setMeta(eventId: string, standId: string, eventName: string, currencyName: string) {
@@ -94,13 +104,14 @@ export async function setMeta(eventId: string, standId: string, eventName: strin
 
 // ─── Remote fetch helpers ──────────────────────────────────────────────────────
 
-async function remoteFetch<T>(path: string): Promise<T> {
+async function remoteFetch<T>(path: string, headers: Record<string, string> = {}): Promise<T> {
     if (!config.remoteUrl) throw new Error('REMOTE_URL non configurato');
     const url = `${config.remoteUrl}${path}`;
     const res = await fetch(url, {
         headers: {
             'Content-Type': 'application/json',
-            ...(config.remoteToken ? { Authorization: `Bearer ${config.remoteToken}` } : {})
+            ...(config.remoteToken ? { Authorization: `Bearer ${config.remoteToken}` } : {}),
+            ...headers
         }
     });
     if (!res.ok) {
@@ -115,10 +126,13 @@ export async function fetchRemoteEvents() {
 }
 
 export async function fetchRemoteStands(eventId: string) {
-    return remoteFetch<{ event: { id: string; name: string }; items: Array<{ id: string; name: string; type: string; number: number | null }> }>(`/sync/events/${eventId}/stands`);
+    return remoteFetch<{
+        event: { id: string; name: string };
+        items: Array<{ id: string; name: string; type: string; number: number | null; syncEnabled: boolean }>;
+    }>(`/sync/events/${eventId}/stands`);
 }
 
-export async function fetchRemoteSnapshot(eventId: string, standId: string) {
+export async function fetchRemoteSnapshot(eventId: string, standId: string, syncPassword?: string | null) {
     return remoteFetch<{
         event: any;
         stand: any;
@@ -127,12 +141,12 @@ export async function fetchRemoteSnapshot(eventId: string, standId: string) {
         eventProducts: any[];
         eventUsers: any[];
         counter: any;
-    }>(`/sync/events/${eventId}/stands/${standId}`);
+    }>(`/sync/events/${eventId}/stands/${standId}`, syncPassword ? { 'X-Sync-Password': syncPassword } : {});
 }
 
 // ─── Import from remote ────────────────────────────────────────────────────────
 
-export async function importFromRemote(eventId: string, standId: string, force: boolean = false) {
+export async function importFromRemote(eventId: string, standId: string, force: boolean = false, syncPassword?: string | null) {
     const pendingCount = await countPending();
     if (pendingCount > 0 && !force) {
         return {
@@ -141,7 +155,15 @@ export async function importFromRemote(eventId: string, standId: string, force: 
         };
     }
 
-    const snapshot = await fetchRemoteSnapshot(eventId, standId);
+    const state = await LocalStateModel.findOne({ key: 'current' }).lean();
+    const password = syncPassword ?? state?.syncPassword ?? null;
+    if (!password) {
+        return {
+            status: 'password-required' as const
+        };
+    }
+
+    const snapshot = await fetchRemoteSnapshot(eventId, standId, password);
 
     // Localize remote images (download Cloudinary assets to local disk and
     // rewrite url/publicId to the local static endpoint) before the wipe.
@@ -194,6 +216,7 @@ export async function importFromRemote(eventId: string, standId: string, force: 
     }
 
     await setMeta(eventId, standId, event.name, event.currencyName);
+    await setSyncPassword(password);
 
     return {
         status: 'ok' as const,
@@ -207,6 +230,18 @@ export async function importFromRemote(eventId: string, standId: string, force: 
 // ─── Push to remote ────────────────────────────────────────────────────────────
 
 export async function pushToRemote(): Promise<{ pushed: number; errors: string[] }> {
+    const state = await LocalStateModel.findOne({ key: 'current' }).lean();
+    const syncPassword = state?.syncPassword ?? null;
+    const remoteStandId = state?.remoteStandId ?? null;
+
+    if (!remoteStandId) {
+        return { pushed: 0, errors: ['Nessuno stand importato dal remoto'] };
+    }
+
+    if (!syncPassword) {
+        return { pushed: 0, errors: ['Password di sincronizzazione non configurata'] };
+    }
+
     const pendingOrders = await SyncLedgerModel.find({ entityType: 'Order', syncStatus: 'pending' }).lean();
     const pendingCounters = await SyncLedgerModel.find({ entityType: 'Counter', syncStatus: 'pending' }).lean();
 
@@ -230,7 +265,8 @@ export async function pushToRemote(): Promise<{ pushed: number; errors: string[]
 
     const body = {
         orders: orders.map(cleanForPush),
-        counters: counters.map(cleanForPush)
+        counters: counters.map(cleanForPush),
+        standId: remoteStandId.toString()
     };
 
     const errors: string[] = [];
@@ -243,7 +279,8 @@ export async function pushToRemote(): Promise<{ pushed: number; errors: string[]
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(config.remoteToken ? { Authorization: `Bearer ${config.remoteToken}` } : {})
+                ...(config.remoteToken ? { Authorization: `Bearer ${config.remoteToken}` } : {}),
+                ...(syncPassword ? { 'X-Sync-Password': syncPassword } : {})
             },
             body: JSON.stringify(body)
         });

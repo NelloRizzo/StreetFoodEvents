@@ -82,6 +82,7 @@ export interface Meta {
     eventName: string | null;
     currencyName: string | null;
     importedAt: string | null;
+    hasSyncPassword: boolean;
     hasPending: boolean;
     pendingCount: number;
 }
@@ -100,10 +101,11 @@ export interface RemoteStand {
     name: string;
     type: string;
     number: number | null;
+    syncEnabled: boolean;
 }
 
 export interface ImportResult {
-    status: 'ok' | 'pending';
+    status: 'ok' | 'pending' | 'password-required';
     eventName?: string;
     standName?: string;
     productsCount?: number;

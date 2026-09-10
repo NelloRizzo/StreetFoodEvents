@@ -6,7 +6,8 @@ import {
     importFromRemote,
     countPending,
     pushToRemote,
-    listPending
+    listPending,
+    setSyncPassword
 } from '../sync.service';
 
 export const syncRouter = Router();
@@ -42,18 +43,30 @@ async function handleRemoteStands(req: Request, res: Response) {
 }
 
 async function handleImport(req: Request, res: Response) {
-    const { eventId, standId, force } = req.body ?? {};
+    const { eventId, standId, force, syncPassword } = req.body ?? {};
     if (!eventId || !standId) {
         return res.status(400).json({ message: 'eventId and standId required' });
     }
-    const result = await importFromRemote(eventId, standId, force === true);
+    const result = await importFromRemote(eventId, standId, force === true, syncPassword ?? null);
     if (result.status === 'pending') {
         return res.status(409).json({
             message: `${result.pendingCount} modifiche non sincronizzate. Sincronizza prima o usa force: true per sovrascrivere.`,
             pendingCount: result.pendingCount
         });
     }
+    if (result.status === 'password-required') {
+        return res.status(400).json({
+            message: 'Password di sincronizzazione mancante: imposta la password di questo stand nel remoto (gestione stand) e inseriscila qui.'
+        });
+    }
     return res.status(200).json(result);
+}
+
+async function handleSyncPassword(req: Request, res: Response) {
+    const { syncPassword } = req.body ?? {};
+    await setSyncPassword(typeof syncPassword === 'string' ? syncPassword : '');
+    const meta = await getMeta();
+    return res.status(200).json({ hasSyncPassword: meta.hasSyncPassword });
 }
 
 async function handlePendingCount(_req: Request, res: Response) {
@@ -85,5 +98,6 @@ syncRouter.post('/import', asyncHandler(handleImport));
 syncRouter.get('/pending/count', asyncHandler(handlePendingCount));
 syncRouter.get('/pending', asyncHandler(handlePendingList));
 syncRouter.post('/push', asyncHandler(handlePush));
+syncRouter.post('/password', asyncHandler(handleSyncPassword));
 
 export default syncRouter;

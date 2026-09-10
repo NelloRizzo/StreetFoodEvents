@@ -16,6 +16,7 @@ export function Sync() {
     const [confirm, setConfirm] = useState<ConfirmAction>(null);
     const [loadingRemote, setLoadingRemote] = useState(false);
     const [remoteError, setRemoteError] = useState('');
+    const [syncPassword, setSyncPassword] = useState('');
 
     useEffect(() => {
         setLoadingRemote(true);
@@ -58,11 +59,14 @@ export function Sync() {
         setBusy(true);
         setLogs('');
         try {
-            const res = await api.importFromRemote(confirm.eventId, confirm.standId, force);
+            const res = await api.importFromRemote(confirm.eventId, confirm.standId, force, syncPassword || undefined);
             if (res.status === 'pending') {
                 setLogs(`Ci sono ${res.pendingCount} modifiche non sincronizzate. Sincronizzale o conferma la sovrascrittura.`);
+            } else if (res.status === 'password-required') {
+                setLogs('Password di sincronizzazione mancante: imposta la password dello stand nel remoto (Gestione stand → Sincronizzazione) e inseriscila qui.');
             } else {
                 setLogs(`Import effettuato: ${res.eventName} — stand ${res.standName} (${res.stationsCount} postazioni, ${res.productsCount} prodotti).`);
+                setSyncPassword('');
                 await refresh();
             }
         } catch (e) {
@@ -70,6 +74,21 @@ export function Sync() {
         } finally {
             setBusy(false);
             setConfirm(null);
+        }
+    }
+
+    async function savePassword() {
+        setBusy(true);
+        setLogs('');
+        try {
+            await api.setSyncPassword(syncPassword || '');
+            setSyncPassword('');
+            setLogs('Password di sincronizzazione salvata.');
+            await refresh();
+        } catch (e) {
+            setLogs(`Errore salvataggio password: ${(e as Error).message}`);
+        } finally {
+            setBusy(false);
         }
     }
 
@@ -91,6 +110,8 @@ export function Sync() {
             setConfirm(null);
         }
     }
+
+    const selectedStandSyncDisabled = stands.find((s) => s.id === standId)?.syncEnabled === false;
 
     return (
         <div style={styles.page}>
@@ -117,7 +138,18 @@ export function Sync() {
                                 {meta.pendingCount}
                             </span>
                         </div>
-                        {meta.pendingCount > 0 && (
+                        <div>
+                            <strong>Password di sincronizzazione:</strong>{' '}
+                            <span style={meta.hasSyncPassword ? styles.ok : styles.pending}>
+                                {meta.hasSyncPassword ? 'Presente' : 'Nessuna'}
+                            </span>
+                        </div>
+                        {!meta.hasSyncPassword && meta.pendingCount > 0 && (
+                            <div style={{ fontSize: 13, color: '#7a5c00', marginTop: 6 }}>
+                                Per inviare le modifiche serve la password di sincronizzazione: salvala sotto e riprova.
+                            </div>
+                        )}
+                        {meta.hasSyncPassword && meta.pendingCount > 0 && (
                             <button onClick={() => setConfirm({ type: 'push' })} disabled={busy} style={styles.pushBtn}>
                                 Sincronizza ora (push al remoto)
                             </button>
@@ -152,13 +184,33 @@ export function Sync() {
                                 <option key={s.id} value={s.id}>
                                     {s.number ? `#${s.number} ` : ''}
                                     {s.name}
+                                    {s.syncEnabled ? '\u{1F512}' : ' (sync non configurata)'}
                                 </option>
                             ))}
                         </select>
                     </label>
-                    <button onClick={requestImport} disabled={!eventId || !standId || busy} style={styles.importBtn}>
+                    <label>
+                        Password di sincronizzazione:
+                        <input
+                            type="password"
+                            value={syncPassword}
+                            onChange={(e) => setSyncPassword(e.target.value)}
+                            style={styles.input}
+                            placeholder="Richiesta per stand con sync abilitata"
+                        />
+                    </label>
+                    <button onClick={savePassword} disabled={!syncPassword || busy} style={styles.btn}>
+                        Salva password
+                    </button>
+                    <button onClick={requestImport} disabled={!eventId || !standId || selectedStandSyncDisabled || busy} style={styles.importBtn}>
                         Importa in locale (sostituisce)
                     </button>
+                    {selectedStandSyncDisabled && (
+                        <div style={styles.error}>
+                            Lo stand selezionato non ha la sync configurata: imposta la password nel remoto (Gestione stand →
+                            Sincronizzazione app locale).
+                        </div>
+                    )}
                 </div>
                 {remoteError && <div style={styles.error}>{remoteError}</div>}
             </div>

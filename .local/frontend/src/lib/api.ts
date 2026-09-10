@@ -46,8 +46,10 @@ export const api = {
     getMeta: () => request<Meta>(`/sync/meta`),
     getRemoteEvents: () => request<{ items: RemoteEvent[] }>(`/sync/remote/events`),
     getRemoteStands: (eventId: string) => request<{ event: { id: string; name: string }; items: RemoteStand[] }>(`/sync/remote/events/${eventId}/stands`),
-    importFromRemote: (eventId: string, standId: string, force?: boolean) =>
-        request<ImportResult>(`/sync/import`, { method: 'POST', body: JSON.stringify({ eventId, standId, force }) }),
+    importFromRemote: (eventId: string, standId: string, force?: boolean, syncPassword?: string) =>
+        request<ImportResult>(`/sync/import`, { method: 'POST', body: JSON.stringify({ eventId, standId, force, syncPassword: syncPassword || undefined }) }),
     getPendingCount: () => request<{ count: number }>(`/sync/pending/count`),
-    pushToRemote: () => request<PushResult>(`/sync/push`, { method: 'POST' })
+    pushToRemote: () => request<PushResult>(`/sync/push`, { method: 'POST' }),
+    setSyncPassword: (syncPassword: string) =>
+        request<{ hasSyncPassword: boolean }>(`/sync/password`, { method: 'POST', body: JSON.stringify({ syncPassword }) })
 };

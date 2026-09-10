@@ -32,6 +32,10 @@ const localStateSchema = new Schema(
             type: String,
             default: null
         },
+        syncPassword: {
+            type: String,
+            default: null
+        },
         importedAt: {
             type: Date,
             default: null
