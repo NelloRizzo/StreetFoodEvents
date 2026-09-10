@@ -123,6 +123,11 @@ export function UserRolesPage() {
     return `${r.name} (${scopeLabels[r.scope] ?? r.scope})`
   }
 
+  function userEmail(u: PopulatedUser) {
+    if (!u) return null
+    return u.email
+  }
+
   return (
     <div className={styles.page}>
       <div className="page-shell">
@@ -177,6 +182,9 @@ export function UserRolesPage() {
               <article key={a.id} className={styles.card}>
                 <div className={styles.cardBody}>
                   <strong className={styles.cardName}>{userName(a.userId)}</strong>
+                  {userEmail(a.userId) && (
+                    <span className={styles.cardMeta}>{userEmail(a.userId)}</span>
+                  )}
                   <span>{roleName(a.roleId)}</span>
                   {a.eventId && (
                     <span className={styles.cardMeta}>Evento: {events.find((e) => e.id === a.eventId)?.name ?? a.eventId}</span>
