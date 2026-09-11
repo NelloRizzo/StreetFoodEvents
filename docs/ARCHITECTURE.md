@@ -28,6 +28,10 @@ Considerazioni progettuali e decisioni architetturali.
 - **Pattern adottato** (pulsante "Scarica Regolamento" in `EventDetailPage`, funzione `downloadRegulation`): `fetch(doc.url)` → `res.blob()` → `URL.createObjectURL(blob)` → crea un `<a>` temporaneo in `document.body` con `anchor.download = nome-desiderato` → `click()` → rimozione e `URL.revokeObjectURL`. Funziona perché ora l'URL è same-origin (object URL) e il `download` viene rispettato.
 - **Prerequisito CORS**: Cloudinary serve le risposte con `Access-Control-Allow-Origin: *`, quindi la fetch cross-origin funziona dal browser (stesso requisito già usato dalle immagini del poster social).
 - **Fallback**: se la `fetch` fallisce (blob nella cache, rete, o futuro hosting non-CORS), `catch` → `window.open(doc.url, '_blank', 'noopener,noreferrer')` per non perdere l'accesso al documento.
+
+## CORS — header custom nel frontend
+- **Prerequisito**: ogni header custom inviato dal browser in una richiesta cross-origin (es. `x-access-token` per l'adesione stand anonima) DEVE essere elencato in `allowedHeaders` della config `cors()` in `backend/src/app.ts` (più `Access-Control-Allow-Headers` nel preflight). Header non dichiarati → blocco preflight (`Request header field ... is not allowed by Access-Control-Allow-Headers`), errore solo in produzione (in locale non scatta perché il Vite proxy è same-origin).
+- **Come evitarlo**: quando si aggiunge un header custom sul fronte (`getsTokenHeaders`, `Authorization`, ecc.), verificare subito che sia in `allowedHeaders: ['Content-Type', 'Cookie', 'Authorization', 'x-access-token']`. I test vitest NON lo coprono (non passano da CORS) — il check va fatto manualmente su Render.
 - **Nome file**: `regolamento-<nome-evento-normalizzato>-<anno-inizio>.pdf` — normalizzazione ASCII (`normalize('NFD')` + rimozione diacritici + `[^a-zA-Z0-9_-]` → `-`, lowercase, ripiegamento `-+`/trim).
 - **Cosa NON fare**: NON affidarsi solo all'attributo `download` su URL Cloudinary cross-origin per forzare il nome; NON usare `<a target="_blank">` come unica modalità quando serve scaricare il file col nome giusto.
 
