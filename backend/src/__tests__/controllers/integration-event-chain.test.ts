@@ -19,9 +19,6 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
 import { CounterModel } from '../../models/counter.model';
 import { EventModel } from '../../models/event.model';
 import { EventProductModel } from '../../models/event-product.model';
-import { EventUserModel } from '../../models/event-user.model';
-import { FavoriteModel } from '../../models/favorite.model';
-import { OrderModel } from '../../models/order.model';
 import { ProductModel } from '../../models/product.model';
 import { SessionModel } from '../../models/session.model';
 import { StandModel } from '../../models/stand.model';
@@ -190,7 +187,7 @@ describe('Integration: Event → Stand → Product → EventProduct → Order ch
 
     it('event-product linked to correct event and stand — filtered correctly', async () => {
         app = createTestApp();
-        const { sessionToken } = await createAuthSession();
+        await createAuthSession();
 
         const event1 = await EventModel.create({
             name: 'Event One',

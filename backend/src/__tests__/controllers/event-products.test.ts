@@ -55,7 +55,7 @@ async function createAuthSession() {
 describe('EventProducts API', () => {
     it('lists event-products filtered by standId', async () => {
         app = createTestApp();
-        const { sessionToken } = await createAuthSession();
+        await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Event',

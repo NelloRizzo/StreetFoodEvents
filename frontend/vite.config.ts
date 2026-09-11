@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { copyFileSync, existsSync } from 'node:fs'
 
 export default defineConfig(({ command }) => {
   return {
@@ -10,12 +11,10 @@ export default defineConfig(({ command }) => {
         name: 'spa-fallback',
         apply: 'build',
         closeBundle() {
-          const fs = require('node:fs')
-          const path = require('node:path')
-          const distIndex = path.resolve(__dirname, 'dist', 'index.html')
-          const dist404 = path.resolve(__dirname, 'dist', '404.html')
-          if (fs.existsSync(distIndex)) {
-            fs.copyFileSync(distIndex, dist404)
+          const distIndex = new URL('./dist/index.html', import.meta.url)
+          const dist404 = new URL('./dist/404.html', import.meta.url)
+          if (existsSync(distIndex)) {
+            copyFileSync(distIndex, dist404)
             console.log('✓ Copiato index.html → 404.html per SPA routing')
           }
         },

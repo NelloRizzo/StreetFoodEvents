@@ -105,7 +105,7 @@ ${qrHtml}
         await apiRequest(`/orders/${orderId}/status`, { method: 'PATCH', bodyJson: { status: 'completed' } })
         setReceipt((prev) => prev ? { ...prev, status: 'completed' } : null)
       }
-    } catch {}
+    } catch { /* noop */ }
     setMarking(false)
   }
 

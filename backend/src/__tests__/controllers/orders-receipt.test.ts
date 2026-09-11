@@ -19,7 +19,6 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
 import { CounterModel } from '../../models/counter.model';
 import { EventModel } from '../../models/event.model';
 import { EventProductModel } from '../../models/event-product.model';
-import { OrderModel } from '../../models/order.model';
 import { ProductModel } from '../../models/product.model';
 import { SessionModel } from '../../models/session.model';
 import { StandModel } from '../../models/stand.model';
@@ -109,7 +108,7 @@ describe('Orders Receipt API', () => {
     it('gets order receipt (public)', async () => {
         app = createTestApp();
         const { sessionToken } = await createAuthSession();
-        const { event, stand, order } = await createTestOrder(sessionToken);
+        const { order } = await createTestOrder(sessionToken);
 
         const res = await request(app)
             .get(`/api/orders/${order.id}/receipt`);

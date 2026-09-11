@@ -269,7 +269,7 @@ describe('Orders API', () => {
 
     it('creates an order with items', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { sessionToken } = await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Test Event',
@@ -405,7 +405,7 @@ describe('Orders API', () => {
 
     it('creates a gift order with forced confirmed/paid state and zero total', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { sessionToken } = await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Gift Event',
@@ -448,7 +448,7 @@ describe('Orders API', () => {
 
     it('returns gift stats with counts and threshold', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { sessionToken } = await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Gift Stats Event',
@@ -480,9 +480,9 @@ describe('Orders API', () => {
             return res.body.item;
         };
 
-        const orderA = await createOrder(false);
-        const orderB = await createOrder(false);
-        const gift1 = await createOrder(true);
+        await createOrder(false);
+        await createOrder(false);
+        await createOrder(true);
         const gift2 = await createOrder(true);
 
         const res = await request(app)
@@ -522,7 +522,7 @@ describe('Orders API', () => {
 
     it('returns gift stats threshold not exceeded at exactly 5 percent', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { sessionToken } = await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Gift Boundary Event',
@@ -582,7 +582,7 @@ describe('Orders API', () => {
 
     it('cancels an unpaid order', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { sessionToken } = await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Cancel Event',
@@ -646,7 +646,7 @@ describe('Orders API', () => {
 
     it('updates order status through workflow', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { sessionToken } = await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Status Event',
@@ -711,7 +711,7 @@ describe('Orders API', () => {
 
     it('creates an order with cash payment (unified cashier)', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { sessionToken } = await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Cash Event',
@@ -869,7 +869,7 @@ describe('Orders API', () => {
 
     it('cancels a paid cash order and sets refunded status', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { sessionToken } = await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Cash Cancel Event',
@@ -914,7 +914,7 @@ describe('Orders API', () => {
 
     it('rejects cancelling an already completed order', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { sessionToken } = await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Compl Event',
@@ -962,7 +962,7 @@ describe('Orders API', () => {
 
     it('rejects invalid status transition', async () => {
         app = createTestApp();
-        const { user, sessionToken } = await createAuthSession();
+        const { sessionToken } = await createAuthSession();
 
         const event = await EventModel.create({
             name: 'Bad Trans',

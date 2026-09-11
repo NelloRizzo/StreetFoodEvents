@@ -20,7 +20,6 @@ import { CounterModel } from '../../models/counter.model';
 import { EventModel } from '../../models/event.model';
 import { EventProductModel } from '../../models/event-product.model';
 import { EventUserModel } from '../../models/event-user.model';
-import { OrderModel } from '../../models/order.model';
 import { ProductModel } from '../../models/product.model';
 import { RoleModel } from '../../models/role.model';
 import { SessionModel } from '../../models/session.model';

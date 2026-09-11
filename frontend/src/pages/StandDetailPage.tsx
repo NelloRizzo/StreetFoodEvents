@@ -636,7 +636,7 @@ export function StandDetailPage() {
                       try {
                         await apiRequest(`/event-products/${ep.id}`, { method: 'PATCH', bodyJson: { available: !ep.available } })
                         setEventProducts((prev) => prev.map((p) => p.id === ep.id ? { ...p, available: !p.available } : p))
-                      } catch {}
+                      } catch { /* noop */ }
                     }}
                   >
                     {ep.available ? 'Disponibile' : 'Non disp.'}

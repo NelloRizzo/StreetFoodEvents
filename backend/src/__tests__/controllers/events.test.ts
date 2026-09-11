@@ -19,11 +19,9 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
 import { SessionModel } from '../../models/session.model';
 import { UserModel } from '../../models/user.model';
 import {
-    clearSessionCookie,
     generateSessionToken,
     getSessionExpiryDate,
-    hashSessionToken,
-    setSessionCookie
+    hashSessionToken
 } from '../../utils/session';
 import { createTestApp } from '../helpers/test-app';
 import { assignPlatformAdmin } from '../helpers/factory';

@@ -61,7 +61,7 @@ export function StandOrdersPage() {
           try {
             const ev = await apiRequest<{ item: { name: string } }>(`/events/${urlEventId}`)
             setEventName(ev.item.name)
-          } catch {}
+          } catch { /* noop */ }
         }
       } catch { setForbidden(true); setIsLoading(false) }
     }

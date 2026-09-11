@@ -19,8 +19,6 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
 import { EventModel } from '../../models/event.model';
 import { RoleModel } from '../../models/role.model';
 import { SessionModel } from '../../models/session.model';
-import { StandModel } from '../../models/stand.model';
-import { StationModel } from '../../models/station.model';
 import { UserModel } from '../../models/user.model';
 import { UserRoleModel } from '../../models/user-role.model';
 import {
@@ -139,7 +137,7 @@ describe('Integration: role-based access across controllers', () => {
             currencyName: 'TC'
         });
 
-        const { role, assignment } = await createRoleWithUser('event', 'event-admin', user._id.toString(), event._id.toString());
+        const { role } = await createRoleWithUser('event', 'event-admin', user._id.toString(), event._id.toString());
 
         const res = await request(app)
             .get(`/api/user-roles?userId=${user._id}`)

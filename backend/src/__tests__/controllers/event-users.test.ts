@@ -18,7 +18,6 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
 
 import { EventModel } from '../../models/event.model';
 import { EventUserModel } from '../../models/event-user.model';
-import { EventUserTransactionModel } from '../../models/event-user-transaction.model';
 import { SessionModel } from '../../models/session.model';
 import { UserModel } from '../../models/user.model';
 import {

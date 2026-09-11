@@ -97,7 +97,7 @@ export function UserRolesPage() {
     try {
       await apiRequest(`/user-roles/${id}/toggle`, { method: 'PATCH' })
       loadAssignments()
-    } catch { }
+    } catch { /* noop */ }
   }
 
   const handleDelete = async (id: string) => {
@@ -110,7 +110,7 @@ export function UserRolesPage() {
       await apiRequest(`/user-roles/${deleteTarget}`, { method: 'DELETE' })
       setDeleteTarget(null)
       loadAssignments()
-    } catch { }
+    } catch { /* noop */ }
   }
 
   function userName(u: PopulatedUser) {

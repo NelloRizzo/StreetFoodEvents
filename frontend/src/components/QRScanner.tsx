@@ -22,7 +22,7 @@ export function QRScanner({ onScan, onClose }: Props) {
   const stopScanner = useCallback(() => {
     const s = scannerRef.current
     if (s) {
-      try { s.stop().catch(() => {}) } catch {}
+      try { s.stop().catch(() => {}) } catch { /* noop */ }
     }
   }, [])
 

@@ -4,10 +4,7 @@ import { Types } from 'mongoose';
 
 import { UserModel } from '../models/user.model';
 import { sendActivationEmail } from '../services/email.service';
-import {
-    generateActivationToken,
-    hashActivationToken
-} from '../utils/activation-token';
+import { generateActivationToken } from '../utils/activation-token';
 import { env } from '../config/env';
 
 function isValidObjectId(value: string) {

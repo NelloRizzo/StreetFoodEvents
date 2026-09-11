@@ -183,7 +183,7 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
       const fmtDate = (d: Date) => d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
       const endFmt = end.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })
 
-      let dateStr = ''
+      let dateStr: string
       if (start.toDateString() === end.toDateString()) {
         dateStr = fmtDate(start)
       } else {

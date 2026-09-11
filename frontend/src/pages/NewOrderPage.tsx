@@ -112,7 +112,7 @@ export function NewOrderPage() {
           try {
             const data = await apiRequest<{ item: Product }>(`/products/${ep.productId}`)
             product = data.item
-          } catch {}
+          } catch { /* noop */ }
           return { ...ep, product, stations: stations.filter((s) => ep.stationIds.includes(s.id)) }
         })
       )

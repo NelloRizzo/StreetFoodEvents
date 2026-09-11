@@ -20,7 +20,6 @@ import { CounterModel } from '../../models/counter.model';
 import { EventModel } from '../../models/event.model';
 import { EventProductModel } from '../../models/event-product.model';
 import { EventUserModel } from '../../models/event-user.model';
-import { OrderModel } from '../../models/order.model';
 import { ProductModel } from '../../models/product.model';
 import { SessionModel } from '../../models/session.model';
 import { StandModel } from '../../models/stand.model';
@@ -134,7 +133,7 @@ async function createOrderWithSetup(overrides: {
 describe('Orders Pay / Mark-Ready / Cancel-Items', () => {
     it('pays an unpaid order with credits', async () => {
         app = createTestApp();
-        const { sessionToken, event, order } = await createOrderWithSetup({ productPrice: 10 });
+        const { sessionToken, order } = await createOrderWithSetup({ productPrice: 10 });
 
         const res = await request(app)
             .post(`/api/orders/${order.id}/pay`)

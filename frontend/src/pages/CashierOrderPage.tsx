@@ -138,7 +138,7 @@ export function CashierOrderPage() {
             try {
               const data = await apiRequest<{ item: Product }>(`/products/${ep.productId}`)
               product = data.item
-            } catch {}
+            } catch { /* noop */ }
             return { ...ep, product, stations: stationData.items.filter((s) => ep.stationIds.includes(s.id)) }
           })
         )

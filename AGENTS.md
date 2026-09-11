@@ -272,6 +272,14 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Set 2026 — pulizia lint pre-esistenti)
+### Completed
+- **Lint a 0 errori** su entrambi i package (era 33 errori backend + 58 errori frontend, tutti pre-esistenti).
+- Frontend `eslint.config.js`: **regole disattivate di proposito** — `react-hooks/set-state-in-effect` (39 errori: il pattern repo `void load()` con `setLoading(true)` sincrono la scatena; era assente con react-hooks ≤6, nessun refactor in remoto) e `react-refresh/only-export-components` (7: helper esportati da `CurrencyDisplay`/`CategorySelect` usati in ~18 file + hook da `auth-context`/`ThemeProvider`). Il resto di react-hooks/ts rules resta attivo.
+- Fix banali frontend: `no-empty` ×9 (`catch { /* noop */ }` su catch intenzionali), `no-useless-assignment` (`PhotoBoothModal` `let dateStr: string`), `no-require-imports` (`vite.config.ts`: import ESM `node:fs` + `new URL('./dist/…', import.meta.url)` al posto di `require`/`__dirname`).
+- Backend: rimosso dead import `hashActivationToken` da `users.controller.ts` + **32 unused vars nei test** (import morti rimossi; fixture per side-effect senza assegnazione destructure o destructured ridotte a `{ role }`).
+- VERIFICA: frontend build ✓ + 43 test vitest ✓ + lint 0 errori (restano 13 warning `exhaustive-deps` pre-esistenti); backend typecheck ✓ + **372 test ✓** + lint 0 errori. Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria. COMMIT `chore`.
+
 ## Session state (Set 2026 — promozioni e coupon)
 ### Completed
 - Sistema **Promozioni e Coupon** completo (backend + frontend): tre tipi di coupon applicabili in cassa via input manuale o **QR scan** — `discount` (sconto `%` o `fixed` in crediti, mai su pagamenti in crediti per la versione percentuale, blocco server+client), `product` (prodotto del menu omaggio — semplici o con **formula** 2x1/3x2 via `formula { paid, total }` e cap `formulaMaxFree`; ogni ordine = 1 presentazione `maxPresentations`, non restituita se l'ordine viene annullato) e `value` (buono valore riscattato accreditando crediti al cliente). Modelli `Promotion` + `PromotionUsage`. API `/api/events/:eventId/promotions` (`Router({ mergeParams: true })`). Integrazione in `createOrder`/`payOrder` con campi `promotionId/promotionCode/discountAmount/freeUnits` sull'ordine, report con sezione `coupons` + `discountAmount`. Frontend: `CouponPanel` nelle due cacce, pagina `/admin/events/:eventId/promotions`, sezione coupon nei report e righe Sconto/Omaggi su ricevuta e modale conferma.
