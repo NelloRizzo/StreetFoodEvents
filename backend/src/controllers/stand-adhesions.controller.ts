@@ -206,13 +206,13 @@ function toAdhesionResponse(adhesion: {
     };
 }
 
-function completenessErrors(a: StandAdhesion): string[] {
+function completenessErrors(a: StandAdhesion, event: { participationFee?: number | null; deposit?: number | null }): string[] {
     const missing: string[] = [];
     if (!a.standName?.trim()) missing.push('nome dello stand');
     if (!a.haccpConfirmed) missing.push('conferma requisiti HACCP');
     if (!a.acceptsPointLight) missing.push('accettazione del punto luce (energia elettrica)');
-    if (!a.participationFeeAccepted) missing.push('accettazione del prezzo di partecipazione');
-    if (!a.depositAccepted) missing.push('accettazione della caparra');
+    if (event.participationFee != null && !a.participationFeeAccepted) missing.push('accettazione del prezzo di partecipazione');
+    if (event.deposit != null && !a.depositAccepted) missing.push('accettazione della caparra');
     if (!a.regulationAccepted) missing.push('accettazione del regolamento');
     if (!a.exclusionAccepted) missing.push('accettazione della clausola di esclusione');
     if (!a.signature?.trim()) missing.push('firma del richiedente');
@@ -484,7 +484,8 @@ export async function submitAdhesion(req: Request, res: Response) {
         return res.status(409).json({ message: 'Adesione non più in stato di bozza.' });
     }
 
-    const missing = completenessErrors(adhesion);
+    const event = await EventModel.findById(adhesion.eventId).select('participationFee deposit').lean();
+    const missing = completenessErrors(adhesion, event ?? {});
     if (missing.length > 0) {
         return res.status(400).json({
             message: `Compilazione incompleta: ${missing.join(', ')}.`

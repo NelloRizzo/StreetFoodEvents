@@ -270,6 +270,41 @@ describe('Integration — Stand Adhesions', () => {
         expect(submitRes.body.message).toMatch(/Compilazione incompleta/);
     });
 
+    it('submit: fee/caparra not required when event has no participationFee/deposit', async () => {
+        const { adminToken } = await setupEnvironment();
+        const bareEvent = await EventModel.create({
+            name: 'Bare Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2027-01-01'),
+            endDate: new Date('2027-01-05'),
+            currencyName: 'Coin',
+            regulationDocument: {
+                url: 'https://example.com/regolamento.pdf',
+                publicId: 'regolamento-bare',
+                format: 'pdf',
+                bytes: 2048,
+                originalName: 'regolamento.pdf'
+            }
+        });
+
+        const payload = completePayload('') as Partial<ReturnType<typeof completePayload>> & { standId?: string };
+        delete payload.standId;
+        delete payload.participationFeeAccepted;
+        delete payload.depositAccepted;
+
+        const created = await request(app)
+            .post(`/api/events/${bareEvent._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(payload);
+        expect(created.status).toBe(201);
+
+        const submitRes = await request(app)
+            .post(`/api/events/${bareEvent._id}/adhesions/${created.body.item.id}/submit`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(submitRes.status).toBe(200);
+        expect(submitRes.body.item.status).toBe('submitted');
+    });
+
     it('submit: complete adhesion → submitted; approve by event-admin → approved; edit → 409', async () => {
         const { adminToken, event, stand } = await setupEnvironment();
         const created = await request(app)

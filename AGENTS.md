@@ -313,6 +313,13 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - **Fix frontend** (`StandAdhesionWizardPage.tsx`): il campo "Stand collegato" da free-text `<input>` con datalist è diventato un `<select>` con gli stand dell'evento (per admin/gestori) o "I tuoi stand" (per l'utente) — prima opzione "— Nuovo stand: scrivi il nome qui sotto —". Label spiegata ("solo stand GIÀ registrati…; se lo stand è NUOVO lascia vuoto"). Selezione di uno stand esistente precompila `standName`; deselezione lo svuota se vuoto.
 - Test: +2 in `integration-stand-adhesions.test.ts` (creazione per nome → id risolto; nome inesistente → 400). Suite backend **374 test ✓**, typecheck ✓, lint 0 errori; frontend build (tsc+vite) ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria.
 
+## Session state (Set 2026 — fix submit adesione: quota/caparra opzionali + persist pre-submit)
+### Completed
+- **Bug**: "Compilazione incompleta: accettazione del prezzo di partecipazione, accettazione della caparra, firma del richiedente" — ma l'evento NON ha quota/caparra e la firma è compilata nel form.
+- **Fix ① (backend)**: `completenessErrors(adhesion, event)` ora richiede `participationFeeAccepted`/`depositAccepted` SOLO se `event.participationFee`/`event.deposit` sono definiti (`!= null`), come già faceva la `missing` list del wizard. `submitAdhesion` carica l'evento (`select('participationFee deposit')`) e lo passa.
+- **Fix ② (frontend)**: `handleSubmit` in `StandAdhesionWizardPage.tsx` chiamava il submit coi dati SALVATI, ignorando modifiche non ancora persistite (es. firma digitata dopo l'ultimo salvataggio). Ora fa SEMPRE `persist(buildPayload(form))` (PATCH se l'adesione esiste, POST altrimenti) prima del POST `/submit`.
+- Test: +1 in `integration-stand-adhesions.test.ts` (evento senza fee/caparra → submit OK senza acceptance). Suite backend **375 test ✓**, typecheck ✓, frontend build ✓.
+
 ## Session state (Aug 2026 — evento admin centralizzato con AdminEventContext)
 ### Completed
 - Nuovo `frontend/src/layouts/AdminEventContext.ts`: `AdminEventContext` + hook `useAdminEvent()` che espone `{ selectedEventId, selectedEvent, events }` a sidebar e pagine.

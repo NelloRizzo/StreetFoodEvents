@@ -340,12 +340,9 @@ export function StandAdhesionWizardPage() {
     setError(null)
     setMsg(null)
     try {
-      let item = adhesion
-      if (!item) {
-        item = await persist(buildPayload(form))
-        setAdhesion(item)
-        setForm(fromAdhesion(item))
-      }
+      const item = await persist(buildPayload(form))
+      setAdhesion(item)
+      setForm(fromAdhesion(item))
       const d = await apiRequest<{ item: AdhesionResponse; activationUrl?: string | null }>(`/events/${eventId}/adhesions/${item.id}/submit`, {
         method: 'POST',
         headers: getsTokenHeaders(eventId),
