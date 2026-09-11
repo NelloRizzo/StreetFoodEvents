@@ -65,7 +65,7 @@ app.use(
         },
         credentials: true,
         methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Cookie', 'Authorization']
+        allowedHeaders: ['Content-Type', 'Cookie', 'Authorization', 'x-access-token']
     })
 );
 app.use(helmet());
