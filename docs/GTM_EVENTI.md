@@ -49,11 +49,14 @@ Creazione di un ordine dal menu pubblico dello stand.
 | `total` | number | totale in valuta evento |
 | `currency` | string | nome moneta evento |
 | `is_gift` | boolean | true se ordine omaggio |
+| `promotion_code` | string | codice coupon applicato all'ordine (vuoto se assente) |
+| `discount_amount` | number | sconto applicato in valuta evento (0 se nessun coupon) |
+| `coupon_type` | string | tipo coupon: `discount` \| `product` \| `value` (vuoto se assente) |
 | `product_names` | string | nomi prodotti, separati da `\|` (una per riga carrello) |
 | `product_quantities` | string | quantità per riga, separate da `\|` (stesso ordine di `product_names`) |
 | `product_prices` | string | prezzi unitari per riga, separati da `\|` (stesso ordine) |
 
-GA4: mappabile su `begin_checkout`/`purchase` se si vogliono standard e-commerce; qui dimensioni custom. Per l'analisi per **stand/evento** usare `event_name` e `stand_name` come dimensioni; per i **prodotti** per stand sfruttare `product_names` (eventualmente splittato).
+GA4: mappabile su `begin_checkout`/`purchase` se si vogliono standard e-commerce; qui dimensioni custom. Per l'analisi per **stand/evento** usare `event_name` e `stand_name` come dimensioni; per i **prodotti** per stand sfruttare `product_names` (eventualmente splittato). `promotion_code`/`coupon_type` si possono usare come dimensione per valutare l'impatto delle promozioni.
 
 ### `sfe_currency_exchange`
 Change valuta dalla cassa cambio (top-up o refund).
@@ -95,6 +98,9 @@ Ordine creato dalla cassa cassiere (`CashierOrderPage` / `EventCashierPage`).
 | `currency` | string | nome moneta evento |
 | `is_gift` | boolean | true se omaggio |
 | `paid_on_create` | boolean | true se incassato alla creazione |
+| `promotion_code` | string | codice coupon applicato all'ordine (vuoto se assente) |
+| `discount_amount` | number | sconto applicato in valuta evento (0 se nessun coupon) |
+| `coupon_type` | string | tipo coupon: `discount` \| `product` \| `value` (vuoto se assente) |
 
 ### `sfe_cashier_payment`
 Incasso/pagamento di un ordine (`payOrder` in `OrderDetailPage`/`OrdersPage`).
@@ -140,7 +146,7 @@ Coupon validato e applicato in cassa (`CouponPanel` nelle cassa cassiere/stand).
 | `code` | string | codice coupon |
 | `coupon_type` | string | `discount` \| `product` |
 | `discount_type` | string | `percent` \| `fixed` (solo coupon sconto) |
-| `discount_amount` | number | sconto in valuta evento (0 se non calcolabile lato client) |
+| `discount_amount` | number | sconto in valuta evento (calcolato da `computeCouponDiscount` al momento della validazione) |
 | `free_units` | number | pezzi gratis (solo coupon prodotto) |
 
 ### `sfe_event_click`
