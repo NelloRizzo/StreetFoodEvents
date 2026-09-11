@@ -152,6 +152,36 @@ describe('Integration — Stand Adhesions', () => {
         expect(res.body.item.standId).toBe(stand._id.toString());
     });
 
+    it('create: admin links adhesion by stand NAME (resolved to id)', async () => {
+        const { adminToken, event, stand } = await setupEnvironment();
+
+        const payload = completePayload(stand.name) as Partial<ReturnType<typeof completePayload>> & { standId?: string };
+        payload.standId = stand.name;
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(payload);
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.standId).toBe(stand._id.toString());
+        expect(res.body.item.standName).toBe('Stand Burger');
+    });
+
+    it('create: unknown stand name → 400', async () => {
+        const { adminToken, event, stand } = await setupEnvironment();
+
+        const payload = completePayload(stand.name) as Partial<ReturnType<typeof completePayload>> & { standId?: string };
+        payload.standId = 'Stand Inesistente';
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(payload);
+
+        expect(res.status).toBe(400);
+    });
+
     it('create: stand user cannot attach an adhesion to another stand (403)', async () => {
         const { standToken, event } = await setupEnvironment();
         const otherStand = await StandModel.create({

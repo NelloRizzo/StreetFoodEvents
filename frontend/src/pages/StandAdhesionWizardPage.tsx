@@ -252,6 +252,7 @@ export function StandAdhesionWizardPage() {
 
   const [event, setEvent] = useState<EventRef | null>(null)
   const [myStands, setMyStands] = useState<MyStand[]>([])
+  const [eventStands, setEventStands] = useState<MyStand[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
   const [adhesion, setAdhesion] = useState<AdhesionResponse | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -272,6 +273,9 @@ export function StandAdhesionWizardPage() {
         .catch(() => { if (!cancelled) setError('Evento non trovato.') }),
       apiRequest<{ stands: MyStand[] }>('/auth/me/stands')
         .then((d) => { if (!cancelled) setMyStands(d.stands) })
+        .catch(() => {}),
+      apiRequest<{ items: MyStand[] }>(`/stands?eventId=${eventId}`)
+        .then((d) => { if (!cancelled) setEventStands(d.items) })
         .catch(() => {}),
       apiRequest<{ isPlatformAdmin: boolean; roles: RoleInfo[] }>('/auth/me/roles')
         .then((d) => {
@@ -483,9 +487,15 @@ export function StandAdhesionWizardPage() {
                 <input
                   id="adh-standid"
                   list="adh-stand-list"
+                  placeholder="Nome di uno stand dell'evento o ID"
                   value={form.standId}
                   onChange={(e) => set('standId', e.target.value)}
                 />
+                <datalist id="adh-stand-list">
+                  {eventStands.map((s) => (
+                    <option key={s.id} value={s.name} />
+                  ))}
+                </datalist>
               </div>
             )}
 

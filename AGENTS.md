@@ -305,6 +305,13 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - Fix `CouponPanel.tsx`: `trackCouponApplied` ora riceve `discountAmount` e `freeUnits` calcolati da `computeCouponDiscount(coupon.item, lines)` al momento della validazione, invece dei valori zero hardcoded.
 - Verifica: frontend build ✓, 43 test vitest ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria.
 
+## Session state (Set 2026 — fix "stand collegato" per nome nel wizard adesione)
+### Completed
+- **Bug**: nel campo "Stand collegato" (gestori evento) si digitava il NOME dello stand che finiva in `standId` del payload → nella creazione/modifica adesione mongoose lanciava `Cast to ObjectId failed for value "…" at path "standId"`.
+- **Fix backend** (`stand-adhesions.controller.ts`): nuova helper `resolveStandReference(eventId, ref)` — accetta sia un ObjectId valido sia il **nome** dello stand (match case-insensitive esatto tra gli stand dell'evento, `name` escaped per la regex); usata in `createAdhesion` e `updateAdhesion` (se il nome non esiste → 400 "Nessuno stand trovato…"). `data.standId`/`body.standId` assegnato con l'ObjectId risolto così il modello non vede più la stringa.
+- **Fix frontend** (`StandAdhesionWizardPage.tsx`): `GET /stands?eventId=` nel bootstrap per popolare il `<datalist id="adh-stand-list">` (era referenziato da `list=` ma mai renderizzato) — il gestore sceglie il nome dagli stand dell'evento.
+- Test: +2 in `integration-stand-adhesions.test.ts` (creazione per nome → id risolto; nome inesistente → 400). Suite backend **374 test ✓**, typecheck ✓, lint 0 errori; frontend build (tsc+vite) ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria.
+
 ## Session state (Aug 2026 — evento admin centralizzato con AdminEventContext)
 ### Completed
 - Nuovo `frontend/src/layouts/AdminEventContext.ts`: `AdminEventContext` + hook `useAdminEvent()` che espone `{ selectedEventId, selectedEvent, events }` a sidebar e pagine.

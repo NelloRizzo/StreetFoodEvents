@@ -40,6 +40,27 @@ function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && /^[0-9a-fA-F]{24}$/.test(value);
 }
 
+/**
+ * Risolve il riferimento a uno stand in un ObjectId.
+ * Accetta sia l'id reale (24 esadecimale) sia il NOME dello stand
+ * (cercato tra gli stand dell'evento, case-insensitive, match esatto).
+ * Restituisce null se non trova nulla.
+ */
+async function resolveStandReference(eventId: string, ref: string): Promise<Types.ObjectId | null> {
+    const trimmed = ref.trim();
+    if (!trimmed) return null;
+    if (/^[0-9a-fA-F]{24}$/.test(trimmed)) return new Types.ObjectId(trimmed);
+
+    const escapedName = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const stand = await StandModel.findOne({
+        eventIds: new Types.ObjectId(eventId),
+        name: { $regex: new RegExp(`^${escapedName}$`, 'i') }
+    })
+        .select('_id')
+        .lean();
+    return stand ? stand._id : null;
+}
+
 function pick(body: Record<string, unknown>, fields: readonly string[]): Record<string, unknown> {
     const out: Record<string, unknown> = {};
     for (const field of fields) {
@@ -264,14 +285,22 @@ export async function createAdhesion(req: Request, res: Response) {
     }
 
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const standId = typeof body.standId === 'string' ? body.standId : null;
+    const standRef = typeof body.standId === 'string' ? body.standId : null;
 
-    if (standId) {
+    let resolvedStandId: Types.ObjectId | null = null;
+    if (standRef) {
+        resolvedStandId = await resolveStandReference(eventId, standRef);
+        if (!resolvedStandId) {
+            return res.status(400).json({
+                message: `Nessuno stand trovato con nome "${standRef}" per questo evento.`
+            });
+        }
+
         if (!req.user) {
             return res.status(403).json({ message: 'Insufficient role' });
         }
         const admin = await isAdminForEvent(req.user.id, eventId);
-        const owner = await isStandMember(req.user.id, standId);
+        const owner = await isStandMember(req.user.id, resolvedStandId.toString());
         if (!admin && !owner) {
             return res.status(403).json({ message: 'Insufficient role' });
         }
@@ -279,8 +308,13 @@ export async function createAdhesion(req: Request, res: Response) {
 
     const data = pick(body, EDITABLE_FIELDS);
     data.eventId = new Types.ObjectId(eventId);
-    if (!data.standName) {
-        const stand = standId ? await StandModel.findById(standId).lean() : null;
+    if (resolvedStandId) {
+        data.standId = resolvedStandId;
+    } else {
+        delete data.standId;
+    }
+    if (!data.standName && resolvedStandId) {
+        const stand = await StandModel.findById(resolvedStandId).lean();
         if (stand?.name) data.standName = stand.name;
     }
     if (typeof data.signature === 'string' && data.signature.trim()) {
@@ -399,13 +433,23 @@ export async function updateAdhesion(req: Request, res: Response) {
 
     const body = pick((req.body ?? {}) as Record<string, unknown>, EDITABLE_FIELDS);
 
-    const standId = typeof body.standId === 'string' ? body.standId : null;
-    if (standId) {
-        const member = await isStandMember(req.user?.id ?? '', standId);
+    const standRef = typeof body.standId === 'string' ? body.standId : null;
+    let resolvedStandId: Types.ObjectId | null = null;
+    if (standRef) {
+        resolvedStandId = await resolveStandReference(adhesion.eventId.toString(), standRef);
+        if (!resolvedStandId) {
+            return res.status(400).json({
+                message: `Nessuno stand trovato con nome "${standRef}" per questo evento.`
+            });
+        }
+        const member = await isStandMember(req.user?.id ?? '', resolvedStandId.toString());
         const admin = req.user ? await isAdminForEvent(req.user.id, adhesion.eventId.toString()) : false;
         if (!admin && !member) {
             return res.status(403).json({ message: 'Non puoi collegare un adesione a uno stand che non gestisci.' });
         }
+        body.standId = resolvedStandId;
+    } else {
+        delete body.standId;
     }
 
     adhesion.set(body);
