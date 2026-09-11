@@ -56,12 +56,15 @@ export function CouponPanel({
           setCode('')
         } else {
           onChange({ code: res.item.code, item: res.item })
+          const discount = computeCouponDiscount(res.item, lines)
           trackCouponApplied({
             eventId,
             standId,
             code: res.item.code,
             type: res.item.type,
             discountType: res.item.discountType,
+            discountAmount: discount.discountAmount,
+            freeUnits: discount.freeUnits,
           })
           setCode('')
         }

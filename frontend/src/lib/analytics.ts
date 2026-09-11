@@ -88,6 +88,9 @@ export function trackOrderCreated(params: {
   currencyName?: string
   isGift?: boolean
   products?: OrderAnalyticsProduct[]
+  promotionCode?: string
+  discountAmount?: number
+  couponType?: string
 }): void {
   analyticsEvent('sfe_order_created', {
     order_id: params.orderId ?? '',
@@ -102,6 +105,9 @@ export function trackOrderCreated(params: {
     product_names: (params.products ?? []).map((p) => p.productName).join('|'),
     product_quantities: (params.products ?? []).map((p) => p.quantity).join('|'),
     product_prices: (params.products ?? []).map((p) => p.unitPrice).join('|'),
+    promotion_code: params.promotionCode ?? '',
+    discount_amount: params.discountAmount ?? 0,
+    coupon_type: params.couponType ?? '',
   })
 }
 
@@ -149,6 +155,9 @@ export function trackCashierOrderCreated(params: {
   currency?: string
   isGift?: boolean
   paidOnCreate: boolean
+  promotionCode?: string
+  discountAmount?: number
+  couponType?: string
 }): void {
   analyticsEvent('sfe_cashier_order_created', {
     order_id: params.orderId ?? '',
@@ -161,6 +170,9 @@ export function trackCashierOrderCreated(params: {
     currency: params.currency ?? '',
     is_gift: Boolean(params.isGift),
     paid_on_create: Boolean(params.paidOnCreate),
+    promotion_code: params.promotionCode ?? '',
+    discount_amount: params.discountAmount ?? 0,
+    coupon_type: params.couponType ?? '',
   })
 }
 

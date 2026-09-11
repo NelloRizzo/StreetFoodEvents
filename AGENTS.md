@@ -299,6 +299,12 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - Verifica: backend typecheck ✓, 303 test ✓, frontend build ✓.
 - Nota: la modifica tocca solo `backend/` e `frontend/` cloud — NON `.local/`, quindi nessuna rigenerazione di `distro/local-app.tar` necessaria.
 
+## Session state (Set 2026 — parametri coupon in eventi GA4/GTM)
+### Completed
+- `trackCashierOrderCreated` e `trackOrderCreated` in `analytics.ts` ora accettano i parametri opzionali `promotionCode`, `discountAmount`, `couponType` (esposti nel dataLayer come `promotion_code`, `discount_amount`, `coupon_type`). Call sites: `CashierOrderPage.tsx` e `EventCashierPage.tsx` passano i valori dalla response API (`response.item.promotionCode`, `response.item.discountAmount`, `coupon?.item.type`). `EventStandMenuPage` (menu pubblico, nessun coupon) mantiene i default vuoti — nessun cambio.
+- Fix `CouponPanel.tsx`: `trackCouponApplied` ora riceve `discountAmount` e `freeUnits` calcolati da `computeCouponDiscount(coupon.item, lines)` al momento della validazione, invece dei valori zero hardcoded.
+- Verifica: frontend build ✓, 43 test vitest ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria.
+
 ## Session state (Aug 2026 — evento admin centralizzato con AdminEventContext)
 ### Completed
 - Nuovo `frontend/src/layouts/AdminEventContext.ts`: `AdminEventContext` + hook `useAdminEvent()` che espone `{ selectedEventId, selectedEvent, events }` a sidebar e pagine.

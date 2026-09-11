@@ -311,6 +311,9 @@ export function EventCashierPage() {
         currency: eventCurrency?.currencyName,
         isGift,
         paidOnCreate: !isGift,
+        promotionCode: response.item.promotionCode || undefined,
+        discountAmount: response.item.discountAmount || undefined,
+        couponType: coupon?.item.type,
       })
     } catch (e) {
       setAlertMsg(e instanceof Error ? e.message : 'Errore durante la creazione ordine')
