@@ -483,25 +483,33 @@ export function StandAdhesionWizardPage() {
 
             {isAdmin && (
               <div className={styles.field}>
-                <label htmlFor="adh-standid">Stand collegato <em>(opzionale per i gestori evento)</em></label>
-                <input
+                <label htmlFor="adh-standid">
+                  Stand collegato <em>(solo stand GIÀ registrati nell'evento; se lo stand è NUOVO lascia vuoto e scrivi il nome qui sotto)</em>
+                </label>
+                <select
                   id="adh-standid"
-                  list="adh-stand-list"
-                  placeholder="Nome di uno stand dell'evento o ID"
                   value={form.standId}
-                  onChange={(e) => set('standId', e.target.value)}
-                />
-                <datalist id="adh-stand-list">
+                  onChange={(e) => {
+                    const isName = eventStands.find((s) => s.id === e.target.value)
+                    set('standId', e.target.value)
+                    if (isName) {
+                      set('standName', isName.name)
+                    } else if (!e.target.value) {
+                      set('standName', '')
+                    }
+                  }}
+                >
+                  <option value="">— Nuovo stand: scrivi il nome qui sotto —</option>
                   {eventStands.map((s) => (
-                    <option key={s.id} value={s.name} />
+                    <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
-                </datalist>
+                </select>
               </div>
             )}
 
             {myStands.length > 0 && (
               <div className={styles.field}>
-                <label htmlFor="adh-stand-select">I tuoi stand</label>
+                <label htmlFor="adh-stand-select">I tuoi stand <em>(seleziona se stai rinnovando l'adesione di uno stand esistente)</em></label>
                 <select
                   id="adh-stand-select"
                   value={form.standId}
@@ -509,9 +517,10 @@ export function StandAdhesionWizardPage() {
                     const stand = myStands.find((s) => s.id === e.target.value)
                     set('standId', e.target.value)
                     if (stand && !form.standName.trim()) set('standName', stand.name)
+                    if (!e.target.value && !form.standName.trim()) set('standName', '')
                   }}
                 >
-                  <option value="">— Seleziona uno stand —</option>
+                  <option value="">— Nuovo stand: scrivi il nome qui sotto —</option>
                   {myStands.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
