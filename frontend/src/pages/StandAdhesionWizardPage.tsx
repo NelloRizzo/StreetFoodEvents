@@ -60,6 +60,9 @@ type EventRef = {
   currencyName: string
   participationFee: number | null
   deposit: number | null
+  participationFeeDeadline: string | null
+  depositDeadline: string | null
+  regulationDocument: { url: string } | null
 }
 
 type MyStand = { id: string; name: string }
@@ -142,6 +145,29 @@ const newProduct = (): ProductDraft => ({
 })
 
 const newEnergyNeed = (): EnergyDraft => ({ equipment: '', powerKw: '', connectionType: 'monofase' })
+
+const tokenKey = (eventId: string | undefined) => `sfe_adhesion_access_token_${eventId}`
+
+function getStoredToken(eventId: string | undefined): string | null {
+  try {
+    return window.localStorage.getItem(tokenKey(eventId))
+  } catch {
+    return null
+  }
+}
+
+function storeToken(eventId: string | undefined, token: string) {
+  try {
+    window.localStorage.setItem(tokenKey(eventId), token)
+  } catch {
+    /* ignore */
+  }
+}
+
+function getsTokenHeaders(eventId: string | undefined): Record<string, string> {
+  const token = getStoredToken(eventId)
+  return token ? { 'x-access-token': token } : {}
+}
 
 function fromAdhesion(a: AdhesionResponse): FormState {
   return {
@@ -253,7 +279,9 @@ export function StandAdhesionWizardPage() {
           if (!cancelled) setIsAdmin(admin)
         })
         .catch(() => {}),
-      apiRequest<{ item: AdhesionResponse | null }>(`/events/${eventId}/adhesions/mine`)
+      apiRequest<{ item: AdhesionResponse | null }>(`/events/${eventId}/adhesions/mine`, {
+        headers: getsTokenHeaders(eventId),
+      })
         .then((d) => {
           if (cancelled) return
           if (d.item) {
@@ -274,13 +302,16 @@ export function StandAdhesionWizardPage() {
       const d = await apiRequest<{ item: AdhesionResponse }>(`/events/${eventId}/adhesions/${adhesion.id}`, {
         method: 'PATCH',
         bodyJson: payload,
+        headers: getsTokenHeaders(eventId),
       })
       return d.item
     }
-    const d = await apiRequest<{ item: AdhesionResponse }>(`/events/${eventId}/adhesions`, {
+    const d = await apiRequest<{ item: AdhesionResponse; accessToken?: string }>(`/events/${eventId}/adhesions`, {
       method: 'POST',
       bodyJson: payload,
+      headers: getsTokenHeaders(eventId),
     })
+    if (d.accessToken) storeToken(eventId, d.accessToken)
     return d.item
   }
 
@@ -311,12 +342,17 @@ export function StandAdhesionWizardPage() {
         setAdhesion(item)
         setForm(fromAdhesion(item))
       }
-      const d = await apiRequest<{ item: AdhesionResponse }>(`/events/${eventId}/adhesions/${item.id}/submit`, {
+      const d = await apiRequest<{ item: AdhesionResponse; activationUrl?: string | null }>(`/events/${eventId}/adhesions/${item.id}/submit`, {
         method: 'POST',
+        headers: getsTokenHeaders(eventId),
       })
       setAdhesion(d.item)
       setForm(fromAdhesion(d.item))
-      setMsg('Adesione inviata per approvazione.')
+      if (d.activationUrl) {
+        setMsg(`Adesione inviata per approvazione. Attiva il tuo account al link: ${d.activationUrl}`)
+      } else {
+        setMsg('Adesione inviata per approvazione.')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Errore durante l'invio.")
     } finally {
@@ -332,6 +368,7 @@ export function StandAdhesionWizardPage() {
     try {
       const d = await apiRequest<{ item: AdhesionResponse }>(`/events/${eventId}/adhesions/${adhesion!.id}/withdraw`, {
         method: 'POST',
+        headers: getsTokenHeaders(eventId),
       })
       setAdhesion(d.item)
       setForm(fromAdhesion(d.item))
@@ -356,10 +393,39 @@ export function StandAdhesionWizardPage() {
     if (!form.regulationAccepted) list.push('regolamento')
     if (!form.exclusionAccepted) list.push('clausola di esclusione')
     if (!form.signature.trim()) list.push('firma')
+    if (!form.standId) {
+      if (!form.contactName.trim()) list.push('nome del referente')
+      if (!form.contactEmail.trim()) list.push('email del referente')
+    }
     return list
   }, [form, event])
 
   if (loading) return null
+
+  if (event && !event.regulationDocument) {
+    return (
+      <div className={styles.page}>
+        <div className="page-shell">
+          <div className={styles.header}>
+            <div>
+              <span className="eyebrow">Adesione stand</span>
+              <h1 className={styles.title}>Modulo di adesione alla manifestazione</h1>
+              {event && (
+                <p className={styles.subtitle}>
+                  {event.name} &middot; {new Date(event.startDate).toLocaleDateString('it-IT')} &ndash;{' '}
+                  {new Date(event.endDate).toLocaleDateString('it-IT')}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className={styles.noRegulation}>
+            Il modulo di adesione è disponibile solo se l&apos;organizzazione ha pubblicato il regolamento
+            della manifestazione. Riprova più tardi.
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const canSubmit = editable && missing.length === 0
 
@@ -398,8 +464,9 @@ export function StandAdhesionWizardPage() {
 
         {myStands.length === 0 && !isAdmin && !adhesion && (
           <p className={styles.hint}>
-            Non risulti collegato ad alcuno stand. Per compilare un&apos;adesione da gestore dell&apos;evento
-            accedi con un ruolo di amministrazione evento.
+            Stai compilando un&apos;adesione per uno stand nuovo: i dati che inserisci verranno usati per creare
+            lo stand di tua proprietà, che sarà attivato dopo l&apos;approvazione dall&apos;organizzazione.
+            Se invece sei gestore di uno stand esistente, accedi con il tuo account e selezionalo dal menu.
           </p>
         )}
 
@@ -665,10 +732,22 @@ export function StandAdhesionWizardPage() {
               <div className={styles.feeLine}>
                 <strong>Quota di partecipazione:</strong>{' '}
                 {event?.participationFee != null ? `${event.participationFee} €` : 'non indicata dall\u2019organizzazione'}
+                {event?.participationFeeDeadline != null && (
+                  <>
+                    {' '}
+                    <em>(saldo entro il {new Date(event.participationFeeDeadline).toLocaleDateString('it-IT')})</em>
+                  </>
+                )}
               </div>
               <div className={styles.feeLine}>
                 <strong>Caparra:</strong>{' '}
                 {event?.deposit != null ? `${event.deposit} €` : 'non indicata dall\u2019organizzazione'}
+                {event?.depositDeadline != null && (
+                  <>
+                    {' '}
+                    <em>(saldo entro il {new Date(event.depositDeadline).toLocaleDateString('it-IT')})</em>
+                  </>
+                )}
               </div>
               <p className={styles.hint}>
                 Il pagamento degli importi non avviene tramite questa piattaforma: le modalità di versamento

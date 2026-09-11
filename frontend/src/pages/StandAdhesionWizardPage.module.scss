@@ -92,6 +92,15 @@
   margin-bottom: 1rem;
 }
 
+.noRegulation {
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(192, 57, 43, 0.5);
+  background: rgba(192, 57, 43, 0.08);
+  color: #b03a2e;
+  line-height: 1.6;
+}
+
 .form {
   margin-top: 1rem;
 }

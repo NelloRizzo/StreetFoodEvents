@@ -75,7 +75,7 @@ Login: utente inattivo o senza password → 403 con messaggio distinto ("non anc
 |---|---|---|---|
 | GET | `/api/events?public=true` | optional | Lista eventi pubblici e non terminati (`endDate >= now`). Senza `public=true`: tutti gli eventi (solo gestori/platform). |
 | GET | `/api/events/:eventId/menu-qrcode` | no | QR code (data URL) che linka al menu del primo stand visibile (`showOnMap !== false`) dell'evento. 404 se nessuno stand visibile. |
-| POST | `/api/events/:eventId/duplicate` | auth | Duplica l'evento come base operativa per la prossima edizione: copia configurazione (moneta, tema, fasce, tagli, categorie), collega gli stand con rinumerazione progressiva, copia EventProduct e POI. NON copia wallet/ordini/transazioni/foto/contest. Body opzionale `{ name, startDate, endDate, isPublic }` (default: nome+" (copia)", date +1 anno). |
+| POST | `/api/events/:eventId/duplicate` | auth | Duplica l'evento come base operativa per la prossima edizione: copia configurazione (moneta, tema, fasce, tagli, categorie), collega gli stand con rinumerazione progressiva, copia EventProduct e POI. NON copia wallet/ordini/transazioni/foto/contest, né le scadenze `participationFeeDeadline`/`depositDeadline` (nuova edizione → null). Body opzionale `{ name, startDate, endDate, isPublic }` (default: nome+" (copia)", date +1 anno). |
 
 ### API routes — Alias
 | Method | Route | Auth | Description |
@@ -130,6 +130,15 @@ Pubblicazione Meta: account UNICO della piattaforma via env opzionali `META_PAGE
 | Route | Element | Description |
 |---|---|---|
 | `/events/:eventId/stands/:standId/ordersqueue` | StandDisplayPage | Coda Ordini: display fullscreen pubblico ordini in lavorazione (auto-refresh 5s) |
+
+### Frontend — Adesione stand
+| Route | Element | Description |
+|---|---|---|
+| `/events/:eventId/stand-adhesion` | StandAdhesionWizardPage | Wizard adesione PUBBLICO (anche anonimo, solo stand nuovi; gate regolamento, ripresa via access token in localStorage) |
+| `/admin/events/:eventId/stand-adhesion` | StandAdhesionWizardPage | Stesso wizard sotto AdminLayout (admin evento / owner stand) |
+| `/admin/events/:eventId/adhesions` | AdhesionsManagePage | Gestione/approvazione adesioni (solo event-admin; platform-admin escluso) |
+| `/admin/events/:eventId/adhesion-form` | AdhesionFormManagePage | Modulo di adesione generato dall'evento (stampa/gestione) |
+| `/events/:eventId/adhesion-form` | AdhesionFormPublicPage | Modulo di adesione stampabile pubblico |
 
 ### Frontend — Exchange route
 | Route | Element | Description |
@@ -197,6 +206,19 @@ Pubblicazione Meta: account UNICO della piattaforma via env opzionali `META_PAGE
 | GET | `/api/contests/:contestId/participation/:participantId` | no | Stato partecipazione |
 | PATCH | `/api/contests/:contestId/participation/:participantId/award` | contest-admin / platform-admin | Consegna premio |
 | GET | `/api/contests/:contestId/poi-qrcodes` | contest-admin / platform-admin | QR code per ogni POI del contest |
+
+### API routes — Adesione stand (wizard elettronico)
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/events/:eventId/adhesions` | auth | Lista adesioni (admin vede tutto; gli altri solo le proprie: stands possesso o `userId`) |
+| POST | `/api/events/:eventId/adhesions` | optional auth | Crea adesione. **Gate**: 400 se l'evento non ha `regulationDocument`. Anonimo SOLO per stand nuovo (senza `standId`); con `standId` → admin/owner. Response include `accessToken` (da conservare e inviare come header `x-access-token`) — nel DB solo `accessTokenHash` sha256 |
+| GET | `/api/events/:eventId/adhesions/mine` | optional auth | Adesione dell'utente (o via `x-access-token`) → `{ item }` o `{ item: null }` |
+| GET | `/api/events/:eventId/adhesions/:adhesionId` | optional auth | Dettaglio (admin/owner/utente/token; altrimenti 404) |
+| PATCH | `/api/events/:eventId/adhesions/:adhesionId` | optional auth | Modifica bozza (409 se approved; `submitted` → `draft`) |
+| POST | `/api/events/:eventId/adhesions/:adhesionId/submit` | optional auth | Invia per approvazione (400 con campi mancanti; per i nuovi stand crea/riusa utente inattivo con invito email; response `activationUrl`/`emailSent`) |
+| POST | `/api/events/:eventId/adhesions/:adhesionId/withdraw` | optional auth | Ritira da `submitted` → `draft` |
+| POST | `/api/events/:eventId/adhesions/:adhesionId/approve` | event-admin | Approva. Se l'adesione non ha `standId` CREA lo `Stand` (numero progressivo + ruoli/logo) e assegna `stand-admin` all'utente. **platform-admin ESCLUSO** (`hasRole` matcha per slug) |
+| POST | `/api/events/:eventId/adhesions/:adhesionId/reject` | event-admin | Rifiuta con `{ reviewNote }` |
 
 ### API routes — Email Subscriptions
 | Method | Route | Auth | Description |

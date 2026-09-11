@@ -35,6 +35,8 @@ type EventItem = {
   exchangeRate: number
   participationFee: number | null
   deposit: number | null
+  participationFeeDeadline: string | null
+  depositDeadline: string | null
   url: string | null
   shortDescription: string | null
   longDescription: string | null
@@ -76,6 +78,8 @@ type EventFormData = {
   exchangeRate: string
   participationFee: string
   deposit: string
+  participationFeeDeadline: string
+  depositDeadline: string
   url: string
   shortDescription: string
   longDescription: string
@@ -114,6 +118,8 @@ const emptyForm: EventFormData = {
   exchangeRate: '1',
   participationFee: '',
   deposit: '',
+  participationFeeDeadline: '',
+  depositDeadline: '',
   url: '',
   shortDescription: '',
   longDescription: '',
@@ -412,6 +418,8 @@ export function EventsPage() {
       exchangeRate: String(ev.exchangeRate ?? 1),
       participationFee: ev.participationFee != null ? String(ev.participationFee) : '',
       deposit: ev.deposit != null ? String(ev.deposit) : '',
+      participationFeeDeadline: ev.participationFeeDeadline ? ev.participationFeeDeadline.slice(0, 10) : '',
+      depositDeadline: ev.depositDeadline ? ev.depositDeadline.slice(0, 10) : '',
       url: ev.url ?? '',
       shortDescription: ev.shortDescription ?? '',
       longDescription: ev.longDescription ?? '',
@@ -479,6 +487,8 @@ export function EventsPage() {
       exchangeRate: form.exchangeRate ? Number(form.exchangeRate) : 1,
       participationFee: form.participationFee ? Number(form.participationFee) : null,
       deposit: form.deposit ? Number(form.deposit) : null,
+      participationFeeDeadline: form.participationFeeDeadline ? new Date(form.participationFeeDeadline).toISOString() : null,
+      depositDeadline: form.depositDeadline ? new Date(form.depositDeadline).toISOString() : null,
       url: form.url || null,
       shortDescription: form.shortDescription || null,
       longDescription: form.longDescription || null,
@@ -1106,6 +1116,15 @@ export function EventsPage() {
                   />
                 </div>
                 <div className={styles.field}>
+                  <label htmlFor="ev-fee-deadline">Ultima data saldo quota</label>
+                  <input
+                    id="ev-fee-deadline"
+                    type="date"
+                    value={form.participationFeeDeadline}
+                    onChange={(e) => setForm({ ...form, participationFeeDeadline: e.target.value })}
+                  />
+                </div>
+                <div className={styles.field}>
                   <label htmlFor="ev-deposit">Caparra (EUR)</label>
                   <input
                     id="ev-deposit"
@@ -1115,6 +1134,15 @@ export function EventsPage() {
                     value={form.deposit}
                     onChange={(e) => setForm({ ...form, deposit: e.target.value })}
                     placeholder="es. 300"
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="ev-deposit-deadline">Ultima data saldo caparra</label>
+                  <input
+                    id="ev-deposit-deadline"
+                    type="date"
+                    value={form.depositDeadline}
+                    onChange={(e) => setForm({ ...form, depositDeadline: e.target.value })}
                   />
                 </div>
               </div>

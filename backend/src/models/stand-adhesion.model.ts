@@ -81,11 +81,20 @@ const standAdhesionSchema = new Schema(
             required: true,
             index: true
         },
-        standId: {
+            standId: {
             type: Schema.Types.ObjectId,
             ref: 'Stand',
+            default: null
+        },
+        userId: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
             default: null,
             index: true
+        },
+        accessTokenHash: {
+            type: String,
+            default: null
         },
         status: {
             type: String,

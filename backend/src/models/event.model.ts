@@ -116,9 +116,17 @@ const eventSchema = new Schema(
             min: 0,
             default: null
         },
+        participationFeeDeadline: {
+            type: Date,
+            default: null
+        },
         deposit: {
             type: Number,
             min: 0,
+            default: null
+        },
+        depositDeadline: {
+            type: Date,
             default: null
         },
         themeBrand: {

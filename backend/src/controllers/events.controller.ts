@@ -76,6 +76,8 @@ function toEventResponse(event: {
     exchangeRate?: number | null;
     participationFee?: number | null;
     deposit?: number | null;
+    participationFeeDeadline?: Date | null;
+    depositDeadline?: Date | null;
     themeBrand?: string | null;
     themeText?: string | null;
     themeSurface?: string | null;
@@ -109,6 +111,8 @@ function toEventResponse(event: {
         exchangeRate: event.exchangeRate ?? 1,
         participationFee: event.participationFee ?? null,
         deposit: event.deposit ?? null,
+        participationFeeDeadline: event.participationFeeDeadline ?? null,
+        depositDeadline: event.depositDeadline ?? null,
         themeBrand: event.themeBrand ?? null,
         themeText: event.themeText ?? null,
         themeSurface: event.themeSurface ?? null,
@@ -232,6 +236,8 @@ export async function createEvent(req: Request, res: Response) {
         exchangeRate,
         participationFee,
         deposit,
+        participationFeeDeadline,
+        depositDeadline,
         themeBrand,
         themeText,
         themeSurface,
@@ -266,6 +272,8 @@ export async function createEvent(req: Request, res: Response) {
         exchangeRate: exchangeRate ?? 1,
         participationFee: participationFee ?? null,
         deposit: deposit ?? null,
+        participationFeeDeadline: participationFeeDeadline ? new Date(participationFeeDeadline) : null,
+        depositDeadline: depositDeadline ? new Date(depositDeadline) : null,
         themeBrand: themeBrand ?? null,
         themeText: themeText ?? null,
         themeSurface: themeSurface ?? null,
@@ -318,6 +326,8 @@ export async function updateEvent(req: Request, res: Response) {
         exchangeRate,
         participationFee,
         deposit,
+        participationFeeDeadline,
+        depositDeadline,
         themeBrand,
         themeText,
         themeSurface,
@@ -376,6 +386,14 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (deposit !== undefined) {
         event.deposit = deposit;
+    }
+
+    if (participationFeeDeadline !== undefined) {
+        event.participationFeeDeadline = participationFeeDeadline ? new Date(participationFeeDeadline) : null;
+    }
+
+    if (depositDeadline !== undefined) {
+        event.depositDeadline = depositDeadline ? new Date(depositDeadline) : null;
     }
 
     if (themeBrand !== undefined) {

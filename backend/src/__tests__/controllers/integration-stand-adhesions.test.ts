@@ -52,7 +52,14 @@ async function setupEnvironment() {
         participationFee: 150,
         deposit: 300,
         feeBands: [{ maxAmount: 1000, feePercent: 10, feeFlat: 20 }],
-        cashPaymentsEnabled: true
+        cashPaymentsEnabled: true,
+        regulationDocument: {
+            url: 'https://example.com/regolamento.pdf',
+            publicId: 'regolamento-1',
+            format: 'pdf',
+            bytes: 2048,
+            originalName: 'regolamento.pdf'
+        }
     });
 
     const eventAdminRole = await RoleModel.create({
@@ -337,5 +344,213 @@ describe('Integration — Stand Adhesions', () => {
         const getRes = await request(app).get(`/api/events/${eventId}`);
         expect(getRes.body.item.participationFee).toBe(200);
         expect(getRes.body.item.deposit).toBe(250);
+    });
+
+    it('events: participationFeeDeadline and depositDeadline round-trip through create and read', async () => {
+        app = createTestApp();
+        const { adminToken } = await setupEnvironment();
+
+        const createRes = await request(app)
+            .post('/api/events')
+            .set('Cookie', [`sid=${adminToken}`])
+            .send({
+                name: 'Deadline Event',
+                location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+                startDate: '2026-10-01',
+                endDate: '2026-10-05',
+                currencyName: 'Coin',
+                participationFee: 200,
+                deposit: 250,
+                participationFeeDeadline: '2026-09-15',
+                depositDeadline: '2026-08-15'
+            });
+        expect(createRes.status).toBe(201);
+        expect(createRes.body.item.participationFeeDeadline).toMatch(/^2026-09-15/);
+        expect(createRes.body.item.depositDeadline).toMatch(/^2026-08-15/);
+
+        const eventId = createRes.body.item.id;
+        const getRes = await request(app).get(`/api/events/${eventId}`);
+        expect(getRes.body.item.participationFeeDeadline).toMatch(/^2026-09-15/);
+        expect(getRes.body.item.depositDeadline).toMatch(/^2026-08-15/);
+    });
+
+    it('create: anonymous user creates adhesion for a NEW stand (201 + accessToken, no auth)', async () => {
+        const { event } = await setupEnvironment();
+        const payload = completePayload('') as Partial<ReturnType<typeof completePayload>> & { standId?: string };
+        delete payload.standId;
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .send(payload);
+
+        expect(res.status).toBe(201);
+        expect(res.body.item).toMatchObject({
+            status: 'draft',
+            standId: null,
+            userId: null,
+            standName: 'Stand Burger',
+            signature: 'Mario Rossi'
+        });
+        expect(typeof res.body.accessToken).toBe('string');
+        expect(res.body.accessToken.length).toBeGreaterThan(16);
+    });
+
+    it('create: anonymous user cannot attach an adhesion to an existing stand (403)', async () => {
+        const { event, stand } = await setupEnvironment();
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .send(completePayload(stand._id.toString()));
+
+        expect(res.status).toBe(403);
+    });
+
+    it('create: event without regulationDocument → 400', async () => {
+        const { adminToken } = await setupEnvironment();
+        const bareEvent = await EventModel.create({
+            name: 'Bare Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2027-01-01'),
+            endDate: new Date('2027-01-05'),
+            currencyName: 'Coin'
+        });
+
+        const res = await request(app)
+            .post(`/api/events/${bareEvent._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(completePayload(''));
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/regolamento/);
+    });
+
+    it('mine: anonymous resumes own adhesion via access token header', async () => {
+        const { event } = await setupEnvironment();
+        const payload = completePayload('') as Partial<ReturnType<typeof completePayload>> & { standId?: string };
+        delete payload.standId;
+
+        const created = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .send(payload);
+        const accessToken = created.body.accessToken as string;
+        const adhesionId = created.body.item.id;
+
+        const mineRes = await request(app)
+            .get(`/api/events/${event._id}/adhesions/mine`)
+            .set('x-access-token', accessToken);
+        expect(mineRes.status).toBe(200);
+        expect(mineRes.body.item.id).toBe(adhesionId);
+
+        const wrongRes = await request(app)
+            .get(`/api/events/${event._id}/adhesions/mine`)
+            .set('x-access-token', 'wrong-token');
+        expect(wrongRes.status).toBe(200);
+        expect(wrongRes.body.item).toBeNull();
+    });
+
+    it('submit: anonymous new-stand adhesion creates an inactive user (or reuses existing email)', async () => {
+        const { event } = await setupEnvironment();
+        const payload = completePayload('') as Partial<ReturnType<typeof completePayload>> & { standId?: string };
+        delete payload.standId;
+
+        const created = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .send(payload);
+        const accessToken = created.body.accessToken as string;
+        const adhesionId = created.body.item.id;
+
+        const userCountBefore = await UserModel.countDocuments({ email: 'mario@example.com' });
+
+        const submitRes = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${adhesionId}/submit`)
+            .set('x-access-token', accessToken);
+        expect(submitRes.status).toBe(200);
+        expect(submitRes.body.item.status).toBe('submitted');
+        expect(submitRes.body.item.userId).toBeTruthy();
+        expect(typeof submitRes.body.activationUrl === 'string' || submitRes.body.activationUrl === null).toBe(true);
+
+        const user = await UserModel.findOne({ email: 'mario@example.com' }).select('+passwordHash +activationTokenHash');
+        expect(user).toBeTruthy();
+        expect(user!.isActive).toBe(false);
+        expect(user!.passwordHash).toBeNull();
+        expect(user!.activationTokenHash).toBeTruthy();
+        expect(userCountBefore).toBe(0);
+
+        const userRole = await UserRoleModel.countDocuments({ userId: user!._id });
+        expect(userRole).toBe(0);
+    });
+
+    it('approve: new-stand adhesion creates the Stand, links it and grants stand-admin to the owner', async () => {
+        const { adminToken, event } = await setupEnvironment();
+        const payload = completePayload('') as Partial<ReturnType<typeof completePayload>> & { standId?: string };
+        delete payload.standId;
+
+        const created = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .send(payload);
+        const accessToken = created.body.accessToken as string;
+        const adhesionId = created.body.item.id;
+
+        await request(app)
+            .post(`/api/events/${event._id}/adhesions/${adhesionId}/submit`)
+            .set('x-access-token', accessToken);
+
+        const approveRes = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${adhesionId}/approve`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(approveRes.status).toBe(200);
+        expect(approveRes.body.item.status).toBe('approved');
+        expect(approveRes.body.item.standId).toBeTruthy();
+
+        const stand = await StandModel.findById(approveRes.body.item.standId);
+        expect(stand).toBeTruthy();
+        expect(stand!.name).toBe('Stand Burger');
+        expect(stand!.eventIds.map((id) => id.toString())).toContain(event._id.toString());
+        expect(stand!.numbers![0]!.eventId.toString()).toBe(event._id.toString());
+        expect(stand!.numbers![0]!.number).toBe(2);
+
+        const userId = approveRes.body.item.userId;
+        const role = await RoleModel.findOne({ scope: 'stand', slug: 'stand-admin' });
+        const userRole = await UserRoleModel.findOne({ userId, roleId: role!._id, standId: stand!._id, isActive: true });
+        expect(userRole).toBeTruthy();
+    });
+
+    it('approve: platform-admin without event-admin slug → 403', async () => {
+        const { event, stand } = await setupEnvironment();
+        const platformRole = await RoleModel.create({
+            name: 'Platform Admin',
+            scope: 'platform',
+            slug: 'platform-admin',
+            permissions: ['*'],
+            isSystem: true,
+            isActive: true
+        });
+        const platformUser = await UserModel.create({
+            firstName: 'Platform',
+            lastName: 'Admin',
+            email: `platform-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`,
+            passwordHash: await argon2.hash('Password123!'),
+            isActive: true
+        });
+        await UserRoleModel.create({ userId: platformUser._id, roleId: platformRole._id, isActive: true });
+        const sessionToken = generateSessionToken();
+        await SessionModel.create({
+            userId: platformUser._id,
+            tokenHash: hashSessionToken(sessionToken),
+            expiresAt: getSessionExpiryDate(),
+            lastActivityAt: new Date()
+        });
+
+        const created = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${sessionToken}`])
+            .send(completePayload(stand._id.toString()));
+        expect(created.status).toBe(201);
+        const adhesionId = created.body.item.id;
+
+        const approveRes = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${adhesionId}/approve`)
+            .set('Cookie', [`sid=${sessionToken}`]);
+        expect(approveRes.status).toBe(403);
     });
 });

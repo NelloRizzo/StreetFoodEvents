@@ -83,6 +83,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/pois/:poiId', element: <PoiDetailPage /> },
       { path: 'events/:eventId/stands/:standId', element: <EventStandMenuPage /> },
       { path: 'events/:eventId/stands/:standId/ordersqueue', element: <StandDisplayPage /> },
+      { path: 'events/:eventId/stand-adhesion', element: <StandAdhesionWizardPage /> },
       { path: 'events/:eventId/contests', element: <EventContestsPage /> },
       { path: 'events/:eventId/galleria', element: <PublicGalleryPage /> },
       { path: 'events/:eventId/slideshow', element: <SlideshowPage /> },

@@ -307,7 +307,7 @@ export function EventDetailPage() {
                   <Link
                     role="menuitem"
                     className={styles.actionDropdownItem}
-                    to={`/admin/events/${eventId}/stand-adhesion`}
+                    to={`/events/${eventId}/stand-adhesion`}
                     onClick={() => setAdesioneMenuOpen(false)}
                   >
                     Compila modulo di adesione
