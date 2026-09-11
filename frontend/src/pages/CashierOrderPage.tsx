@@ -10,6 +10,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { CouponPanel } from '../components/CouponPanel'
 import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
 import { GiftCounter } from '../components/GiftCounter'
+import { useKeepAlive } from '../hooks/useKeepAlive'
 import type { UploadedImage } from '../lib/upload'
 import styles from './CashierOrderPage.module.scss'
 
@@ -61,6 +62,8 @@ type NotesModalState = {
 
 export function CashierOrderPage() {
   const { eventId, standId } = useParams<{ eventId: string; standId: string }>()
+
+  useKeepAlive()
 
   const [eventName, setEventName] = useState('')
   const [eventCurrency, setEventCurrency] = useState<{ currencyName: string; currencySymbol: UploadedImage | null } | null>(null)

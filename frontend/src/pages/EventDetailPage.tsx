@@ -270,20 +270,20 @@ export function EventDetailPage() {
             <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
               Scatta foto
             </button>
-            {event.regulationDocument && (
-              <div className={styles.actionDropdown} ref={adesioneMenuRef}>
-                <button
-                  type="button"
-                  className={styles.actionDropdownTrigger}
-                  onClick={() => setAdesioneMenuOpen((v) => !v)}
-                  aria-haspopup="menu"
-                  aria-expanded={adesioneMenuOpen}
-                >
-                  Adesione Stand
-                  <span className={styles.actionDropdownCaret} aria-hidden="true">▾</span>
-                </button>
-                {adesioneMenuOpen && (
-                  <div className={styles.actionDropdownMenu} role="menu">
+            <div className={styles.actionDropdown} ref={adesioneMenuRef}>
+              <button
+                type="button"
+                className={styles.actionDropdownTrigger}
+                onClick={() => setAdesioneMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={adesioneMenuOpen}
+              >
+                Adesione Stand
+                <span className={styles.actionDropdownCaret} aria-hidden="true">▾</span>
+              </button>
+              {adesioneMenuOpen && (
+                <div className={styles.actionDropdownMenu} role="menu">
+                  {event.regulationDocument && (
                     <button
                       type="button"
                       role="menuitem"
@@ -295,26 +295,26 @@ export function EventDetailPage() {
                     >
                       Scarica Regolamento
                     </button>
-                    <Link
-                      role="menuitem"
-                      className={styles.actionDropdownItem}
-                      to={`/events/${eventId}/adhesion-form`}
-                      onClick={() => setAdesioneMenuOpen(false)}
-                    >
-                      Scarica modulo di adesione
-                    </Link>
-                    <Link
-                      role="menuitem"
-                      className={styles.actionDropdownItem}
-                      to={`/admin/events/${eventId}/stand-adhesion`}
-                      onClick={() => setAdesioneMenuOpen(false)}
-                    >
-                      Compila modulo di adesione
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                  <Link
+                    role="menuitem"
+                    className={styles.actionDropdownItem}
+                    to={`/events/${eventId}/adhesion-form`}
+                    onClick={() => setAdesioneMenuOpen(false)}
+                  >
+                    Scarica modulo di adesione
+                  </Link>
+                  <Link
+                    role="menuitem"
+                    className={styles.actionDropdownItem}
+                    to={`/admin/events/${eventId}/stand-adhesion`}
+                    onClick={() => setAdesioneMenuOpen(false)}
+                  >
+                    Compila modulo di adesione
+                  </Link>
+                </div>
+              )}
+            </div>
             <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} label="QR Evento" />
             <QRCodeDownload apiPath={`/events/${eventId}/menu-qrcode`} fileName={`menu-${event.name}`} label="QR Menu" />
           </div>

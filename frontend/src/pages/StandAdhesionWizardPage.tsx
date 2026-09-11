@@ -240,33 +240,31 @@ export function StandAdhesionWizardPage() {
   useEffect(() => {
     let cancelled = false
 
-    void apiRequest<{ item: EventRef }>(`/events/${eventId}`)
-      .then((d) => { if (!cancelled) setEvent(d.item) })
-      .catch(() => { if (!cancelled) setError('Evento non trovato.') })
-
-    void apiRequest<{ stands: MyStand[] }>('/auth/me/stands')
-      .then((d) => { if (!cancelled) setMyStands(d.stands) })
-      .catch(() => {})
-
-    void apiRequest<{ isPlatformAdmin: boolean; roles: RoleInfo[] }>('/auth/me/roles')
-      .then((d) => {
-        const admin = d.isPlatformAdmin || d.roles.some((r) => r.scope === 'event' && r.eventId === eventId)
-        if (!cancelled) setIsAdmin(admin)
-      })
-      .catch(() => {})
-
-    void apiRequest<{ item: AdhesionResponse | null }>(`/events/${eventId}/adhesions/mine`)
-      .then((d) => {
-        if (cancelled) return
-        if (d.item) {
-          setAdhesion(d.item)
-          setForm(fromAdhesion(d.item))
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    void Promise.allSettled([
+      apiRequest<{ item: EventRef }>(`/events/${eventId}`)
+        .then((d) => { if (!cancelled) setEvent(d.item) })
+        .catch(() => { if (!cancelled) setError('Evento non trovato.') }),
+      apiRequest<{ stands: MyStand[] }>('/auth/me/stands')
+        .then((d) => { if (!cancelled) setMyStands(d.stands) })
+        .catch(() => {}),
+      apiRequest<{ isPlatformAdmin: boolean; roles: RoleInfo[] }>('/auth/me/roles')
+        .then((d) => {
+          const admin = d.isPlatformAdmin || d.roles.some((r) => r.scope === 'event' && r.eventId === eventId)
+          if (!cancelled) setIsAdmin(admin)
+        })
+        .catch(() => {}),
+      apiRequest<{ item: AdhesionResponse | null }>(`/events/${eventId}/adhesions/mine`)
+        .then((d) => {
+          if (cancelled) return
+          if (d.item) {
+            setAdhesion(d.item)
+            setForm(fromAdhesion(d.item))
+          }
+        })
+        .catch(() => {}),
+    ]).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
 
     return () => { cancelled = true }
   }, [eventId])

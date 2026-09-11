@@ -174,7 +174,7 @@ describe('Integration — Stand Adhesions', () => {
     });
 
     it('list: admin sees all, stand user sees only own', async () => {
-        const { adminToken, standToken, event } = await setupEnvironment();
+        const { adminToken, standToken, event, stand } = await setupEnvironment();
         const otherStand = await StandModel.create({
             name: 'Altro Stand',
             eventIds: [event._id],
@@ -186,7 +186,7 @@ describe('Integration — Stand Adhesions', () => {
             .set('Cookie', [`sid=${standToken}`])
             .send(completePayload(stand._id.toString()));
 
-        const payload = completePayload(otherStand._id.toString());
+        const payload = completePayload(otherStand._id.toString()) as Partial<ReturnType<typeof completePayload>> & { standId?: string };
         delete payload.standId;
         await StandAdhesionModel.create({
             eventId: event._id,
