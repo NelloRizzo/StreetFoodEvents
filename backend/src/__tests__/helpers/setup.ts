@@ -32,7 +32,8 @@ const collectionsToClear = [
     'adhesionforms',
     'promotions',
     'promotionusages',
-    'standadhesions'
+    'standadhesions',
+    'advertisements'
 ];
 
 beforeAll(async () => {

@@ -27,6 +27,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   users: 'Utenti',
   'user-roles': 'Ruoli',
   frames: 'Cornici',
+  advertisements: 'Advertisement',
   'usage-contracts': "Contratti d'uso",
   'menu-print': 'Stampa menù',
   cashier: 'Cassa evento',

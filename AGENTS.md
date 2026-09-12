@@ -221,6 +221,15 @@ Pubblicazione Meta: account UNICO della piattaforma via env opzionali `META_PAGE
 | POST | `/api/events/:eventId/adhesions/:adhesionId/reject` | event-admin | Rifiuta con `{ reviewNote }` |
 | POST | `/api/events/:eventId/adhesions/:adhesionId/integration` | event-admin | Richiede integrazioni → stato `integration` ("Da integrare"), `reviewNote` obbligatoria |
 
+### API routes — Advertisement
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/advertisements` | no | Lista advertisement ABILITATI (per lo slideshow); trasversali, non legati a un evento |
+| GET | `/api/advertisements/manage` | platform-admin / photo-admin | Lista completa (abilitati e disabilitati) |
+| POST | `/api/advertisements` | platform-admin / photo-admin | Crea advertisement (multipart `image` + `name` opzionale) |
+| PATCH | `/api/advertisements/:advertisementId` | platform-admin / photo-admin | Attiva/disattiva (`enabled`) o aggiorna `name` |
+| DELETE | `/api/advertisements/:advertisementId` | platform-admin / photo-admin | Elimina (rimuove asset da Cloudinary) |
+
 ### API routes — Email Subscriptions
 | Method | Route | Auth | Description |
 |---|---|---|---|
@@ -326,6 +335,13 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - **Stato `integration` ("Da integrare")** per le adesioni stand: nuovo endpoint `POST /api/events/:eventId/adhesions/:adhesionId/integration` (solo event-admin, `reviewNote` obbligatoria, 400 se manca) richiesto dal terzo pulsante "Da integrare" su `AdhesionsManagePage`. Setta `status: 'integration'`, `reviewedAt`, `reviewNote`. Lo stand riapre l'adesione in modifica dal wizard (stato `editable` come draft/rejected), può ritirarla (da `submitted` o `integration`) e reinviarla (`submit` funziona da `integration`; azzera `reviewedAt`/`reviewNote`). Il gestore può da `integration` approvare/rifiutare/chiedere ulteriori integrazioni.
 - **Sezione referente**: estratta dalla sezione ① e spostata in campo dedicato finale ⑦ "Referente dello stand" nel wizard — "Nome e cognome del referente" (campo unico), email, telefono, **recapito social** opzionale (`contactSocial`, nuovo campo modello + API). Regole: nome referente obbligatorio per TUTTI; stand NUOVO (standId vuoto) → email obbligatoria (serve per creare/attivare l'account di gestione); stand GIÀ registrato → email O telefono. Validazione identica in `completenessErrors` (backend) e `missing` (frontend).
 - Test: suite backend **377 test ✓** (+2: flusso integration, regole referente), typecheck ✓, frontend build (tsc+vite) ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria.
+
+## Session state (Set 2026 — advertisement nel pannello slideshow)
+### Completed
+- **Advertisement trasversali**: modello `Advertisement` (collezione `advertisements`, NON legato a evento — campi `image`/`enabled`/`name`) con API `/api/advertisements`: `GET /` pubblico (solo `enabled: true`), `GET /manage` (platform-admin/photo-admin, tutte), `POST` (multipart `image`, guard same-role), `PATCH /:advertisementId` (toggle `enabled`/nome), `DELETE` (rimuove asset Cloudinary).
+- **Pannello collassabile in `SlideshowPage`**: a destra della griglia foto — chiuso = tab verticale sottile "Advertisement"; aperto = occupa `min(30vw, 100vh*0.7071)` (proporzione portrait A4) a tutta l'altezza, riducendo la larghezza della griglia. Mostra 1 advertisement alla volta, ruota con lo stesso timer `rotateSec` dei pulsanti velocità, contatore "n/m", dissolvenza `adFade`. Struct layout: `.fullscreen` (colonna) → `.body` (riga: `.stage` + `.adPanel`).
+- **Pagina admin** `AdvertisementsPage` (`/admin/advertisements`, sezione sidebar Foto, solo platform-admin): upload (nome opzionale), attiva/disattiva, elimina.
+- Test: `integration-advertisements.test.ts` (8 test: public only enabled, auth/403 su manage, create platform-admin, toggle, delete + deleteImage, 400/404). Suite backend **385 test ✓** (45 file), typecheck ✓, lint ✓; frontend build (tsc+vite) ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria.
 
 ## Session state (Aug 2026 — evento admin centralizzato con AdminEventContext)
 ### Completed

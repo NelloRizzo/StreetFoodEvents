@@ -44,6 +44,7 @@ import { MenuPrintPage } from './pages/MenuPrintPage'
 import { AliasRedirectPage } from './pages/AliasRedirectPage'
 import { SlideshowPage } from './pages/SlideshowPage'
 import { FramesPage } from './pages/FramesPage'
+import { AdvertisementsPage } from './pages/AdvertisementsPage'
 import { EventContestsPage } from './pages/EventContestsPage'
 import { ContestPage } from './pages/ContestPage'
 import { ContestPlayPage } from './pages/ContestPlayPage'
@@ -156,6 +157,7 @@ export const router = createBrowserRouter([
       { path: 'users', element: <UsersPage /> },
       { path: 'user-roles', element: <UserRolesPage /> },
       { path: 'frames', element: <FramesPage /> },
+      { path: 'advertisements', element: <AdvertisementsPage /> },
       { path: 'usage-contracts', element: <UsageContractsPage /> },
       { path: 'menu-print', element: <MenuPrintPage /> },
       { path: 'documents', element: <DocumentsPage /> },

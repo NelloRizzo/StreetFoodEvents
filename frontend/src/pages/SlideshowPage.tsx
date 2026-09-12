@@ -19,6 +19,12 @@ type EventData = {
   slideshowTitle?: string | null
 }
 
+type Advertisement = {
+  id: string
+  name: string | null
+  image: { url: string }
+}
+
 const POLL_MS = 2 * 60_000
 const PHOTOS_PER_PAGE = 8
 const ROTATE_OPTIONS = [5, 10, 15, 20, 30] as const
@@ -40,6 +46,9 @@ export function SlideshowPage() {
   const [rotateSec, setRotateSec] = useState<number>(10)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
+  const [ads, setAds] = useState<Advertisement[]>([])
+  const [adOpen, setAdOpen] = useState(false)
+  const [adIndex, setAdIndex] = useState(0)
   const titleRef = useRef<HTMLInputElement>(null)
   const allRef = useRef<Photo[]>([])
   const refreshRef = useRef<() => void>(() => {})
@@ -121,7 +130,24 @@ export function SlideshowPage() {
     return () => clearInterval(rotateId)
   }, [rotateSec])
 
+  useEffect(() => {
+    let cancelled = false
+    apiRequest<{ items: Advertisement[] }>('/advertisements')
+      .then((res) => { if (!cancelled) setAds(res.items) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!adOpen || ads.length < 2 || rotateSec <= 0) return
+    const rotateId = setInterval(() => {
+      setAdIndex((i) => (i + 1) % ads.length)
+    }, rotateSec * 1000)
+    return () => clearInterval(rotateId)
+  }, [adOpen, ads.length, rotateSec])
+
   const hasPhotos = batch.length > 0
+  const currentAd = ads.length > 0 ? ads[adIndex % ads.length]! : null
 
   return (
     <div className={styles.fullscreen}>
@@ -173,34 +199,61 @@ export function SlideshowPage() {
         </div>
       </div>
 
-      {hasPhotos ? (
-        <div className={styles.grid} style={eventData?.coverImage?.url ? { '--cover': `url(${eventData.coverImage.url})` } as React.CSSProperties : undefined}>
-          {batch.map((p) => (
-            <div key={p.id} className={styles.photoWrapper} onClick={() => setSelectedPhoto(p)}>
-              {p.type === 'video' && p.video ? (
-                <video
-                  src={p.video.url}
-                  className={styles.photo}
-                  muted
-                  loop
-                  autoPlay
-                  playsInline
-                  preload="metadata"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ) : p.image ? (
-                <img src={p.image.url} alt="" className={styles.photo} />
-              ) : null}
-              <span className={styles.badge}>{p.sequenceNumber}</span>
+      <div className={styles.body}>
+        <div className={styles.stage}>
+          {hasPhotos ? (
+            <div className={styles.grid} style={eventData?.coverImage?.url ? { '--cover': `url(${eventData.coverImage.url})` } as React.CSSProperties : undefined}>
+              {batch.map((p) => (
+                <div key={p.id} className={styles.photoWrapper} onClick={() => setSelectedPhoto(p)}>
+                  {p.type === 'video' && p.video ? (
+                    <video
+                      src={p.video.url}
+                      className={styles.photo}
+                      muted
+                      loop
+                      autoPlay
+                      playsInline
+                      preload="metadata"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : p.image ? (
+                    <img src={p.image.url} alt="" className={styles.photo} />
+                  ) : null}
+                  <span className={styles.badge}>{p.sequenceNumber}</span>
+                </div>
+              ))}
+              {Array.from({ length: PHOTOS_PER_PAGE - batch.length }).map((_, i) => (
+                <div key={`empty-${i}`} className={styles.photo} style={{ background: 'transparent' }} />
+              ))}
             </div>
-          ))}
-          {Array.from({ length: PHOTOS_PER_PAGE - batch.length }).map((_, i) => (
-            <div key={`empty-${i}`} className={styles.photo} style={{ background: 'transparent' }} />
-          ))}
+          ) : eventData?.coverImage?.url ? (
+            <img src={eventData.coverImage.url} alt="" className={styles.coverFull} />
+          ) : null}
         </div>
-      ) : eventData?.coverImage?.url ? (
-        <img src={eventData.coverImage.url} alt="" className={styles.coverFull} />
-      ) : null}
+
+        {ads.length > 0 && (
+          <aside className={`${styles.adPanel} ${adOpen ? styles.adPanelOpen : styles.adPanelClosed}`}>
+            {adOpen ? (
+              <>
+                <div className={styles.adPanelHeader}>
+                  <span className={styles.adPanelTitle}>Advertisement</span>
+                  <button className={styles.adPanelClose} onClick={() => setAdOpen(false)} title="Chiudi">×</button>
+                </div>
+                {currentAd ? (
+                  <img key={currentAd.id} src={currentAd.image.url} alt={currentAd.name ?? ''} className={styles.adPanelImage} />
+                ) : (
+                  <span className={styles.adPanelEmpty}>Nessun advertisement</span>
+                )}
+                {ads.length > 1 && (
+                  <span className={styles.adPanelCounter}>{adIndex % ads.length + 1} / {ads.length}</span>
+                )}
+              </>
+            ) : (
+              <button className={styles.adPanelTab} onClick={() => setAdOpen(true)}>Advertisement</button>
+            )}
+          </aside>
+        )}
+      </div>
 
       <div className={styles.footer}>
         Se vedi una tua foto segna il suo numero e recati al Welcome Point per ottenerla

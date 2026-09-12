@@ -160,6 +160,9 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
             ...(isPlatformAdmin
               ? [{ label: 'Cornici', to: '/admin/frames', icon: '\u{1F5BC}' } as SidebarItem]
               : []),
+            ...(isPlatformAdmin
+              ? [{ label: 'Advertisement', to: '/admin/advertisements', icon: '\u{1F4F1}' } as SidebarItem]
+              : []),
           ],
         } as SidebarSection]
       : []),
