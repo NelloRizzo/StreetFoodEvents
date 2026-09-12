@@ -7,6 +7,7 @@ import {
     getMyAdhesion,
     listAdhesions,
     rejectAdhesion,
+    requestIntegrationAdhesion,
     submitAdhesion,
     updateAdhesion,
     withdrawAdhesion
@@ -35,4 +36,10 @@ standAdhesionsRouter.post(
     asyncHandler(authMiddleware),
     asyncHandler(hasRole(['event-admin'], { eventParam: 'eventId' })),
     asyncHandler(rejectAdhesion)
+);
+standAdhesionsRouter.post(
+    '/:adhesionId/integration',
+    asyncHandler(authMiddleware),
+    asyncHandler(hasRole(['event-admin'], { eventParam: 'eventId' })),
+    asyncHandler(requestIntegrationAdhesion)
 );

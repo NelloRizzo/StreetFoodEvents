@@ -305,6 +305,58 @@ describe('Integration — Stand Adhesions', () => {
         expect(submitRes.body.item.status).toBe('submitted');
     });
 
+    it('referente: nome required for all; email required for new stand; email-or-phone for linked stand', async () => {
+        const { adminToken, event, stand } = await setupEnvironment();
+
+        const noNamePayload = { ...completePayload(stand._id.toString()), contactName: '' };
+        const noNameCreated = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(noNamePayload);
+        await request(app)
+            .post(`/api/events/${event._id}/adhesions/${noNameCreated.body.item.id}/submit`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        const noNameSubmit = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${noNameCreated.body.item.id}/submit`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(noNameSubmit.status).toBe(400);
+        expect(noNameSubmit.body.message).toMatch(/nome del referente/);
+
+        const linkedNoContact = { ...completePayload(stand._id.toString()), contactEmail: '', contactPhone: '' };
+        const linkedCreated = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(linkedNoContact);
+        const linkedSubmit = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${linkedCreated.body.item.id}/submit`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(linkedSubmit.status).toBe(400);
+        expect(linkedSubmit.body.message).toMatch(/email o telefono del referente/);
+
+        const linkedPhoneOnly = { ...completePayload(stand._id.toString()), contactEmail: '' };
+        const phoneCreated = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(linkedPhoneOnly);
+        const phoneSubmit = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${phoneCreated.body.item.id}/submit`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(phoneSubmit.status).toBe(200);
+
+        const newNoEmail = completePayload('') as Partial<ReturnType<typeof completePayload>> & { standId?: string };
+        delete newNoEmail.standId;
+        newNoEmail.contactEmail = '';
+        const newCreated = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(newNoEmail);
+        const newSubmit = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${newCreated.body.item.id}/submit`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(newSubmit.status).toBe(400);
+        expect(newSubmit.body.message).toMatch(/email del referente/);
+    });
+
     it('submit: complete adhesion → submitted; approve by event-admin → approved; edit → 409', async () => {
         const { adminToken, event, stand } = await setupEnvironment();
         const created = await request(app)
@@ -369,6 +421,47 @@ describe('Integration — Stand Adhesions', () => {
         expect(rejectRes.status).toBe(200);
         expect(rejectRes.body.item.status).toBe('rejected');
         expect(rejectRes.body.item.reviewNote).toBe('Manca licenza');
+    });
+
+    it('integration: event-admin requests integration with note; stand edits and resubmits', async () => {
+        const { adminToken, event, stand } = await setupEnvironment();
+        const created = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(completePayload(stand._id.toString()));
+        const adhesionId = created.body.item.id;
+
+        await request(app)
+            .post(`/api/events/${event._id}/adhesions/${adhesionId}/submit`)
+            .set('Cookie', [`sid=${adminToken}`]);
+
+        const missingNoteRes = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${adhesionId}/integration`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(missingNoteRes.status).toBe(400);
+
+        const integrateRes = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${adhesionId}/integration`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send({ reviewNote: 'Manca il logo dello stand' });
+        expect(integrateRes.status).toBe(200);
+        expect(integrateRes.body.item.status).toBe('integration');
+        expect(integrateRes.body.item.reviewNote).toBe('Manca il logo dello stand');
+
+        const editRes = await request(app)
+            .patch(`/api/events/${event._id}/adhesions/${adhesionId}`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send({ logo: null });
+        expect(editRes.status).toBe(200);
+        expect(editRes.body.item.status).toBe('integration');
+
+        const resubmitRes = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${adhesionId}/submit`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(resubmitRes.status).toBe(200);
+        expect(resubmitRes.body.item.status).toBe('submitted');
+        expect(resubmitRes.body.item.reviewNote).toBeNull();
+        expect(resubmitRes.body.item.reviewedAt).toBeNull();
     });
 
     it('approve: stand user without event role → 403', async () => {

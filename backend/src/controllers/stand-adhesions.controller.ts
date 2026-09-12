@@ -24,6 +24,7 @@ const EDITABLE_FIELDS = [
     'contactName',
     'contactEmail',
     'contactPhone',
+    'contactSocial',
     'products',
     'haccpConfirmed',
     'haccpNote',
@@ -157,6 +158,7 @@ function toAdhesionResponse(adhesion: {
     contactName?: unknown;
     contactEmail?: unknown;
     contactPhone?: unknown;
+    contactSocial?: unknown;
     products?: unknown;
     haccpConfirmed?: unknown;
     haccpNote?: unknown;
@@ -189,6 +191,7 @@ function toAdhesionResponse(adhesion: {
         contactName: adhesion.contactName ?? null,
         contactEmail: adhesion.contactEmail ?? null,
         contactPhone: adhesion.contactPhone ?? null,
+        contactSocial: adhesion.contactSocial ?? null,
         products: adhesion.products ?? [],
         haccpConfirmed: adhesion.haccpConfirmed ?? false,
         haccpNote: adhesion.haccpNote ?? null,
@@ -209,6 +212,12 @@ function toAdhesionResponse(adhesion: {
 function completenessErrors(a: StandAdhesion, event: { participationFee?: number | null; deposit?: number | null }): string[] {
     const missing: string[] = [];
     if (!a.standName?.trim()) missing.push('nome dello stand');
+    if (!a.contactName?.trim()) missing.push('nome del referente');
+    if (!a.standId) {
+        if (!a.contactEmail?.trim()) missing.push('email del referente');
+    } else if (!a.contactEmail?.trim() && !a.contactPhone?.trim()) {
+        missing.push('email o telefono del referente');
+    }
     if (!a.haccpConfirmed) missing.push('conferma requisiti HACCP');
     if (!a.acceptsPointLight) missing.push('accettazione del punto luce (energia elettrica)');
     if (event.participationFee != null && !a.participationFeeAccepted) missing.push('accettazione del prezzo di partecipazione');
@@ -216,10 +225,6 @@ function completenessErrors(a: StandAdhesion, event: { participationFee?: number
     if (!a.regulationAccepted) missing.push('accettazione del regolamento');
     if (!a.exclusionAccepted) missing.push('accettazione della clausola di esclusione');
     if (!a.signature?.trim()) missing.push('firma del richiedente');
-    if (!a.standId) {
-        if (!a.contactName?.trim()) missing.push('nome del referente');
-        if (!a.contactEmail?.trim()) missing.push('email del referente');
-    }
     return missing;
 }
 
@@ -528,8 +533,8 @@ export async function withdrawAdhesion(req: Request, res: Response) {
         return res.status(404).json({ message: 'Adhesion not found' });
     }
 
-    if (adhesion.status !== 'submitted') {
-        return res.status(409).json({ message: 'Solo un adesione in attesa può essere ritirata.' });
+    if (adhesion.status !== 'submitted' && adhesion.status !== 'integration') {
+        return res.status(409).json({ message: 'Solo un adesione in attesa o da integrare può essere ritirata.' });
     }
 
     adhesion.status = 'draft';
@@ -618,6 +623,34 @@ export async function rejectAdhesion(req: Request, res: Response) {
     adhesion.reviewedAt = new Date();
     adhesion.reviewNote =
         typeof req.body?.reviewNote === 'string' && req.body.reviewNote.trim() ? req.body.reviewNote.trim() : null;
+    await adhesion.save();
+
+    return res.status(200).json({ item: toAdhesionResponse(adhesion) });
+}
+
+export async function requestIntegrationAdhesion(req: Request, res: Response) {
+    const { adhesionId } = req.params;
+    if (!isValidObjectId(adhesionId)) {
+        return res.status(400).json({ message: 'Invalid adhesion id' });
+    }
+
+    const adhesion = await StandAdhesionModel.findById(adhesionId);
+    if (!adhesion) {
+        return res.status(404).json({ message: 'Adhesion not found' });
+    }
+
+    if (adhesion.status === 'approved') {
+        return res.status(409).json({ message: 'Adesione già approvata.' });
+    }
+
+    const note = typeof req.body?.reviewNote === 'string' && req.body.reviewNote.trim() ? req.body.reviewNote.trim() : null;
+    if (!note) {
+        return res.status(400).json({ message: 'Indicare cosa deve essere integrato.' });
+    }
+
+    adhesion.status = 'integration';
+    adhesion.reviewedAt = new Date();
+    adhesion.reviewNote = note;
     await adhesion.save();
 
     return res.status(200).json({ item: toAdhesionResponse(adhesion) });

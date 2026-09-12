@@ -3,7 +3,7 @@ import { Schema, model, type InferSchemaType } from 'mongoose';
 import { ALLERGEN_VALUES } from './product.model';
 import { imageSchema } from './schemas/image.schema';
 
-export const ADHESION_STATUS_VALUES = ['draft', 'submitted', 'approved', 'rejected'] as const;
+export const ADHESION_STATUS_VALUES = ['draft', 'submitted', 'integration', 'approved', 'rejected'] as const;
 export type AdhesionStatus = (typeof ADHESION_STATUS_VALUES)[number];
 
 const adhesionProductSchema = new Schema(
@@ -158,6 +158,12 @@ const standAdhesionSchema = new Schema(
             type: String,
             trim: true,
             maxlength: 40,
+            default: null
+        },
+        contactSocial: {
+            type: String,
+            trim: true,
+            maxlength: 200,
             default: null
         },
         products: {

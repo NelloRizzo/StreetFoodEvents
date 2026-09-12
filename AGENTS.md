@@ -219,6 +219,7 @@ Pubblicazione Meta: account UNICO della piattaforma via env opzionali `META_PAGE
 | POST | `/api/events/:eventId/adhesions/:adhesionId/withdraw` | optional auth | Ritira da `submitted` → `draft` |
 | POST | `/api/events/:eventId/adhesions/:adhesionId/approve` | event-admin | Approva. Se l'adesione non ha `standId` CREA lo `Stand` (numero progressivo + ruoli/logo) e assegna `stand-admin` all'utente. **platform-admin ESCLUSO** (`hasRole` matcha per slug) |
 | POST | `/api/events/:eventId/adhesions/:adhesionId/reject` | event-admin | Rifiuta con `{ reviewNote }` |
+| POST | `/api/events/:eventId/adhesions/:adhesionId/integration` | event-admin | Richiede integrazioni → stato `integration` ("Da integrare"), `reviewNote` obbligatoria |
 
 ### API routes — Email Subscriptions
 | Method | Route | Auth | Description |
@@ -319,6 +320,12 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - **Fix ① (backend)**: `completenessErrors(adhesion, event)` ora richiede `participationFeeAccepted`/`depositAccepted` SOLO se `event.participationFee`/`event.deposit` sono definiti (`!= null`), come già faceva la `missing` list del wizard. `submitAdhesion` carica l'evento (`select('participationFee deposit')`) e lo passa.
 - **Fix ② (frontend)**: `handleSubmit` in `StandAdhesionWizardPage.tsx` chiamava il submit coi dati SALVATI, ignorando modifiche non ancora persistite (es. firma digitata dopo l'ultimo salvataggio). Ora fa SEMPRE `persist(buildPayload(form))` (PATCH se l'adesione esiste, POST altrimenti) prima del POST `/submit`.
 - Test: +1 in `integration-stand-adhesions.test.ts` (evento senza fee/caparra → submit OK senza acceptance). Suite backend **375 test ✓**, typecheck ✓, frontend build ✓.
+
+## Session state (Set 2026 — stato "Da integrare" + referente dello stand nel wizard adesione)
+### Completed
+- **Stato `integration` ("Da integrare")** per le adesioni stand: nuovo endpoint `POST /api/events/:eventId/adhesions/:adhesionId/integration` (solo event-admin, `reviewNote` obbligatoria, 400 se manca) richiesto dal terzo pulsante "Da integrare" su `AdhesionsManagePage`. Setta `status: 'integration'`, `reviewedAt`, `reviewNote`. Lo stand riapre l'adesione in modifica dal wizard (stato `editable` come draft/rejected), può ritirarla (da `submitted` o `integration`) e reinviarla (`submit` funziona da `integration`; azzera `reviewedAt`/`reviewNote`). Il gestore può da `integration` approvare/rifiutare/chiedere ulteriori integrazioni.
+- **Sezione referente**: estratta dalla sezione ① e spostata in campo dedicato finale ⑦ "Referente dello stand" nel wizard — "Nome e cognome del referente" (campo unico), email, telefono, **recapito social** opzionale (`contactSocial`, nuovo campo modello + API). Regole: nome referente obbligatorio per TUTTI; stand NUOVO (standId vuoto) → email obbligatoria (serve per creare/attivare l'account di gestione); stand GIÀ registrato → email O telefono. Validazione identica in `completenessErrors` (backend) e `missing` (frontend).
+- Test: suite backend **377 test ✓** (+2: flusso integration, regole referente), typecheck ✓, frontend build (tsc+vite) ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria.
 
 ## Session state (Aug 2026 — evento admin centralizzato con AdminEventContext)
 ### Completed
