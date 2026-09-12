@@ -257,9 +257,7 @@ export function SlideshowPage() {
           <aside className={`${styles.adPanel} ${adOpen ? styles.adPanelOpen : styles.adPanelClosed}`}>
             {adOpen ? (
               <>
-                <div className={styles.adPanelHeader}>
-                  <button className={styles.adPanelClose} onClick={() => setAdOpen(false)} title="Chiudi">×</button>
-                </div>
+                <button className={styles.adPanelClose} onClick={() => setAdOpen(false)} title="Chiudi">×</button>
                 {currentAd ? (
                   <img key={currentAd.id} src={currentAd.image.url} alt={currentAd.name ?? ''} className={styles.adPanelImage} />
                 ) : (
