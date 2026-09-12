@@ -14,6 +14,7 @@ type Advertisement = {
   image: UploadedImage
   enabled: boolean
   weight: number
+  appearances: number
 }
 
 export function AdvertisementsPage() {
@@ -23,6 +24,7 @@ export function AdvertisementsPage() {
   const [image, setImage] = useState<UploadedImage | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [resetConfirm, setResetConfirm] = useState(false)
   const [modal, setModal] = useState<ModalState>({ open: false, variant: 'alert', title: '', message: '' })
 
   const loadItems = () => {
@@ -90,6 +92,16 @@ export function AdvertisementsPage() {
     }
   }
 
+  const confirmResetCounters = async () => {
+    setResetConfirm(false)
+    try {
+      await apiRequest('/advertisements/reset-appearances', { method: 'POST' })
+      setItems((prev) => prev.map((i) => ({ ...i, appearances: 0 })))
+    } catch {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Azzera contatori non riuscito.' })
+    }
+  }
+
   return (
     <div className={styles.page}>
       <div className="page-shell">
@@ -115,7 +127,12 @@ export function AdvertisementsPage() {
         </section>
 
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Advertisement ({items.length})</h2>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Advertisement ({items.length})</h2>
+            <button className={styles.resetBtn} onClick={() => setResetConfirm(true)}>
+              Azzera contatori apparizioni
+            </button>
+          </div>
           <div className={styles.list}>
             {items.map((item) => (
               <article key={item.id} className={styles.card}>
@@ -128,17 +145,20 @@ export function AdvertisementsPage() {
                     {item.image.url && (
                       <img src={item.image.url} alt={item.name ?? ''} className={styles.thumb} />
                     )}
-                    <label className={styles.pesoLabel}>
-                      Peso
-                      <input
-                        type="number"
-                        min={1}
-                        value={item.weight}
-                        onChange={(e) => setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, weight: Math.max(1, Math.round(Number(e.target.value) || 1)) } : i)))}
-                        onBlur={() => void updateWeight(item.id, item.weight)}
-                        className={styles.pesoInput}
-                      />
-                    </label>
+                    <div className={styles.pesoCol}>
+                      <label className={styles.pesoLabel}>
+                        Peso
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.weight}
+                          onChange={(e) => setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, weight: Math.max(1, Math.round(Number(e.target.value) || 1)) } : i)))}
+                          onBlur={() => void updateWeight(item.id, item.weight)}
+                          className={styles.pesoInput}
+                        />
+                      </label>
+                      <span className={styles.appearancesBadge}>{item.appearances ?? 0} apparizioni</span>
+                    </div>
                   </div>
                 </div>
                 <div className={styles.cardActions}>
@@ -175,6 +195,16 @@ export function AdvertisementsPage() {
         confirmLabel="Elimina"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmModal
+        open={resetConfirm}
+        variant="confirm"
+        title="Azzera tutti i contatori?"
+        message="I contatori apparizioni di tutti gli advertisement verranno azzerati."
+        confirmLabel="Azzera"
+        onConfirm={confirmResetCounters}
+        onCancel={() => setResetConfirm(false)}
       />
     </div>
   )

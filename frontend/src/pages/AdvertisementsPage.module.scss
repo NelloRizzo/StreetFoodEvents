@@ -34,6 +34,35 @@
   margin-bottom: 1rem;
 }
 
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sectionHeader .sectionTitle {
+  margin-bottom: 0;
+}
+
+.resetBtn {
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-card);
+  border: 1px solid #f57c00;
+  background: transparent;
+  color: #f57c00;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.resetBtn:hover {
+  background: #f57c00;
+  color: #fff;
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -124,6 +153,23 @@
   display: flex;
   align-items: flex-end;
   gap: 1rem;
+}
+
+.pesoCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.appearancesBadge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #555;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-pill);
+  padding: 2px 10px;
+  align-self: flex-start;
+  white-space: nowrap;
 }
 
 .cardActions {

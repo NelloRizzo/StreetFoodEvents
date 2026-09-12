@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+import { useKeepAlive } from '../hooks/useKeepAlive'
 import styles from './SlideshowPage.module.scss'
 
 type Photo = {
@@ -13,7 +14,9 @@ type Photo = {
 }
 
 type EventData = {
+  name: string
   coverImage?: { url: string; publicId: string } | null
+  slideshowTitle?: string | null
 }
 
 type Advertisement = {
@@ -52,18 +55,45 @@ function weightedPickIndex(ads: Advertisement[], currentIndex?: number): number 
 
 export function SlideshowPage() {
   const { eventId } = useParams<{ eventId: string }>()
+  useKeepAlive()
+
   const [batch, setBatch] = useState<Photo[]>([])
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [rotateSec, setRotateSec] = useState<number>(10)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
   const [ads, setAds] = useState<Advertisement[]>([])
   const [adOpen, setAdOpen] = useState(false)
   const [adIndex, setAdIndex] = useState(0)
-  const [adAppearances, setAdAppearances] = useState<Record<string, number>>({})
+  const titleRef = useRef<HTMLInputElement>(null)
   const allRef = useRef<Photo[]>([])
   const refreshRef = useRef<() => void>(() => {})
 
   const closeModal = useCallback(() => setSelectedPhoto(null), [])
+
+  async function saveTitle(value: string) {
+    if (!eventId) return
+    setEditingTitle(false)
+    const trimmed = value.trim()
+    if (trimmed === (eventData?.slideshowTitle ?? '')) return
+    setEventData((prev) => prev ? { ...prev, slideshowTitle: trimmed || null } : prev)
+    try {
+      await apiRequest(`/events/${eventId}`, { method: 'PATCH', bodyJson: { slideshowTitle: trimmed || null } })
+    } catch { /* ignore */ }
+  }
+
+  function startEditing() {
+    setTitleDraft(eventData?.slideshowTitle ?? '')
+    setEditingTitle(true)
+  }
+
+  useEffect(() => {
+    if (editingTitle && titleRef.current) {
+      titleRef.current.focus()
+      titleRef.current.select()
+    }
+  }, [editingTitle])
 
   useEffect(() => {
     if (!selectedPhoto) return
@@ -128,12 +158,18 @@ export function SlideshowPage() {
   useEffect(() => {
     if (!adOpen || ads.length === 0 || rotateSec <= 0) return
     const rotateId = setInterval(() => {
-      const next = weightedPickIndex(ads, adIndex)
-      setAdIndex(next)
-      setAdAppearances((prev) => ({ ...prev, [ads[next]!.id]: (prev[ads[next]!.id] ?? 0) + 1 }))
+      setAdIndex(weightedPickIndex(ads, adIndex))
     }, rotateSec * 1000)
     return () => clearInterval(rotateId)
   }, [adOpen, ads, adIndex, rotateSec])
+
+  useEffect(() => {
+    if (!adOpen || ads.length === 0) return
+    const current = ads[adIndex % ads.length]
+    if (current) {
+      apiRequest(`/advertisements/${current.id}/appearance`, { method: 'POST' }).catch(() => {})
+    }
+  }, [adOpen, adIndex, ads])
 
   const hasPhotos = batch.length > 0
   const currentAd = ads.length > 0 ? ads[adIndex % ads.length]! : null
@@ -141,6 +177,29 @@ export function SlideshowPage() {
   return (
     <div className={styles.fullscreen}>
       <div className={styles.header}>
+        <div className={styles.titleGroup}>
+          {editingTitle ? (
+            <input
+              ref={titleRef}
+              className={styles.titleInput}
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={(e) => saveTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { (e.target as HTMLInputElement).blur() }
+                if (e.key === 'Escape') { setEditingTitle(false) }
+              }}
+              placeholder="Titolo slideshow..."
+            />
+          ) : (
+            <span className={styles.slideshowTitle} onClick={startEditing}>
+              {eventData?.slideshowTitle || 'Clicca per aggiungere un titolo...'}
+            </span>
+          )}
+          <span className={styles.eventName}>
+            {eventData?.name ?? 'Street Food Events'}
+          </span>
+        </div>
         <button className={styles.refreshBtn} onClick={() => refreshRef.current()} title="Aggiorna">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 2v6h-6" />
@@ -199,18 +258,12 @@ export function SlideshowPage() {
             {adOpen ? (
               <>
                 <div className={styles.adPanelHeader}>
-                  <span className={styles.adPanelTitle}>Advertisement</span>
                   <button className={styles.adPanelClose} onClick={() => setAdOpen(false)} title="Chiudi">×</button>
                 </div>
                 {currentAd ? (
                   <img key={currentAd.id} src={currentAd.image.url} alt={currentAd.name ?? ''} className={styles.adPanelImage} />
                 ) : (
                   <span className={styles.adPanelEmpty}>Nessun advertisement</span>
-                )}
-                {currentAd && (
-                  <span className={styles.adPanelCounter}>
-                    {adAppearances[currentAd.id] ?? 0} app.
-                  </span>
                 )}
               </>
             ) : (

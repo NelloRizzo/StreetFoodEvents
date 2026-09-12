@@ -4,6 +4,8 @@ import {
     deleteAdvertisement,
     listAllAdvertisements,
     listEnabledAdvertisements,
+    registerAdvertisementAppearance,
+    resetAllAppearances,
     updateAdvertisement
 } from '../controllers/advertisements.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
@@ -14,6 +16,18 @@ import { asyncHandler } from '../utils/async-handler';
 export const advertisementsRouter = Router();
 
 advertisementsRouter.get('/', asyncHandler(listEnabledAdvertisements));
+
+advertisementsRouter.post(
+    '/reset-appearances',
+    asyncHandler(authMiddleware),
+    asyncHandler(hasRole(['platform-admin', 'photo-admin'])),
+    asyncHandler(resetAllAppearances)
+);
+
+advertisementsRouter.post(
+    '/:advertisementId/appearance',
+    asyncHandler(registerAdvertisementAppearance)
+);
 
 advertisementsRouter.get(
     '/manage',

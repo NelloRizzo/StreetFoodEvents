@@ -232,6 +232,58 @@ describe('Integration: advertisements', () => {
         expect(res.body.item.weight).toBe(3);
     });
 
+    it('registers an appearance publicly (no auth) and increments the counter', async () => {
+        app = createTestApp();
+        const item = await createAdvertisement(true);
+
+        const res = await request(app)
+            .post(`/api/advertisements/${item._id}/appearance`);
+        expect(res.status).toBe(204);
+
+        const fresh = await AdvertisementModel.findById(item._id);
+        expect(fresh!.appearances).toBe(1);
+
+        await request(app).post(`/api/advertisements/${item._id}/appearance`);
+        const fresh2 = await AdvertisementModel.findById(item._id);
+        expect(fresh2!.appearances).toBe(2);
+    });
+
+    it('returns 400/404 for appearance on invalid or unknown ids', async () => {
+        app = createTestApp();
+
+        const invalid = await request(app)
+            .post('/api/advertisements/not-an-id/appearance');
+        expect(invalid.status).toBe(400);
+
+        const missing = await request(app)
+            .post('/api/advertisements/507f1f77bcf86cd799439011/appearance');
+        expect(missing.status).toBe(404);
+    });
+
+    it('resets all appearance counters as platform admin', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+        await assignPlatformAdmin(user._id.toString());
+        const item = await createAdvertisement(true);
+        await request(app).post(`/api/advertisements/${item._id}/appearance`);
+        await request(app).post(`/api/advertisements/${item._id}/appearance`);
+
+        const res = await request(app)
+            .post('/api/advertisements/reset-appearances')
+            .set('Cookie', `sid=${sessionToken}`);
+        expect(res.status).toBe(200);
+
+        const fresh = await AdvertisementModel.findById(item._id);
+        expect(fresh!.appearances).toBe(0);
+    });
+
+    it('requires auth to reset appearance counters', async () => {
+        app = createTestApp();
+        const res = await request(app)
+            .post('/api/advertisements/reset-appearances');
+        expect(res.status).toBe(401);
+    });
+
     it('deletes an advertisement and removes the cloudinary asset', async () => {
         app = createTestApp();
         const { user, sessionToken } = await createAuthSession();

@@ -21,6 +21,7 @@ function toResponse(advertisement: InstanceType<typeof AdvertisementModel>) {
         image: advertisement.image,
         enabled: advertisement.enabled,
         weight: advertisement.weight,
+        appearances: advertisement.appearances ?? 0,
         createdAt: advertisement.createdAt
     };
 }
@@ -33,6 +34,11 @@ export async function listEnabledAdvertisements(_req: Request, res: Response) {
 export async function listAllAdvertisements(_req: Request, res: Response) {
     const items = await AdvertisementModel.find().sort({ createdAt: 1 });
     return res.status(200).json({ items: items.map(toResponse) });
+}
+
+export async function resetAllAppearances(_req: Request, res: Response) {
+    await AdvertisementModel.updateMany({}, { appearances: 0 });
+    return res.status(200).json({ message: 'Appearance counters reset' });
 }
 
 export async function createAdvertisement(req: Request, res: Response) {
@@ -52,6 +58,22 @@ export async function createAdvertisement(req: Request, res: Response) {
         weight: parseWeight(req.body.weight) ?? 1
     });
     return res.status(201).json({ item: toResponse(item) });
+}
+
+export async function registerAdvertisementAppearance(req: Request, res: Response) {
+    const { advertisementId } = req.params;
+    if (!isValidObjectId(advertisementId)) {
+        return res.status(400).json({ message: 'Invalid advertisement id' });
+    }
+    const item = await AdvertisementModel.findByIdAndUpdate(
+        advertisementId,
+        { $inc: { appearances: 1 } },
+        { new: false }
+    );
+    if (!item) {
+        return res.status(404).json({ message: 'Advertisement not found' });
+    }
+    return res.status(204).send();
 }
 
 export async function updateAdvertisement(req: Request, res: Response) {
