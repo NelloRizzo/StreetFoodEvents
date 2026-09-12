@@ -8,7 +8,7 @@ import { ALLERGEN_OPTIONS } from '../lib/allergens'
 import type { UploadedImage } from '../lib/upload'
 import styles from './StandAdhesionWizardPage.module.scss'
 
-type AdhesionStatus = 'draft' | 'submitted' | 'approved' | 'rejected'
+type AdhesionStatus = 'draft' | 'submitted' | 'integration' | 'approved' | 'rejected'
 
 type AdhesionProduct = {
   name: string
@@ -38,6 +38,7 @@ type AdhesionResponse = {
   contactName: string | null
   contactEmail: string | null
   contactPhone: string | null
+  contactSocial: string | null
   products: AdhesionProduct[]
   haccpConfirmed: boolean
   haccpNote: string | null
@@ -92,6 +93,7 @@ type FormState = {
   contactName: string
   contactEmail: string
   contactPhone: string
+  contactSocial: string
   products: ProductDraft[]
   haccpConfirmed: boolean
   haccpNote: string
@@ -115,6 +117,7 @@ const emptyForm: FormState = {
   contactName: '',
   contactEmail: '',
   contactPhone: '',
+  contactSocial: '',
   products: [],
   haccpConfirmed: false,
   haccpNote: '',
@@ -130,6 +133,7 @@ const emptyForm: FormState = {
 const STATUS_LABEL: Record<AdhesionStatus, string> = {
   draft: 'Bozza',
   submitted: 'In attesa di approvazione',
+  integration: 'Da integrare',
   approved: 'Approvata',
   rejected: 'Rifiutata',
 }
@@ -181,6 +185,7 @@ function fromAdhesion(a: AdhesionResponse): FormState {
     contactName: a.contactName ?? '',
     contactEmail: a.contactEmail ?? '',
     contactPhone: a.contactPhone ?? '',
+    contactSocial: a.contactSocial ?? '',
     products: a.products.map((p) => ({
       name: p.name,
       description: p.description ?? '',
@@ -218,6 +223,7 @@ function buildPayload(form: FormState) {
     contactName: form.contactName || null,
     contactEmail: form.contactEmail || null,
     contactPhone: form.contactPhone || null,
+    contactSocial: form.contactSocial || null,
     products: form.products
       .filter((p) => p.name.trim())
       .map((p) => ({
@@ -262,7 +268,7 @@ export function StandAdhesionWizardPage() {
   const [error, setError] = useState<string | null>(null)
   const [confirmWithdraw, setConfirmWithdraw] = useState(false)
 
-  const editable = adhesion === null || adhesion.status === 'draft' || adhesion.status === 'rejected'
+  const editable = adhesion === null || adhesion.status === 'draft' || adhesion.status === 'rejected' || adhesion.status === 'integration'
 
   useEffect(() => {
     let cancelled = false
@@ -387,6 +393,12 @@ export function StandAdhesionWizardPage() {
   const missing = useMemo(() => {
     const list: string[] = []
     if (!form.standName.trim()) list.push('nome dello stand')
+    if (!form.contactName.trim()) list.push('nome del referente')
+    if (!form.standId) {
+      if (!form.contactEmail.trim()) list.push('email del referente')
+    } else if (!form.contactEmail.trim() && !form.contactPhone.trim()) {
+      list.push('email o telefono del referente')
+    }
     if (!form.haccpConfirmed) list.push('requisiti HACCP')
     if (!form.acceptsPointLight) list.push('punto luce energia')
     if (!form.participationFeeAccepted && event?.participationFee != null) list.push('accettazione quota di partecipazione')
@@ -394,10 +406,6 @@ export function StandAdhesionWizardPage() {
     if (!form.regulationAccepted) list.push('regolamento')
     if (!form.exclusionAccepted) list.push('clausola di esclusione')
     if (!form.signature.trim()) list.push('firma')
-    if (!form.standId) {
-      if (!form.contactName.trim()) list.push('nome del referente')
-      if (!form.contactEmail.trim()) list.push('email del referente')
-    }
     return list
   }, [form, event])
 
@@ -548,21 +556,6 @@ export function StandAdhesionWizardPage() {
             <div className={styles.field}>
               <label htmlFor="adh-desc">Descrizione attività</label>
               <textarea id="adh-desc" rows={3} value={form.description} onChange={(e) => set('description', e.target.value)} />
-            </div>
-
-            <div className={styles.fieldRow}>
-              <div className={styles.field}>
-                <label htmlFor="adh-contact">Referente</label>
-                <input id="adh-contact" value={form.contactName} onChange={(e) => set('contactName', e.target.value)} />
-              </div>
-              <div className={styles.field}>
-                <label htmlFor="adh-email">Email</label>
-                <input id="adh-email" type="email" value={form.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} />
-              </div>
-              <div className={styles.field}>
-                <label htmlFor="adh-phone">Telefono</label>
-                <input id="adh-phone" value={form.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} />
-              </div>
             </div>
 
             <div className={styles.fieldRow}>
@@ -803,6 +796,41 @@ export function StandAdhesionWizardPage() {
             )}
           </fieldset>
 
+          <fieldset className={styles.fieldset} disabled={!editable}>
+            <legend className={styles.legend}>{'\u2466'} Referente dello stand</legend>
+            <div className={styles.field}>
+              <label htmlFor="adh-contact">
+                Nome e cognome del referente *
+                {form.standId ? '' : ' (creerà l\u2019account con cui gestirai lo stand)'}
+              </label>
+              <input id="adh-contact" value={form.contactName} onChange={(e) => set('contactName', e.target.value)} />
+            </div>
+            <div className={styles.fieldRow}>
+              <div className={styles.field}>
+                <label htmlFor="adh-email">Email {form.standId ? '(email o telefono)' : '*'}</label>
+                <input id="adh-email" type="email" value={form.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="adh-phone">Telefono</label>
+                <input id="adh-phone" value={form.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} />
+              </div>
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="adh-social">Recapito social (Instagram, Facebook, WhatsApp&hellip;)</label>
+              <input id="adh-social" value={form.contactSocial} onChange={(e) => set('contactSocial', e.target.value)} />
+            </div>
+            {!form.standId && (
+              <p className={styles.hint}>
+                Per gli stand nuovi è obbligatoria l&apos;email: l&apos;account di gestione riceverà l&apos;invito di attivazione.
+              </p>
+            )}
+            {form.standId && (
+              <p className={styles.hint}>
+                Per gli stand già registrati è sufficiente fornire almeno email o telefono.
+              </p>
+            )}
+          </fieldset>
+
           {editable && (
             <div className={styles.formActions}>
               <button type="button" className={styles.secondaryBtn} disabled={busy} onClick={() => void handleSave()}>
@@ -819,13 +847,13 @@ export function StandAdhesionWizardPage() {
             </div>
           )}
 
-          {adhesion?.status === 'submitted' && (
+          {adhesion?.status === 'submitted' || adhesion?.status === 'integration' ? (
             <div className={styles.formActions}>
               <button type="button" className={styles.secondaryBtn} disabled={busy} onClick={() => setConfirmWithdraw(true)}>
                 Ritira adesione
               </button>
             </div>
-          )}
+          ) : null}
         </form>
       </div>
 

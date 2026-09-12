@@ -7,7 +7,7 @@ import { ALLERGEN_LABELS } from '../lib/allergens'
 import type { UploadedImage } from '../lib/upload'
 import styles from './AdhesionsManagePage.module.scss'
 
-type AdhesionStatus = 'draft' | 'submitted' | 'approved' | 'rejected'
+type AdhesionStatus = 'draft' | 'submitted' | 'integration' | 'approved' | 'rejected'
 
 type AdhesionItem = {
   id: string
@@ -25,6 +25,7 @@ type AdhesionItem = {
   contactName: string | null
   contactEmail: string | null
   contactPhone: string | null
+  contactSocial: string | null
   products: Array<{
     name: string
     description: string | null
@@ -60,11 +61,12 @@ type EventRef = {
 const STATUS_LABEL: Record<AdhesionStatus, string> = {
   draft: 'Bozza',
   submitted: 'In attesa',
+  integration: 'Da integrare',
   approved: 'Approvata',
   rejected: 'Rifiutata',
 }
 
-const STATUS_ORDER: AdhesionStatus[] = ['submitted', 'draft', 'rejected', 'approved']
+const STATUS_ORDER: AdhesionStatus[] = ['submitted', 'integration', 'draft', 'rejected', 'approved']
 
 const STAND_TYPE_LABEL: Record<AdhesionItem['standType'], string> = {
   food: 'Enogastronomico',
@@ -83,6 +85,7 @@ export function AdhesionsManagePage() {
   const [msg, setMsg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rejectingId, setRejectingId] = useState<string | null>(null)
+  const [integratingId, setIntegratingId] = useState<string | null>(null)
 
   const fetchItems = useCallback(async () => {
     try {
@@ -155,6 +158,15 @@ export function AdhesionsManagePage() {
       'Adesione rifiutata.'
     )
 
+  const handleIntegration = (note: string) =>
+    runAction(
+      () => apiRequest(`/events/${eventId}/adhesions/${integratingId}/integration`, {
+        method: 'POST',
+        bodyJson: { reviewNote: note },
+      }),
+      'Richiesta di integrazione inviata allo stand.'
+    )
+
   if (loading) return null
 
   const countByStatus = (s: AdhesionStatus) => items.filter((i) => i.status === s).length
@@ -181,6 +193,7 @@ export function AdhesionsManagePage() {
 
         <div className={styles.statsRow}>
           <span className={styles.statPill}>In attesa: {countByStatus('submitted')}</span>
+          <span className={styles.statPill}>Da integrare: {countByStatus('integration')}</span>
           <span className={styles.statPill}>Bozze: {countByStatus('draft')}</span>
           <span className={styles.statPill}>Rifiutate: {countByStatus('rejected')}</span>
           <span className={styles.statPill}>Approvate: {countByStatus('approved')}</span>
@@ -243,9 +256,9 @@ export function AdhesionsManagePage() {
                       {a.logo && <img src={a.logo.url} alt="logo" className={styles.thumb} />}
                     </div>
                   )}
-                  {a.contactName || a.contactEmail || a.contactPhone ? (
+                  {a.contactName || a.contactEmail || a.contactPhone || a.contactSocial ? (
                     <p>
-                      <strong>Contatti:</strong> {[a.contactName, a.contactEmail, a.contactPhone].filter(Boolean).join(' · ')}
+                      <strong>Contatti:</strong> {[a.contactName, a.contactEmail, a.contactPhone, a.contactSocial].filter(Boolean).join(' · ')}
                     </p>
                   ) : null}
 
@@ -296,7 +309,7 @@ export function AdhesionsManagePage() {
                 </div>
               )}
 
-              {(a.status === 'submitted' || a.status === 'draft') && (
+              {(a.status === 'submitted' || a.status === 'draft' || a.status === 'integration') && (
                 <div className={styles.cardActions}>
                   <button
                     type="button"
@@ -306,6 +319,16 @@ export function AdhesionsManagePage() {
                   >
                     Approva
                   </button>
+                  {(a.status === 'submitted' || a.status === 'integration') && (
+                    <button
+                      type="button"
+                      className={`${styles.primaryBtn} ${styles.integrationBtn}`}
+                      disabled={busy}
+                      onClick={() => setIntegratingId(a.id)}
+                    >
+                      Da integrare
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`${styles.primaryBtn} ${styles.rejectBtn}`}
@@ -333,6 +356,19 @@ export function AdhesionsManagePage() {
           setRejectingId(null)
         }}
         onCancel={() => setRejectingId(null)}
+      />
+
+      <ConfirmModal
+        open={integratingId !== null}
+        variant="prompt"
+        title="Richiedi integrazione"
+        message="Indica cosa deve essere integrato o corretto dallo stand (la nota sarà visibile allo stand)."
+        confirmLabel="Richiedi integrazione"
+        onConfirm={(note) => {
+          void handleIntegration(note ?? '')
+          setIntegratingId(null)
+        }}
+        onCancel={() => setIntegratingId(null)}
       />
     </div>
   )
