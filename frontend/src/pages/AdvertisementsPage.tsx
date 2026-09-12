@@ -136,38 +136,38 @@ export function AdvertisementsPage() {
           <div className={styles.list}>
             {items.map((item) => (
               <article key={item.id} className={styles.card}>
-                <div className={styles.cardBody}>
-                  <strong className={styles.cardName}>{item.name || '(senza nome)'}</strong>
+                <div className={styles.cardImgWrap}>
+                  {item.image.url ? (
+                    <img src={item.image.url} alt={item.name ?? ''} className={styles.thumb} />
+                  ) : (
+                    <span className={styles.cardImgEmpty}>Nessuna immagine</span>
+                  )}
                   <span className={`${styles.badge} ${item.enabled ? styles.badgeOn : styles.badgeOff}`}>
                     {item.enabled ? 'Attiva' : 'Disattivata'}
                   </span>
-                  <div className={styles.cardImageRow}>
-                    {item.image.url && (
-                      <img src={item.image.url} alt={item.name ?? ''} className={styles.thumb} />
-                    )}
-                    <div className={styles.pesoCol}>
-                      <label className={styles.pesoLabel}>
-                        Peso
-                        <input
-                          type="number"
-                          min={1}
-                          value={item.weight}
-                          onChange={(e) => setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, weight: Math.max(1, Math.round(Number(e.target.value) || 1)) } : i)))}
-                          onBlur={() => void updateWeight(item.id, item.weight)}
-                          className={styles.pesoInput}
-                        />
-                      </label>
-                      <span className={styles.appearancesBadge}>{item.appearances ?? 0} apparizioni</span>
-                    </div>
-                  </div>
                 </div>
-                <div className={styles.cardActions}>
-                  <button className={styles.toggleBtn} onClick={() => toggleEnabled(item.id, !item.enabled)}>
-                    {item.enabled ? 'Disattiva' : 'Attiva'}
-                  </button>
-                  <button className={styles.dangerBtn} onClick={() => setDeleteTarget(item.id)}>
-                    Elimina
-                  </button>
+                <div className={styles.cardBody}>
+                  <strong className={styles.cardName}>{item.name || '(senza nome)'}</strong>
+                  <span className={styles.appearancesBadge}>{item.appearances ?? 0} apparizioni</span>
+                  <label className={styles.pesoLabel}>
+                    Peso
+                    <input
+                      type="number"
+                      min={1}
+                      value={item.weight}
+                      onChange={(e) => setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, weight: Math.max(1, Math.round(Number(e.target.value) || 1)) } : i)))}
+                      onBlur={() => void updateWeight(item.id, item.weight)}
+                      className={styles.pesoInput}
+                    />
+                  </label>
+                  <div className={styles.cardActions}>
+                    <button className={styles.toggleBtn} onClick={() => toggleEnabled(item.id, !item.enabled)}>
+                      {item.enabled ? 'Disattiva' : 'Attiva'}
+                    </button>
+                    <button className={styles.dangerBtn} onClick={() => setDeleteTarget(item.id)}>
+                      Elimina
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}
