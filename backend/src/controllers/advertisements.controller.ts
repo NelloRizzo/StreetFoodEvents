@@ -7,12 +7,20 @@ function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
 }
 
+function parseWeight(value: unknown): number | null {
+    if (value === undefined || value === null || value === '') return null;
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n) || n < 1) return null;
+    return Math.round(n);
+}
+
 function toResponse(advertisement: InstanceType<typeof AdvertisementModel>) {
     return {
         id: advertisement._id.toString(),
         name: advertisement.name,
         image: advertisement.image,
         enabled: advertisement.enabled,
+        weight: advertisement.weight,
         createdAt: advertisement.createdAt
     };
 }
@@ -40,7 +48,8 @@ export async function createAdvertisement(req: Request, res: Response) {
     const item = await AdvertisementModel.create({
         name: typeof name === 'string' && name.trim() ? name.trim() : null,
         image,
-        enabled: true
+        enabled: true,
+        weight: parseWeight(req.body.weight) ?? 1
     });
     return res.status(201).json({ item: toResponse(item) });
 }
@@ -59,6 +68,10 @@ export async function updateAdvertisement(req: Request, res: Response) {
     }
     if (typeof req.body.name === 'string' || req.body.name === null) {
         item.name = typeof req.body.name === 'string' && req.body.name.trim() ? req.body.name.trim() : null;
+    }
+    const parsedWeight = parseWeight(req.body.weight);
+    if (parsedWeight !== null) {
+        item.weight = parsedWeight;
     }
     await item.save();
     return res.status(200).json({ item: toResponse(item) });

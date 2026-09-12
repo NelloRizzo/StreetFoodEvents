@@ -16,6 +16,11 @@ const advertisementSchema = new Schema(
         enabled: {
             type: Boolean,
             default: true
+        },
+        weight: {
+            type: Number,
+            min: 1,
+            default: 1
         }
     },
     {

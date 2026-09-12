@@ -76,7 +76,7 @@ async function assignPlatformAdmin(userId: string) {
     });
 }
 
-async function createAdvertisement(enabled = true) {
+async function createAdvertisement(enabled = true, weight = 1) {
     return AdvertisementModel.create({
         name: 'Pubblicità',
         image: {
@@ -87,7 +87,8 @@ async function createAdvertisement(enabled = true) {
             format: 'jpg',
             bytes: 1234
         },
-        enabled
+        enabled,
+        weight
     });
 }
 
@@ -107,6 +108,7 @@ describe('Integration: advertisements', () => {
         expect(res.body.items).toHaveLength(1);
         expect(res.body.items[0].id).toBe(enabled._id.toString());
         expect(res.body.items[0].enabled).toBe(true);
+        expect(res.body.items[0].weight).toBe(1);
     });
 
     it('requires authentication for manage list', async () => {
@@ -160,9 +162,41 @@ describe('Integration: advertisements', () => {
         expect(uploadImageBufferMock).toHaveBeenCalledTimes(1);
         expect(res.body.item.enabled).toBe(true);
         expect(res.body.item.name).toBe('Sponsor test');
+        expect(res.body.item.weight).toBe(1);
 
         const list = await request(app).get('/api/advertisements');
         expect(list.body.items).toHaveLength(1);
+    });
+
+    it('creates an advertisement with a custom weight', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+        await assignPlatformAdmin(user._id.toString());
+
+        const res = await request(app)
+            .post('/api/advertisements')
+            .set('Cookie', `sid=${sessionToken}`)
+            .field('name', 'Sponsor fortissimo')
+            .field('weight', '5')
+            .attach('image', Buffer.from('fake-image'), { filename: 'ad.jpg', contentType: 'image/jpeg' });
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.weight).toBe(5);
+    });
+
+    it('rejects invalid weight on create and defaults to 1', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+        await assignPlatformAdmin(user._id.toString());
+
+        const res = await request(app)
+            .post('/api/advertisements')
+            .set('Cookie', `sid=${sessionToken}`)
+            .field('weight', '0')
+            .attach('image', Buffer.from('fake-image'), { filename: 'ad.jpg', contentType: 'image/jpeg' });
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.weight).toBe(1);
     });
 
     it('toggles enabled via PATCH', async () => {
@@ -181,6 +215,21 @@ describe('Integration: advertisements', () => {
 
         const list = await request(app).get('/api/advertisements');
         expect(list.body.items).toHaveLength(0);
+    });
+
+    it('updates weight via PATCH', async () => {
+        app = createTestApp();
+        const { user, sessionToken } = await createAuthSession();
+        await assignPlatformAdmin(user._id.toString());
+        const item = await createAdvertisement(true, 1);
+
+        const res = await request(app)
+            .patch(`/api/advertisements/${item._id}`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ weight: 3 });
+
+        expect(res.status).toBe(200);
+        expect(res.body.item.weight).toBe(3);
     });
 
     it('deletes an advertisement and removes the cloudinary asset', async () => {

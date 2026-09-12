@@ -226,9 +226,11 @@ Pubblicazione Meta: account UNICO della piattaforma via env opzionali `META_PAGE
 |---|---|---|---|
 | GET | `/api/advertisements` | no | Lista advertisement ABILITATI (per lo slideshow); trasversali, non legati a un evento |
 | GET | `/api/advertisements/manage` | platform-admin / photo-admin | Lista completa (abilitati e disabilitati) |
-| POST | `/api/advertisements` | platform-admin / photo-admin | Crea advertisement (multipart `image` + `name` opzionale) |
-| PATCH | `/api/advertisements/:advertisementId` | platform-admin / photo-admin | Attiva/disattiva (`enabled`) o aggiorna `name` |
+| POST | `/api/advertisements` | platform-admin / photo-admin | Crea advertisement (multipart `image` + `name` opzionale + `weight` default 1) |
+| PATCH | `/api/advertisements/:advertisementId` | platform-admin / photo-admin | Attiva/disattiva (`enabled`), aggiorna `name` o `weight` |
 | DELETE | `/api/advertisements/:advertisementId` | platform-admin / photo-admin | Elimina (rimuove asset da Cloudinary) |
+
+Nota: `weight` (min 1) guida la **selezione casuale ponderata** nel pannello slideshow — piú alto = piú spesso mostrato; il pannello conta le apparizioni ("n app") per advertisement. La schermata slideshow NON ha titolo/branding in testata (solo aggiorna + velocità).
 
 ### API routes — Email Subscriptions
 | Method | Route | Auth | Description |
@@ -338,10 +340,10 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 
 ## Session state (Set 2026 — advertisement nel pannello slideshow)
 ### Completed
-- **Advertisement trasversali**: modello `Advertisement` (collezione `advertisements`, NON legato a evento — campi `image`/`enabled`/`name`) con API `/api/advertisements`: `GET /` pubblico (solo `enabled: true`), `GET /manage` (platform-admin/photo-admin, tutte), `POST` (multipart `image`, guard same-role), `PATCH /:advertisementId` (toggle `enabled`/nome), `DELETE` (rimuove asset Cloudinary).
-- **Pannello collassabile in `SlideshowPage`**: a destra della griglia foto — chiuso = tab verticale sottile "Advertisement"; aperto = occupa `min(30vw, 100vh*0.7071)` (proporzione portrait A4) a tutta l'altezza, riducendo la larghezza della griglia. Mostra 1 advertisement alla volta, ruota con lo stesso timer `rotateSec` dei pulsanti velocità, contatore "n/m", dissolvenza `adFade`. Struct layout: `.fullscreen` (colonna) → `.body` (riga: `.stage` + `.adPanel`).
-- **Pagina admin** `AdvertisementsPage` (`/admin/advertisements`, sezione sidebar Foto, solo platform-admin): upload (nome opzionale), attiva/disattiva, elimina.
-- Test: `integration-advertisements.test.ts` (8 test: public only enabled, auth/403 su manage, create platform-admin, toggle, delete + deleteImage, 400/404). Suite backend **385 test ✓** (45 file), typecheck ✓, lint ✓; frontend build (tsc+vite) ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria.
+- **Advertisement trasversali**: modello `Advertisement` (collezione `advertisements`, NON legato a evento — campi `image`/`enabled`/`weight`/`name`) con API `/api/advertisements`: `GET /` pubblico (solo `enabled: true`), `GET /manage` (platform-admin/photo-admin, tutte), `POST` (multipart `image`, guard same-role), `PATCH /:advertisementId` (toggle `enabled`/nome/`weight`), `DELETE` (rimuove asset Cloudinary).
+- **Pannello collassabile in `SlideshowPage`**: a destra della griglia foto — chiuso = tab verticale sottile "Advertisement"; aperto = occupa `min(30vw, 100vh*0.7071)` (proporzione portrait A4) a tutta l'altezza, riducendo la larghezza della griglia. Ruota con lo stesso timer `rotateSec` dei pulsanti velocità ma con **selezione casuale ponderata** sul `weight` (`weightedPickIndex` — probabilità ∝ peso, mai ripetuto consecutivo se esistono alternative); contatore "n app" delle apparizioni della figura corrente, dissolvenza `adFade`. Struct layout: `.fullscreen` (colonna) → `.body` (riga: `.stage` + `.adPanel`). La schermata NON ha più titolo/branding in testata (solo aggiorna + velocità).
+- **Pagina admin** `AdvertisementsPage` (`/admin/advertisements`, sezione sidebar Foto, solo platform-admin): upload (nome opzionale + peso), input peso numerico accanto alla thumbnail di ogni card, attiva/disattiva, elimina.
+- Test: `integration-advertisements.test.ts` (11 test: public only enabled, auth/403 su manage, create platform-admin, peso custom, clamp peso a 1, PATCH peso, toggle, delete + deleteImage, 400/404). Suite backend **388 test ✓** (45 file), typecheck ✓, lint ✓; frontend build (tsc+vite) ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: nessuna rigenerazione di `distro/local-app.tar` necessaria.
 
 ## Session state (Aug 2026 — evento admin centralizzato con AdminEventContext)
 ### Completed

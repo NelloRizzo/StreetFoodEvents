@@ -13,16 +13,14 @@ type Photo = {
 }
 
 type EventData = {
-  name: string
-  logo?: { url: string; publicId: string } | null
   coverImage?: { url: string; publicId: string } | null
-  slideshowTitle?: string | null
 }
 
 type Advertisement = {
   id: string
   name: string | null
   image: { url: string }
+  weight: number
 }
 
 const POLL_MS = 2 * 60_000
@@ -38,38 +36,34 @@ function shuffle<T>(arr: T[]): T[] {
   return copy
 }
 
+function weightedPickIndex(ads: Advertisement[], currentIndex?: number): number {
+  if (ads.length <= 1) return 0
+  const entries = ads.map((a, i) => ({ a, i }))
+  const pool = entries.filter(({ i }) => i !== currentIndex)
+  const candidates = pool.length > 0 ? pool : entries
+  const total = candidates.reduce((sum, { a }) => sum + a.weight, 0)
+  let r = Math.random() * total
+  for (const { a, i } of candidates) {
+    r -= a.weight
+    if (r <= 0) return i
+  }
+  return candidates[candidates.length - 1]!.i
+}
+
 export function SlideshowPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const [batch, setBatch] = useState<Photo[]>([])
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [rotateSec, setRotateSec] = useState<number>(10)
-  const [editingTitle, setEditingTitle] = useState(false)
-  const [titleDraft, setTitleDraft] = useState('')
   const [ads, setAds] = useState<Advertisement[]>([])
   const [adOpen, setAdOpen] = useState(false)
   const [adIndex, setAdIndex] = useState(0)
-  const titleRef = useRef<HTMLInputElement>(null)
+  const [adAppearances, setAdAppearances] = useState<Record<string, number>>({})
   const allRef = useRef<Photo[]>([])
   const refreshRef = useRef<() => void>(() => {})
 
   const closeModal = useCallback(() => setSelectedPhoto(null), [])
-
-  async function saveTitle(value: string) {
-    if (!eventId) return
-    setEditingTitle(false)
-    const trimmed = value.trim()
-    if (trimmed === (eventData?.slideshowTitle ?? '')) return
-    setEventData((prev) => prev ? { ...prev, slideshowTitle: trimmed || null } : prev)
-    try {
-      await apiRequest(`/events/${eventId}`, { method: 'PATCH', bodyJson: { slideshowTitle: trimmed || null } })
-    } catch { /* ignore */ }
-  }
-
-  function startEditing() {
-    setTitleDraft(eventData?.slideshowTitle ?? '')
-    setEditingTitle(true)
-  }
 
   useEffect(() => {
     if (!selectedPhoto) return
@@ -77,13 +71,6 @@ export function SlideshowPage() {
     globalThis.addEventListener('keydown', onKey)
     return () => globalThis.removeEventListener('keydown', onKey)
   }, [selectedPhoto, closeModal])
-
-  useEffect(() => {
-    if (editingTitle && titleRef.current) {
-      titleRef.current.focus()
-      titleRef.current.select()
-    }
-  }, [editingTitle])
 
   useEffect(() => {
     if (!eventId) return
@@ -139,12 +126,14 @@ export function SlideshowPage() {
   }, [])
 
   useEffect(() => {
-    if (!adOpen || ads.length < 2 || rotateSec <= 0) return
+    if (!adOpen || ads.length === 0 || rotateSec <= 0) return
     const rotateId = setInterval(() => {
-      setAdIndex((i) => (i + 1) % ads.length)
+      const next = weightedPickIndex(ads, adIndex)
+      setAdIndex(next)
+      setAdAppearances((prev) => ({ ...prev, [ads[next]!.id]: (prev[ads[next]!.id] ?? 0) + 1 }))
     }, rotateSec * 1000)
     return () => clearInterval(rotateId)
-  }, [adOpen, ads.length, rotateSec])
+  }, [adOpen, ads, adIndex, rotateSec])
 
   const hasPhotos = batch.length > 0
   const currentAd = ads.length > 0 ? ads[adIndex % ads.length]! : null
@@ -152,32 +141,6 @@ export function SlideshowPage() {
   return (
     <div className={styles.fullscreen}>
       <div className={styles.header}>
-        {eventData?.logo?.url && (
-          <img src={eventData.logo.url} alt="" className={styles.logo} />
-        )}
-        <div className={styles.titleGroup}>
-          <span className={styles.eventName}>
-            {eventData?.name ?? 'Street Food Events'}
-          </span>
-          {editingTitle ? (
-            <input
-              ref={titleRef}
-              className={styles.titleInput}
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              onBlur={(e) => saveTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') { (e.target as HTMLInputElement).blur() }
-                if (e.key === 'Escape') { setEditingTitle(false) }
-              }}
-              placeholder="Titolo slideshow..."
-            />
-          ) : (
-            <span className={styles.slideshowTitle} onClick={startEditing}>
-              {eventData?.slideshowTitle || 'Clicca per aggiungere un titolo...'}
-            </span>
-          )}
-        </div>
         <button className={styles.refreshBtn} onClick={() => refreshRef.current()} title="Aggiorna">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 2v6h-6" />
@@ -244,8 +207,10 @@ export function SlideshowPage() {
                 ) : (
                   <span className={styles.adPanelEmpty}>Nessun advertisement</span>
                 )}
-                {ads.length > 1 && (
-                  <span className={styles.adPanelCounter}>{adIndex % ads.length + 1} / {ads.length}</span>
+                {currentAd && (
+                  <span className={styles.adPanelCounter}>
+                    {adAppearances[currentAd.id] ?? 0} app.
+                  </span>
                 )}
               </>
             ) : (

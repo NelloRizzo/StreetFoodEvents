@@ -13,11 +13,13 @@ type Advertisement = {
   name: string | null
   image: UploadedImage
   enabled: boolean
+  weight: number
 }
 
 export function AdvertisementsPage() {
   const [items, setItems] = useState<Advertisement[]>([])
   const [imageName, setImageName] = useState('')
+  const [weight, setWeight] = useState('1')
   const [image, setImage] = useState<UploadedImage | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -39,9 +41,10 @@ export function AdvertisementsPage() {
     try {
       await apiRequest(`/advertisements`, {
         method: 'POST',
-        bodyJson: { name: imageName.trim() || null, image },
+        bodyJson: { name: imageName.trim() || null, weight: Math.max(1, Math.round(Number(weight) || 1)), image },
       })
       setImageName('')
+      setWeight('1')
       setImage(null)
       loadItems()
     } catch {
@@ -58,6 +61,19 @@ export function AdvertisementsPage() {
         bodyJson: { enabled },
       })
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, enabled: res.item.enabled } : i)))
+    } catch {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Aggiornamento non riuscito.' })
+    }
+  }
+
+  const updateWeight = async (id: string, newWeight: number) => {
+    const w = Math.max(1, Math.round(Number(newWeight) || 1))
+    try {
+      const res = await apiRequest<{ item: Advertisement }>(`/advertisements/${id}`, {
+        method: 'PATCH',
+        bodyJson: { weight: w },
+      })
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, weight: res.item.weight } : i)))
     } catch {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: 'Aggiornamento non riuscito.' })
     }
@@ -89,6 +105,8 @@ export function AdvertisementsPage() {
           <h2 className={styles.sectionTitle}>Nuovo advertisement</h2>
           <div className={styles.form}>
             <input type="text" value={imageName} onChange={(e) => setImageName(e.target.value)} placeholder="Nome (opzionale)" style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }} />
+            <input type="number" min={1} value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="Peso (default 1)" title="Peso" style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', fontSize: 14, width: 140 }} />
+            <label className={styles.pesoHint}>Peso: più alto = più spesso nel pannello</label>
             <ImageUploader mode="single" value={image} onChange={(data) => setImage(data as UploadedImage | null)} />
             <button className={styles.primaryBtn} onClick={saveItem} disabled={saving || !image}>
               {saving ? 'Salvataggio...' : 'Aggiungi'}
@@ -106,9 +124,22 @@ export function AdvertisementsPage() {
                   <span className={`${styles.badge} ${item.enabled ? styles.badgeOn : styles.badgeOff}`}>
                     {item.enabled ? 'Attiva' : 'Disattivata'}
                   </span>
-                  {item.image.url && (
-                    <img src={item.image.url} alt={item.name ?? ''} className={styles.thumb} />
-                  )}
+                  <div className={styles.cardImageRow}>
+                    {item.image.url && (
+                      <img src={item.image.url} alt={item.name ?? ''} className={styles.thumb} />
+                    )}
+                    <label className={styles.pesoLabel}>
+                      Peso
+                      <input
+                        type="number"
+                        min={1}
+                        value={item.weight}
+                        onChange={(e) => setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, weight: Math.max(1, Math.round(Number(e.target.value) || 1)) } : i)))}
+                        onBlur={() => void updateWeight(item.id, item.weight)}
+                        className={styles.pesoInput}
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div className={styles.cardActions}>
                   <button className={styles.toggleBtn} onClick={() => toggleEnabled(item.id, !item.enabled)}>
