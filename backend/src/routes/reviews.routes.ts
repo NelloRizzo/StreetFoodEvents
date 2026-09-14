@@ -3,6 +3,7 @@ import { Router } from 'express';
 import {
     createReview,
     deleteReview,
+    getAllReviewQrCodes,
     getEventReviews,
     getManageReviews,
     getMyReviews,
@@ -27,5 +28,6 @@ reviewsRouter.use(asyncHandler(authMiddleware));
 reviewsRouter.use(hasRole(['event-admin', 'platform-admin'], { eventParam: 'eventId' }));
 
 reviewsRouter.get('/manage', asyncHandler(getManageReviews));
+reviewsRouter.get('/qrcodes/all', asyncHandler(getAllReviewQrCodes));
 reviewsRouter.patch('/:reviewId', asyncHandler(updateReviewStatus));
 reviewsRouter.delete('/:reviewId', asyncHandler(deleteReview));

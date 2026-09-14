@@ -2,6 +2,7 @@
 
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
+- **IN CODA**: data limite adesione (`adhesionDeadline` su `Event`, impostata in admin, default null) — dopo tale data il backend deve rifiutare `createAdhesion`/`updateAdhesion`/`submitAdhesion` (400 con messaggio) e il wizard (`StandAdhesionWizardPage`) deve bloccarsi e mostrare la scadenza. Task accodato a Set 2026.
 
 ## Pubblicazione social — analisi problematiche (ricerca Ago 2026)
 Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-side) e hostate su Cloudinary con URL pubblico — requisito indispensabile: Meta fa fetch dell'immagine dall'URL passato.
@@ -65,13 +66,6 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **API**: `/api/events/:eventId/analytics` con aggregazioni MongoDB
 - **Frontend**: grafici (Chart.js/Recharts), export CSV/PDF
 - **Motivazione**: supporto decisionale per organizzatori
-
-### 4. Sistema Feedback e Recensioni
-- **Descrizione**: valutazione stand e prodotti da parte dei clienti
-- **Modello**: `Review { eventId, standId, userId, rating, comment, createdAt }`
-- **API**: CRUD recensioni, media voti, moderazione
-- **Frontend**: stelle valutazione, form commento, top-rated stand
-- **Motivazione**: quality control, gamification
 
 ### 6. Multi-lingua (i18n) — Piano dettagliato (Ago 2026)
 - **Scope**: solo pagine pubbliche; admin resta in italiano

@@ -67,45 +67,47 @@ export function StandReviewPage() {
 
   return (
     <div className={styles.page}>
-      <Link className={styles.backLink} to={`/events/${eventId}/stands/${standId}`}>
-        &larr; Torna al menu di {stand.name}
-      </Link>
+      <div className="page-shell">
+        <Link className={styles.backLink} to={`/events/${eventId}/stands/${standId}`}>
+          &larr; Torna al menu di {stand.name}
+        </Link>
 
-      <header className={styles.hero}>
-        <h1 className={styles.title}>{stand.name}</h1>
-        <p className={styles.subtitle}>
-          Recensioni dello stand — {event.name}
-        </p>
-        <div className={styles.summary}>
-          <RatingStars value={standSummary?.avg ?? null} size={24} />
-          <span className={styles.ratingValue}>{standSummary?.avg ?? '–'}</span>
-          <span className={styles.ratingCount}>({standSummary?.count ?? 0} recensioni)</span>
+        <header className={styles.hero}>
+          <h1 className={styles.title}>{stand.name}</h1>
+          <p className={styles.subtitle}>
+            Recensioni dello stand — {event.name}
+          </p>
+          <div className={styles.summary}>
+            <RatingStars value={standSummary?.avg ?? null} size={24} />
+            <span className={styles.ratingValue}>{standSummary?.avg ?? '–'}</span>
+            <span className={styles.ratingCount}>({standSummary?.count ?? 0} recensioni)</span>
+          </div>
+        </header>
+
+        <div className={styles.cols}>
+          <section>
+            {alreadyReviewed ? (
+              <div className={styles.already}>
+                Hai già pubblicato una recensione per questo stand.
+              </div>
+            ) : (
+              <ReviewForm eventId={eventId!} standId={standId} targetLabel="stand" onCreated={handleCreated} />
+            )}
+          </section>
+
+          <section>
+            <h2 className={styles.sectionTitle}>Recensioni stand</h2>
+            {reviews.length === 0 ? (
+              <p className={styles.empty}>Ancora nessuna recensione per questo stand.</p>
+            ) : (
+              <div className={styles.list}>
+                {reviews.map((r) => (
+                  <ReviewCard key={r.id} review={r} />
+                ))}
+              </div>
+            )}
+          </section>
         </div>
-      </header>
-
-      <div className={styles.cols}>
-        <section>
-          {alreadyReviewed ? (
-            <div className={styles.already}>
-              Hai già pubblicato una recensione per questo stand.
-            </div>
-          ) : (
-            <ReviewForm eventId={eventId!} standId={standId} targetLabel="stand" onCreated={handleCreated} />
-          )}
-        </section>
-
-        <section>
-          <h2 className={styles.sectionTitle}>Recensioni stand</h2>
-          {reviews.length === 0 ? (
-            <p className={styles.empty}>Ancora nessuna recensione per questo stand.</p>
-          ) : (
-            <div className={styles.list}>
-              {reviews.map((r) => (
-                <ReviewCard key={r.id} review={r} />
-              ))}
-            </div>
-          )}
-        </section>
       </div>
     </div>
   )

@@ -1,0 +1,144 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.backLink {
+  display: inline-flex;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.printBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.5rem 1.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+}
+
+.printBtn:hover:not(:disabled) {
+  background: var(--color-brand-deep);
+}
+
+.printBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.header {
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--color-ink-strong);
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--color-ink-soft);
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 14px;
+  background: var(--color-surface-strong);
+  break-inside: avoid;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+}
+
+.standName {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--color-ink-strong);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.standNumber {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #fffaf2;
+  background: var(--color-brand);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+}
+
+.qr {
+  width: 170px;
+  height: 170px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--color-line);
+}
+
+.target {
+  font-size: 0.72rem;
+  color: var(--color-ink-soft);
+  text-align: center;
+}
+
+@media print {
+  .page {
+    padding: 0;
+  }
+
+  :global(.no-print) {
+    display: none !important;
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+  }
+
+  .card {
+    border-color: #666;
+  }
+}

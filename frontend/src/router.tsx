@@ -69,6 +69,7 @@ import { AdhesionsManagePage } from './pages/AdhesionsManagePage'
 import { EventReviewPage } from './pages/EventReviewPage'
 import { StandReviewPage } from './pages/StandReviewPage'
 import { ReviewsManagePage } from './pages/ReviewsManagePage'
+import { ReviewsQrCodesPage } from './pages/ReviewsQrCodesPage'
 import { ParamRedirect } from './components/ParamRedirect'
 
 export const router = createBrowserRouter([
@@ -144,6 +145,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/stand-adhesion', element: <StandAdhesionWizardPage /> },
       { path: 'events/:eventId/adhesions', element: <AdhesionsManagePage /> },
       { path: 'events/:eventId/reviews', element: <ReviewsManagePage /> },
+      { path: 'events/:eventId/reviews/qrcodes', element: <ReviewsQrCodesPage /> },
       { path: 'events/:eventId/stands/:standId/orders', element: <StandOrdersPage /> },
       { path: 'events/:eventId/stands/:standId/order', element: <CashierOrderPage /> },
 

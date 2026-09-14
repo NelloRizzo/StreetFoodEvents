@@ -454,3 +454,57 @@ export async function getReviewQrCode(req: Request, res: Response) {
 
     return res.status(200).json({ qrCode, url });
 }
+
+export async function getAllReviewQrCodes(req: Request, res: Response) {
+    const { eventId } = req.params;
+
+    if (!isValidObjectId(eventId)) {
+        return res.status(400).json({ message: 'Invalid event id' });
+    }
+
+    const event = await EventModel.findById(eventId).select('_id');
+    if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+    }
+
+    const stands = await StandModel.find({ eventIds: eventId })
+        .select('_id name numbers')
+        .lean();
+
+    const numberFor = (stand: { numbers?: Array<{ eventId: unknown; number: number }> }) =>
+        stand.numbers?.find((n) => n.eventId?.toString() === eventId)?.number ?? null;
+
+    const origin = req.headers.origin ?? `${req.protocol}://${req.headers.host}`;
+
+    const ordered = [...stands].sort((a, b) => {
+        const na = numberFor(a)
+        const nb = numberFor(b)
+        if (na == null && nb == null) return a.name.localeCompare(b.name)
+        if (na == null) return 1
+        if (nb == null) return -1
+        return na - nb
+    })
+
+    const items = await Promise.all(
+        ordered.map(async (stand) => {
+            const url = `${origin}/events/${eventId}/stands/${stand._id.toString()}/review`;
+            const qrCode = await qrcode.toDataURL(url, {
+                width: 400,
+                margin: 2,
+                color: {
+                    dark: '#264137',
+                    light: '#ffffff'
+                }
+            });
+            return {
+                standId: stand._id.toString(),
+                standName: stand.name,
+                number: numberFor(stand),
+                url,
+                qrCode
+            };
+        })
+    );
+
+    return res.status(200).json({ items });
+}

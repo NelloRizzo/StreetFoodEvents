@@ -466,4 +466,55 @@ describe('Reviews API', () => {
         expect(standQr.status).toBe(200);
         expect(standQr.body.url).toContain(`/events/${event._id}/stands/${stand._id}/review`);
     });
+
+    it('returns QR codes for all event stands via /qrcodes/all (event-admin)', async () => {
+        app = createTestApp();
+        const admin = await createUser(`admin-${Date.now()}@test.com`);
+        const { event, stand, otherStand } = await createBaseEntities();
+        const sessionToken = await createSession(admin._id);
+
+        const role = await RoleModel.create({
+            name: 'Event Admin',
+            scope: 'event',
+            slug: 'event-admin',
+            permissions: [],
+            isSystem: true,
+            isActive: true
+        });
+        await UserRoleModel.create({
+            userId: admin._id,
+            roleId: role._id,
+            eventId: event._id,
+            isActive: true
+        });
+
+        const res = await request(app)
+            .get(`/api/events/${event._id}/reviews/qrcodes/all`)
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.items).toHaveLength(2);
+        const ids = res.body.items.map((i: { standId: string }) => i.standId).sort();
+        expect(ids).toEqual([stand._id.toString(), otherStand._id.toString()].sort());
+        for (const item of res.body.items) {
+            expect(item.standName).toBeDefined();
+            expect(item.qrCode).toMatch(/^data:image\/png;base64,/);
+            expect(item.url).toContain(`/events/${event._id}/stands/${item.standId}/review`);
+        }
+    });
+
+    it('blocks /qrcodes/all without auth or with a non-event role', async () => {
+        app = createTestApp();
+        const stranger = await createUser(`stranger-${Date.now()}@test.com`);
+        const { event } = await createBaseEntities();
+
+        const unauth = await request(app).get(`/api/events/${event._id}/reviews/qrcodes/all`);
+        expect(unauth.status).toBe(401);
+
+        const sessionToken = await createSession(stranger._id);
+        const forbidden = await request(app)
+            .get(`/api/events/${event._id}/reviews/qrcodes/all`)
+            .set('Cookie', `sid=${sessionToken}`);
+        expect(forbidden.status).toBe(403);
+    });
 });

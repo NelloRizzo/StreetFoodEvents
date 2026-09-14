@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { RatingStars } from '../components/RatingStars'
@@ -119,6 +119,9 @@ export function ReviewsManagePage() {
           <p className={styles.subtitle}>{eventName}</p>
         </div>
         <div className={styles.toolbar}>
+          <Link className={styles.printAllLink} to={`/admin/events/${eventId}/reviews/qrcodes`}>
+            QR recensioni di tutti gli stand
+          </Link>
           <QRCodeDownload apiPath={`/events/${eventId}/reviews/qrcode`} fileName="recensioni-evento" label="QR recensioni evento" />
           <QRCodeDownload
             apiPath={standId ? `/events/${eventId}/reviews/qrcode?standId=${standId}` : ''}

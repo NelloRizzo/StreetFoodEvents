@@ -113,11 +113,34 @@ Login: utente inattivo o senza password → 403 con messaggio distinto ("non anc
 
 Pubblicazione Meta: account UNICO della piattaforma via env opzionali `META_PAGE_ACCESS_TOKEN`, `META_PAGE_ID`, `META_IG_USER_ID` (Facebook Page + Instagram professional, variante Facebook Login su graph.facebook.com). Coda in-process con worker `setInterval` avviato da `server.ts`; retry max 3 con backoff. Se le env non sono impostate la feature resta silenziosamente disattivata.
 
+### API routes — Recensioni
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/events/:eventId/reviews` | no | Lista recensioni pubbliche (`standId` opzionale) |
+| GET | `/api/events/:eventId/reviews/summary` | no | Media evento + per-stand |
+| GET | `/api/events/:eventId/reviews/qrcode?standId=` | no | QR data URL della pagina recensione (evento o stand) |
+| GET | `/api/events/:eventId/reviews/mine` | optional auth (o `x-access-token` guest) | Mie recensioni |
+| POST | `/api/events/:eventId/reviews` | optional auth | Crea recensione. Gate: utente registrato deve aver un **ordine non cancellato** per evento/stand (403 altrimenti); anonimo richiede `reviewerName`, riceve guest token (salvato sha256 come `guestTokenHash`) rimandato come header `x-access-token`; secondo tentativo stesso target → 409. UX unica per target (indice unico parziale su `userId`/`guestTokenHash`) |
+| GET | `/api/events/:eventId/reviews/manage` | event-admin / platform-admin | Lista admin con filtro stand/stato, paginata |
+| GET | `/api/events/:eventId/reviews/qrcodes/all` | event-admin / platform-admin | QR data URL delle pagine recensione di **TUTTI** gli stand dell'evento, ordinati per numero stand (`{ items: [{ standId, standName, number, url, qrCode }] }`) |
+| PATCH | `/api/events/:eventId/reviews/:reviewId` | event-admin / platform-admin | Nasconde/mostra recensione (`status: hidden|visible`) |
+| DELETE | `/api/events/:eventId/reviews/:reviewId` | event-admin / platform-admin | Elimina recensione |
+
+Nota: modello `Review` — `standId` null = recensione evento; moderazione **post-hoc** (visibili subito, nascondibili). Guardia route admin: `reviewsRouter.use(authMiddleware)` + `hasRole(['event-admin','platform-admin'])` — la registrazione `GET /qrcodes/all` è PRIMA di `/:reviewId` (il segmento `all` non deve finire nel param).
+
 ### Frontend — Alias routes
 | Route | Element | Description |
 |---|---|---|
 | `/show/:entityType/:alias` | AliasRedirectPage | Redirect verso pagina reale |
 | `/attiva/:token` | ActivationPage | Attivazione account su invito: imposta password, attiva utente |
+
+### Frontend — Recensioni
+| Route | Element | Description |
+|---|---|---|
+| `/events/:eventId/review` | EventReviewPage | Recensione evento (pubblica, form con stelle + lista, guardia "acquisto verificato") |
+| `/events/:eventId/stands/:standId/review` | StandReviewPage | Recensione stand (pubblica) |
+| `/admin/events/:eventId/reviews` | ReviewsManagePage | Moderazione recensioni (filtro stand/stato, paginazione, QR evento e stand) |
+| `/admin/events/:eventId/reviews/qrcodes` | ReviewsQrCodesPage | QR recensioni di TUTTI gli stand in un'unica pagina stampabile (`window.print`, `@media print` = griglia 3 colonne, toolbar nascosta) |
 
 ### Frontend — Gallery route
 | Route | Element | Description |
@@ -285,6 +308,13 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Set 2026 — recensioni: QR stampabili di tutti gli stand + layout pagine recensione)
+### Completed
+- **Pagina stampabile QR recensioni di TUTTI gli stand** (`ReviewsQrCodesPage`, `/admin/events/:eventId/reviews/qrcodes`): guardia roles (event-admin / platform-admin, come ReviewsManagePage), fetch `GET /events/:eventId/reviews/qrcodes/all`, header con nome evento + pulsante Stampa, griglia card (nome stand + badge numero + QR + "Recensione dello stand"), CSS `@media print` = griglia a 3 colonne + class `no-print` per toolbar. Route admin in `router.tsx`; link "QR recensioni di tutti gli stand" nella toolbar di `ReviewsManagePage`.
+- **Endpoint backend** `GET /api/events/:eventId/reviews/qrcodes/all` (event-admin / platform-admin): `getAllReviewQrCodes` in `reviews.controller.ts` — carica evento + stand (`.select('_id name numbers')`, `.lean()`), ordina per numero stand evento (null → fondo, poi per nome), genera QR data URL per ogni `/events/:eventId/stands/:standId/review` → `{ items: [{ standId, standName, number, url, qrCode }] }`. Route registrata PRIMA di `/:reviewId`.
+- **Fix layout pagine recensione**: le pagine pubbliche `EventReviewPage` e `StandReviewPage` renderizzavano senza `page-shell` (larghezza piena, diversa dalle altre pagine) → contenuto avvolto in `<div className="page-shell">` (stesso pattern di EventStandMenuPage/EventDetailPage).
+- Test: +2 in `integration-reviews.test.ts` (lista completa QR per event-admin; 401/403). Suite backend **417 test ✓** (46 file), typecheck ✓, lint 0 errori; frontend build (tsc+vite) ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 
 ## Session state (Set 2026 — menu operativo platform-admin + data inizio nel dropdown evento)
 ### Completed
