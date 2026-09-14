@@ -83,9 +83,16 @@ export function EventDetailPage() {
   const [favLoading, setFavLoading] = useState(false)
   const [modal, setModal] = useState<{ open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }>({ open: false, variant: 'alert', title: '', message: '' })
   const [showPhotoBooth, setShowPhotoBooth] = useState(false)
+  const [now] = useState(() => Date.now())
   const [userBalance, setUserBalance] = useState<number | null>(null)
   const [adesioneMenuOpen, setAdesioneMenuOpen] = useState(false)
   const adesioneMenuRef = useRef<HTMLDivElement>(null)
+  const isEventFinished = (() => {
+    if (!event) return false
+    const endOfDay = new Date(event.endDate)
+    endOfDay.setHours(23, 59, 59, 999)
+    return endOfDay.getTime() < now
+  })()
   const themeData = useMemo(
     () =>
       event
@@ -267,9 +274,11 @@ export function EventDetailPage() {
             <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
               Galleria
             </Link>
-            <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
-              Scatta foto
-            </button>
+            {!isEventFinished && (
+              <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
+                Scatta foto
+              </button>
+            )}
             <div className={styles.actionDropdown} ref={adesioneMenuRef}>
               <button
                 type="button"

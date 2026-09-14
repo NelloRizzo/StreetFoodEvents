@@ -151,7 +151,7 @@ export function CashierOrderPage() {
     if (!eventId || !standId) return
     try {
       const data = await fetchOrders({ eventId, standId, status: 'preparing,ready' })
-      setActiveOrders(data.items)
+      setActiveOrders([...data.items].sort((a, b) => a.orderNumber - b.orderNumber))
     } catch { /* ignore */ }
   }, [eventId, standId])
 
