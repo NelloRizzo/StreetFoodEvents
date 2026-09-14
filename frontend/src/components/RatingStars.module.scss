@@ -1,0 +1,29 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  line-height: 1;
+}
+
+.star {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  transition: transform 0.1s ease, color 0.1s ease;
+}
+
+.star:disabled {
+  cursor: default;
+}
+
+.star.filled {
+  color: #f5a623;
+}
+
+.star:not(:disabled):hover {
+  color: #f5a623;
+  transform: scale(1.12);
+}

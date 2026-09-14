@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/auth-context'
 import { useAdminEvent } from '../layouts/AdminEventContext'
+import { QRCodeDownload } from '../components/QRCodeDownload'
 import styles from './EventDetailPage.module.scss'
 import manageStyles from './StandManagePage.module.scss'
 
@@ -154,7 +155,16 @@ export function StandManagePage() {
 
   return (
     <div className={`page-shell ${styles.page}`}>
-      <h1 className={styles.pageTitle}>Gestione stand &mdash; {standName || '?'}</h1>
+      <div className={manageStyles.headerRow}>
+        <h1 className={styles.pageTitle}>Gestione stand &mdash; {standName || '?'}</h1>
+        {selectedEventId && (
+          <QRCodeDownload
+            apiPath={`/events/${selectedEventId}/reviews/qrcode?standId=${standId}`}
+            fileName={`recensioni-${standName}`}
+            label="QR recensioni"
+          />
+        )}
+      </div>
 
       {selectedEventId && !standEvents.some((ev) => ev.id === selectedEventId) && (
         <p className={manageStyles.finishedNote}>

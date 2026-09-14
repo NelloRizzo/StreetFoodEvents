@@ -2,6 +2,15 @@
   margin-bottom: 1.5rem;
 }
 
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
 .field {
   display: block;
   max-width: 420px;

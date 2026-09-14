@@ -321,6 +321,24 @@
   white-space: nowrap;
 }
 
+.standReview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #b8860b;
+}
+
+.standReview::before {
+  content: '';
+  display: inline-block;
+  border-left: 1px solid var(--color-line);
+  height: 1em;
+  margin-right: 0.15rem;
+}
+
 .standCardRow {
   display: flex;
   align-items: center;

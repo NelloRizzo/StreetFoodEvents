@@ -66,6 +66,9 @@ import { AdhesionFormPublicPage } from './pages/AdhesionFormPublicPage'
 import { AdhesionFormManagePage } from './pages/AdhesionFormManagePage'
 import { StandAdhesionWizardPage } from './pages/StandAdhesionWizardPage'
 import { AdhesionsManagePage } from './pages/AdhesionsManagePage'
+import { EventReviewPage } from './pages/EventReviewPage'
+import { StandReviewPage } from './pages/StandReviewPage'
+import { ReviewsManagePage } from './pages/ReviewsManagePage'
 import { ParamRedirect } from './components/ParamRedirect'
 
 export const router = createBrowserRouter([
@@ -84,6 +87,8 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/pois/:poiId', element: <PoiDetailPage /> },
       { path: 'events/:eventId/stands/:standId', element: <EventStandMenuPage /> },
       { path: 'events/:eventId/stands/:standId/ordersqueue', element: <StandDisplayPage /> },
+      { path: 'events/:eventId/stands/:standId/review', element: <StandReviewPage /> },
+      { path: 'events/:eventId/review', element: <EventReviewPage /> },
       { path: 'events/:eventId/stand-adhesion', element: <StandAdhesionWizardPage /> },
       { path: 'events/:eventId/contests', element: <EventContestsPage /> },
       { path: 'events/:eventId/galleria', element: <PublicGalleryPage /> },
@@ -138,6 +143,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/promotions', element: <EventPromotionsPage /> },
       { path: 'events/:eventId/stand-adhesion', element: <StandAdhesionWizardPage /> },
       { path: 'events/:eventId/adhesions', element: <AdhesionsManagePage /> },
+      { path: 'events/:eventId/reviews', element: <ReviewsManagePage /> },
       { path: 'events/:eventId/stands/:standId/orders', element: <StandOrdersPage /> },
       { path: 'events/:eventId/stands/:standId/order', element: <CashierOrderPage /> },
 

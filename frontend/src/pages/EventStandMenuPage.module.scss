@@ -170,6 +170,37 @@
   background: var(--color-brand-deep);
 }
 
+.reviewLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-strong);
+  border: 1.5px solid var(--color-line-strong);
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.reviewLink:hover {
+  border-color: var(--color-brand);
+  background: var(--color-surface);
+}
+
+.reviewStars {
+  color: #f5a623;
+  letter-spacing: 1px;
+}
+
+.reviewValue {
+  font-size: 0.85rem;
+}
+
 .layout {
   display: grid;
   gap: 1.5rem;

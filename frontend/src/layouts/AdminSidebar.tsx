@@ -125,6 +125,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
                   { label: 'Promozioni e Coupon', to: `${basePath}/promotions`, icon: '\u{1F3AB}' } as SidebarItem,
                   { label: 'Adesione stand', to: `${basePath}/stand-adhesion`, icon: '\u{1F4DD}' } as SidebarItem,
                   { label: 'Adesioni da approvare', to: `${basePath}/adhesions`, icon: '\u{1F4CB}' } as SidebarItem,
+                  { label: 'Recensioni', to: `${basePath}/reviews`, icon: '\u{2B50}' } as SidebarItem,
                   { label: 'Stampa Menu', to: '/admin/menu-print', icon: '\u{1F5A8}' } as SidebarItem,
                 ]
               : []),

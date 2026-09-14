@@ -1,0 +1,98 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1rem 1.15rem;
+  border-radius: 12px;
+  background: var(--color-surface-strong);
+  border: 1px solid var(--color-line-strong);
+}
+
+.card.hidden {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-ink-strong);
+}
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-brand-deep);
+  background: var(--color-brand-soft);
+  border-radius: var(--radius-pill);
+  padding: 0.15rem 0.6rem;
+}
+
+.badgeHidden {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  background: var(--color-surface);
+  border-radius: var(--radius-pill);
+  padding: 0.15rem 0.6rem;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.date {
+  font-size: 0.78rem;
+  color: var(--color-ink-soft);
+}
+
+.comment {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--color-ink-strong);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface-strong);
+  color: var(--color-ink-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.actionBtn:hover {
+  border-color: var(--color-ink-soft);
+}
+
+.actionBtn.danger {
+  color: var(--color-danger, #c0392b);
+  border-color: var(--color-danger-line, rgba(192, 57, 43, 0.4));
+}
+
+.actionBtn.danger:hover {
+  background: var(--color-danger-soft, rgba(192, 57, 43, 0.08));
+}

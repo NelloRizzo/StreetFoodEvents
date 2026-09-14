@@ -8,6 +8,7 @@ import { useEventTheme } from '../features/theme/useEventTheme'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { CurrencyDisplay, isBareCurrencySymbol } from '../components/CurrencyDisplay'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
+import { fetchReviewsSummary, type ReviewsSummary } from '../lib/reviews'
 import { trackStandClick } from '../lib/analytics'
 import { PhotoBoothModal } from './PhotoBoothModal'
 import styles from './EventDetailPage.module.scss'
@@ -86,6 +87,7 @@ export function EventDetailPage() {
   const [now] = useState(() => Date.now())
   const [userBalance, setUserBalance] = useState<number | null>(null)
   const [adesioneMenuOpen, setAdesioneMenuOpen] = useState(false)
+  const [reviewsSummary, setReviewsSummary] = useState<ReviewsSummary | null>(null)
   const adesioneMenuRef = useRef<HTMLDivElement>(null)
   const isEventFinished = (() => {
     if (!event) return false
@@ -116,11 +118,13 @@ export function EventDetailPage() {
     Promise.all([
       apiRequest<{ item: Event; wallet?: { balance: number } | null }>(`/events/${eventId}`),
       apiRequest<{ items: Stand[] }>(`/stands?eventId=${eventId}`),
+      fetchReviewsSummary(eventId),
     ])
-      .then(([eventData, standsData]) => {
+      .then(([eventData, standsData, reviewsData]) => {
         setEvent(eventData.item)
         setStands(standsData.items)
         setUserBalance(eventData.wallet?.balance ?? null)
+        setReviewsSummary(reviewsData)
         setIsLoading(false)
       })
       .catch(() => setIsLoading(false))
@@ -274,6 +278,9 @@ export function EventDetailPage() {
             <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
               Galleria
             </Link>
+            <Link to={`/events/${eventId}/review`} className={styles.actionBtnOutline}>
+              Recensioni{reviewsSummary?.event.count ? ` (${reviewsSummary.event.count})` : ''}
+            </Link>
             {!isEventFinished && (
               <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
                 Scatta foto
@@ -420,6 +427,14 @@ export function EventDetailPage() {
                         {stand.name}
                       </strong>
                       {stand.slogan && <span className={styles.standSlogan}>{stand.slogan}</span>}
+                      {(() => {
+                        const sum = reviewsSummary?.stands.find((s) => s.standId === stand.id)
+                        return sum && sum.count > 0 && sum.avg != null ? (
+                          <span className={styles.standReview}>
+                            {'★'.repeat(Math.round(sum.avg))} {sum.avg.toFixed(1)} ({sum.count})
+                          </span>
+                        ) : null
+                      })()}
                     </div>
                   </Link>
                 ))}

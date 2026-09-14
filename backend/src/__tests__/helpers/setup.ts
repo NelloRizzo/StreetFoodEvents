@@ -33,7 +33,8 @@ const collectionsToClear = [
     'promotions',
     'promotionusages',
     'standadhesions',
-    'advertisements'
+    'advertisements',
+    'reviews'
 ];
 
 beforeAll(async () => {

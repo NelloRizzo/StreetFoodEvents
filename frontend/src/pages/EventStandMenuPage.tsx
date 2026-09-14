@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { createOrder } from '../lib/orders'
+import { fetchReviewsSummary } from '../lib/reviews'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { useAuth } from '../features/auth/auth-context'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -107,6 +108,7 @@ export function EventStandMenuPage() {
   const [categoryLabels, setCategoryLabels] = useState<string[]>([])
   const [socialOpen, setSocialOpen] = useState(false)
   const [canExportSocial, setCanExportSocial] = useState(false)
+  const [reviewAvg, setReviewAvg] = useState<{ avg: number; count: number } | null>(null)
 
   const total = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
 
@@ -133,11 +135,18 @@ export function EventStandMenuPage() {
       apiRequest<{ item: Stand }>(`/stands/${standId}`),
       apiRequest<{ items: MenuItem[] }>(`/event-products?eventId=${eventId}&standId=${standId}`),
       apiRequest<{ items: Stand[] }>(`/stands?eventId=${eventId}`),
+      fetchReviewsSummary(eventId, standId),
     ])
-      .then(([eventData, standData, menuData, standsData]) => {
+      .then(([eventData, standData, menuData, standsData, reviewsData]) => {
         setEvent(eventData.item)
         setStand(standData.item)
         setMenuItems(menuData.items)
+        const standSum = reviewsData.stands.find((s) => s.standId === standId)
+        setReviewAvg(
+          standSum && standSum.count > 0 && standSum.avg != null
+            ? { avg: standSum.avg, count: standSum.count }
+            : null,
+        )
         setAllStands(
           standsData.items
             .slice()
@@ -374,6 +383,18 @@ export function EventStandMenuPage() {
           </div>
           {viewMode === 'stand' && (
             <div className={styles.headerActions}>
+              <Link className={styles.reviewLink} to={`/events/${eventId}/stands/${standId}/review`}>
+                {reviewAvg ? (
+                  <>
+                    <span className={styles.reviewStars}>{'★'.repeat(Math.round(reviewAvg.avg))}</span>
+                    <span className={styles.reviewValue}>
+                      {reviewAvg.avg.toFixed(1)} ({reviewAvg.count})
+                    </span>
+                  </>
+                ) : (
+                  <span className={styles.reviewValue}>Lascia una recensione</span>
+                )}
+              </Link>
               {canExportSocial && user && (
                 <button
                   type="button"

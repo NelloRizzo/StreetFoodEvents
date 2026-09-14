@@ -30,6 +30,7 @@ import { adhesionFormRouter } from '../../routes/adhesion-form.routes';
 import { promotionsRouter } from '../../routes/promotions.routes';
 import { standAdhesionsRouter } from '../../routes/stand-adhesions.routes';
 import { advertisementsRouter } from '../../routes/advertisements.routes';
+import { reviewsRouter } from '../../routes/reviews.routes';
 
 export function createTestApp() {
     const app = express();
@@ -71,6 +72,7 @@ export function createTestApp() {
     app.use('/api/events/:eventId/adhesions', standAdhesionsRouter);
     app.use('/api/advertisements', advertisementsRouter);
     app.use('/api/sync', syncRouter);
+    app.use('/api/events/:eventId/reviews', reviewsRouter);
 
     app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
         if (error instanceof MongooseError.ValidationError) {
