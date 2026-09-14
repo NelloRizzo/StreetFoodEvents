@@ -286,6 +286,13 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Set 2026 — app locale fullscreen + tema evento + code in ordine FIFO)
+### Completed
+- **Code in ordine FIFO** (cloud + app locale): coda postazione e coda pubblica/display ordinano gli elementi per **`orderNumber` crescente** (primo ordine in testa) con sort lato frontend — la coda postazione prima mostrava il più recente in alto (il backend `listOrders` ordina per `createdAt: -1`). File: `frontend/src/pages/StationQueuePage.tsx`, `frontend/src/pages/StandDisplayPage.tsx`, `.local/frontend/src/components/CodaPostazioni.tsx`, `.local/frontend/src/components/CodaPubblica.tsx`. Nessuna modifica backend (per non influire su altre pagine che usano `listOrders`).
+- **App locale fullscreen con navbar**: `.local/frontend/src/App.tsx` ha una navbar (brand "Street Food — Locale", tab pillola Cassa/Coda Postazioni/Display Pubblico/Sync con badge pendenti, nome evento a destra) e layout `100dvh` flex column; `Cassa`, `CodaPostazioni`, `CodaPubblica` sono page a tutto schermo (`flex:1, minHeight:0`) con tema dark che richiama il cashier remoto (`#1a1a2e`/`#16213e`/`#0f3460`, accento `#e94560`, success `#28a745`); `CodaPubblica` replica il `StandDisplayPage` remoto (`#0f172a`/`#1e293b`/`#334155`). `Sync.tsx` NON è a tema (resta pannello admin-like con maxWidth 1100).
+- **Tema evento negli accenti**: `getMeta()` del backend locale espone `theme` (`{brand,text,surface,highlight}`) letto dall'`EventModel` corrente; `MetaContext` le applica come CSS variables `--sf-brand` / `--sf-highlight` su `:root` (fallback `#e94560`/`#ffc107`). Gli accenti dei componenti locali usano `var(--sf-brand)` / `var(--sf-highlight)` (tab attiva, brand navbar, badge ordine, titoli, pulsanti, bordo "in preparazione", badge omaggio); sfondi scuri fissi restano navy. **GOTCHA**: se l'evento remoto non ha il tema i colori cadono sui default navy — mai ripristinare hex accento hardcoded nei componenti locali.
+- Verifica: build `.local/frontend` ✓ (warning pre-esistente duplicate key `height` in App.tsx), `tsc --noEmit` backend locale ✓, frontend cloud build (tsc+vite) ✓, lint selettivo cloud 0 errori. **`.local/` modificato: `distro/local-app.tar` RIGENERATA.**
+
 ## Session state (Set 2026 — pulizia lint pre-esistenti)
 ### Completed
 - **Lint a 0 errori** su entrambi i package (era 33 errori backend + 58 errori frontend, tutti pre-esistenti).

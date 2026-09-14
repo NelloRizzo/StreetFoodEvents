@@ -51,7 +51,7 @@ export function CodaPostazioni() {
         const load = () =>
             api
                 .listOrders(standId, '&status=preparing,ready,confirmed')
-                .then((r) => setOrders(r.items))
+                .then((r) => setOrders([...r.items].sort((a, b) => a.orderNumber - b.orderNumber)))
                 .catch((e) => setError(e.message));
         load();
         const t = setInterval(load, 5000);
@@ -143,7 +143,7 @@ export function CodaPostazioni() {
     if (!standId) {
         return (
             <div style={styles.page}>
-                <p>Nessun evento/stand attivo. Vai nella scheda Sync per importare l'evento e lo stand.</p>
+                <p style={{ color: '#94a3b8' }}>Nessun evento/stand attivo. Vai nella scheda Sync per importare l'evento e lo stand.</p>
             </div>
         );
     }
@@ -152,9 +152,9 @@ export function CodaPostazioni() {
 
     return (
         <div style={styles.page}>
-            <h2>Coda Postazioni</h2>
             <div style={styles.toolbar}>
-                <span style={{ color: '#555' }}>Postazioni selezionate (aggregate):</span>
+                <h2 style={styles.title}>Coda Postazioni</h2>
+                <span style={{ color: '#94a3b8' }}>Postazioni selezionate (aggregate):</span>
                 {stations.map((s) => (
                     <label key={s.id} style={styles.stationToggle}>
                         <input type="checkbox" checked={selected.includes(s.id)} onChange={() => toggle(s.id)} />
@@ -165,11 +165,15 @@ export function CodaPostazioni() {
 
             {error && <div style={styles.error}>{error}</div>}
 
-            {selected.length === 0 && <div style={{ color: '#888', padding: 20 }}>Seleziona almeno una postazione</div>}
+            {selected.length === 0 && (
+                <div style={{ color: '#94a3b8', padding: 20 }}>Seleziona almeno una postazione</div>
+            )}
 
             {selected.length > 0 && allReady && (
-                <div style={{ color: '#888', padding: 20 }}>
-                    Tutti i prodotti delle postazioni selezionate sono pronti
+                <div style={styles.allReady}>
+                    <span style={styles.check}>&#10003;</span>
+                    <div style={styles.allReadyText}>Tutti i prodotti delle postazioni selezionate sono pronti</div>
+                    <div style={styles.allReadyHint}>In attesa di nuovi ordini...</div>
                 </div>
             )}
 
@@ -184,7 +188,7 @@ export function CodaPostazioni() {
                             </div>
 
                             {visible.length === 0 && (
-                                <div style={{ color: '#888', padding: 12 }}>Tutti i prodotti sono pronti</div>
+                                <div style={{ color: '#94a3b8', padding: 12 }}>Tutti i prodotti sono pronti</div>
                             )}
 
                             {visible.map((o) => {
@@ -196,7 +200,7 @@ export function CodaPostazioni() {
                                         <div style={styles.cardHeader}>
                                             <span style={styles.badge}>{o.isGift ? 'O' : '#'}{o.orderNumber}</span>
                                             {o.isGift && <span style={styles.gift}>OMAGGIO</span>}
-                                            <span>{new Date(o.createdAt).toLocaleTimeString('it-IT')}</span>
+                                            <span style={{ color: '#94a3b8', fontSize: 13 }}>{new Date(o.createdAt).toLocaleTimeString('it-IT')}</span>
                                         </div>
                                         <div>
                                             {stationItems.map((i, idx) => {
@@ -205,7 +209,7 @@ export function CodaPostazioni() {
                                                 return (
                                                     <div key={idx} style={styles.itemRow}>
                                                         <div style={{ ...styles.line, ...(i.ready ? styles.lineDone : {}) }}>
-                                                            <span style={{ flexShrink: 0 }}>{i.quantity}×</span>{' '}
+                                                            <span style={{ flexShrink: 0, color: 'var(--sf-brand)', fontWeight: 700 }}>{i.quantity}×</span>{' '}
                                                             <span style={{ flex: 1 }}>{i.productName}</span>
                                                             {i.ready && <span style={styles.done}>✓</span>}
                                                         </div>
@@ -241,24 +245,63 @@ export function CodaPostazioni() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-    page: { fontFamily: 'system-ui, sans-serif', padding: 16, maxWidth: 1100, margin: '0 auto' },
-    toolbar: { marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' },
-    stationToggle: { display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', border: '1px solid #ddd', borderRadius: 20, cursor: 'pointer' },
-    aggregate: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 },
-    stationSection: { border: '1px solid #ddd', borderRadius: 10, padding: 12, background: '#fafafa' },
+    page: {
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 16,
+        background: '#1a1a2e',
+        color: '#e0e0e0',
+        overflow: 'hidden'
+    },
+    toolbar: {
+        flexShrink: 0,
+        marginBottom: 12,
+        display: 'flex',
+        gap: 12,
+        flexWrap: 'wrap',
+        alignItems: 'center'
+    },
+    title: { margin: 0, marginRight: 8, color: 'var(--sf-brand)', fontSize: 20 },
+    stationToggle: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '4px 10px',
+        border: '1px solid #0f3460',
+        borderRadius: 20,
+        cursor: 'pointer',
+        background: '#16213e',
+        fontSize: 13
+    },
+    aggregate: {
+        flex: 1,
+        minHeight: 0,
+        overflowY: 'auto',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+        gap: 14,
+        alignContent: 'start'
+    },
+    stationSection: { border: '1px solid #0f3460', borderRadius: 10, padding: 12, background: '#16213e' },
     stationHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-    stationName: { fontWeight: 700, fontSize: 16 },
-    count: { fontSize: 12, color: '#666' },
-    card: { border: '1px solid #ddd', borderRadius: 10, padding: 16, background: '#fff', marginBottom: 10 },
-    cardHeader: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
-    badge: { background: '#264137', color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 700 },
-    gift: { background: '#c0392b', color: '#fff', borderRadius: 6, padding: '2px 8px', fontSize: 12 },
+    stationName: { fontWeight: 800, fontSize: 18, color: 'var(--sf-brand)' },
+    count: { fontSize: 12, color: '#94a3b8' },
+    card: { border: '1px solid #0f3460', borderRadius: 10, padding: 14, background: '#1a1a2e', marginBottom: 10 },
+    cardHeader: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 },
+    badge: { background: 'var(--sf-brand)', color: '#fff', borderRadius: 6, padding: '2px 10px', fontWeight: 800, fontSize: 18 },
+    gift: { background: '#c0392b', color: '#fff', borderRadius: 6, padding: '2px 8px', fontSize: 12, fontWeight: 700 },
     itemRow: { display: 'flex', alignItems: 'center', gap: 8 },
-    line: { padding: '6px 0', fontSize: 16, borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 6, flex: 1 },
-    lineDone: { opacity: 0.5 },
-    done: { color: '#27ae60', fontWeight: 700 },
+    line: { padding: '6px 0', fontSize: 16, borderBottom: '1px solid rgba(15, 52, 96, 0.6)', display: 'flex', alignItems: 'center', gap: 6, flex: 1 },
+    lineDone: { opacity: 0.5, textDecoration: 'line-through' },
+    done: { color: '#28a745', fontWeight: 800 },
     btnSmall: { background: '#2e86de', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 13, cursor: 'pointer', flexShrink: 0 },
-    btnBig: { marginTop: 14, background: '#27ae60', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', width: '100%', fontSize: 15, cursor: 'pointer' },
-    btnBigDone: { marginTop: 14, background: '#8fbfa0', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', width: '100%', fontSize: 15, cursor: 'default' },
-    error: { padding: 10, background: '#fdecea', color: '#c0392b', borderRadius: 8, marginBottom: 12 }
+    btnBig: { marginTop: 14, background: '#28a745', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', width: '100%', fontSize: 15, fontWeight: 700, cursor: 'pointer' },
+    btnBigDone: { marginTop: 14, background: '#1d4d2b', color: '#9fd3ae', border: 'none', borderRadius: 8, padding: '10px', width: '100%', fontSize: 15, fontWeight: 700, cursor: 'default' },
+    error: { padding: 10, background: 'rgba(192, 57, 43, 0.2)', color: '#ff8a80', borderRadius: 8, marginBottom: 12 },
+    allReady: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#28a745' },
+    check: { fontSize: 64, fontWeight: 800 },
+    allReadyText: { fontSize: 28, fontWeight: 800, textAlign: 'center' },
+    allReadyHint: { fontSize: 16, color: '#94a3b8' }
 };

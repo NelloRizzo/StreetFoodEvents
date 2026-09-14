@@ -50,6 +50,13 @@ export async function countPending(): Promise<number> {
 
 // ─── Meta (active event / stand) ──────────────────────────────────────────────
 
+export interface EventThemeColors {
+    brand: string | null;
+    text: string | null;
+    surface: string | null;
+    highlight: string | null;
+}
+
 export interface Meta {
     eventId: string | null;
     standId: string | null;
@@ -59,11 +66,26 @@ export interface Meta {
     hasSyncPassword: boolean;
     hasPending: boolean;
     pendingCount: number;
+    theme: EventThemeColors | null;
 }
 
 export async function getMeta(): Promise<Meta> {
     const state = await LocalStateModel.findOne({ key: 'current' }).lean();
     const pendingCount = await countPending();
+
+    let theme: EventThemeColors | null = null;
+    if (state?.eventId) {
+        const event = await EventModel.findById(state.eventId).select('themeBrand themeText themeSurface themeHighlight').lean();
+        if (event) {
+            theme = {
+                brand: event.themeBrand ?? null,
+                text: event.themeText ?? null,
+                surface: event.themeSurface ?? null,
+                highlight: event.themeHighlight ?? null
+            };
+        }
+    }
+
     return {
         eventId: state?.eventId?.toString() ?? null,
         standId: state?.standId?.toString() ?? null,
@@ -72,7 +94,8 @@ export async function getMeta(): Promise<Meta> {
         importedAt: state?.importedAt ?? null,
         hasSyncPassword: Boolean(state?.syncPassword),
         hasPending: pendingCount > 0,
-        pendingCount
+        pendingCount,
+        theme
     };
 }
 

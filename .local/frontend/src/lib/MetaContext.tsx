@@ -14,6 +14,12 @@ const MetaContext = createContext<MetaContextValue>({
     refresh: async () => {}
 });
 
+function applyThemeVars(meta: Meta | null) {
+    const root = document.documentElement;
+    root.style.setProperty('--sf-brand', meta?.theme?.brand || '#e94560');
+    root.style.setProperty('--sf-highlight', meta?.theme?.highlight || '#ffc107');
+}
+
 export function MetaProvider({ children }: { children: ReactNode }) {
     const [meta, setMeta] = useState<Meta | null>(null);
     const [loading, setLoading] = useState(true);
@@ -22,8 +28,10 @@ export function MetaProvider({ children }: { children: ReactNode }) {
         try {
             const m = await api.getMeta();
             setMeta(m);
+            applyThemeVars(m);
         } catch {
             setMeta(null);
+            applyThemeVars(null);
         } finally {
             setLoading(false);
         }

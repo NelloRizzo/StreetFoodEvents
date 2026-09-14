@@ -121,64 +121,67 @@ export function Cassa() {
 
     return (
         <div style={styles.page}>
-            <div style={styles.header}>
+            <div style={styles.topBar}>
                 {catalog?.coverImage ? (
                     <img src={catalog.coverImage.url} alt={catalog.standName} style={styles.coverThumb} />
                 ) : null}
-                <div>
-                    <h2 style={{ margin: 0 }}>Cassa — {catalog?.standName || 'Stand'}</h2>
+                <div style={styles.topText}>
+                    <div style={styles.topTitle}>Cassa — {catalog?.standName || 'Stand'}</div>
                     {catalog?.eventName ? (
-                        <div style={{ fontSize: 13, color: '#555' }}>{catalog.eventName}</div>
+                        <div style={styles.topSub}>{catalog.eventName}</div>
                     ) : null}
                 </div>
-            </div>
-            <div style={styles.toolbar}>
-                <span style={{ color: '#555' }}>Pagamento contanti — moneta: {catalog?.currencyName ?? '€'}</span>
+                <div style={styles.topMeta}>
+                    <span>Moneta: {catalog?.currencyName ?? '€'}</span>
+                    <span>Pagamento contanti</span>
+                </div>
             </div>
 
-            <div style={styles.grid}>
+            <div style={styles.body}>
                 <div style={styles.col}>
-                    <h3>Prodotti</h3>
-                    {items.map((item) => (
-                        <div key={item.eventProductId} style={styles.product}>
-                            <div style={styles.productRow}>
-                                {item.coverImage ? (
-                                    <img src={item.coverImage.url} alt={item.name} style={styles.productThumb} />
-                                ) : null}
-                                <div>
-                                    <div style={{ fontWeight: 600 }}>{item.name}</div>
-                                    <div style={{ fontSize: 12, color: '#555' }}>
-                                        {item.price.toFixed(2)} {catalog?.currencyName ?? '€'} — {item.stationIds.map(stationName).join(', ')}
+                    <h3 style={styles.colTitle}>Prodotti</h3>
+                    <div style={styles.list}>
+                        {items.map((item) => (
+                            <div key={item.eventProductId} style={styles.product}>
+                                <div style={styles.productRow}>
+                                    {item.coverImage ? (
+                                        <img src={item.coverImage.url} alt={item.name} style={styles.productThumb} />
+                                    ) : null}
+                                    <div>
+                                        <div style={styles.productName}>{item.name}</div>
+                                        <div style={styles.productMeta}>
+                                            {item.price.toFixed(2)} {catalog?.currencyName ?? '€'} — {item.stationIds.map(stationName).join(', ')}
+                                        </div>
                                     </div>
                                 </div>
+                                <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {item.stationIds.map((sid) => (
+                                        <button
+                                            key={sid}
+                                            onClick={() => addToCart(item, sid)}
+                                            style={styles.btn}
+                                        >
+                                            + {stationName(sid)}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                            <div style={{ marginTop: 4 }}>
-                                {item.stationIds.map((sid) => (
-                                    <button
-                                        key={sid}
-                                        onClick={() => addToCart(item, sid)}
-                                        style={styles.btn}
-                                    >
-                                        + {stationName(sid)}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
 
                 <div style={styles.col}>
-                    <h3>Carrello</h3>
-                    {cart.length === 0 && <div style={{ color: '#888' }}>Nessun prodotto</div>}
+                    <h3 style={styles.colTitle}>Carrello</h3>
+                    {cart.length === 0 && <div style={styles.muted}>Nessun prodotto</div>}
                     {cart.map((l) => (
                         <div key={`${l.eventProductId}-${l.stationId}`} style={styles.cartLine}>
                             <div style={{ flex: 1 }}>
                                 <div>{l.name} (@{l.stationName})</div>
-                                <div style={{ fontSize: 12, color: '#555' }}>{(l.unitPrice * l.quantity).toFixed(2)}</div>
+                                <div style={styles.muted}>{(l.unitPrice * l.quantity).toFixed(2)}</div>
                             </div>
-                            <button onClick={() => changeQty(l.eventProductId, l.stationId, -1)} style={styles.btn}>−</button>
+                            <button onClick={() => changeQty(l.eventProductId, l.stationId, -1)} style={styles.qtyBtn}>−</button>
                             <span style={{ padding: '0 6px' }}>{l.quantity}</span>
-                            <button onClick={() => changeQty(l.eventProductId, l.stationId, 1)} style={styles.btn}>+</button>
+                            <button onClick={() => changeQty(l.eventProductId, l.stationId, 1)} style={styles.qtyBtn}>+</button>
                         </div>
                     ))}
                     <label style={styles.giftToggle}>
@@ -200,21 +203,46 @@ export function Cassa() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-    page: { fontFamily: 'system-ui, sans-serif', padding: 16, maxWidth: 1100, margin: '0 auto' },
-    center: { fontFamily: 'system-ui, sans-serif', padding: 40, textAlign: 'center' },
-    header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 },
-    coverThumb: { width: 56, height: 56, objectFit: 'cover', borderRadius: 8, background: '#eee' },
+    page: {
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#1a1a2e',
+        color: '#f0f0f0',
+        overflow: 'hidden'
+    },
+    center: { fontFamily: 'system-ui, sans-serif', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#1a1a2e', color: '#f0f0f0' },
+    topBar: {
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '0.6rem 1.25rem',
+        background: '#16213e',
+        borderBottom: '1px solid #0f3460'
+    },
+    coverThumb: { width: 44, height: 44, objectFit: 'cover', borderRadius: 8, background: '#0f3460', flexShrink: 0 },
+    topText: { display: 'flex', flexDirection: 'column', gap: 2, marginRight: 'auto' },
+    topTitle: { fontWeight: 800, fontSize: 18 },
+    topSub: { fontSize: 13, color: '#94a3b8' },
+    topMeta: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, fontSize: 12, color: '#94a3b8', flexShrink: 0 },
+    body: { flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: 16, overflow: 'hidden' },
+    col: { border: '1px solid #0f3460', borderRadius: 10, padding: 12, background: '#16213e', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' },
+    colTitle: { margin: 0, marginBottom: 10, fontSize: 15, color: 'var(--sf-brand)', textTransform: 'uppercase', letterSpacing: '0.05em' },
+    list: { flex: 1, minHeight: 0, overflowY: 'auto' },
+    muted: { fontSize: 12, color: '#94a3b8' },
+    product: { borderBottom: '1px solid rgba(15, 52, 96, 0.6)', padding: '8px 0' },
     productRow: { display: 'flex', alignItems: 'center', gap: 10 },
-    productThumb: { width: 44, height: 44, objectFit: 'cover', borderRadius: 6, background: '#eee', flexShrink: 0 },
-    toolbar: { display: 'flex', gap: 20, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' },
-    grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 },
-    col: { border: '1px solid #ddd', borderRadius: 8, padding: 12 },
-    product: { borderBottom: '1px solid #eee', padding: '8px 0' },
-    cartLine: { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid #eee' },
-    total: { fontWeight: 700, margin: '12px 0', fontSize: 18 },
+    productThumb: { width: 44, height: 44, objectFit: 'cover', borderRadius: 6, background: '#0f3460', flexShrink: 0 },
+    productName: { fontWeight: 600, fontSize: 15 },
+    productMeta: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+    cartLine: { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: '1px solid rgba(15, 52, 96, 0.6)', fontSize: 14 },
+    total: { fontWeight: 800, margin: '12px 0', fontSize: 20, color: '#fff' },
     giftToggle: { display: 'flex', alignItems: 'center', gap: 6, margin: '12px 0', cursor: 'pointer' },
-    btn: { padding: '4px 10px', border: '1px solid #ccc', borderRadius: 6, cursor: 'pointer', marginRight: 6 },
-    btnBig: { background: '#264137', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 20px', fontSize: 16, cursor: 'pointer', width: '100%' },
+    btn: { padding: '6px 12px', border: '1px solid #0f3460', background: '#1a1a2e', color: 'var(--sf-brand)', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600 },
+    qtyBtn: { padding: '2px 10px', border: '1px solid #0f3460', background: '#1a1a2e', color: 'var(--sf-brand)', borderRadius: 6, cursor: 'pointer', fontSize: 15 },
+    btnBig: { background: '#28a745', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 20px', fontSize: 16, fontWeight: 700, cursor: 'pointer', width: '100%' },
     btnBigGift: { background: '#c0392b' },
-    log: { marginTop: 16, padding: 10, background: '#f4f4f4', borderRadius: 8 }
+    log: { flexShrink: 0, padding: 10, background: '#0f3460', color: '#fff', fontSize: 13, borderTop: '1px solid rgba(255,255,255,0.2)' }
 };

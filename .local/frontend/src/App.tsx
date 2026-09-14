@@ -19,8 +19,9 @@ function Shell() {
     ];
 
     return (
-        <div>
+        <div style={styles.root}>
             <nav style={styles.nav}>
+                <div style={styles.navBrand}>Street Food — Locale</div>
                 <div style={styles.navInner}>
                     {tabs.map((t) => (
                         <button
@@ -35,12 +36,14 @@ function Shell() {
                         </button>
                     ))}
                 </div>
-                {meta?.eventName && <div style={styles.meta}>{meta.eventName}</div>}
+                {meta?.eventName && <div style={styles.navMeta}>{meta.eventName}</div>}
             </nav>
-            {view === 'cassa' && <Cassa />}
-            {view === 'coda' && <CodaPostazioni />}
-            {view === 'display' && <CodaPubblica />}
-            {view === 'sync' && <Sync />}
+            <main style={styles.main}>
+                {view === 'cassa' && <Cassa />}
+                {view === 'coda' && <CodaPostazioni />}
+                {view === 'display' && <CodaPubblica />}
+                {view === 'sync' && <Sync />}
+            </main>
         </div>
     );
 }
@@ -54,10 +57,45 @@ export default function App() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-    nav: { display: 'flex', alignItems: 'center', gap: 8, padding: 12, background: '#f5f5f5', borderBottom: '1px solid #ddd', flexWrap: 'wrap' },
-    navInner: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' },
-    tab: { padding: '10px 18px', border: '1px solid #ccc', background: '#fff', borderRadius: 8, cursor: 'pointer', fontSize: 15 },
-    tabActive: { background: '#264137', color: '#fff', borderColor: '#264137' },
-    meta: { marginLeft: 'auto', color: '#555', fontSize: 14 },
-    navBadge: { background: '#c0392b', color: '#fff', borderRadius: 10, padding: '0 7px', marginLeft: 6, fontSize: 12 }
+    root: {
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        height: '100vh',
+        height: '100dvh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+    },
+    nav: {
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        padding: '0 1rem',
+        height: '3.25rem',
+        background: '#16213e',
+        color: '#f0f0f0',
+        borderBottom: '1px solid #0f3460'
+    },
+    navBrand: {
+        fontWeight: 800,
+        fontSize: '0.95rem',
+        color: 'var(--sf-brand)',
+        whiteSpace: 'nowrap',
+        flexShrink: 0
+    },
+    navInner: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'nowrap' },
+    tab: {
+        padding: '6px 14px',
+        border: '1px solid #0f3460',
+        background: 'transparent',
+        color: '#cbd5e1',
+        borderRadius: 999,
+        cursor: 'pointer',
+        fontSize: 14,
+        whiteSpace: 'nowrap'
+    },
+    tabActive: { background: 'var(--sf-brand)', color: '#fff', borderColor: 'var(--sf-brand)' },
+    navMeta: { marginLeft: 'auto', color: '#94a3b8', fontSize: 13, whiteSpace: 'nowrap' },
+    navBadge: { background: 'var(--sf-highlight)', color: '#16213e', borderRadius: 10, padding: '0 7px', marginLeft: 6, fontSize: 12, fontWeight: 700 },
+    main: { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }
 };

@@ -76,7 +76,7 @@ export function StationQueuePage() {
       }
       prevOrderIdsRef.current = currentIds
 
-      setOrders(data.items)
+      setOrders([...data.items].sort((a, b) => a.orderNumber - b.orderNumber))
     } catch { /* ignore */ }
   }, [stationKey, eventId])
 

@@ -76,6 +76,13 @@ export interface DisplayOrder {
     }[];
 }
 
+export interface EventThemeColors {
+    brand: string | null;
+    text: string | null;
+    surface: string | null;
+    highlight: string | null;
+}
+
 export interface Meta {
     eventId: string | null;
     standId: string | null;
@@ -85,6 +92,7 @@ export interface Meta {
     hasSyncPassword: boolean;
     hasPending: boolean;
     pendingCount: number;
+    theme: EventThemeColors | null;
 }
 
 export interface RemoteEvent {

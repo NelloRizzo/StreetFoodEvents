@@ -48,7 +48,7 @@ export function StandDisplayPage() {
       .catch(() => {})
   }, [standId])
 
-  const orders = data?.items ?? []
+  const orders = [...(data?.items ?? [])].sort((a, b) => a.orderNumber - b.orderNumber)
 
   return (
     <div className={styles.page}>
