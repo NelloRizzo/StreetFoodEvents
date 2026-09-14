@@ -436,7 +436,7 @@ export function EventsPage() {
       isPublic: ev.isPublic,
       currencySymbol: ev.currencySymbol ?? null,
       feeBands: (ev.feeBands ?? []).map((fb) => ({
-        maxAmount: String(fb.maxAmount),
+        maxAmount: fb.maxAmount > 0 ? String(fb.maxAmount) : '',
         feePercent: String(fb.feePercent),
         feeFlat: String(fb.feeFlat),
       })),
@@ -459,6 +459,13 @@ export function EventsPage() {
   }
 
   const handleSubmit = async () => {
+    const untethered = form.feeBands.filter(
+      (fb) => !fb.maxAmount.trim() || Number(fb.maxAmount) === 0
+    )
+    if (untethered.length > 1) {
+      setAlertMsg('È consentita al massimo una fascia commissione senza tetto (incassi oltre l\'ultimo tetto).')
+      return
+    }
     const bodyJson = {
       name: form.name,
       location: {
@@ -968,11 +975,14 @@ export function EventsPage() {
 
             <fieldset className={styles.fieldset}>
               <legend className={styles.legend}>Fasce commissione</legend>
-              <p className={styles.fieldHint}>Commissioni percentuali e fisse applicate alle liquidazioni stand in base all'importo lordo. Lascia vuoto per non applicare commissioni.</p>
+              <p className={styles.fieldHint}>
+                Commissioni percentuali e fisse applicate alle liquidazioni stand in base all'importo lordo. Lascia vuoto per non applicare commissioni.
+                Al massimo una fascia può essere senza tetto (&quot;Incassi non compresi nelle altre fasce&quot;): lascia vuoto il tetto di quell'unica fascia.
+              </p>
               {form.feeBands.map((fb, idx) => (
                 <div key={idx} className={styles.fieldRow}>
                   <div className={styles.field} style={{ flex: 1 }}>
-                    <label>Importo massimo (EUR)</label>
+                    <label>Importo massimo (EUR) — vuoto = senza tetto</label>
                     <input
                       type="number"
                       min="0"

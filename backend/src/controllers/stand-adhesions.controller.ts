@@ -32,6 +32,7 @@ const EDITABLE_FIELDS = [
     'energyNeeds',
     'participationFeeAccepted',
     'depositAccepted',
+    'feesAccepted',
     'regulationAccepted',
     'exclusionAccepted',
     'signature'
@@ -166,6 +167,7 @@ function toAdhesionResponse(adhesion: {
     energyNeeds?: unknown;
     participationFeeAccepted?: unknown;
     depositAccepted?: unknown;
+    feesAccepted?: unknown;
     regulationAccepted?: unknown;
     exclusionAccepted?: unknown;
     signature?: unknown;
@@ -199,6 +201,7 @@ function toAdhesionResponse(adhesion: {
         energyNeeds: adhesion.energyNeeds ?? [],
         participationFeeAccepted: adhesion.participationFeeAccepted ?? false,
         depositAccepted: adhesion.depositAccepted ?? false,
+        feesAccepted: adhesion.feesAccepted ?? false,
         regulationAccepted: adhesion.regulationAccepted ?? false,
         exclusionAccepted: adhesion.exclusionAccepted ?? false,
         signature: adhesion.signature ?? null,
@@ -209,7 +212,7 @@ function toAdhesionResponse(adhesion: {
     };
 }
 
-function completenessErrors(a: StandAdhesion, event: { participationFee?: number | null; deposit?: number | null }): string[] {
+function completenessErrors(a: StandAdhesion, event: { participationFee?: number | null; deposit?: number | null; feeBands?: Array<{ maxAmount: number; feePercent?: number; feeFlat?: number }> }): string[] {
     const missing: string[] = [];
     if (!a.standName?.trim()) missing.push('nome dello stand');
     if (!a.contactName?.trim()) missing.push('nome del referente');
@@ -222,6 +225,7 @@ function completenessErrors(a: StandAdhesion, event: { participationFee?: number
     if (!a.acceptsPointLight) missing.push('accettazione del punto luce (energia elettrica)');
     if (event.participationFee != null && !a.participationFeeAccepted) missing.push('accettazione del prezzo di partecipazione');
     if (event.deposit != null && !a.depositAccepted) missing.push('accettazione della caparra');
+    if ((event.feeBands?.length ?? 0) > 0 && !a.feesAccepted) missing.push('accettazione dei fee');
     if (!a.regulationAccepted) missing.push('accettazione del regolamento');
     if (!a.exclusionAccepted) missing.push('accettazione della clausola di esclusione');
     if (!a.signature?.trim()) missing.push('firma del richiedente');
@@ -489,7 +493,7 @@ export async function submitAdhesion(req: Request, res: Response) {
         return res.status(409).json({ message: 'Adesione non più in stato di bozza.' });
     }
 
-    const event = await EventModel.findById(adhesion.eventId).select('participationFee deposit').lean();
+    const event = await EventModel.findById(adhesion.eventId).select('participationFee deposit feeBands').lean();
     const missing = completenessErrors(adhesion, event ?? {});
     if (missing.length > 0) {
         return res.status(400).json({

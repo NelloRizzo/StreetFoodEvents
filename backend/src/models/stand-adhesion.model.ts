@@ -195,6 +195,10 @@ const standAdhesionSchema = new Schema(
             type: Boolean,
             default: false
         },
+        feesAccepted: {
+            type: Boolean,
+            default: false
+        },
         regulationAccepted: {
             type: Boolean,
             default: false

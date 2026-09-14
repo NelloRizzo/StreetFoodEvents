@@ -141,26 +141,48 @@ function currencySection(event: Event): GeneratedSection {
 
 function feesSection(event: Event): GeneratedSection {
     const bands = Array.isArray(event.feeBands) ? event.feeBands : [];
-    const content = bands.length === 0
-        ? `<p>Non sono previste <strong>commissioni sugli incassi</strong>: la partecipazione non prevede trattenute percentuali o fisse sulle vendite dello stand.</p>`
-        : bands
-            .slice()
-            .sort((a, b) => Number(a.maxAmount) - Number(b.maxAmount))
-            .map((b, idx) => {
-                const parts = [
-                    `fino a ${Number(b.maxAmount)} \u20AC lordi`
-                ];
-                const extras: string[] = [];
-                if (Number(b.feePercent) > 0) extras.push(`${Number(b.feePercent)}%`);
-                if (Number(b.feeFlat) > 0) extras.push(`${Number(b.feeFlat)} \u20AC quota fissa`);
-                const condition = extras.length > 0 ? extras.join(' e ') : 'nessuna commissione';
-                return `<li><strong>Fascia ${idx + 1}:</strong> incassi ${parts[0]} \u2014 ${condition}.</li>`;
-            })
-            .join('');
+    if (bands.length === 0) {
+        return {
+            slug: 'fees',
+            title: 'Sezione F — Commissioni sugli incassi',
+            generatedFrom: 'fees',
+            content: [
+                `<p>Non sono previste <strong>commissioni sugli incassi</strong>: la partecipazione non prevede trattenute percentuali o fisse sulle vendite dello stand.</p>`,
+                `<p><strong>Accettazione commissioni (firma):</strong> ______________________</p>`,
+                `<p><strong>Data:</strong> ____ / ____ / ________</p>`
+            ].join('')
+        };
+    }
 
-    const body = bands.length === 0
-        ? `<p>L'evento non prevede commissioni sugli incassi.</p>`
-        : `<p>L'organizzatore applica una <strong>commissione sugli incassi</strong> dello stand secondo le fasce seguenti, determinate nella definizione dell'evento.</p><ul>${content}</ul>`;
+    const capped = bands.filter((b) => Number(b.maxAmount) > 0)
+        .slice()
+        .sort((a, b) => Number(a.maxAmount) - Number(b.maxAmount));
+    const residual = bands.find((b) => Number(b.maxAmount) <= 0) ?? null;
+
+    const residualRange = 'oltre l\u2019ultimo tetto';
+    const listCapped = capped.map((b, idx) => {
+        const extras: string[] = [];
+        if (Number(b.feePercent) > 0) extras.push(`${Number(b.feePercent)}%`);
+        if (Number(b.feeFlat) > 0) extras.push(`${Number(b.feeFlat)} \u20AC quota fissa`);
+        const condition = extras.length > 0 ? extras.join(' e ') : 'nessuna commissione';
+        return `<li><strong>Fascia ${idx + 1}:</strong> fino a ${Number(b.maxAmount)} \u20AC lordi \u2014 ${condition}.</li>`;
+    }).join('');
+
+    const listResidual = residual
+        ? (() => {
+            const extras: string[] = [];
+            if (Number(residual.feePercent) > 0) extras.push(`${Number(residual.feePercent)}%`);
+            if (Number(residual.feeFlat) > 0) extras.push(`${Number(residual.feeFlat)} \u20AC quota fissa`);
+            const condition = extras.length > 0 ? extras.join(' e ') : 'nessuna commissione';
+            return `<li><strong>Fascia ${capped.length + 1}:</strong> incassi ${residualRange} (non compresi nelle altre fasce) \u2014 ${condition}.</li>`;
+        })()
+        : '';
+
+    const note = residual
+        ? `<p><em>Nota: la fascia &quot;${residualRange}&quot; ricomprende gli incassi non coperti dalle fasce precedenti (senza tetto massimo).</em></p>`
+        : '';
+
+    const body = `<p>L'organizzatore applica una <strong>commissione sugli incassi</strong> dello stand secondo le fasce seguenti, determinate nella definizione dell'evento.</p><ul>${listCapped}${listResidual}</ul>${note}`;
 
     return {
         slug: 'fees',

@@ -129,6 +129,7 @@ const completePayload = (standId: string) => ({
     energyNeeds: [{ equipment: 'Friggitrice', powerKw: 3, connectionType: 'monofase' }],
     participationFeeAccepted: true,
     depositAccepted: true,
+    feesAccepted: true,
     regulationAccepted: true,
     exclusionAccepted: true,
     signature: 'Mario Rossi'
@@ -268,6 +269,24 @@ describe('Integration — Stand Adhesions', () => {
             .set('Cookie', [`sid=${adminToken}`]);
         expect(submitRes.status).toBe(400);
         expect(submitRes.body.message).toMatch(/Compilazione incompleta/);
+    });
+
+    it('submit: fees acceptance required when event has feeBands', async () => {
+        const { adminToken, event, stand } = await setupEnvironment();
+        const payload = completePayload(stand._id.toString()) as Partial<ReturnType<typeof completePayload>> & { feesAccepted?: boolean };
+        delete payload.feesAccepted;
+
+        const created = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(payload);
+        expect(created.status).toBe(201);
+
+        const submitRes = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${created.body.item.id}/submit`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(submitRes.status).toBe(400);
+        expect(submitRes.body.message).toMatch(/accettazione dei fee/);
     });
 
     it('submit: fee/caparra not required when event has no participationFee/deposit', async () => {

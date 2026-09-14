@@ -158,8 +158,11 @@ export function StandSettlementsPage() {
 
   const resolveFee = (ge: number): string => {
     if (standFeeOverride?.feePercent != null) return String(standFeeOverride.feePercent)
-    const matchingBand = [...eventFeeBands].sort((a, b) => a.maxAmount - b.maxAmount).find((b) => ge <= b.maxAmount)
+    const capped = eventFeeBands.filter((b) => b.maxAmount > 0).sort((a, b) => a.maxAmount - b.maxAmount)
+    const residual = eventFeeBands.find((b) => b.maxAmount <= 0)
+    const matchingBand = capped.find((b) => ge <= b.maxAmount)
     if (matchingBand) return String(matchingBand.feePercent)
+    if (residual) return String(residual.feePercent)
     return ''
   }
 

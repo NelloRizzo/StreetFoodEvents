@@ -41,6 +41,7 @@ type AdhesionItem = {
   energyNeeds: Array<{ equipment: string; powerKw: number; connectionType: string }>
   participationFeeAccepted: boolean
   depositAccepted: boolean
+  feesAccepted: boolean
   regulationAccepted: boolean
   exclusionAccepted: boolean
   signature: string | null
@@ -56,6 +57,7 @@ type EventRef = {
   currencyName: string
   participationFee: number | null
   deposit: number | null
+  feeBands: Array<{ maxAmount: number; feePercent: number; feeFlat: number }>
 }
 
 const STATUS_LABEL: Record<AdhesionStatus, string> = {
@@ -297,6 +299,9 @@ export function AdhesionsManagePage() {
                     )}
                     {event?.deposit != null && (
                       <p>Caparra ({event.deposit} €): {a.depositAccepted ? 'accettata' : 'non accettata'}</p>
+                    )}
+                    {(event?.feeBands?.length ?? 0) > 0 && (
+                      <p>Commissioni sugli incassi: {a.feesAccepted ? 'accettate' : 'non accettate'}</p>
                     )}
                     <p>Regolamento: {a.regulationAccepted ? 'accettato' : 'non accettato'}</p>
                     <p>Clausola di esclusione: {a.exclusionAccepted ? 'accettata' : 'non accettata'}</p>

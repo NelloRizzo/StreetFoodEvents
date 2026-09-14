@@ -297,6 +297,27 @@ describe('Integration — Adhesion Form', () => {
         expect(fees.content).toContain('50 \u20AC quota fissa');
     });
 
+    it('renders an untethered fee band as residual revenue (incassi non compresi nelle altre fasce)', async () => {
+        const env = await setupAdhesionEnvironment();
+        await request(app)
+            .patch(`/api/events/${env.event._id}`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ feeBands: [
+                { maxAmount: 1000, feePercent: 10, feeFlat: 0 },
+                { maxAmount: 0, feePercent: 12, feeFlat: 0 }
+            ] });
+
+        await request(app)
+            .post(`/api/events/${env.event._id}/adhesion-form/generate`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        const res = await request(app).get(`/api/events/${env.event._id}/adhesion-form`);
+        const fees = res.body.item.sections.find((s: { slug: string }) => s.slug === 'fees');
+        expect(fees.content).toContain('fino a 1000 \u20AC lordi');
+        expect(fees.content).toContain('incassi oltre l\u2019ultimo tetto');
+        expect(fees.content).toContain('non compresi nelle altre fasce');
+    });
+
     it('does not mark stale when non-guided event fields change', async () => {
         const env = await setupAdhesionEnvironment();
 

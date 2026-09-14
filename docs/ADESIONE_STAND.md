@@ -95,6 +95,8 @@ Eventuali **esigenze elettriche aggiuntive** (macchinari, frigoriferi, cucine, e
 
 L'organizzatore applica una **commissione sugli incassi** dello stand secondo le fasce indicate nella definizione dell'evento; con la firma di accettazione lo stand ne **prende atto e le accetta**. Se non sono previste commissioni, barrare la casella "nessuna commissione".
 
+> **Nota**: una fascia con importo lordo massimo **0 € (senza tetto)** indica gli **incassi non compresi nelle altre fasce** — ovvero tutti gli incassi oltre l'ultimo tetto elencato. Può esserci al massimo **una sola fascia senza tetto**.
+
 | Fascia | Importo lordo massimo (€) | Commissione % | Quota fissa (€) |
 |---|---|---|---|
 | 1 | ____________ | ____________ % | ____________ |

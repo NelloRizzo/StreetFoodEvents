@@ -46,6 +46,7 @@ type AdhesionResponse = {
   energyNeeds: EnergyNeed[]
   participationFeeAccepted: boolean
   depositAccepted: boolean
+  feesAccepted: boolean
   regulationAccepted: boolean
   exclusionAccepted: boolean
   signature: string | null
@@ -64,6 +65,7 @@ type EventRef = {
   participationFeeDeadline: string | null
   depositDeadline: string | null
   regulationDocument: { url: string } | null
+  feeBands: Array<{ maxAmount: number; feePercent: number; feeFlat: number }>
 }
 
 type MyStand = { id: string; name: string }
@@ -101,6 +103,7 @@ type FormState = {
   energyNeeds: EnergyDraft[]
   participationFeeAccepted: boolean
   depositAccepted: boolean
+  feesAccepted: boolean
   regulationAccepted: boolean
   exclusionAccepted: boolean
   signature: string
@@ -125,6 +128,7 @@ const emptyForm: FormState = {
   energyNeeds: [],
   participationFeeAccepted: false,
   depositAccepted: false,
+  feesAccepted: false,
   regulationAccepted: false,
   exclusionAccepted: false,
   signature: '',
@@ -205,6 +209,7 @@ function fromAdhesion(a: AdhesionResponse): FormState {
     })),
     participationFeeAccepted: a.participationFeeAccepted,
     depositAccepted: a.depositAccepted,
+    feesAccepted: a.feesAccepted,
     regulationAccepted: a.regulationAccepted,
     exclusionAccepted: a.exclusionAccepted,
     signature: a.signature ?? '',
@@ -247,6 +252,7 @@ function buildPayload(form: FormState) {
       })),
     participationFeeAccepted: form.participationFeeAccepted,
     depositAccepted: form.depositAccepted,
+    feesAccepted: form.feesAccepted,
     regulationAccepted: form.regulationAccepted,
     exclusionAccepted: form.exclusionAccepted,
     signature: form.signature,
@@ -403,6 +409,7 @@ export function StandAdhesionWizardPage() {
     if (!form.acceptsPointLight) list.push('punto luce energia')
     if (!form.participationFeeAccepted && event?.participationFee != null) list.push('accettazione quota di partecipazione')
     if (!form.depositAccepted && event?.deposit != null) list.push('accettazione caparra')
+    if (!form.feesAccepted && (event?.feeBands?.length ?? 0) > 0) list.push('accettazione fee')
     if (!form.regulationAccepted) list.push('regolamento')
     if (!form.exclusionAccepted) list.push('clausola di esclusione')
     if (!form.signature.trim()) list.push('firma')
@@ -567,6 +574,7 @@ export function StandAdhesionWizardPage() {
                   onChange={(data) => set('banner', data as UploadedImage | null)}
                   label="Icona / banner dello stand"
                 />
+                <p className={styles.hint}>Dimensioni consigliate: 1080 x 220 px (banner orizzontale).</p>
               </div>
               <div className={styles.field}>
                 <ImageUploader
@@ -576,6 +584,7 @@ export function StandAdhesionWizardPage() {
                   onChange={(data) => set('logo', data as UploadedImage | null)}
                   label="Logo dello stand"
                 />
+                <p className={styles.hint}>Dimensioni consigliate: quadrato, minimo 512 x 512 px.</p>
               </div>
             </div>
           </fieldset>
@@ -760,7 +769,7 @@ export function StandAdhesionWizardPage() {
               </div>
               <p className={styles.hint}>
                 Il pagamento degli importi non avviene tramite questa piattaforma: le modalità di versamento
-                saranno comunicate dall\u2019organizzazione.
+                saranno comunicate dall&apos;organizzazione.
               </p>
               {event?.participationFee != null && (
                 <label className={styles.checkLabel}>
@@ -776,6 +785,39 @@ export function StandAdhesionWizardPage() {
               )}
             </div>
           </fieldset>
+
+          {(event?.feeBands?.length ?? 0) > 0 && (
+            <fieldset className={styles.fieldset} disabled={!editable}>
+              <legend className={styles.legend}>{'\u2464'}bis Commissioni sugli incassi</legend>
+              <div className={styles.feeBox}>
+                <div className={styles.feeLine}>
+                  <strong>Fasce di commissione applicate agli incassi dello stand:</strong>
+                </div>
+                {[...(event?.feeBands ?? [])]
+                  .slice()
+                  .sort((a, b) => a.maxAmount - b.maxAmount)
+                  .map((band, idx) => (
+                    <div className={styles.feeLine} key={idx}>
+                      {band.maxAmount > 0
+                        ? `Fino a ${band.maxAmount.toLocaleString('it-IT')} \u20AC lordi: `
+                        : 'Incassi non compresi nelle altre fasce (oltre l\u2019ultimo tetto): '}
+                      {[
+                        band.feePercent > 0 ? `${band.feePercent}%` : '',
+                        band.feeFlat > 0 ? `${band.feeFlat.toLocaleString('it-IT')} \u20AC quota fissa` : '',
+                      ].filter(Boolean).join(' e ') || 'nessuna commissione'}
+                    </div>
+                  ))}
+                <p className={styles.hint}>
+                  Gli incassi che superano il tetto massimo delle fasce indicate sono coperti dalla fascia
+                  &quot;incassi non compresi nelle altre fasce&quot;, quando prevista dall&apos;organizzazione.
+                </p>
+                <label className={styles.checkLabel}>
+                  <input type="checkbox" checked={form.feesAccepted} onChange={(e) => set('feesAccepted', e.target.checked)} />
+                  <span>Accetto le commissioni sugli incassi applicate dall&apos;organizzazione *</span>
+                </label>
+              </div>
+            </fieldset>
+          )}
 
           <fieldset className={styles.fieldset} disabled={!editable}>
             <legend className={styles.legend}>{'\u2465'} Dichiarazioni e firma</legend>
