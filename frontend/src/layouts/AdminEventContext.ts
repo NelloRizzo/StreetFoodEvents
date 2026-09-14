@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 
-export type AdminEventItem = { id: string; name: string; endDate?: string | null }
+export type AdminEventItem = { id: string; name: string; startDate?: string | null; endDate?: string | null }
 
 export type AdminEventContextValue = {
   selectedEventId: string | null

@@ -18,6 +18,11 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
 
 import { UserModel } from '../../models/user.model';
 import { SessionModel } from '../../models/session.model';
+import { RoleModel } from '../../models/role.model';
+import { UserRoleModel } from '../../models/user-role.model';
+import { EventModel } from '../../models/event.model';
+import { StandModel } from '../../models/stand.model';
+import { StationModel } from '../../models/station.model';
 import {
     generateSessionToken,
     getSessionExpiryDate,
@@ -138,5 +143,90 @@ describe('Auth API', () => {
             tokenHash: hashSessionToken(sessionToken)
         });
         expect(session!.isRevoked).toBe(true);
+    });
+
+    async function createAuthedUser(scratchEmail: string) {
+        const user = await UserModel.create({
+            firstName: 'Stand',
+            lastName: 'User',
+            email: scratchEmail,
+            passwordHash: await argon2.hash('Password123!'),
+            isActive: true
+        });
+        const sessionToken = generateSessionToken();
+        await SessionModel.create({
+            userId: user._id,
+            tokenHash: hashSessionToken(sessionToken),
+            expiresAt: getSessionExpiryDate(),
+            lastActivityAt: new Date()
+        });
+        return { user, sessionToken };
+    }
+
+    async function seedRole(scope: string, slug: string) {
+        return RoleModel.create({
+            name: slug,
+            scope,
+            slug,
+            permissions: [],
+            isSystem: true,
+            isActive: true
+        });
+    }
+
+    async function seedStandAndStation() {
+        const event = await EventModel.create({
+            name: 'My Stands Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-09-01'),
+            endDate: new Date('2026-09-07'),
+            currencyName: 'Coin'
+        });
+        const stand = await StandModel.create({
+            name: 'Stand A',
+            type: 'food',
+            eventIds: [event._id]
+        });
+        const station = await StationModel.create({
+            name: 'Postazione A',
+            standId: stand._id
+        });
+        return { event, stand, station };
+    }
+
+    it('returns ALL stands for a platform admin (no explicit role link needed)', async () => {
+        app = createTestApp();
+        const platformRole = await seedRole('platform', 'platform-admin');
+        const { user, sessionToken } = await createAuthedUser(`platform-${Date.now()}@test.com`);
+        await UserRoleModel.create({
+            userId: user._id,
+            roleId: platformRole._id,
+            isActive: true
+        });
+        const { stand, station } = await seedStandAndStation();
+
+        const res = await request(app)
+            .get('/api/auth/me/stands')
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.stands.some((s: { id: string }) => s.id === stand._id.toString())).toBe(true);
+        expect(res.body.stands[0].eventIds).toContain((stand.eventIds[0] as unknown as { toString(): string }).toString());
+        expect(res.body.stations.some((st: { id: string }) => st.id === station._id.toString())).toBe(true);
+    });
+
+    it('returns only role-linked stands for a regular user', async () => {
+        app = createTestApp();
+        await seedRole('platform', 'platform-admin');
+        await seedRole('stand', 'cashier');
+        const { stand } = await seedStandAndStation();
+        const { sessionToken } = await createAuthedUser(`regular-${Date.now()}@test.com`);
+
+        const res = await request(app)
+            .get('/api/auth/me/stands')
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.stands.some((s: { id: string }) => s.id === stand._id.toString())).toBe(false);
     });
 });

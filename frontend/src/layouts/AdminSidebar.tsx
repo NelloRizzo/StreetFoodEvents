@@ -230,7 +230,11 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
               >
                 {events.length === 0 && <option value="">Nessun evento</option>}
                 {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>{ev.name}</option>
+                  <option key={ev.id} value={ev.id}>
+                    {ev.startDate
+                      ? `${ev.name} — ${new Date(ev.startDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+                      : ev.name}
+                  </option>
                 ))}
               </select>
             </div>

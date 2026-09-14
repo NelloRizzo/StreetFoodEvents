@@ -353,6 +353,14 @@ export async function getMyStands(req: Request, res: Response) {
 
   const userId = req.user.id;
 
+  // Platform admins operate on EVERY stand regardless of explicit role links
+  const platformRoleIds = await RoleModel.find({ scope: 'platform' }).distinct('_id');
+  const isPlatformAdmin = !!(await UserRoleModel.findOne({
+    userId,
+    roleId: { $in: platformRoleIds },
+    isActive: true
+  }));
+
   // Stand-level roles → specific stand IDs
   const standRoleIds = await RoleModel.find({ scope: 'stand' }).distinct('_id');
   const userStandRoles = await UserRoleModel.find({
@@ -381,15 +389,19 @@ export async function getMyStands(req: Request, res: Response) {
     roleStandIds.add(s._id.toString());
   }
 
-  const allStandIds = [...roleStandIds];
+  const allStandIds = isPlatformAdmin ? [] : [...roleStandIds];
 
-  const stands = allStandIds.length > 0
-    ? await StandModel.find({ _id: { $in: allStandIds } })
-    : [];
+  const stands = isPlatformAdmin
+    ? await StandModel.find({})
+    : allStandIds.length > 0
+      ? await StandModel.find({ _id: { $in: allStandIds } })
+      : [];
 
-  const standStations = allStandIds.length > 0
-    ? await StationModel.find({ standId: { $in: allStandIds } }).populate('standId', 'name')
-    : [];
+  const standStations = isPlatformAdmin
+    ? await StationModel.find({ standId: { $ne: null } }).populate('standId', 'name')
+    : allStandIds.length > 0
+      ? await StationModel.find({ standId: { $in: allStandIds } }).populate('standId', 'name')
+      : [];
 
   const userStations = await UserStationModel.find({ userId, isActive: true });
   const userStationIds = new Set(userStations.map((us) => us.stationId.toString()));

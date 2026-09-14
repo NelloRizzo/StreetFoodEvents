@@ -286,6 +286,12 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Set 2026 — menu operativo platform-admin + data inizio nel dropdown evento)
+### Completed
+- **`GET /api/auth/me/stands` ora include TUTTI gli stand per i platform-admin**: prima restituiva solo gli stand legati ai ruoli stand/evento espliciti dell'utente → un platform-admin (es. `platform-admin` senza ruoli su "Evento di prova") NON vedeva lo stand collegato all'evento nella sezione **Operativo** della sidebar (che filtra `eventIds.includes(selectedEventId)`). Fix in `auth.controller.ts` `getMyStands`: ramo `isPlatformAdmin` (rilevato da UserRole con ruolo scope `platform`) → `StandModel.find({})` + `StationModel.find({ standId: { $ne: null } })`. Corregge anche i falsi "forbidden" di Cassa/Ordini/Ricevuta (usano `/auth/me/stands` per l'autorizzazione). Test: +2 in `auth.test.ts` (platform vede tutti, utente regolare no). Suite backend **396 test ✓**, typecheck ✓, lint 0 errori.
+- **Dropdown "Evento attivo"** (AdminSidebar): ogni evento mostra `Nome — gg/mm/aaaa` (data inizio da `AdminEventItem.startDate`, già esposta da `GET /events`) per distinguere le edizioni con lo stesso nome.
+- Nessun tocco a `.local/`: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+
 ## Session state (Set 2026 — adesione stand: commissioni senza tetto + accettazione fee + fix testi)
 ### Completed
 - **Fascia commissione "senza tetto"** (fee band residuale): una fascia con `maxAmount` vuoto/0 = **incassi non compresi nelle altre fasce** (oltre l'ultimo tetto). `EventsPage` la consente come "Importo massimo (EUR) — vuoto = senza tetto" con **validazione al submit: al massimo UNA fascia senza tetto** (alert+return). `adhesion-form.service.ts` `feesSection` rende le fasce capped ordinate ("fino a X € lordi") + la residuale in coda ("oltre l’ultimo tetto (non compresi nelle altre fasce)") con nota. `StandSettlementsPage` `resolveFee`: fallback alla fascia residuale quando nessuna capped copre `ge`.
