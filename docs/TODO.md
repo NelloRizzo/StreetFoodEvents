@@ -1,9 +1,5 @@
 # TODO — Street Food Events
 
-- ~~Eliminiamo la verifica dell'acquisto per una recensione di uno stand~~ — **FATTO (Set 2026)**: gate acquisto rimosso per evento e stand; nuovo campo facoltativo "Cosa hai comprato" (testo libero ≤200, sanitizzato, solo per gli stand); badge "Acquisto verificato" → "Utente registrato"; nel summary `registeredCount` con percentuale "X% da utenti registrati" (calcolata client-side). Vedi CHANGELOG Settembre 2026.
-
-- ~~Quando un ordine viene effettuato, in cassa viene mostrata la ricevuta. **Chiosco ordini**~~ — **FATTO (Set 2026)**: postazione aggiuntiva attivabile per-browser (admin stand/evento/platform) che mostra il QR dell'ultimo ordine con il riepilogo; l'utente fotografa il QR → pagina pubblica `/track/:id` con riepilogo e notifica (suono/PRONTO) quando l'ordine è pronto. Vedi CHANGELOG Settembre 2026.
-
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
 
