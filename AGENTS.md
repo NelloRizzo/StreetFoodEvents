@@ -309,6 +309,17 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Set 2026 — recensioni senza gate acquisto + "Cosa hai comprato" + % affidabilità)
+### Completed
+- **Gate acquisto rimosso**: `createReview` in `reviews.controller.ts` non esegue più `OrderModel.exists` con ordine non cancellato → un **utente registrato può recensire qualsiasi evento o stand** (era 403 per evento/stand senza acquisto). Il duplicate-check (409 per stesso target) e il guest token per gli anonimi sono invariati.
+- **Campo `Review.whatBought`** (String, trim, default null, max 200, sanitizzato): creato in `review.model.ts` (dopo `comment`), incluso in `toPublicReview` e nel `ReviewModel.create`. Il frontend lo espone come "Cosa hai comprato" **solo per le recensioni stand** (`ReviewForm.tsx`, maxLength 200), mostrato nelle card con riga "Comprato: …" (`ReviewCard.tsx`, `ReviewsManagePage.tsx`).
+- **Affidabilità**: il badge "Acquisto verificato" è rinominato **"Utente registrato"** (il campo `isVerified` resta `!!userId`, cambia solo il significato esposto); `getReviewsSummary` aggiunge `registeredCount` alle aggregazioni evento e per-stand; le pagine `EventReviewPage`/`StandReviewPage` mostrano "X% da utenti registrati" (percentuale client-side, helper `registeredPercent` in `lib/reviews.ts`).
+- **GOTCHAS**: il testo "Verificheremo il tuo acquisto…" in `ReviewForm` non esiste più; `whatBought` è solo per stand (per l'evento resta null); il backend arrotonda `avg` a 1 decimale (testare con `3.3`, non con `10/3` esatto).
+- Test: adattati i 2 test del gate (ora 201) + +1 `whatBought` (round-trip sanitizzato + max 200) + `registeredCount` nel summary in `integration-reviews.test.ts`. Suite backend **421 test ✓** (46 file), typecheck ✓, lint 0 errori; frontend build (tsc+vite) ✓, 43 test vitest ✓, lint 0 errori (13 warning pre-esistenti). Docs aggiornate (`docs/CHANGELOG.md`, `docs/TODO.md` punto 1 → fatto, punto 2 chiosco riscritto conciso). Nessun tocco a `.local/`: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+
+## Pending — chiosco QR ordini + track (prossima sessione F2)
+- **Chiosco ordini**: postazione aggiuntiva attivabile per-browser (admin stand/evento/platform) che mostra il QR dell'ultimo ordine + riepilogo; endpoint pubblici `GET /api/orders/:orderId/track` e `GET /api/orders/stand/:standId/kiosk-recent` da registrare PRIMA di `authMiddleware` in `orders.routes.ts` (come `/orders/:orderId/receipt` e `/orders/stand/:standId/ordersqueue`). Pagina pubblica `/track/:orderId` con polling 5s + "PRONTO" + beep + Notification API opzionale; pagina kiosk `/events/:eventId/stands/:standId/kiosk` con attivazione `localStorage['sfe_kiosk_<standId>']`. QR generati server-side (`qrcode` lib backend — il frontend non ha lib QR). Aggiungere `/track` e `/kiosk` a `hideChrome`.
+
 ## Session state (Set 2026 — data limite adesione stand)
 ### Completed
 - **Data limite adesione** (`Event.adhesionDeadline`, Date, default null — dopo `depositDeadline` nel model): configurabile in admin in `EventsPage` ("Termine adesione stand", `type="date"`, vuoto = nessun limite). Esposto in `toEventResponse` (create/update/read round-trip). `duplicateEvent` NON lo copia nella nuova edizione (resta null, come le altre scadenze).

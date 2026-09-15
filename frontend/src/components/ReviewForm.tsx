@@ -17,11 +17,13 @@ export function ReviewForm({ eventId, standId = null, targetLabel = 'stand', onC
   const { isAuthenticated } = useAuth()
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
+  const [whatBought, setWhatBought] = useState('')
   const [reviewerName, setReviewerName] = useState('')
   const [reviewerEmail, setReviewerEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const isStandReview = standId != null
   const canSubmit = rating >= 1 && (!isAuthenticated ? reviewerName.trim().length > 0 : true)
 
   const handleSubmit = async () => {
@@ -33,11 +35,13 @@ export function ReviewForm({ eventId, standId = null, targetLabel = 'stand', onC
         standId,
         rating,
         comment: comment.trim() || null,
+        whatBought: isStandReview && whatBought.trim() ? whatBought.trim() : null,
         reviewerName: reviewerName.trim() || null,
         reviewerEmail: reviewerEmail.trim() || null,
       })
       setRating(0)
       setComment('')
+      setWhatBought('')
       setReviewerName('')
       setReviewerEmail('')
       onCreated?.(res.item)
@@ -69,9 +73,19 @@ export function ReviewForm({ eventId, standId = null, targetLabel = 'stand', onC
         />
       </label>
 
-      {isAuthenticated ? (
-        <p className={styles.note}>Verificheremo il tuo acquisto prima di pubblicare la recensione.</p>
-      ) : (
+      {isStandReview && (
+        <label className={styles.field}>
+          <span className={styles.labelText}>Cosa hai comprato (facoltativo)</span>
+          <input
+            className={styles.input}
+            value={whatBought}
+            onChange={(e) => setWhatBought(e.target.value)}
+            maxLength={200}
+            placeholder="Es. burger + patatine"
+          />
+        </label>
+      )}
+        {!isAuthenticated && (
         <>
           <label className={styles.field}>
             <span className={styles.labelText}>Il tuo nome *</span>

@@ -176,13 +176,15 @@ export function ReviewsManagePage() {
 
                 <div className={styles.meta}>
                   <RatingStars value={r.rating} />
-                  {r.isVerified && <span className={styles.badge}>Acquisto verificato</span>}
+                  {r.isVerified && <span className={styles.badge}>Utente registrato</span>}
                   {r.hasGuest && <span className={styles.badge}>Anonimo</span>}
                   {isHidden && <span className={styles.badgeHidden}>Nascosta</span>}
                   <span className={styles.date}>
                     {new Date(r.createdAt).toLocaleDateString('it-IT')}
                   </span>
                 </div>
+
+                {r.whatBought && <p className={styles.comment}>Comprato: {r.whatBought}</p>}
 
                 {r.comment && <p className={styles.comment}>{r.comment}</p>}
 

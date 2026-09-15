@@ -7,6 +7,7 @@ export type Review = {
   standId: string | null
   rating: number
   comment: string | null
+  whatBought: string | null
   reviewerName: string | null
   isVerified: boolean
   status: 'visible' | 'hidden'
@@ -33,7 +34,7 @@ export function ReviewCard({ review, admin = false, onHide, onUnhide, onDelete }
     <article className={`${styles.card} ${isHidden ? styles.hidden : ''}`}>
       <div className={styles.header}>
         <span className={styles.name}>{review.reviewerName ?? 'Anonimo'}</span>
-        {review.isVerified && <span className={styles.badge}>Acquisto verificato</span>}
+        {review.isVerified && <span className={styles.badge}>Utente registrato</span>}
         {isHidden && <span className={styles.badgeHidden}>Nascosta</span>}
       </div>
 
@@ -41,6 +42,8 @@ export function ReviewCard({ review, admin = false, onHide, onUnhide, onDelete }
         <RatingStars value={review.rating} />
         <span className={styles.date}>{date}</span>
       </div>
+
+      {review.whatBought && <p className={styles.whatBought}>Comprato: {review.whatBought}</p>}
 
       {review.comment && <p className={styles.comment}>{review.comment}</p>}
 

@@ -6,6 +6,7 @@ export type Review = {
   standId: string | null
   rating: number
   comment: string | null
+  whatBought: string | null
   reviewerName: string | null
   isVerified: boolean
   status: 'visible' | 'hidden'
@@ -20,17 +21,24 @@ export type AdminReview = Review & {
 export type TargetSummary = {
   count: number
   avg: number | null
+  registeredCount: number
 }
 
 export type StandSummary = {
   standId: string
   count: number
   avg: number | null
+  registeredCount: number
 }
 
 export type ReviewsSummary = {
   event: TargetSummary
   stands: StandSummary[]
+}
+
+export function registeredPercent(sum: { count: number; registeredCount: number }): number | null {
+  if (!sum.count) return null
+  return Math.round((sum.registeredCount / sum.count) * 100)
 }
 
 type Paginated<T> = {
@@ -83,6 +91,7 @@ export type SubmitReviewInput = {
   standId?: string | null
   rating: number
   comment?: string | null
+  whatBought?: string | null
   reviewerName?: string | null
   reviewerEmail?: string | null
 }

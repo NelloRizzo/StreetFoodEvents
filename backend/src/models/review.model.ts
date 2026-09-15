@@ -28,6 +28,12 @@ const reviewSchema = new Schema(
             default: null,
             maxlength: 1000
         },
+        whatBought: {
+            type: String,
+            trim: true,
+            default: null,
+            maxlength: 200
+        },
         reviewerName: {
             type: String,
             trim: true,

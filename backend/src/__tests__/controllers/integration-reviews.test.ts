@@ -139,7 +139,7 @@ describe('Reviews API', () => {
         expect(res.body.guestToken).toBeUndefined();
     });
 
-    it('rejects registered user without a purchase at the stand', async () => {
+    it('allows a registered user without a purchase at the stand (no gate)', async () => {
         app = createTestApp();
         const buyer = await createUser(`nopurchase-${Date.now()}@test.com`);
         const { event, stand } = await createBaseEntities();
@@ -150,10 +150,11 @@ describe('Reviews API', () => {
             .set('Cookie', `sid=${sessionToken}`)
             .send({ standId: stand._id.toString(), rating: 4 });
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(201);
+        expect(res.body.item.isVerified).toBe(true);
     });
 
-    it('rejects registered user whose order was cancelled', async () => {
+    it('allows a registered user to review even with only a cancelled order (no gate)', async () => {
         app = createTestApp();
         const buyer = await createUser(`cancelled-${Date.now()}@test.com`);
         const { event, stand, station, eventProduct } = await createBaseEntities();
@@ -188,7 +189,7 @@ describe('Reviews API', () => {
             .set('Cookie', `sid=${sessionToken}`)
             .send({ standId: stand._id.toString(), rating: 3 });
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(201);
     });
 
     it('creates an event-level review when user bought anything at the event', async () => {
@@ -305,9 +306,36 @@ describe('Reviews API', () => {
         expect(res.body.item.comment).toBe('Ottimo');
     });
 
+    it('supports the optional whatBought field (sanitized, ≤200)', async () => {
+        app = createTestApp();
+        const { event, stand } = await createBaseEntities();
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/reviews`)
+            .send({
+                standId: stand._id.toString(),
+                rating: 5,
+                whatBought: '<b>Burger</b> + patatine',
+                reviewerName: 'Mario'
+            });
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.whatBought).toBe('Burger + patatine');
+
+        const list = await request(app).get(`/api/events/${event._id}/reviews?standId=${stand._id}`);
+        expect(list.body.items[0].whatBought).toBe('Burger + patatine');
+
+        const tooLong = await request(app)
+            .post(`/api/events/${event._id}/reviews`)
+            .send({ standId: stand._id.toString(), rating: 4, whatBought: 'x'.repeat(201), reviewerName: 'Luca' });
+        expect(tooLong.status).toBe(400);
+    });
+
     it('lists visible reviews and computes summary aggregates', async () => {
         app = createTestApp();
         const { event, stand } = await createBaseEntities();
+        const registered = await createUser(`sum-${Date.now()}@test.com`);
+        const sessionToken = await createSession(registered._id);
 
         await request(app)
             .post(`/api/events/${event._id}/reviews`)
@@ -317,13 +345,17 @@ describe('Reviews API', () => {
             .send({ standId: stand._id.toString(), rating: 3, reviewerName: 'Luigi' });
         await request(app)
             .post(`/api/events/${event._id}/reviews`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ standId: stand._id.toString(), rating: 2 });
+        await request(app)
+            .post(`/api/events/${event._id}/reviews`)
             .send({ rating: 4, reviewerName: 'Giulia' });
 
         const list = await request(app).get(
             `/api/events/${event._id}/reviews?standId=${stand._id}`
         );
         expect(list.status).toBe(200);
-        expect(list.body.items).toHaveLength(2);
+        expect(list.body.items).toHaveLength(3);
         expect(list.body.items.every((r: { standId: string | null }) => r.standId === stand._id.toString())).toBe(true);
 
         const eventList = await request(app).get(`/api/events/${event._id}/reviews`);
@@ -334,16 +366,19 @@ describe('Reviews API', () => {
         const standRow = summary.body.stands.find(
             (s: { standId: string }) => s.standId === stand._id.toString()
         );
-        expect(standRow.count).toBe(2);
-        expect(standRow.avg).toBe(4);
+        expect(standRow.count).toBe(3);
+        expect(standRow.avg).toBe(3.3);
+        expect(standRow.registeredCount).toBe(1);
         expect(summary.body.event.count).toBe(1);
         expect(summary.body.event.avg).toBe(4);
+        expect(summary.body.event.registeredCount).toBe(0);
 
         const standSummary = await request(app).get(
             `/api/events/${event._id}/reviews/summary?standId=${stand._id}`
         );
         expect(standSummary.body.stands).toHaveLength(1);
-        expect(standSummary.body.stands[0].count).toBe(2);
+        expect(standSummary.body.stands[0].count).toBe(3);
+        expect(standSummary.body.stands[0].registeredCount).toBe(1);
     });
 
     it('returns my reviews for a registered user', async () => {

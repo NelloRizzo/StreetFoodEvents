@@ -3,7 +3,6 @@ import { Types } from 'mongoose';
 import * as qrcode from 'qrcode';
 
 import { EventModel } from '../models/event.model';
-import { OrderModel } from '../models/order.model';
 import { ReviewModel } from '../models/review.model';
 import { StandModel } from '../models/stand.model';
 import { sanitizeHtmlContent } from '../utils/html-sanitizer';
@@ -28,6 +27,7 @@ function toPublicReview(r: {
     standId?: Types.ObjectId | null;
     rating: number;
     comment?: string | null;
+    whatBought?: string | null;
     reviewerName?: string | null;
     userId?: Types.ObjectId | null;
     status: string;
@@ -39,6 +39,7 @@ function toPublicReview(r: {
         standId: r.standId ? r.standId.toString() : null,
         rating: r.rating,
         comment: r.comment ?? null,
+        whatBought: r.whatBought ?? null,
         reviewerName: r.reviewerName ?? (r.userId ? 'Cliente verificato' : null),
         isVerified: !!r.userId,
         status: r.status,
@@ -138,7 +139,14 @@ export async function getReviewsSummary(req: Request, res: Response) {
                 standId: null
             }
         },
-        { $group: { _id: null, count: { $sum: 1 }, avg: { $avg: '$rating' } } }
+        {
+            $group: {
+                _id: null,
+                count: { $sum: 1 },
+                avg: { $avg: '$rating' },
+                registeredCount: { $sum: { $cond: [{ $ne: ['$userId', null] }, 1, 0] } }
+            }
+        }
     ]);
 
     const standMatch: Record<string, unknown> = {
@@ -152,17 +160,25 @@ export async function getReviewsSummary(req: Request, res: Response) {
 
     const standsAgg = await ReviewModel.aggregate([
         { $match: standMatch },
-        { $group: { _id: '$standId', count: { $sum: 1 }, avg: { $avg: '$rating' } } }
+        {
+            $group: {
+                _id: '$standId',
+                count: { $sum: 1 },
+                avg: { $avg: '$rating' },
+                registeredCount: { $sum: { $cond: [{ $ne: ['$userId', null] }, 1, 0] } }
+            }
+        }
     ]);
 
     return res.status(200).json({
         event: eventAgg[0]
-            ? { count: eventAgg[0].count, avg: round1(eventAgg[0].avg) }
-            : { count: 0, avg: null },
+            ? { count: eventAgg[0].count, avg: round1(eventAgg[0].avg), registeredCount: eventAgg[0].registeredCount }
+            : { count: 0, avg: null, registeredCount: 0 },
         stands: standsAgg.map((s) => ({
             standId: s._id.toString(),
             count: s.count,
-            avg: round1(s.avg)
+            avg: round1(s.avg),
+            registeredCount: s.registeredCount
         }))
     });
 }
@@ -214,6 +230,7 @@ export async function createReview(req: Request, res: Response) {
         standId,
         rating,
         comment,
+        whatBought,
         reviewerName,
         reviewerEmail
     } = req.body ?? {};
@@ -241,6 +258,14 @@ export async function createReview(req: Request, res: Response) {
         return res.status(400).json({ message: 'Il commento non può superare i 1000 caratteri' });
     }
 
+    const parsedWhatBought =
+        typeof whatBought === 'string' && whatBought.trim()
+            ? sanitizeHtmlContent(whatBought.trim())
+            : null;
+    if (parsedWhatBought && parsedWhatBought.length > 200) {
+        return res.status(400).json({ message: '"Cosa hai comprato" non può superare i 200 caratteri' });
+    }
+
     const parsedEmail =
         typeof reviewerEmail === 'string' && reviewerEmail.trim()
             ? reviewerEmail.trim().toLowerCase()
@@ -258,21 +283,6 @@ export async function createReview(req: Request, res: Response) {
     let guestToken: string | undefined;
 
     if (req.user) {
-        const orderFilter: Record<string, unknown> = {
-            eventId,
-            customerId: req.user.id,
-            status: { $ne: 'cancelled' }
-        };
-        if (standId != null) {
-            orderFilter.standId = standId;
-        }
-        const purchased = await OrderModel.exists(orderFilter);
-        if (!purchased) {
-            return res.status(403).json({
-                message: 'Solo chi ha acquistato da questo stand può lasciare una recensione'
-            });
-        }
-
         identity = {
             userId: req.user.id,
             reviewerName:
@@ -313,6 +323,7 @@ export async function createReview(req: Request, res: Response) {
             standId: standId ?? null,
             rating: parsedRating,
             comment: parsedComment,
+            whatBought: parsedWhatBought,
             reviewerName: identity.reviewerName,
             reviewerEmail: identity.reviewerEmail,
             userId: identity.userId,

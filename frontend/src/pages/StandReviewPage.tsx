@@ -5,7 +5,7 @@ import { ReviewCard, type Review } from '../components/ReviewCard'
 import { ReviewForm } from '../components/ReviewForm'
 import { RatingStars } from '../components/RatingStars'
 import { apiRequest } from '../lib/api'
-import { fetchEventReviews, fetchMyReviews, fetchReviewsSummary, type ReviewsSummary } from '../lib/reviews'
+import { fetchEventReviews, fetchMyReviews, fetchReviewsSummary, registeredPercent, type ReviewsSummary } from '../lib/reviews'
 import styles from './ReviewPage.module.scss'
 
 type EventLite = {
@@ -81,6 +81,11 @@ export function StandReviewPage() {
             <RatingStars value={standSummary?.avg ?? null} size={24} />
             <span className={styles.ratingValue}>{standSummary?.avg ?? '–'}</span>
             <span className={styles.ratingCount}>({standSummary?.count ?? 0} recensioni)</span>
+            {standSummary && registeredPercent(standSummary) != null && (
+              <span className={styles.ratingCount}>
+                · {registeredPercent(standSummary)}% da utenti registrati
+              </span>
+            )}
           </div>
         </header>
 
