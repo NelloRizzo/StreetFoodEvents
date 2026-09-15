@@ -216,8 +216,12 @@ export function SlideshowPage() {
             className={`${styles.trackBtn} ${trackingEnabled ? styles.trackBtnActive : ''}`}
             onClick={onToggleTracking}
             title={trackingEnabled ? 'Disabilita tracking' : 'Abilita tracking'}
+            aria-label={trackingEnabled ? 'Disabilita tracking' : 'Abilita tracking'}
           >
-            {trackingEnabled ? 'Tracking attivo' : 'Tracking'}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="3.5" />
+              <path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22" />
+            </svg>
           </button>
         )}
         <div className={styles.speedControl}>

@@ -306,14 +306,16 @@
 
 .trackBtn {
   flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 999px;
   background: #fff;
   color: #111;
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0.3rem 0.75rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
 
