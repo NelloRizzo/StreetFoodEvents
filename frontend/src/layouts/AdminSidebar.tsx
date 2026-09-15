@@ -17,6 +17,8 @@ type AdminSidebarProps = {
   isMobileOpen: boolean
   onMobileClose: () => void
   onSelectEvent: (eventId: string) => void
+  trackingEnabled: boolean
+  onToggleTracking: () => void
 }
 
 type SidebarSection = {
@@ -24,7 +26,7 @@ type SidebarSection = {
   items: SidebarItem[]
 }
 
-export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: AdminSidebarProps) {
+export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent, trackingEnabled, onToggleTracking }: AdminSidebarProps) {
   const { user, logout } = useAuth()
   const location = useLocation()
   const { selectedEventId, selectedEvent, events } = useAdminEvent()
@@ -217,6 +219,22 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
             <span className={styles.navIcon}>{'\u{1F4CA}'}</span>
             {!isCollapsed && <span className={styles.navLabel}>Dashboard</span>}
           </NavLink>
+
+          {selectedEventId && (
+            <button
+              type="button"
+              className={`${styles.navItem} ${styles.navItemBtn} ${trackingEnabled ? styles.navItemActive : ''}`}
+              onClick={onToggleTracking}
+              title={isCollapsed ? (trackingEnabled ? 'Disabilita tracking' : 'Abilita tracking') : undefined}
+            >
+              <span className={styles.navIcon}>{'\u{1F517}'}</span>
+              {!isCollapsed && (
+                <span className={styles.navLabel}>
+                  {trackingEnabled ? 'Disabilita tracking' : 'Abilita tracking'}
+                </span>
+              )}
+            </button>
+          )}
 
           {!isCollapsed && (
             <div className={styles.eventPicker}>

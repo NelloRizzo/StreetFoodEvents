@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { useKeepAlive } from '../hooks/useKeepAlive'
+import { useTrackingEnabled } from '../lib/tracking'
+import { OrderTrackingModal } from '../components/OrderTrackingModal'
 import styles from './SlideshowPage.module.scss'
 
 type Photo = {
@@ -56,6 +58,7 @@ function weightedPickIndex(ads: Advertisement[], currentIndex?: number): number 
 export function SlideshowPage() {
   const { eventId } = useParams<{ eventId: string }>()
   useKeepAlive()
+  const { enabled: trackingEnabled, toggle: onToggleTracking } = useTrackingEnabled(eventId)
 
   const [batch, setBatch] = useState<Photo[]>([])
   const [eventData, setEventData] = useState<EventData | null>(null)
@@ -208,6 +211,15 @@ export function SlideshowPage() {
             <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
           </svg>
         </button>
+        {eventId && (
+          <button
+            className={`${styles.trackBtn} ${trackingEnabled ? styles.trackBtnActive : ''}`}
+            onClick={onToggleTracking}
+            title={trackingEnabled ? 'Disabilita tracking' : 'Abilita tracking'}
+          >
+            {trackingEnabled ? 'Tracking attivo' : 'Tracking'}
+          </button>
+        )}
         <div className={styles.speedControl}>
           {ROTATE_OPTIONS.map((s) => (
             <button
@@ -290,6 +302,14 @@ export function SlideshowPage() {
             <img src={selectedPhoto.image?.url ?? ''} alt="" className={styles.modalPhoto} />
           )}
         </div>
+      )}
+
+      {eventId && (
+        <OrderTrackingModal
+          open={trackingEnabled}
+          eventId={eventId}
+          onClose={onToggleTracking}
+        />
       )}
     </div>
   )

@@ -2,6 +2,8 @@ import { useMemo, useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+import { useTrackingEnabled } from '../lib/tracking'
+import { OrderTrackingModal } from '../components/OrderTrackingModal'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminTopBar } from './AdminTopBar'
 import { AdminEventContext, type AdminEventContextValue } from './AdminEventContext'
@@ -102,6 +104,8 @@ export function AdminLayout() {
 
   const hideChrome = isSlideshow || isCashier || isOrdersQueue || isStationQueue || isExchange
 
+  const { enabled: trackingEnabled, toggle: onToggleTracking } = useTrackingEnabled(selectedEventId)
+
   if (isLoading) {
     return null
   }
@@ -118,6 +122,8 @@ export function AdminLayout() {
             isMobileOpen={isMobileMenuOpen}
             onMobileClose={() => setIsMobileMenuOpen(false)}
             onSelectEvent={handleSelectEvent}
+            trackingEnabled={trackingEnabled}
+            onToggleTracking={onToggleTracking}
           />
         )}
 
@@ -136,6 +142,15 @@ export function AdminLayout() {
             )}
           </div>
         </div>
+
+        {trackingEnabled && !isCashier && selectedEventId && (
+          <OrderTrackingModal
+            open
+            eventId={selectedEventId}
+            standId={urlStandId ?? undefined}
+            onClose={onToggleTracking}
+          />
+        )}
       </div>
     </AdminEventContext.Provider>
   )

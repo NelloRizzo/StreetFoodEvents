@@ -352,5 +352,3 @@ export function fetchStandKioskRecent(standId: string, eventId?: string, baseUrl
   const qs = params.toString()
   return apiRequest<KioskState>(`/orders/stand/${standId}/kiosk-recent${qs ? `?${qs}` : ''}`)
 }
-
-export const KIOSK_ACTIVE_KEY = (standId: string) => `sfe_kiosk_${standId}`

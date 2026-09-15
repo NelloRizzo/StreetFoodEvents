@@ -35,10 +35,9 @@ export function PublicLayout() {
   const isSlideshow = location.pathname.includes('/slideshow')
   const isCashier = /\/stands\/[^/]+\/order$/.test(location.pathname) || /\/cashier/.test(location.pathname)
   const isDisplay = /\/stands\/[^/]+\/ordersqueue/.test(location.pathname)
-  const isKiosk = /\/stands\/[^/]+\/kiosk/.test(location.pathname)
   const isTrack = location.pathname.startsWith('/track/')
 
-  const hideChrome = isSlideshow || isCashier || isDisplay || isKiosk || isTrack
+  const hideChrome = isSlideshow || isCashier || isDisplay || isTrack
 
   return (
     <div className={styles.layout} id="top">

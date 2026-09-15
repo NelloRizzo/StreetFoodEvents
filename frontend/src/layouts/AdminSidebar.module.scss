@@ -160,6 +160,15 @@
   }
 }
 
+.navItemBtn {
+  background: none;
+  border: none;
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .navIcon {
   font-size: 1rem;
   flex-shrink: 0;

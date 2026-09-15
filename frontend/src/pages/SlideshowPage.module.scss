@@ -303,3 +303,26 @@
   background: #111;
   color: #fff;
 }
+
+.trackBtn {
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.trackBtn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.trackBtnActive {
+  background: #e94560;
+  color: #fff;
+  border-color: #e94560;
+}
