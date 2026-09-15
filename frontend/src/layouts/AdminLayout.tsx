@@ -129,7 +129,11 @@ export function AdminLayout() {
 
         <div className={styles.main} data-hide-chrome={hideChrome || undefined}>
           {!hideChrome && (
-            <AdminTopBar onMenuToggle={() => setIsMobileMenuOpen((v) => !v)} />
+            <AdminTopBar
+              onMenuToggle={() => setIsMobileMenuOpen((v) => !v)}
+              trackingEnabled={trackingEnabled}
+              onToggleTracking={onToggleTracking}
+            />
           )}
 
           <div className={styles.content} data-fullbleed={hideChrome || undefined}>

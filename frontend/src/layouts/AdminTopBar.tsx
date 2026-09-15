@@ -8,7 +8,16 @@ import styles from './AdminTopBar.module.scss'
 
 type AdminTopBarProps = {
   onMenuToggle: () => void
+  trackingEnabled: boolean
+  onToggleTracking: () => void
 }
+
+type RolesPayload = {
+  isPlatformAdmin: boolean
+  roles: { slug: string; scope: string }[]
+}
+
+const ADMIN_TRACKING_ROLE_SLUGS = ['event-admin', 'stand-admin', 'platform-admin']
 
 const OID_RE = /^[a-f0-9]{24}$/i
 
@@ -95,12 +104,24 @@ function buildBreadcrumbs(pathname: string): Crumb[] {
   return crumbs
 }
 
-export function AdminTopBar({ onMenuToggle }: AdminTopBarProps) {
+export function AdminTopBar({ onMenuToggle, trackingEnabled, onToggleTracking }: AdminTopBarProps) {
   const { user } = useAuth()
   const location = useLocation()
   const breadcrumbs = useMemo(() => buildBreadcrumbs(location.pathname), [location.pathname])
   const [names, setNames] = useState<Record<string, string>>({})
   const requestedRef = useRef(new Set<string>())
+  const [canTrack, setCanTrack] = useState(false)
+
+  useEffect(() => {
+    apiRequest<RolesPayload>('/auth/me/roles')
+      .then((d) => {
+        const isAdminRole =
+          d.isPlatformAdmin ||
+          d.roles.some((r) => ADMIN_TRACKING_ROLE_SLUGS.includes(r.slug))
+        setCanTrack(isAdminRole)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     breadcrumbs.forEach((crumb) => {
@@ -171,6 +192,20 @@ export function AdminTopBar({ onMenuToggle }: AdminTopBarProps) {
       </div>
 
       <div className={styles.right}>
+        {canTrack && (
+          <button
+            type="button"
+            className={`${styles.trackBtn} ${trackingEnabled ? styles.trackBtnActive : ''}`}
+            onClick={onToggleTracking}
+            title={trackingEnabled ? 'Disabilita tracking' : 'Abilita tracking'}
+            aria-label={trackingEnabled ? 'Disabilita tracking' : 'Abilita tracking'}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="3.5" />
+              <path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22" />
+            </svg>
+          </button>
+        )}
         <Link className={styles.publicLink} to="/" target="_blank" rel="noopener">
           {'\u{1F310}'} Modalità pubblica
         </Link>
