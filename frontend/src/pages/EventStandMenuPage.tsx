@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { createOrder } from '../lib/orders'
+import { broadcastOrderCreated } from '../lib/tracking'
 import { fetchReviewsSummary } from '../lib/reviews'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { useAuth } from '../features/auth/auth-context'
@@ -291,6 +292,12 @@ export function EventStandMenuPage() {
           quantity: c.quantity,
           unitPrice: c.unitPrice,
         })),
+      })
+      broadcastOrderCreated({
+        eventId,
+        standId,
+        orderId: response.item.id,
+        orderNumber: String(response.item.orderNumber),
       })
       navigate('/orders')
     } catch (e) {

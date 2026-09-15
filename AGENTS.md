@@ -309,6 +309,12 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Set 2026 — tracking: sessionStorage per tab + notifiche self da ogni sorgente)
+### Completed
+- **Toggle per pagina ora in `sessionStorage`** (era `localStorage`, che sopravvive alla chiusura del browser): `isTrackingEnabled`/`setTrackingEnabled` in `lib/tracking.ts` leggono/scrivono `sessionStorage`, quindi il tracking resta attivo su navigazioni e F5 nella stessa tab e si spegne solo alla **disattivazione o chiusura della tab/browser**. **Rimosso il listener cross-tab `storage`** da `useTrackingEnabled` (con sessionStorage ogni tab è indipendente) — il toggle NON è più sincronizzato tra finestre diverse.
+- **Notifiche ordine con self-delivery + tutte le sorgenti**: `broadcastOrderCreated` ora notifica sia un registro **locale** (`localListeners`, stesso tab) sia il BroadcastChannel `sfe_tracking_orders` (altre tab); `onOrderCreated` sottoscrive entrambi con unsubscribe combinato → **il modale si aggiorna subito anche nella tab che ha creato l'ordine** (prima lo stesso tab non riceveva i propri messaggi via BroadcastChannel). Aggiunto `broadcastOrderCreated` dopo il `createOrder` anche in **`EventStandMenuPage`** (ordini dal menu pubblico), oltre alle due casse.
+- Verifica: frontend build (tsc+vite) ✓, 43 test vitest ✓, lint 0 errori (13 warning pre-esistenti). Backend non toccato. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+
 ## Session state (Set 2026 — modale tracking ordini globale + pagina track ordine con notifica "pronto")
 ### Completed
 - **Backend** — due endpoint pubblici registrati PRIMA di `authMiddleware` in `orders.routes.ts`: `GET /api/orders/:orderId/track` (`getOrderTrack`: minimi dati `{ id, orderNumber, status, isGift, readyAt, createdAt, eventId, standId, eventName, standName, items[{ productName, quantity, stationName }] }` — **niente dati cliente né prezzi**) e `GET /api/orders/stand/:standId/kiosk-recent` (`getStandKioskRecent`: `confirmed/preparing/ready`, filtro `eventId`, ultimo ordine per `orderNumber: -1`, `queueCount`, `trackUrl` da `req.query.url` (usato dal frontend con `window.location.origin` così il QR punta all'origin della postazione) con fallback origin/request, **QR data URL generato server-side** con `qrcode` — il frontend NON ha lib QR).
