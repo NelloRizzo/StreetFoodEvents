@@ -58,7 +58,7 @@ function weightedPickIndex(ads: Advertisement[], currentIndex?: number): number 
 export function SlideshowPage() {
   const { eventId } = useParams<{ eventId: string }>()
   useKeepAlive()
-  const { enabled: trackingEnabled, toggle: onToggleTracking } = useTrackingEnabled(eventId)
+  const { enabled: trackingEnabled, toggle: onToggleTracking } = useTrackingEnabled('slideshow', eventId)
 
   const [batch, setBatch] = useState<Photo[]>([])
   const [eventData, setEventData] = useState<EventData | null>(null)

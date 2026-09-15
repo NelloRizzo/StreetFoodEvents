@@ -10,7 +10,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { CouponPanel } from '../components/CouponPanel'
 import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
 import { GiftCounter } from '../components/GiftCounter'
-import { useTrackingEnabled } from '../lib/tracking'
+import { useTrackingEnabled, broadcastOrderCreated } from '../lib/tracking'
 import { OrderTrackingModal } from '../components/OrderTrackingModal'
 import type { UploadedImage } from '../lib/upload'
 import styles from './CashierOrderPage.module.scss'
@@ -87,7 +87,7 @@ export function CashierOrderPage() {
   const [activeOrders, setActiveOrders] = useState<Order[]>([])
   const [giftStats, setGiftStats] = useState<GiftStats | null>(null)
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null)
-  const { enabled: trackingEnabled } = useTrackingEnabled(eventId)
+  const { enabled: trackingEnabled } = useTrackingEnabled('cashier', eventId)
 
   const [notesModal, setNotesModal] = useState<NotesModalState>({
     open: false,
@@ -305,6 +305,12 @@ export function CashierOrderPage() {
       })
       await updateOrderStatus(response.item.id, 'preparing')
       setSuccessOrder(response.item)
+      broadcastOrderCreated({
+        eventId: response.item.eventId,
+        standId: response.item.standId,
+        orderId: response.item.id,
+        orderNumber: String(response.item.orderNumber),
+      })
       loadGiftStats()
       resetOrder()
       trackCashierOrderCreated({

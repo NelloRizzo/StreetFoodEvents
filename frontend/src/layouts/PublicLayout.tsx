@@ -1,18 +1,45 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 
 import styles from './PublicLayout.module.scss'
 import { PublicHeader } from '../components/PublicHeader'
 import { PublicBottomBar } from '../components/PublicBottomBar'
 import { CookieConsentBanner } from '../components/CookieConsentBanner'
+import { OrderTrackingModal } from '../components/OrderTrackingModal'
 import { initGTM, trackPageView, setAnalyticsContext } from '../lib/gtm'
 import { getConsent } from '../lib/consent'
 import { useAuth } from '../features/auth/auth-context'
+import { apiRequest } from '../lib/api'
+import { useTrackingEnabled } from '../lib/tracking'
+
+type RolesPayload = {
+  isPlatformAdmin: boolean
+  roles: { slug: string; scope: string }[]
+}
+
+const ADMIN_TRACKING_ROLE_SLUGS = ['event-admin', 'stand-admin', 'platform-admin']
 
 export function PublicLayout() {
   const location = useLocation()
   const params = useParams<{ eventId?: string; standId?: string }>()
   const { user } = useAuth()
+  const [canTrack, setCanTrack] = useState(false)
+  const { enabled: trackingEnabled, toggle: onToggleTracking } = useTrackingEnabled('public', params.eventId)
+
+  useEffect(() => {
+    if (!user) {
+      setCanTrack(false)
+      return
+    }
+    apiRequest<RolesPayload>('/auth/me/roles')
+      .then((d) => {
+        const isAdminRole =
+          d.isPlatformAdmin ||
+          d.roles.some((r) => ADMIN_TRACKING_ROLE_SLUGS.includes(r.slug))
+        setCanTrack(isAdminRole)
+      })
+      .catch(() => {})
+  }, [user])
 
   useEffect(() => {
     const consent = getConsent()
@@ -41,7 +68,7 @@ export function PublicLayout() {
 
   return (
     <div className={styles.layout} id="top">
-      {!hideChrome && <PublicHeader />}
+      {!hideChrome && <PublicHeader showTracking={canTrack && Boolean(params.eventId)} trackingEnabled={trackingEnabled} onToggleTracking={onToggleTracking} />}
 
       <main className={styles.main}>
         <Outlet />
@@ -59,6 +86,14 @@ export function PublicLayout() {
       {!hideChrome && <PublicBottomBar />}
 
       <CookieConsentBanner />
+
+      {canTrack && trackingEnabled && params.eventId && !hideChrome && (
+        <OrderTrackingModal
+          open
+          eventId={params.eventId}
+          onClose={onToggleTracking}
+        />
+      )}
     </div>
   )
 }

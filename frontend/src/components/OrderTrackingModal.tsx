@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
 import { fetchStandKioskRecent, type KioskState } from '../lib/orders'
+import { onOrderCreated } from '../lib/tracking'
 import styles from './OrderTrackingModal.module.scss'
 
 const POLL_INTERVAL_MS = 5000
@@ -60,6 +61,15 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
     const interval = setInterval(load, POLL_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [open, selectedStandId, load])
+
+  useEffect(() => {
+    if (!open) return
+    return onOrderCreated((event) => {
+      if (event.eventId !== eventId) return
+      if (selectedStandId && event.standId !== selectedStandId) return
+      void load()
+    })
+  }, [open, eventId, selectedStandId, load])
 
   useEffect(() => {
     if (!open || variant !== 'standalone' || !onClose) return

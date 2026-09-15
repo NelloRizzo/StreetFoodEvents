@@ -5,7 +5,13 @@ import { useAuth } from '../features/auth/auth-context'
 import { Avatar } from './Avatar'
 import styles from './PublicHeader.module.scss'
 
-export function PublicHeader() {
+type PublicHeaderProps = {
+  showTracking?: boolean
+  trackingEnabled?: boolean
+  onToggleTracking?: () => void
+}
+
+export function PublicHeader({ showTracking, trackingEnabled, onToggleTracking }: PublicHeaderProps) {
   const { isAuthenticated, user, logout } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -29,6 +35,20 @@ export function PublicHeader() {
         </Link>
 
         <div className={styles.actions} ref={menuRef}>
+          {showTracking && (
+            <button
+              type="button"
+              className={`${styles.trackBtn} ${trackingEnabled ? styles.trackBtnActive : ''}`}
+              onClick={onToggleTracking}
+              title={trackingEnabled ? 'Disabilita tracking' : 'Abilita tracking'}
+              aria-label={trackingEnabled ? 'Disabilita tracking' : 'Abilita tracking'}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <circle cx="12" cy="12" r="3.5" />
+                <path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22" />
+              </svg>
+            </button>
+          )}
           {isAuthenticated ? (
             <>
               <Link className={styles.adminLink} to="/admin/dashboard">

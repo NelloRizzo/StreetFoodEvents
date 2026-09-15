@@ -104,7 +104,7 @@ export function AdminLayout() {
 
   const hideChrome = isSlideshow || isCashier || isOrdersQueue || isStationQueue || isExchange
 
-  const { enabled: trackingEnabled, toggle: onToggleTracking } = useTrackingEnabled(selectedEventId)
+  const { enabled: trackingEnabled, toggle: onToggleTracking } = useTrackingEnabled('admin', selectedEventId)
 
   if (isLoading) {
     return null
