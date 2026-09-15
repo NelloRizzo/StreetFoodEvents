@@ -78,6 +78,7 @@ function toEventResponse(event: {
     deposit?: number | null;
     participationFeeDeadline?: Date | null;
     depositDeadline?: Date | null;
+    adhesionDeadline?: Date | null;
     themeBrand?: string | null;
     themeText?: string | null;
     themeSurface?: string | null;
@@ -113,6 +114,7 @@ function toEventResponse(event: {
         deposit: event.deposit ?? null,
         participationFeeDeadline: event.participationFeeDeadline ?? null,
         depositDeadline: event.depositDeadline ?? null,
+        adhesionDeadline: event.adhesionDeadline ?? null,
         themeBrand: event.themeBrand ?? null,
         themeText: event.themeText ?? null,
         themeSurface: event.themeSurface ?? null,
@@ -238,6 +240,7 @@ export async function createEvent(req: Request, res: Response) {
         deposit,
         participationFeeDeadline,
         depositDeadline,
+        adhesionDeadline,
         themeBrand,
         themeText,
         themeSurface,
@@ -274,6 +277,7 @@ export async function createEvent(req: Request, res: Response) {
         deposit: deposit ?? null,
         participationFeeDeadline: participationFeeDeadline ? new Date(participationFeeDeadline) : null,
         depositDeadline: depositDeadline ? new Date(depositDeadline) : null,
+        adhesionDeadline: adhesionDeadline ? new Date(adhesionDeadline) : null,
         themeBrand: themeBrand ?? null,
         themeText: themeText ?? null,
         themeSurface: themeSurface ?? null,
@@ -328,6 +332,7 @@ export async function updateEvent(req: Request, res: Response) {
         deposit,
         participationFeeDeadline,
         depositDeadline,
+        adhesionDeadline,
         themeBrand,
         themeText,
         themeSurface,
@@ -394,6 +399,10 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (depositDeadline !== undefined) {
         event.depositDeadline = depositDeadline ? new Date(depositDeadline) : null;
+    }
+
+    if (adhesionDeadline !== undefined) {
+        event.adhesionDeadline = adhesionDeadline ? new Date(adhesionDeadline) : null;
     }
 
     if (themeBrand !== undefined) {
@@ -646,6 +655,7 @@ export async function duplicateEvent(req: Request, res: Response) {
     // Duplica SOLO la configurazione dell'evento (base operativa per la prossima edizione).
     // NON vengono copiati: wallet/utenti evento, transazioni, ordini, liquidazioni,
     // foto/video, cornici, contest, preferiti, alias. cashRegisterResetAt riparte da null.
+    // Le scadenze (participationFeeDeadline/depositDeadline/adhesionDeadline) restano null (nuova edizione).
     const duplicate = await EventModel.create({
         name: newName,
         location: source.location,

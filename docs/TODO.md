@@ -1,8 +1,11 @@
 # TODO — Street Food Events
 
+- Eliminiamo la verifica dell'acquisto per una recensione di uno stand, ma aggiungiamo un campo "Cosa hai comprato"... al momento gli utenti non si registrano sull'app, quindi la rendiamo identica alla recensione di un evento. al limite registriamo il numero di recensioni "di utente registrato" e tutte le recensioni, in maniera da presentare "una percentuale di affidabilità"
+
+- Quando un ordine viene effettuato, in cassa viene mostrata la ricevuta. Dobbiamo creare una modale che sarà attivabile a scelta su UNA postazione aggiuntiva e che mostrerà il qrcode dell'ordine appena effettuato (con il riepilogo di quanto ordinato). Sull'app ci sarà, nella parte pubblica, ad uso esclusivo dell'amministratore dello stand (o dell'evento o della piattaforma), l'attivazione della visualizzazione di questo QRCode. Tale attivazione sarà gestita tramite un meccanismo legato al browser su quella macchina e consentirà di mostrare solo su quella postazione il riepilogo dell'ordine effettuato con il QRCode. L'utente potrà fotografare il QRCode e sarà indirizzato ad una pagina nella quale avrà la notifica quando l'ordine sarà pronto. Riscrivi in maniera concisa questo punto e studia l'implementazione, solo dietro conferma procedi alla elaborazione
+
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
-- **IN CODA**: data limite adesione (`adhesionDeadline` su `Event`, impostata in admin, default null) — dopo tale data il backend deve rifiutare `createAdhesion`/`updateAdhesion`/`submitAdhesion` (400 con messaggio) e il wizard (`StandAdhesionWizardPage`) deve bloccarsi e mostrare la scadenza. Task accodato a Set 2026.
 
 ## Pubblicazione social — analisi problematiche (ricerca Ago 2026)
 Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-side) e hostate su Cloudinary con URL pubblico — requisito indispensabile: Meta fa fetch dell'immagine dall'URL passato.

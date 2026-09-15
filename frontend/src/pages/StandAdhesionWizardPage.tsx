@@ -64,6 +64,7 @@ type EventRef = {
   deposit: number | null
   participationFeeDeadline: string | null
   depositDeadline: string | null
+  adhesionDeadline: string | null
   regulationDocument: { url: string } | null
   feeBands: Array<{ maxAmount: number; feePercent: number; feeFlat: number }>
 }
@@ -273,6 +274,7 @@ export function StandAdhesionWizardPage() {
   const [msg, setMsg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmWithdraw, setConfirmWithdraw] = useState(false)
+  const [now] = useState(() => Date.now())
 
   const editable = adhesion === null || adhesion.status === 'draft' || adhesion.status === 'rejected' || adhesion.status === 'integration'
 
@@ -444,6 +446,36 @@ export function StandAdhesionWizardPage() {
   }
 
   const canSubmit = editable && missing.length === 0
+
+  const adhesionDeadlinePassed =
+    event?.adhesionDeadline != null && now > new Date(event.adhesionDeadline).getTime()
+  const deadlineBlocked = adhesionDeadlinePassed && (adhesion === null || editable)
+
+  if (deadlineBlocked) {
+    return (
+      <div className={styles.page}>
+        <div className="page-shell">
+          <div className={styles.header}>
+            <div>
+              <span className="eyebrow">Adesione stand</span>
+              <h1 className={styles.title}>Modulo di adesione alla manifestazione</h1>
+              {event && (
+                <p className={styles.subtitle}>
+                  {event.name} &middot; {new Date(event.startDate).toLocaleDateString('it-IT')} &ndash;{' '}
+                  {new Date(event.endDate).toLocaleDateString('it-IT')}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className={styles.deadlineNotice}>
+            Il termine per la presentazione delle adesioni era il{' '}
+            <strong>{new Date(event!.adhesionDeadline!).toLocaleDateString('it-IT')}</strong>.
+            Non è più possibile compilare o inviare un&apos;adesione per questa manifestazione.
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.page}>

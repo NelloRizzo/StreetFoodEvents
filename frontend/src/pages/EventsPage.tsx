@@ -37,6 +37,7 @@ type EventItem = {
   deposit: number | null
   participationFeeDeadline: string | null
   depositDeadline: string | null
+  adhesionDeadline: string | null
   url: string | null
   shortDescription: string | null
   longDescription: string | null
@@ -80,6 +81,7 @@ type EventFormData = {
   deposit: string
   participationFeeDeadline: string
   depositDeadline: string
+  adhesionDeadline: string
   url: string
   shortDescription: string
   longDescription: string
@@ -120,6 +122,7 @@ const emptyForm: EventFormData = {
   deposit: '',
   participationFeeDeadline: '',
   depositDeadline: '',
+  adhesionDeadline: '',
   url: '',
   shortDescription: '',
   longDescription: '',
@@ -420,6 +423,7 @@ export function EventsPage() {
       deposit: ev.deposit != null ? String(ev.deposit) : '',
       participationFeeDeadline: ev.participationFeeDeadline ? ev.participationFeeDeadline.slice(0, 10) : '',
       depositDeadline: ev.depositDeadline ? ev.depositDeadline.slice(0, 10) : '',
+      adhesionDeadline: ev.adhesionDeadline ? ev.adhesionDeadline.slice(0, 10) : '',
       url: ev.url ?? '',
       shortDescription: ev.shortDescription ?? '',
       longDescription: ev.longDescription ?? '',
@@ -496,6 +500,7 @@ export function EventsPage() {
       deposit: form.deposit ? Number(form.deposit) : null,
       participationFeeDeadline: form.participationFeeDeadline ? new Date(form.participationFeeDeadline).toISOString() : null,
       depositDeadline: form.depositDeadline ? new Date(form.depositDeadline).toISOString() : null,
+      adhesionDeadline: form.adhesionDeadline ? new Date(form.adhesionDeadline).toISOString() : null,
       url: form.url || null,
       shortDescription: form.shortDescription || null,
       longDescription: form.longDescription || null,
@@ -1154,6 +1159,16 @@ export function EventsPage() {
                     value={form.depositDeadline}
                     onChange={(e) => setForm({ ...form, depositDeadline: e.target.value })}
                   />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="ev-adhesion-deadline">Termine adesione stand</label>
+                  <input
+                    id="ev-adhesion-deadline"
+                    type="date"
+                    value={form.adhesionDeadline}
+                    onChange={(e) => setForm({ ...form, adhesionDeadline: e.target.value })}
+                  />
+                  <small>Le adesioni online chiudono dopo questa data (vuoto = nessun limite).</small>
                 </div>
               </div>
             </fieldset>

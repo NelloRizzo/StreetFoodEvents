@@ -730,4 +730,80 @@ describe('Integration — Stand Adhesions', () => {
             .set('Cookie', [`sid=${sessionToken}`]);
         expect(approveRes.status).toBe(403);
     });
+
+    it('events: adhesionDeadline round-trips through create and read', async () => {
+        app = createTestApp();
+        const { adminToken } = await setupEnvironment();
+
+        const createRes = await request(app)
+            .post('/api/events')
+            .set('Cookie', [`sid=${adminToken}`])
+            .send({
+                name: 'Adh Deadline Event',
+                location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+                startDate: '2026-10-01',
+                endDate: '2026-10-05',
+                currencyName: 'Coin',
+                adhesionDeadline: '2026-08-15'
+            });
+        expect(createRes.status).toBe(201);
+        expect(createRes.body.item.adhesionDeadline).toMatch(/^2026-08-15/);
+
+        const eventId = createRes.body.item.id;
+        const getRes = await request(app).get(`/api/events/${eventId}`);
+        expect(getRes.body.item.adhesionDeadline).toMatch(/^2026-08-15/);
+    });
+
+    it('deadline: create adhesion blocked when adhesionDeadline has passed (400)', async () => {
+        const { adminToken } = await setupEnvironment();
+        const pastEvent = await EventModel.create({
+            name: 'Past Deadline Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-09-01'),
+            endDate: new Date('2026-09-07'),
+            currencyName: 'Coin',
+            adhesionDeadline: new Date('2020-01-01'),
+            regulationDocument: {
+                url: 'https://example.com/regolamento.pdf',
+                publicId: 'regolamento-pd',
+                format: 'pdf',
+                bytes: 2048,
+                originalName: 'regolamento.pdf'
+            }
+        });
+
+        const res = await request(app)
+            .post(`/api/events/${pastEvent._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(completePayload(''));
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/scaduto/);
+    });
+
+    it('deadline: update and submit of a draft blocked once adhesionDeadline passes (400)', async () => {
+        const { adminToken, event, stand } = await setupEnvironment();
+        await EventModel.updateOne({ _id: event._id }, { adhesionDeadline: new Date('2099-01-01') });
+
+        const created = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(completePayload(stand._id.toString()));
+        expect(created.status).toBe(201);
+        const adhesionId = created.body.item.id;
+
+        await EventModel.updateOne({ _id: event._id }, { adhesionDeadline: new Date('2020-01-01') });
+
+        const editRes = await request(app)
+            .patch(`/api/events/${event._id}/adhesions/${adhesionId}`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send({ slogan: 'aggiornato' });
+        expect(editRes.status).toBe(400);
+        expect(editRes.body.message).toMatch(/scaduto/);
+
+        const submitRes = await request(app)
+            .post(`/api/events/${event._id}/adhesions/${adhesionId}/submit`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(submitRes.status).toBe(400);
+        expect(submitRes.body.message).toMatch(/scaduto/);
+    });
 });

@@ -75,7 +75,7 @@ Login: utente inattivo o senza password → 403 con messaggio distinto ("non anc
 |---|---|---|---|
 | GET | `/api/events?public=true` | optional | Lista eventi pubblici e non terminati (`endDate >= now`). Senza `public=true`: tutti gli eventi (solo gestori/platform). |
 | GET | `/api/events/:eventId/menu-qrcode` | no | QR code (data URL) che linka al menu del primo stand visibile (`showOnMap !== false`) dell'evento. 404 se nessuno stand visibile. |
-| POST | `/api/events/:eventId/duplicate` | auth | Duplica l'evento come base operativa per la prossima edizione: copia configurazione (moneta, tema, fasce, tagli, categorie), collega gli stand con rinumerazione progressiva, copia EventProduct e POI. NON copia wallet/ordini/transazioni/foto/contest, né le scadenze `participationFeeDeadline`/`depositDeadline` (nuova edizione → null). Body opzionale `{ name, startDate, endDate, isPublic }` (default: nome+" (copia)", date +1 anno). |
+| POST | `/api/events/:eventId/duplicate` | auth | Duplica l'evento come base operativa per la prossima edizione: copia configurazione (moneta, tema, fasce, tagli, categorie), collega gli stand con rinumerazione progressiva, copia EventProduct e POI. NON copia wallet/ordini/transazioni/foto/contest, né le scadenze `participationFeeDeadline`/`depositDeadline`/`adhesionDeadline` (nuova edizione → null). Body opzionale `{ name, startDate, endDate, isPublic }` (default: nome+" (copia)", date +1 anno). |
 
 ### API routes — Alias
 | Method | Route | Auth | Description |
@@ -234,11 +234,11 @@ Nota: modello `Review` — `standId` null = recensione evento; moderazione **pos
 | Method | Route | Auth | Description |
 |---|---|---|---|
 | GET | `/api/events/:eventId/adhesions` | auth | Lista adesioni (admin vede tutto; gli altri solo le proprie: stands possesso o `userId`) |
-| POST | `/api/events/:eventId/adhesions` | optional auth | Crea adesione. **Gate**: 400 se l'evento non ha `regulationDocument`. Anonimo SOLO per stand nuovo (senza `standId`); con `standId` → admin/owner. Response include `accessToken` (da conservare e inviare come header `x-access-token`) — nel DB solo `accessTokenHash` sha256 |
+| POST | `/api/events/:eventId/adhesions` | optional auth | Crea adesione. **Gate**: 400 se l'evento non ha `regulationDocument` o se `Event.adhesionDeadline` è passata ("Il termine per la presentazione delle adesioni è scaduto."). Anonimo SOLO per stand nuovo (senza `standId`); con `standId` → admin/owner. Response include `accessToken` (da conservare e inviare come header `x-access-token`) — nel DB solo `accessTokenHash` sha256 |
 | GET | `/api/events/:eventId/adhesions/mine` | optional auth | Adesione dell'utente (o via `x-access-token`) → `{ item }` o `{ item: null }` |
 | GET | `/api/events/:eventId/adhesions/:adhesionId` | optional auth | Dettaglio (admin/owner/utente/token; altrimenti 404) |
-| PATCH | `/api/events/:eventId/adhesions/:adhesionId` | optional auth | Modifica bozza (409 se approved; `submitted` → `draft`) |
-| POST | `/api/events/:eventId/adhesions/:adhesionId/submit` | optional auth | Invia per approvazione (400 con campi mancanti; per i nuovi stand crea/riusa utente inattivo con invito email; response `activationUrl`/`emailSent`) |
+| PATCH | `/api/events/:eventId/adhesions/:adhesionId` | optional auth | Modifica bozza (409 se approved; `submitted` → `draft`). 400 se `adhesionDeadline` passata |
+| POST | `/api/events/:eventId/adhesions/:adhesionId/submit` | optional auth | Invia per approvazione (400 con campi mancanti o se `adhesionDeadline` passata; per i nuovi stand crea/riusa utente inattivo con invito email; response `activationUrl`/`emailSent`) |
 | POST | `/api/events/:eventId/adhesions/:adhesionId/withdraw` | optional auth | Ritira da `submitted` → `draft` |
 | POST | `/api/events/:eventId/adhesions/:adhesionId/approve` | event-admin | Approva. Se l'adesione non ha `standId` CREA lo `Stand` (numero progressivo + ruoli/logo) e assegna `stand-admin` all'utente. **platform-admin ESCLUSO** (`hasRole` matcha per slug) |
 | POST | `/api/events/:eventId/adhesions/:adhesionId/reject` | event-admin | Rifiuta con `{ reviewNote }` |
@@ -308,6 +308,14 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Set 2026 — data limite adesione stand)
+### Completed
+- **Data limite adesione** (`Event.adhesionDeadline`, Date, default null — dopo `depositDeadline` nel model): configurabile in admin in `EventsPage` ("Termine adesione stand", `type="date"`, vuoto = nessun limite). Esposto in `toEventResponse` (create/update/read round-trip). `duplicateEvent` NON lo copia nella nuova edizione (resta null, come le altre scadenze).
+- **Gate backend** in `stand-adhesions.controller.ts`: helper `adhesionDeadlineError(deadline)` + 400 `'Il termine per la presentazione delle adesioni è scaduto.'` in `createAdhesion` (dopo il gate `regulationDocument`), `updateAdhesion` (check prima dei controlli approved) e `submitAdhesion` (prima di `completenessErrors`). `submitAdhesion` ora carica l'evento con `.select('adhesionDeadline participationFee deposit')`.
+- **Blocco wizard** (`StandAdhesionWizardPage`): `EventRef` include `adhesionDeadline`; `now` catturato via `useState(() => Date.now())` (mai `Date.now()` in render — regola React impure); se scaduta E (nessuna adesione OPPURE adesione editabile: draft/rejected/integration) → early return con `styles.deadlineNotice` ("Il termine per la presentazione delle adesioni era il <data>. Non è più possibile compilare o inviare un'adesione."). Adesioni in stato submitted/approved restano consultabili.
+- **QR che punta all'app per gli stand: NON implementata** (decisione utente) — esclusa da TODO e docs.
+- Test: +3 in `integration-stand-adhesions.test.ts` (round-trip evento; create 400 con deadline passata; update+submit 400 dopo spostamento deadline al passato). Suite backend **420 test ✓** (46 file), typecheck ✓, lint 0 errori; frontend tsc+build ✓, 43 test vitest ✓, lint 0 errori (13 warning pre-esistenti). Nessun tocco a `.local/`: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 
 ## Session state (Set 2026 — recensioni: QR stampabili di tutti gli stand + layout pagine recensione)
 ### Completed

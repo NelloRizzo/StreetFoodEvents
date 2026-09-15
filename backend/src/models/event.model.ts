@@ -129,6 +129,10 @@ const eventSchema = new Schema(
             type: Date,
             default: null
         },
+        adhesionDeadline: {
+            type: Date,
+            default: null
+        },
         themeBrand: {
             type: String,
             trim: true,

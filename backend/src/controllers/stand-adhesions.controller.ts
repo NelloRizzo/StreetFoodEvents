@@ -276,6 +276,14 @@ async function ensureOwnerUser(adhesion: StandAdhesion): Promise<{ error?: strin
     }
 }
 
+function adhesionDeadlineError(deadline: Date | null | undefined): string | null {
+    if (!deadline) return null;
+    if (Date.now() > deadline.getTime()) {
+        return 'Il termine per la presentazione delle adesioni è scaduto.';
+    }
+    return null;
+}
+
 export async function createAdhesion(req: Request, res: Response) {
     const eventId = req.params.eventId;
     if (!isValidObjectId(eventId)) {
@@ -291,6 +299,11 @@ export async function createAdhesion(req: Request, res: Response) {
         return res.status(400).json({
             message: 'Il modulo di adesione è disponibile solo se l\'organizzazione ha pubblicato il regolamento della manifestazione.'
         });
+    }
+
+    const expired = adhesionDeadlineError(event.adhesionDeadline ?? null);
+    if (expired) {
+        return res.status(400).json({ message: expired });
     }
 
     const body = (req.body ?? {}) as Record<string, unknown>;
@@ -440,6 +453,12 @@ export async function updateAdhesion(req: Request, res: Response) {
         return res.status(409).json({ message: 'Adesione già approvata: non modificabile.' });
     }
 
+    const event = await EventModel.findById(adhesion.eventId).select('adhesionDeadline').lean();
+    const expired = adhesionDeadlineError(event?.adhesionDeadline ?? null);
+    if (expired) {
+        return res.status(400).json({ message: expired });
+    }
+
     const body = pick((req.body ?? {}) as Record<string, unknown>, EDITABLE_FIELDS);
 
     const standRef = typeof body.standId === 'string' ? body.standId : null;
@@ -493,7 +512,11 @@ export async function submitAdhesion(req: Request, res: Response) {
         return res.status(409).json({ message: 'Adesione non più in stato di bozza.' });
     }
 
-    const event = await EventModel.findById(adhesion.eventId).select('participationFee deposit feeBands').lean();
+    const event = await EventModel.findById(adhesion.eventId).select('participationFee deposit feeBands adhesionDeadline').lean();
+    const expired = adhesionDeadlineError(event?.adhesionDeadline ?? null);
+    if (expired) {
+        return res.status(400).json({ message: expired });
+    }
     const missing = completenessErrors(adhesion, event ?? {});
     if (missing.length > 0) {
         return res.status(400).json({
