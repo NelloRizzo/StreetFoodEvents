@@ -16,6 +16,7 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
     uploadImages: vi.fn()
 }));
 
+import { Types } from 'mongoose';
 import { CounterModel } from '../../models/counter.model';
 import { EventModel } from '../../models/event.model';
 import { EventProductModel } from '../../models/event-product.model';
@@ -1016,5 +1017,164 @@ describe('Orders API', () => {
             .send({ status: 'preparing' });
 
         expect(res.status).toBe(400);
+    });
+
+    it('returns order track publicly (no auth) with minimal data', async () => {
+        app = createTestApp();
+        const event = await EventModel.create({
+            name: 'Track Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+        const stand = await StandModel.create({ name: 'Track Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Grill' });
+        const order = await OrderModel.create({
+            eventId: event._id,
+            standId: stand._id,
+            orderNumber: 7,
+            userId: new Types.ObjectId(),
+            customerId: null,
+            status: 'preparing',
+            items: [
+                {
+                    eventProductId: new Types.ObjectId(),
+                    productId: new Types.ObjectId(),
+                    productName: 'Burger',
+                    stationId: station._id,
+                    stationName: 'Grill',
+                    quantity: 2,
+                    unitPrice: 10,
+                    subtotal: 20
+                }
+            ],
+            total: 20
+        });
+
+        const res = await request(app).get(`/api/orders/${order._id}/track`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.item.id).toBe(order._id.toString());
+        expect(res.body.item.orderNumber).toBe(7);
+        expect(res.body.item.status).toBe('preparing');
+        expect(res.body.item.eventName).toBe('Track Event');
+        expect(res.body.item.standName).toBe('Track Stand');
+        expect(res.body.item.items).toEqual([
+            { productName: 'Burger', quantity: 2, stationName: 'Grill' }
+        ]);
+        expect(res.body.item).not.toHaveProperty('customerId');
+        expect(res.body.item).not.toHaveProperty('userId');
+        expect(res.body.item).not.toHaveProperty('total');
+    });
+
+    it('returns 400/404 for invalid or unknown order track', async () => {
+        app = createTestApp();
+
+        const invalid = await request(app).get('/api/orders/abc/track');
+        expect(invalid.status).toBe(400);
+
+        const missing = await request(app).get('/api/orders/000000000000000000000000/track');
+        expect(missing.status).toBe(404);
+    });
+
+    it('returns the latest in-progress order with QR for the kiosk', async () => {
+        app = createTestApp();
+        const event = await EventModel.create({
+            name: 'Kiosk Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+        const stand = await StandModel.create({ name: 'Kiosk Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Grill' });
+
+        const makeOrder = (orderNumber: number, status: string) =>
+            OrderModel.create({
+                eventId: event._id,
+                standId: stand._id,
+                orderNumber,
+                userId: new Types.ObjectId(),
+                customerId: null,
+                status,
+                items: [
+                    {
+                        eventProductId: new Types.ObjectId(),
+                        productId: new Types.ObjectId(),
+                        productName: `Item ${orderNumber}`,
+                        stationId: station._id,
+                        stationName: 'Grill',
+                        quantity: 1,
+                        unitPrice: 5,
+                        subtotal: 5
+                    }
+                ],
+                total: 5
+            });
+
+        await makeOrder(1, 'confirmed');
+        const latest = await makeOrder(2, 'preparing');
+        await makeOrder(3, 'completed');
+        await makeOrder(4, 'cancelled');
+
+        const res = await request(app)
+            .get(`/api/orders/stand/${stand._id}/kiosk-recent`)
+            .query({ url: 'https://app.example.com', eventId: event._id.toString() });
+
+        expect(res.status).toBe(200);
+        expect(res.body.standName).toBe('Kiosk Stand');
+        expect(res.body.queueCount).toBe(2);
+        expect(res.body.order.id).toBe(latest._id.toString());
+        expect(res.body.order.orderNumber).toBe(2);
+        expect(res.body.order.status).toBe('preparing');
+        expect(res.body.trackUrl).toBe(`https://app.example.com/track/${latest._id.toString()}`);
+        expect(res.body.qrCode).toMatch(/^data:image\/png;base64,/);
+    });
+
+    it('kiosk-recent returns empty kiosk without in-progress orders and 404 for unknown stand', async () => {
+        app = createTestApp();
+        const event = await EventModel.create({
+            name: 'Empty Kiosk',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+        const stand = await StandModel.create({ name: 'Empty Kiosk Stand', eventIds: [event._id] });
+        await OrderModel.create({
+            eventId: event._id,
+            standId: stand._id,
+            orderNumber: 1,
+            userId: new Types.ObjectId(),
+            customerId: null,
+            status: 'completed',
+            items: [
+                {
+                    eventProductId: new Types.ObjectId(),
+                    productId: new Types.ObjectId(),
+                    productName: 'X',
+                    stationId: new Types.ObjectId(),
+                    stationName: 'S',
+                    quantity: 1,
+                    unitPrice: 1,
+                    subtotal: 1
+                }
+            ],
+            total: 1
+        });
+
+        const res = await request(app).get(`/api/orders/stand/${stand._id}/kiosk-recent`);
+        expect(res.status).toBe(200);
+        expect(res.body.order).toBeNull();
+        expect(res.body.qrCode).toBeNull();
+        expect(res.body.trackUrl).toBeNull();
+        expect(res.body.queueCount).toBe(0);
+
+        const missing = await request(app).get('/api/orders/stand/000000000000000000000000/kiosk-recent');
+        expect(missing.status).toBe(404);
+
+        const invalid = await request(app).get('/api/orders/stand/abc/kiosk-recent');
+        expect(invalid.status).toBe(400);
     });
 });

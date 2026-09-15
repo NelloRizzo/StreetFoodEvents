@@ -37,6 +37,8 @@ import { EventGalleryPage } from './pages/EventGalleryPage'
 import { PublicGalleryPage } from './pages/PublicGalleryPage'
 import { PoiDetailPage } from './pages/PoiDetailPage'
 import { ReceiptPage } from './pages/ReceiptPage'
+import { TrackOrderPage } from './pages/TrackOrderPage'
+import { OrderKioskPage } from './pages/OrderKioskPage'
 import { GuidePage } from './pages/GuidePage'
 import { FlyerPage } from './pages/FlyerPage'
 import { UsageContractsPage } from './pages/UsageContractsPage'
@@ -88,6 +90,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/pois/:poiId', element: <PoiDetailPage /> },
       { path: 'events/:eventId/stands/:standId', element: <EventStandMenuPage /> },
       { path: 'events/:eventId/stands/:standId/ordersqueue', element: <StandDisplayPage /> },
+      { path: 'events/:eventId/stands/:standId/kiosk', element: <OrderKioskPage /> },
       { path: 'events/:eventId/stands/:standId/review', element: <StandReviewPage /> },
       { path: 'events/:eventId/review', element: <EventReviewPage /> },
       { path: 'events/:eventId/stand-adhesion', element: <StandAdhesionWizardPage /> },
@@ -99,6 +102,7 @@ export const router = createBrowserRouter([
       { path: 'contest/:contestId/verify/:participantId', element: <ContestVerifyPage /> },
       { path: 'contest/:contestId/consegna', element: <ContestDeliveryPage /> },
       { path: 'receipt/:orderId', element: <ReceiptPage /> },
+      { path: 'track/:orderId', element: <TrackOrderPage /> },
       { path: 'privacy', element: <PrivacyPage /> },
       { path: 'guide/:role', element: <GuidePage /> },
       { path: 'theme-preview', element: <ThemePreviewPage /> },

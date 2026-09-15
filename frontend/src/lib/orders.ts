@@ -302,3 +302,55 @@ export function fetchStandDisplayOrders(standId: string, eventId?: string) {
   const qs = params.toString()
   return apiRequest<StandDisplayData>(`/orders/stand/${standId}/ordersqueue${qs ? `?${qs}` : ''}`)
 }
+
+export type OrderTrackItem = {
+  productName: string
+  quantity: number
+  stationName: string
+}
+
+export type OrderTrack = {
+  id: string
+  orderNumber: number
+  status: string
+  isGift: boolean
+  readyAt: string | null
+  createdAt: string
+  eventId: string
+  standId: string
+  eventName: string | null
+  standName: string | null
+  items: OrderTrackItem[]
+}
+
+export function fetchOrderTrack(orderId: string) {
+  return apiRequest<{ item: OrderTrack }>(`/orders/${orderId}/track`)
+}
+
+export type KioskOrder = {
+  id: string
+  orderNumber: number
+  status: string
+  isGift: boolean
+  createdAt: string
+  items: OrderTrackItem[]
+}
+
+export type KioskState = {
+  standId: string
+  standName: string
+  queueCount: number
+  order: KioskOrder | null
+  qrCode: string | null
+  trackUrl: string | null
+}
+
+export function fetchStandKioskRecent(standId: string, eventId?: string, baseUrl?: string) {
+  const params = new URLSearchParams()
+  if (eventId) params.set('eventId', eventId)
+  if (baseUrl) params.set('url', baseUrl)
+  const qs = params.toString()
+  return apiRequest<KioskState>(`/orders/stand/${standId}/kiosk-recent${qs ? `?${qs}` : ''}`)
+}
+
+export const KIOSK_ACTIVE_KEY = (standId: string) => `sfe_kiosk_${standId}`

@@ -412,6 +412,114 @@ export async function getOrderReceiptQrCode(req: Request, res: Response) {
     return res.status(200).json({ qrCode: qrDataUrl });
 }
 
+export async function getOrderTrack(req: Request, res: Response) {
+    const orderId = req.params.orderId;
+
+    if (!isValidObjectId(orderId)) {
+        return res.status(400).json({ message: 'Invalid order id' });
+    }
+
+    const order = await OrderModel.findById(orderId).lean();
+
+    if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const [event, stand] = await Promise.all([
+        EventModel.findById(order.eventId).select('name').lean(),
+        StandModel.findById(order.standId).select('name').lean(),
+    ]);
+
+    return res.status(200).json({
+        item: {
+            id: order._id.toString(),
+            orderNumber: order.orderNumber,
+            status: order.status,
+            isGift: order.isGift,
+            readyAt: order.readyAt ?? null,
+            createdAt: order.createdAt,
+            eventId: order.eventId.toString(),
+            standId: order.standId.toString(),
+            eventName: event?.name ?? null,
+            standName: stand?.name ?? null,
+            items: order.items.map((item) => ({
+                productName: item.productName,
+                quantity: item.quantity,
+                stationName: item.stationName,
+            })),
+        },
+    });
+}
+
+export async function getStandKioskRecent(req: Request, res: Response) {
+    const standId = req.params.standId;
+
+    if (!isValidObjectId(standId)) {
+        return res.status(400).json({ message: 'Invalid stand id' });
+    }
+
+    const stand = await StandModel.findById(standId).select('name').lean();
+
+    if (!stand) {
+        return res.status(404).json({ message: 'Stand not found' });
+    }
+
+    const filter: Record<string, unknown> = {
+        standId: new Types.ObjectId(standId),
+        status: { $in: ['confirmed', 'preparing', 'ready'] },
+    };
+
+    if (req.query.eventId && isValidObjectId(req.query.eventId as string)) {
+        filter.eventId = new Types.ObjectId(req.query.eventId as string);
+    }
+
+    const [latest, queueCount] = await Promise.all([
+        OrderModel.findOne(filter).sort({ orderNumber: -1 }).lean(),
+        OrderModel.countDocuments(filter),
+    ]);
+
+    let qrCode: string | null = null;
+    let trackUrl: string | null = null;
+
+    if (latest) {
+        const requestedOrigin =
+            typeof req.query.url === 'string' && req.query.url.length > 0
+                ? req.query.url
+                : (req.headers.origin ?? `${req.protocol}://${req.headers.host}`);
+        trackUrl = `${requestedOrigin.replace(/\/+$/, '')}/track/${latest._id.toString()}`;
+        qrCode = await qrcode.toDataURL(trackUrl, {
+            width: 400,
+            margin: 2,
+            color: {
+                dark: '#1a1a2e',
+                light: '#ffffff',
+            },
+        });
+    }
+
+    return res.status(200).json({
+        standId: stand._id.toString(),
+        standName: stand.name,
+        queueCount,
+        order: latest
+            ? {
+                  id: latest._id.toString(),
+                  orderNumber: latest.orderNumber,
+                  status: latest.status,
+                  isGift: latest.isGift,
+                  createdAt: latest.createdAt,
+                  items: latest.items.map((item) => ({
+                      productName: item.productName,
+                      quantity: item.quantity,
+                      stationName: item.stationName,
+                  })),
+              }
+            : null,
+        qrCode,
+        trackUrl,
+    });
+}
+
 export async function createOrder(req: Request, res: Response) {
     if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });

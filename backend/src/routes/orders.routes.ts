@@ -10,7 +10,9 @@ import {
     getOrderById,
     getOrderReceipt,
     getOrderReceiptQrCode,
+    getOrderTrack,
     getStandDisplayOrders,
+    getStandKioskRecent,
     getStandReport,
     getGiftStats,
     listMyStationOrders,
@@ -28,7 +30,9 @@ import { asyncHandler } from '../utils/async-handler';
 export const ordersRouter = Router();
 
 ordersRouter.get('/:orderId/receipt', asyncHandler(getOrderReceipt));
+ordersRouter.get('/:orderId/track', asyncHandler(getOrderTrack));
 ordersRouter.get('/stand/:standId/ordersqueue', asyncHandler(getStandDisplayOrders));
+ordersRouter.get('/stand/:standId/kiosk-recent', asyncHandler(getStandKioskRecent));
 
 ordersRouter.use(asyncHandler(authMiddleware));
 

@@ -1,0 +1,264 @@
+.page {
+  min-height: 100dvh;
+  background: #0f172a;
+  color: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.center {
+  margin: auto;
+  color: #94a3b8;
+}
+
+.lockCard {
+  margin: auto;
+  max-width: 460px;
+  background: #1e293b;
+  border-radius: 1rem;
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.lockIcon,
+.kioskIcon {
+  font-size: 4rem;
+}
+
+.lockTitle {
+  color: #f8fafc;
+  margin: 0.75rem 0 0.4rem;
+  font-size: 1.5rem;
+}
+
+.lockHint {
+  color: #94a3b8;
+  line-height: 1.55;
+  margin: 0 0 1.25rem;
+}
+
+.activateBtn {
+  background: var(--sf-brand, #e94560);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.activateBtn:hover {
+  filter: brightness(1.1);
+}
+
+.header {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #1e293b;
+  margin-bottom: 2rem;
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.eventName {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.standName {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.queueBadge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #1e293b;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+}
+
+.queueBadgeActive {
+  color: var(--sf-highlight, #ffc107);
+}
+
+.deactivateBtn {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.deactivateBtn:hover {
+  background: #1e293b;
+}
+
+.empty {
+  margin: auto;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.emptyIcon {
+  font-size: 4rem;
+}
+
+.emptyText {
+  font-size: 1.2rem;
+  color: #e2e8f0;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.emptyHint {
+  margin: 0;
+}
+
+.kioskCard {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3rem;
+  flex-wrap: wrap;
+  animation: fadeIn 0.4s ease;
+}
+
+.qrCol {
+  text-align: center;
+}
+
+.qr {
+  width: min(420px, 70vw);
+  height: min(420px, 70vw);
+  background: #fff;
+  border-radius: 1rem;
+  padding: 0.75rem;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+}
+
+.qrHint {
+  color: #94a3b8;
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+}
+
+.infoCol {
+  background: #1e293b;
+  border-radius: 1rem;
+  padding: 2rem 2.25rem;
+  min-width: 300px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.orderNumber {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: var(--sf-brand, #e94560);
+  line-height: 1;
+}
+
+.orderNumberGift {
+  color: #22c55e;
+}
+
+.statusBadge {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.giftBadge {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #052e16;
+  background: #22c55e;
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+}
+
+.items {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  width: 100%;
+  border-top: 1px solid #334155;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #334155;
+}
+
+.itemRow:last-child {
+  border-bottom: none;
+}
+
+.itemQty {
+  font-weight: 700;
+  color: var(--sf-highlight, #ffc107);
+  min-width: 1.7rem;
+}
+
+.itemName {
+  flex: 1;
+  color: #f1f5f9;
+}
+
+.itemStation {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #1e293b;
+  width: 100%;
+  max-width: 1100px;
+  text-align: center;
+}
+
+.footerText {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
