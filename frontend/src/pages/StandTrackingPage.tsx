@@ -65,7 +65,7 @@ export function StandTrackingPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.hero}>
+      <aside className={styles.standPanel}>
         {bannerUrl && <img src={bannerUrl} alt="" className={styles.banner} />}
         <div className={styles.identity}>
           {logoUrl && <img src={logoUrl} alt="" className={styles.logo} />}
@@ -77,9 +77,9 @@ export function StandTrackingPage() {
             {event && <span className={styles.eventName}>{event.name}</span>}
           </div>
         </div>
-      </div>
+      </aside>
 
-      <main className={styles.body}>
+      <main className={styles.trackPanel}>
         {eventId && standId && (
           <OrderTrackingModal open eventId={eventId} standId={standId} variant="page" />
         )}

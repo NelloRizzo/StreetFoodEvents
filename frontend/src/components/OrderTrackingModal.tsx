@@ -96,7 +96,7 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
   }, [open, eventId, selectedStandId, load])
 
   useEffect(() => {
-    if (!open || variant !== 'standalone') return
+    if (!open) return
     return onTrackingClear((event) => {
       if (event.eventId !== eventId) return
       if (selectedStandId && event.standId !== selectedStandId) return
