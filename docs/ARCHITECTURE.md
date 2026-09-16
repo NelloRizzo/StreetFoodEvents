@@ -225,6 +225,12 @@ Considerazioni progettuali e decisioni architetturali.
 - **Cosa NON fare - Promise.all in transazione**: operazioni Mongo sulla stessa session lanciate con `Promise.all` dentro una transazione sono **flaky** (500 intermittente). Usare SEMPRE await sequenziali (vedi `resetEventOrders` in orders.controller.ts).
 - **UI**: doppia conferma in `EventDetailPage` (bottone "Azzera ordini" → modale riepilogo → modale prompt con digitazione "AZZERA"). L'endpoint DELETE `/api/orders/event/:eventId` (solo ordini) esiste ancora ed è separato.
 
+## Kiosk-recent / tracking ordini — data di emissione, MAI orderNumber (Set 2026)
+- **`Order.orderNumber` può essere azzerato**: `POST /api/orders/event/:eventId/reset` elimina i `Counter` degli stand, quindi il progressivo riparte da 1 → un ordine SUCCESSIVO può avere un numero più BASSO del precedente. Per questo il "più recente" per uno stand non va mai derivato dal numero.
+- **Sort `getStandKioskRecent`**: ordina per **`createdAt: -1`** (era `orderNumber: -1`). Il "latest" del chiosco/tracking = ordine in-lavorazione con data di emissione più recente.
+- **Baseline date-based nel tracking** (`OrderTrackingModal`): il confronto "ordine nuovo" usa `createdAt` in ms (`new Date(res.order.createdAt).getTime()`), MAI `orderNumber`. Baseline = `createdAt` dell'ordine più recente alla prima apertura; compare solo se `createdAtMs > baselineRef.current`, con `clearedAtRef` a guardia delle race (fetch risolta dopo il `tracking-clear`). Stesso criterio per la variante `page` (`StandTrackingPage`).
+- **Cosa NON fare**: non confrontare/ordinare per `orderNumber` per ricavare l'ordine più recente nel tracking/chiosco — dopo un azzeramento i numeri non sono più monotoni nel tempo.
+
 ## POI form centrato sull'evento (Aug 2026)
 - **MapPicker**: quando `lat`/`lng` sono vuoti (nuova entità) e viene passato `resetCenter`, il centro iniziale della mappa, il marker e le coordinate precompilate via `onChange` usano `resetCenter`. Fallback a Roma (default) solo se mancano entrambi. Questo rende il componente "anchor-aware": aprire un form legato a un evento parte già dal punto giusto.
 - **Form "Nuovo POI"** in `EventDetailPage`: passa le coordinate dell'evento (`event.location.coordinates`, formato `[lng, lat]`) come `resetCenter` con label "Centra sull'evento". Il marker parte quindi sull'evento e il pulsante di reset riporta lì la vista.
