@@ -483,7 +483,7 @@ export async function getStandKioskRecent(req: Request, res: Response) {
     const standLogo = (stand.logo ?? stand.coverImage)?.url ?? null;
 
     const [latest, queueCount] = await Promise.all([
-        OrderModel.findOne(filter).sort({ orderNumber: -1 }).lean(),
+        OrderModel.findOne(filter).sort({ createdAt: -1 }).lean(),
         OrderModel.countDocuments(filter),
     ]);
 

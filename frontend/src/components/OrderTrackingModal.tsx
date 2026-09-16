@@ -55,18 +55,18 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
     const startedAt = Date.now()
     try {
       const res = await fetchStandKioskRecent(selectedStandId, eventId, window.location.origin)
-      const orderNumber = res.order ? Number(res.order.orderNumber) : 0
-      if (variant === 'page') {
-        setKiosk(res)
-        if (res.order) setActive(true)
-        return
-      }
+      const createdAtMs = res.order ? new Date(res.order.createdAt).getTime() : 0
       if (baselineRef.current === null) {
-        baselineRef.current = orderNumber
+        baselineRef.current = createdAtMs
         return
       }
-      if (res.order && orderNumber > baselineRef.current) {
-        baselineRef.current = orderNumber
+      if (variant === 'page' && !res.order) {
+        setKiosk(null)
+        setActive(false)
+        return
+      }
+      if (createdAtMs > baselineRef.current) {
+        baselineRef.current = createdAtMs
         if (clearedAtRef.current > startedAt) return
         setKiosk(res)
         setActive(true)

@@ -1146,6 +1146,61 @@ describe('Orders API', () => {
         expect(res.body.qrCode).toMatch(/^data:image\/png;base64,/);
     });
 
+    it('kiosk-recent picks the most recently emitted order by date even after an order-number reset', async () => {
+        app = createTestApp();
+        const event = await EventModel.create({
+            name: 'Kiosk Reset',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+        const stand = await StandModel.create({ name: 'Kiosk Reset Stand', eventIds: [event._id] });
+        const station = await StationModel.create({ standId: stand._id, name: 'Grill' });
+        const item = {
+            eventProductId: new Types.ObjectId(),
+            productId: new Types.ObjectId(),
+            productName: 'X',
+            stationId: station._id,
+            stationName: 'Grill',
+            quantity: 1,
+            unitPrice: 5,
+            subtotal: 5
+        };
+
+        await OrderModel.create({
+            eventId: event._id,
+            standId: stand._id,
+            orderNumber: 50,
+            userId: new Types.ObjectId(),
+            customerId: null,
+            status: 'confirmed',
+            items: [item],
+            total: 5,
+            createdAt: new Date(Date.now() - 3_600_000)
+        });
+        const fresh = await OrderModel.create({
+            eventId: event._id,
+            standId: stand._id,
+            orderNumber: 1,
+            userId: new Types.ObjectId(),
+            customerId: null,
+            status: 'preparing',
+            items: [item],
+            total: 5
+        });
+
+        const res = await request(app)
+            .get(`/api/orders/stand/${stand._id}/kiosk-recent`)
+            .query({ url: 'https://app.example.com', eventId: event._id.toString() });
+
+        expect(res.status).toBe(200);
+        expect(res.body.queueCount).toBe(2);
+        expect(res.body.order.id).toBe(fresh._id.toString());
+        expect(res.body.order.orderNumber).toBe(1);
+        expect(res.body.order.status).toBe('preparing');
+    });
+
     it('kiosk-recent returns empty kiosk without in-progress orders and 404 for unknown stand', async () => {
         app = createTestApp();
         const event = await EventModel.create({
