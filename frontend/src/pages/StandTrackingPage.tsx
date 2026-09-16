@@ -59,7 +59,6 @@ export function StandTrackingPage() {
       .catch(() => {})
   }, [standId])
 
-  const standNumber = stand?.numbers.find((n) => n.eventId === eventId)?.number ?? null
   const bannerUrl = stand?.coverImage?.url ?? null
   const logoUrl = stand?.logo?.url ?? bannerUrl
 
@@ -71,10 +70,7 @@ export function StandTrackingPage() {
         <aside className={styles.standPanel}>
           {logoUrl && <img src={logoUrl} alt="" className={styles.logo} />}
           <div className={styles.identityText}>
-            <div className={styles.nameRow}>
-              {standNumber !== null && <span className={styles.number}>{standNumber}</span>}
-              <h1 className={styles.name}>{stand?.name ?? 'Stand'}</h1>
-            </div>
+            <h1 className={styles.name}>{stand?.name ?? 'Stand'}</h1>
             {event && <span className={styles.eventName}>{event.name}</span>}
           </div>
         </aside>
