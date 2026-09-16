@@ -205,6 +205,19 @@ export function StandManagePage() {
                 <span className={manageStyles.actionDesc}>Display pubblico degli ordini in lavorazione</span>
               </a>
             )}
+
+            {selectedEventId && eventOngoing && (
+              <a
+                className={manageStyles.actionCard}
+                href={`/events/${selectedEventId}/stands/${standId}/tracking`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className={manageStyles.actionIcon}>{'\u{1F50D}'}</span>
+                <span className={manageStyles.actionTitle}>Tracking ordine</span>
+                <span className={manageStyles.actionDesc}>Pagina dedicata: banner, logo e nome dello stand nel tema evento</span>
+              </a>
+            )}
           </div>
         </section>
       )}

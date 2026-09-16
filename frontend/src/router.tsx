@@ -23,6 +23,7 @@ import { StandDetailPage } from './pages/StandDetailPage'
 import { StandManagePage } from './pages/StandManagePage'
 import { StandOrdersPage } from './pages/StandOrdersPage'
 import { StandDisplayPage } from './pages/StandDisplayPage'
+import { StandTrackingPage } from './pages/StandTrackingPage'
 import { StationQueuePage } from './pages/StationQueuePage'
 import { ThemePreviewPage } from './pages/ThemePreviewPage'
 import { UsersPage } from './pages/UsersPage'
@@ -182,6 +183,7 @@ export const router = createBrowserRouter([
 
   /* ── Standalone routes (no layout) ── */
   { path: 'orders/station/:stationId', element: <StationQueuePage /> },
+  { path: 'events/:eventId/stands/:standId/tracking', element: <StandTrackingPage /> },
   { path: 'flyer', element: <FlyerPage /> },
   { path: 'show/:entityType/:alias', element: <AliasRedirectPage /> },
   { path: 'attiva/:token', element: <ActivationPage /> },

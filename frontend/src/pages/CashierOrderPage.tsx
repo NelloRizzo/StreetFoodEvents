@@ -11,7 +11,6 @@ import { CouponPanel } from '../components/CouponPanel'
 import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
 import { GiftCounter } from '../components/GiftCounter'
 import { broadcastOrderCreated, broadcastTrackingClear } from '../lib/tracking'
-import { OrderTrackingModal } from '../components/OrderTrackingModal'
 import type { UploadedImage } from '../lib/upload'
 import styles from './CashierOrderPage.module.scss'
 
@@ -832,12 +831,6 @@ ${qrHtml}
               </button>
             </div>
           </div>
-          <OrderTrackingModal
-            open
-            eventId={eventId!}
-            standId={standId!}
-            variant="inline"
-          />
         </div>
       )}
 

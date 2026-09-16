@@ -19,14 +19,14 @@ type OrderTrackingModalProps = {
   open: boolean
   eventId: string
   standId?: string
-  variant?: 'standalone' | 'inline'
+  variant?: 'standalone' | 'page'
 }
 
 export function OrderTrackingModal({ open, eventId, standId, variant = 'standalone' }: OrderTrackingModalProps) {
   const [stands, setStands] = useState<StandLite[]>([])
   const [selectedStandId, setSelectedStandId] = useState(standId ?? '')
   const [kiosk, setKiosk] = useState<KioskState | null>(null)
-  const [active, setActive] = useState(variant === 'inline')
+  const [active, setActive] = useState(false)
   const baselineRef = useRef<number | null>(null)
   const clearedAtRef = useRef(0)
 
@@ -45,7 +45,7 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
 
   useEffect(() => {
     setKiosk(null)
-    setActive(variant === 'inline')
+    setActive(false)
     baselineRef.current = null
     clearedAtRef.current = 0
   }, [selectedStandId, variant])
@@ -56,7 +56,7 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
     try {
       const res = await fetchStandKioskRecent(selectedStandId, eventId, window.location.origin)
       const orderNumber = res.order ? Number(res.order.orderNumber) : 0
-      if (variant === 'inline') {
+      if (variant === 'page') {
         setKiosk(res)
         if (res.order) setActive(true)
         return
@@ -96,7 +96,7 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
   }, [open, eventId, selectedStandId, load])
 
   useEffect(() => {
-    if (!open) return
+    if (!open || variant !== 'standalone') return
     return onTrackingClear((event) => {
       if (event.eventId !== eventId) return
       if (selectedStandId && event.standId !== selectedStandId) return
@@ -104,7 +104,7 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
       setKiosk(null)
       setActive(false)
     })
-  }, [open, eventId, selectedStandId])
+  }, [open, variant, eventId, selectedStandId])
 
   const dismiss = useCallback(() => {
     clearedAtRef.current = Date.now()
@@ -123,7 +123,15 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
 
   const hasOrder = Boolean(kiosk?.order && kiosk.qrCode)
   if (variant === 'standalone' && selectedStandId && !active) return null
-  if (variant === 'inline' && !hasOrder) return null
+
+  if (variant === 'page' && (!selectedStandId || !active || !hasOrder)) {
+    return (
+      <div className={styles.empty}>
+        <span className={styles.emptyText}>Preparazione ordine in corso...</span>
+        <span className={styles.emptyHint}>In attesa di nuovi ordini</span>
+      </div>
+    )
+  }
 
   const card = (
     <div className={styles.card} onClick={(e) => e.stopPropagation()}>
@@ -187,7 +195,7 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
     </div>
   )
 
-  if (variant === 'inline') return card
+  if (variant === 'page') return card
 
   return (
     <div className={styles.overlay} onClick={dismiss}>
