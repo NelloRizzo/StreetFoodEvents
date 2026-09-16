@@ -28,6 +28,7 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
   const [kiosk, setKiosk] = useState<KioskState | null>(null)
   const [active, setActive] = useState(variant === 'inline')
   const baselineRef = useRef<number | null>(null)
+  const clearedAtRef = useRef(0)
 
   useEffect(() => {
     if (standId) setSelectedStandId(standId)
@@ -46,10 +47,12 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
     setKiosk(null)
     setActive(variant === 'inline')
     baselineRef.current = null
+    clearedAtRef.current = 0
   }, [selectedStandId, variant])
 
   const load = useCallback(async () => {
     if (!selectedStandId) return
+    const startedAt = Date.now()
     try {
       const res = await fetchStandKioskRecent(selectedStandId, eventId, window.location.origin)
       const orderNumber = res.order ? Number(res.order.orderNumber) : 0
@@ -64,6 +67,7 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
       }
       if (res.order && orderNumber > baselineRef.current) {
         baselineRef.current = orderNumber
+        if (clearedAtRef.current > startedAt) return
         setKiosk(res)
         setActive(true)
       }
@@ -96,12 +100,14 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
     return onTrackingClear((event) => {
       if (event.eventId !== eventId) return
       if (selectedStandId && event.standId !== selectedStandId) return
+      clearedAtRef.current = Date.now()
       setKiosk(null)
       setActive(false)
     })
   }, [open, eventId, selectedStandId])
 
   const dismiss = useCallback(() => {
+    clearedAtRef.current = Date.now()
     setKiosk(null)
     setActive(false)
   }, [])
@@ -123,9 +129,6 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
     <div className={styles.card} onClick={(e) => e.stopPropagation()}>
       <div className={styles.cardHeader}>
         <span className={styles.cardTitle}>Tracking ordine</span>
-        {variant === 'standalone' && (
-          <button type="button" className={styles.closeBtn} onClick={dismiss} title="Chiudi">×</button>
-        )}
       </div>
 
       {!selectedStandId ? (

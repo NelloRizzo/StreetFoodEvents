@@ -40,22 +40,6 @@
   letter-spacing: 0.08em;
 }
 
-.closeBtn {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
-  border: none;
-  background: #fff;
-  color: #16213e;
-  font-size: 1.2rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.closeBtn:hover {
-  opacity: 0.85;
-}
-
 .standPicker {
   display: flex;
   flex-direction: column;
