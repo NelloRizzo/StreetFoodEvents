@@ -91,7 +91,6 @@ export function PublicLayout() {
         <OrderTrackingModal
           open
           eventId={params.eventId}
-          onClose={onToggleTracking}
         />
       )}
     </div>

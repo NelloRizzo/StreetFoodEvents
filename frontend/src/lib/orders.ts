@@ -339,6 +339,8 @@ export type KioskOrder = {
 export type KioskState = {
   standId: string
   standName: string
+  standNumber: number | null
+  standLogo: string | null
   queueCount: number
   order: KioskOrder | null
   qrCode: string | null

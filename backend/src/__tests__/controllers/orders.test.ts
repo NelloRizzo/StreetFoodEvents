@@ -1087,7 +1087,19 @@ describe('Orders API', () => {
             endDate: new Date('2026-06-07'),
             currencyName: 'TC'
         });
-        const stand = await StandModel.create({ name: 'Kiosk Stand', eventIds: [event._id] });
+        const stand = await StandModel.create({
+            name: 'Kiosk Stand',
+            eventIds: [event._id],
+            numbers: [{ eventId: event._id, number: 7 }],
+            logo: {
+                url: 'https://res.cloudinary.com/x/logo.png',
+                publicId: 'logo',
+                width: 120,
+                height: 120,
+                format: 'png',
+                bytes: 1234
+            }
+        });
         const station = await StationModel.create({ standId: stand._id, name: 'Grill' });
 
         const makeOrder = (orderNumber: number, status: string) =>
@@ -1124,6 +1136,8 @@ describe('Orders API', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.standName).toBe('Kiosk Stand');
+        expect(res.body.standNumber).toBe(7);
+        expect(res.body.standLogo).toBe('https://res.cloudinary.com/x/logo.png');
         expect(res.body.queueCount).toBe(2);
         expect(res.body.order.id).toBe(latest._id.toString());
         expect(res.body.order.orderNumber).toBe(2);

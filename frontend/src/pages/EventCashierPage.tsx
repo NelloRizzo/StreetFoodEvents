@@ -10,7 +10,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { CouponPanel } from '../components/CouponPanel'
 import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
 import { GiftCounter } from '../components/GiftCounter'
-import { useTrackingEnabled, broadcastOrderCreated } from '../lib/tracking'
+import { broadcastOrderCreated, broadcastTrackingClear } from '../lib/tracking'
 import { OrderTrackingModal } from '../components/OrderTrackingModal'
 import type { UploadedImage } from '../lib/upload'
 import styles from './CashierOrderPage.module.scss'
@@ -93,7 +93,6 @@ export function EventCashierPage() {
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
   const [giftStats, setGiftStats] = useState<GiftStats | null>(null)
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null)
-  const { enabled: trackingEnabled } = useTrackingEnabled('cashier', eventId)
 
   const [notesModal, setNotesModal] = useState<NotesModalState>({
     open: false,
@@ -709,7 +708,10 @@ ${qrHtml}
       )}
 
       {createdOrder && (
-        <div className={styles.overlay} onClick={() => setCreatedOrder(null)}>
+        <div className={styles.overlay} onClick={() => {
+          broadcastTrackingClear({ eventId: createdOrder.eventId, standId: createdOrder.standId })
+          setCreatedOrder(null)
+        }}>
           <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
             <h2 className={styles.confirmTitle}>Ordine creato</h2>
             <div className={`${styles.confirmOrderNumber} ${createdOrder.isGift ? styles.confirmOrderNumberGift : ''}`}>
@@ -786,19 +788,20 @@ ${qrHtml}
                   Storna ordine
                 </button>
               )}
-              <button className={styles.confirmCloseBtn} onClick={() => setCreatedOrder(null)}>
+              <button className={styles.confirmCloseBtn} onClick={() => {
+                broadcastTrackingClear({ eventId: createdOrder.eventId, standId: createdOrder.standId })
+                setCreatedOrder(null)
+              }}>
                 Chiudi
               </button>
             </div>
           </div>
-          {trackingEnabled && (
-            <OrderTrackingModal
-              open
-              eventId={eventId!}
-              standId={selectedStandId || undefined}
-              variant="inline"
-            />
-          )}
+          <OrderTrackingModal
+            open
+            eventId={eventId!}
+            standId={selectedStandId || undefined}
+            variant="inline"
+          />
         </div>
       )}
 

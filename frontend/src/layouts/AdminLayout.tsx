@@ -152,7 +152,6 @@ export function AdminLayout() {
             open
             eventId={selectedEventId}
             standId={urlStandId ?? undefined}
-            onClose={onToggleTracking}
           />
         )}
       </div>

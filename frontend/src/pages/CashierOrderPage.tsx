@@ -10,7 +10,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { CouponPanel } from '../components/CouponPanel'
 import { CurrencyDisplay, currencyBadgeHtml } from '../components/CurrencyDisplay'
 import { GiftCounter } from '../components/GiftCounter'
-import { useTrackingEnabled, broadcastOrderCreated } from '../lib/tracking'
+import { broadcastOrderCreated, broadcastTrackingClear } from '../lib/tracking'
 import { OrderTrackingModal } from '../components/OrderTrackingModal'
 import type { UploadedImage } from '../lib/upload'
 import styles from './CashierOrderPage.module.scss'
@@ -87,7 +87,6 @@ export function CashierOrderPage() {
   const [activeOrders, setActiveOrders] = useState<Order[]>([])
   const [giftStats, setGiftStats] = useState<GiftStats | null>(null)
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null)
-  const { enabled: trackingEnabled } = useTrackingEnabled('cashier', eventId)
 
   const [notesModal, setNotesModal] = useState<NotesModalState>({
     open: false,
@@ -401,7 +400,12 @@ ${qrHtml}
     if (w) { w.document.write(html); w.document.close() }
   }
 
-  const resetSuccessModal = () => setSuccessOrder(null)
+  const resetSuccessModal = () => {
+    if (successOrder) {
+      broadcastTrackingClear({ eventId: successOrder.eventId, standId: successOrder.standId })
+    }
+    setSuccessOrder(null)
+  }
 
   if (isLoading) return null
   if (forbidden) return <div className={styles.page}><div className="page-shell"><p className={styles.empty}>Accesso negato.</p></div></div>
@@ -828,14 +832,12 @@ ${qrHtml}
               </button>
             </div>
           </div>
-          {trackingEnabled && (
-            <OrderTrackingModal
-              open
-              eventId={eventId!}
-              standId={standId!}
-              variant="inline"
-            />
-          )}
+          <OrderTrackingModal
+            open
+            eventId={eventId!}
+            standId={standId!}
+            variant="inline"
+          />
         </div>
       )}
 

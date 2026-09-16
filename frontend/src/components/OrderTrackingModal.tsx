@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
 import { fetchStandKioskRecent, type KioskState } from '../lib/orders'
-import { onOrderCreated } from '../lib/tracking'
+import { onOrderCreated, onTrackingClear } from '../lib/tracking'
 import styles from './OrderTrackingModal.module.scss'
 
 const POLL_INTERVAL_MS = 5000
@@ -20,13 +20,14 @@ type OrderTrackingModalProps = {
   eventId: string
   standId?: string
   variant?: 'standalone' | 'inline'
-  onClose?: () => void
 }
 
-export function OrderTrackingModal({ open, eventId, standId, variant = 'standalone', onClose }: OrderTrackingModalProps) {
+export function OrderTrackingModal({ open, eventId, standId, variant = 'standalone' }: OrderTrackingModalProps) {
   const [stands, setStands] = useState<StandLite[]>([])
   const [selectedStandId, setSelectedStandId] = useState(standId ?? '')
   const [kiosk, setKiosk] = useState<KioskState | null>(null)
+  const [active, setActive] = useState(variant === 'inline')
+  const baselineRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (standId) setSelectedStandId(standId)
@@ -43,20 +44,39 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
 
   useEffect(() => {
     setKiosk(null)
-  }, [selectedStandId])
+    setActive(variant === 'inline')
+    baselineRef.current = null
+  }, [selectedStandId, variant])
 
   const load = useCallback(async () => {
     if (!selectedStandId) return
     try {
       const res = await fetchStandKioskRecent(selectedStandId, eventId, window.location.origin)
-      setKiosk(res)
+      const orderNumber = res.order ? Number(res.order.orderNumber) : 0
+      if (variant === 'inline') {
+        setKiosk(res)
+        if (res.order) setActive(true)
+        return
+      }
+      if (baselineRef.current === null) {
+        baselineRef.current = orderNumber
+        return
+      }
+      if (res.order && orderNumber > baselineRef.current) {
+        baselineRef.current = orderNumber
+        setKiosk(res)
+        setActive(true)
+      }
     } catch {
       /* ignorato */
     }
-  }, [selectedStandId, eventId])
+  }, [selectedStandId, eventId, variant])
 
   useEffect(() => {
     if (!open || !selectedStandId) return
+    baselineRef.current = null
+    setActive(false)
+    setKiosk(null)
     void load()
     const interval = setInterval(load, POLL_INTERVAL_MS)
     return () => clearInterval(interval)
@@ -72,22 +92,39 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
   }, [open, eventId, selectedStandId, load])
 
   useEffect(() => {
-    if (!open || variant !== 'standalone' || !onClose) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    if (!open) return
+    return onTrackingClear((event) => {
+      if (event.eventId !== eventId) return
+      if (selectedStandId && event.standId !== selectedStandId) return
+      setKiosk(null)
+      setActive(false)
+    })
+  }, [open, eventId, selectedStandId])
+
+  const dismiss = useCallback(() => {
+    setKiosk(null)
+    setActive(false)
+  }, [])
+
+  useEffect(() => {
+    if (!open || variant !== 'standalone' || !active) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') dismiss() }
     globalThis.addEventListener('keydown', onKey)
     return () => globalThis.removeEventListener('keydown', onKey)
-  }, [open, variant, onClose])
+  }, [open, variant, active, dismiss])
 
   if (!open) return null
 
   const hasOrder = Boolean(kiosk?.order && kiosk.qrCode)
+  if (variant === 'standalone' && selectedStandId && !active) return null
+  if (variant === 'inline' && !hasOrder) return null
 
   const card = (
     <div className={styles.card} onClick={(e) => e.stopPropagation()}>
       <div className={styles.cardHeader}>
         <span className={styles.cardTitle}>Tracking ordine</span>
-        {variant === 'standalone' && onClose && (
-          <button type="button" className={styles.closeBtn} onClick={onClose} title="Chiudi">×</button>
+        {variant === 'standalone' && (
+          <button type="button" className={styles.closeBtn} onClick={dismiss} title="Chiudi">×</button>
         )}
       </div>
 
@@ -106,8 +143,21 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
             ))}
           </select>
         </div>
-      ) : hasOrder ? (
+      ) : (
         <>
+          {(kiosk?.standLogo || kiosk?.standName) && (
+            <div className={styles.standIdentity}>
+              {kiosk?.standLogo && (
+                <img src={kiosk.standLogo} alt="" className={styles.standLogo} />
+              )}
+              {kiosk?.standNumber && (
+                <span className={`${styles.standNumber} ${kiosk.standLogo ? styles.standNumberInline : ''}`}>
+                  {kiosk.standNumber}
+                </span>
+              )}
+              <span className={styles.standName}>{kiosk?.standName ?? 'Stand'}</span>
+            </div>
+          )}
           {(kiosk?.queueCount ?? 0) > 0 && (
             <span className={styles.queueBadge}>
               {kiosk!.queueCount} ordini in coda
@@ -130,11 +180,6 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
           </ul>
           <span className={styles.hint}>Inquadra per seguire il tuo ordine</span>
         </>
-      ) : (
-        <div className={styles.empty}>
-          <span className={styles.emptyText}>Nessun ordine in attesa</span>
-          <span className={styles.emptyHint}>Il QR del prossimo ordine apparirà qui.</span>
-        </div>
       )}
     </div>
   )
@@ -142,7 +187,7 @@ export function OrderTrackingModal({ open, eventId, standId, variant = 'standalo
   if (variant === 'inline') return card
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
+    <div className={styles.overlay} onClick={dismiss}>
       {card}
     </div>
   )

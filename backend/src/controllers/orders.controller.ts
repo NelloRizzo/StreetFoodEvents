@@ -458,7 +458,7 @@ export async function getStandKioskRecent(req: Request, res: Response) {
         return res.status(400).json({ message: 'Invalid stand id' });
     }
 
-    const stand = await StandModel.findById(standId).select('name').lean();
+    const stand = await StandModel.findById(standId).select('name numbers logo coverImage').lean();
 
     if (!stand) {
         return res.status(404).json({ message: 'Stand not found' });
@@ -469,9 +469,18 @@ export async function getStandKioskRecent(req: Request, res: Response) {
         status: { $in: ['confirmed', 'preparing', 'ready'] },
     };
 
-    if (req.query.eventId && isValidObjectId(req.query.eventId as string)) {
-        filter.eventId = new Types.ObjectId(req.query.eventId as string);
+    const eventId = req.query.eventId && isValidObjectId(req.query.eventId as string)
+        ? new Types.ObjectId(req.query.eventId as string)
+        : null;
+    if (eventId) {
+        filter.eventId = eventId;
     }
+
+    const standNumber =
+        eventId && Array.isArray(stand.numbers)
+            ? (stand.numbers.find((n) => n.eventId.toString() === eventId.toString())?.number ?? null)
+            : null;
+    const standLogo = (stand.logo ?? stand.coverImage)?.url ?? null;
 
     const [latest, queueCount] = await Promise.all([
         OrderModel.findOne(filter).sort({ orderNumber: -1 }).lean(),
@@ -500,6 +509,8 @@ export async function getStandKioskRecent(req: Request, res: Response) {
     return res.status(200).json({
         standId: stand._id.toString(),
         standName: stand.name,
+        standNumber,
+        standLogo,
         queueCount,
         order: latest
             ? {

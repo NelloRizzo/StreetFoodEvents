@@ -312,7 +312,6 @@ export function SlideshowPage() {
         <OrderTrackingModal
           open={trackingEnabled}
           eventId={eventId}
-          onClose={onToggleTracking}
         />
       )}
     </div>

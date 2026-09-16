@@ -20,8 +20,17 @@ export type OrderCreatedEvent = {
   at: number
 }
 
-type OrderCreatedListener = (event: OrderCreatedEvent) => void
+export type TrackingClearEvent = {
+  type: 'tracking-clear'
+  eventId: string
+  standId: string
+  at: number
+}
 
+type OrderCreatedListener = (event: OrderCreatedEvent) => void
+type TrackingClearListener = (event: TrackingClearEvent) => void
+
+const trackingClearListeners = new Set<TrackingClearListener>()
 const localListeners = new Set<OrderCreatedListener>()
 let channel: BroadcastChannel | null | undefined
 
@@ -84,16 +93,48 @@ export function broadcastOrderCreated(input: {
   }
 }
 
+export function broadcastTrackingClear(input: { eventId: string; standId: string }) {
+  const event: TrackingClearEvent = { type: 'tracking-clear', at: Date.now(), ...input }
+  trackingClearListeners.forEach((cb) => {
+    try {
+      cb(event)
+    } catch {
+      /* listener non disponibile */
+    }
+  })
+  const ch = getChannel()
+  if (!ch) return
+  try {
+    ch.postMessage(event)
+  } catch {
+    /* canale non disponibile */
+  }
+}
+
 export function onOrderCreated(cb: (event: OrderCreatedEvent) => void): () => void {
   localListeners.add(cb)
   const ch = getChannel()
   const handler = (e: MessageEvent) => {
-    const data = e.data as OrderCreatedEvent | null
+    const data = e.data as OrderCreatedEvent | TrackingClearEvent | null
     if (data?.type === 'order-created') cb(data)
   }
   if (ch) ch.addEventListener('message', handler)
   return () => {
     localListeners.delete(cb)
+    if (ch) ch.removeEventListener('message', handler)
+  }
+}
+
+export function onTrackingClear(cb: (event: TrackingClearEvent) => void): () => void {
+  trackingClearListeners.add(cb)
+  const ch = getChannel()
+  const handler = (e: MessageEvent) => {
+    const data = e.data as OrderCreatedEvent | TrackingClearEvent | null
+    if (data?.type === 'tracking-clear') cb(data)
+  }
+  if (ch) ch.addEventListener('message', handler)
+  return () => {
+    trackingClearListeners.delete(cb)
     if (ch) ch.removeEventListener('message', handler)
   }
 }
