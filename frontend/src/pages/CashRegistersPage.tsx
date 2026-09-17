@@ -50,6 +50,8 @@ type CashRegistersReport = {
     euroContent: number
     creditsContent: number
     sinceTotalCount: number
+    sinceTopUpCount: number
+    sinceRefundCount: number
   }
 }
 
@@ -297,7 +299,7 @@ export function CashRegistersPage() {
                         topUpReal: 0, refundReal: 0,
                         euroContent: totals.euroContent,
                         creditsContent: totals.creditsContent,
-                        sinceTopUpCount: 0, sinceRefundCount: 0,
+                        sinceTopUpCount: totals.sinceTopUpCount, sinceRefundCount: totals.sinceRefundCount,
                         sinceTotalCount: totals.sinceTotalCount,
                       }}
                     />

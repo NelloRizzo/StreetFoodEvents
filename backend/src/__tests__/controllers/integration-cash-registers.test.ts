@@ -293,6 +293,11 @@ describe('Integration: cash registers (multi-cassa)', () => {
             .set('Cookie', cookie)
             .send({ eventUserId: wallet._id.toString(), amount: 20, cashRegisterId: id });
 
+        await request(app)
+            .post(`/api/exchange/${event._id}/refund`)
+            .set('Cookie', cookie)
+            .send({ eventUserId: wallet._id.toString(), amount: 5, cashRegisterId: id });
+
         const fromIso = from.toISOString();
         const report = await request(app)
             .get(`/api/exchange/${event._id}/cash-registers/report?from=${encodeURIComponent(fromIso)}`)
@@ -300,9 +305,12 @@ describe('Integration: cash registers (multi-cassa)', () => {
         expect(report.status).toBe(200);
         expect(report.body.items).toHaveLength(1);
         expect(report.body.items[0].sinceTopUpCount).toBe(1);
-        expect(report.body.totals.sinceTotalCount).toBe(1);
-        expect(report.body.totals.euroContent).toBe(20);
-        expect(report.body.totals.creditsContent).toBe(-40);
+        expect(report.body.items[0].sinceRefundCount).toBe(1);
+        expect(report.body.totals.sinceTotalCount).toBe(2);
+        expect(report.body.totals.sinceTopUpCount).toBe(1);
+        expect(report.body.totals.sinceRefundCount).toBe(1);
+        expect(report.body.totals.euroContent).toBe(17.5);
+        expect(report.body.totals.creditsContent).toBe(-35);
 
         const future = new Date(Date.now() + 60_000).toISOString();
         const reportBefore = await request(app)

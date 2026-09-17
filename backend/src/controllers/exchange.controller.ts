@@ -1428,7 +1428,9 @@ async function getCashRegistersReport(req: Request, res: Response) {
         floatCredits: round2(items.reduce((a, i) => a + i.cashFloat.credits, 0)),
         euroContent: round2(items.reduce((a, i) => a + i.euroContent, 0)),
         creditsContent: round2(items.reduce((a, i) => a + i.creditsContent, 0)),
-        sinceTotalCount: items.reduce((a, i) => a + i.sinceTotalCount, 0)
+        sinceTotalCount: items.reduce((a, i) => a + i.sinceTotalCount, 0),
+        sinceTopUpCount: items.reduce((a, i) => a + i.sinceTopUpCount, 0),
+        sinceRefundCount: items.reduce((a, i) => a + i.sinceRefundCount, 0)
     };
 
     return res.status(200).json({
