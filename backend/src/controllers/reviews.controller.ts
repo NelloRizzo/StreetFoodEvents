@@ -59,11 +59,16 @@ function toAdminReview(r: {
     guestTokenHash?: string | null;
     status: string;
     createdAt: Date;
+}, context?: {
+    eventName?: string | null;
+    standName?: string | null;
 }) {
     return {
         ...toPublicReview(r),
         reviewerEmail: r.reviewerEmail ?? null,
-        hasGuest: !!r.guestTokenHash
+        hasGuest: !!r.guestTokenHash,
+        eventName: context?.eventName ?? null,
+        standName: context?.standName ?? null
     };
 }
 
@@ -369,7 +374,8 @@ export async function getManageReviews(req: Request, res: Response) {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const skip = (page - 1) * limit;
 
-    const [items, total] = await Promise.all([
+    const [eventName, items, total] = await Promise.all([
+        EventModel.findById(eventId).select('name').lean(),
         ReviewModel.find(filter as never)
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -377,8 +383,19 @@ export async function getManageReviews(req: Request, res: Response) {
         ReviewModel.countDocuments(filter as never)
     ]);
 
+    const standIds = [...new Set(
+        items.map((r) => r.standId?.toString()).filter((id): id is string => !!id)
+    )];
+    const stands = standIds.length > 0
+        ? await StandModel.find({ _id: { $in: standIds } }).select('name').lean()
+        : [];
+    const standNameMap = new Map(stands.map((s) => [s._id.toString(), s.name]));
+
     return res.status(200).json({
-        items: items.map(toAdminReview),
+        items: items.map((r) => toAdminReview(r, {
+            eventName: eventName?.name ?? null,
+            standName: r.standId ? (standNameMap.get(r.standId.toString()) ?? null) : null
+        })),
         pagination: {
             page,
             limit,

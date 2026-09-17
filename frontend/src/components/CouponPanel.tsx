@@ -5,6 +5,7 @@ import { trackCouponApplied } from '../lib/analytics'
 import {
   computeCouponDiscount,
   couponDescription,
+  redeemValuePromotion,
   type AppliedCoupon,
   type CouponLine,
   type PromotionValidation,
@@ -23,6 +24,7 @@ type Props = {
   payWithCredits: boolean
   creditAmount: number
   lines: CouponLine[]
+  customerUserId?: string
 }
 
 export function CouponPanel({
@@ -35,11 +37,14 @@ export function CouponPanel({
   payWithCredits,
   creditAmount,
   lines,
+  customerUserId,
 }: Props) {
   const [code, setCode] = useState('')
   const [checking, setChecking] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [valueCoupon, setValueCoupon] = useState<NonNullable<PromotionValidation['item']> | null>(null)
+  const [redeeming, setRedeeming] = useState(false)
+  const [redeemSuccess, setRedeemSuccess] = useState<{ code: string; amount: number; balance: number } | null>(null)
   const [showScanner, setShowScanner] = useState(false)
 
   const applyCode = async (raw: string) => {
@@ -48,6 +53,7 @@ export function CouponPanel({
     setChecking(true)
     setNotice(null)
     setValueCoupon(null)
+    setRedeemSuccess(null)
     try {
       const res = await validatePromotionCode(eventId, { code: trimmed, standId })
       if (res.valid && res.item) {
@@ -83,6 +89,32 @@ export function CouponPanel({
     await applyCode(text)
   }
 
+  const handleRedeemValue = async () => {
+    if (!valueCoupon || !customerUserId) return
+    const label = couponDescription(valueCoupon)
+    if (
+      !window.confirm(
+        `Riscattare ${label} accreditando ${(valueCoupon.valueAmount ?? 0).toFixed(2)} ${currencyName ?? 'crediti'} sul portafoglio del cliente selezionato?`,
+      )
+    ) {
+      return
+    }
+    setRedeeming(true)
+    setNotice(null)
+    try {
+      const res = await redeemValuePromotion(eventId, { code: valueCoupon.code, userId: customerUserId })
+      setRedeemSuccess({
+        code: res.item.code,
+        amount: res.item.valueAmount,
+        balance: res.item.balance,
+      })
+      setValueCoupon(null)
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Riscatto non riuscito')
+    }
+    setRedeeming(false)
+  }
+
   const conflict = Boolean(
     coupon &&
       coupon.item.type === 'discount' &&
@@ -92,6 +124,8 @@ export function CouponPanel({
   )
 
   const preview = coupon ? computeCouponDiscount(coupon.item, lines) : { discountAmount: 0, freeUnits: 0 }
+  const productNotInCart =
+    coupon?.item.type === 'product' && preview.discountAmount === 0 && preview.freeUnits === 0
 
   return (
     <div className={styles.panel}>
@@ -118,13 +152,46 @@ export function CouponPanel({
               Uno sconto percentuale non si combina con un pagamento in crediti: disattiva i crediti o rimuovi il coupon.
             </p>
           )}
+          {productNotInCart && (
+            <p className={styles.productHint}>
+              Aggiungi al carrello &ldquo;{coupon.item.productName ?? 'il prodotto dedicato'}&rdquo; per applicare
+              l&apos;omaggio.
+            </p>
+          )}
+        </div>
+      ) : redeemSuccess ? (
+        <div className={styles.valueBox}>
+          <span className={styles.valueLabel}>
+            Buono valore {redeemSuccess.amount.toFixed(2)} {currencyName ?? 'crediti'} riscattato sul portafoglio del
+            cliente. Nuovo saldo: <strong>{redeemSuccess.balance.toFixed(2)}</strong> {currencyName ?? 'crediti'}.
+          </span>
+          <button type="button" className={styles.redeemBtn} onClick={() => setRedeemSuccess(null)}>
+            Ok
+          </button>
         </div>
       ) : valueCoupon ? (
         <div className={styles.valueBox}>
           <span className={styles.valueLabel}>
-            {couponDescription(valueCoupon)} &mdash; si riscatta sul portafoglio cliente.
+            {couponDescription(valueCoupon)} &mdash; si riscatta sul portafoglio cliente, non su un ordine.
           </span>
-          <Link to={`/events/${eventId}/exchange`} className={styles.exchangeLink}>
+          {customerUserId ? (
+            <button
+              type="button"
+              className={styles.redeemBtn}
+              disabled={redeeming}
+              onClick={() => void handleRedeemValue()}
+            >
+              {redeeming ? 'Riscatto...' : 'Riscatta sul portafoglio del cliente selezionato'}
+            </button>
+          ) : (
+            <span className={styles.valueHint}>Seleziona un cliente per riscattare il buono sul suo portafoglio.</span>
+          )}
+          <Link
+            to={`/admin/events/${eventId}/exchange`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.exchangeLink}
+          >
             Apri Cambio Valuta
           </Link>
         </div>

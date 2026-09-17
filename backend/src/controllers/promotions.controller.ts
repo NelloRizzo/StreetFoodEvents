@@ -526,23 +526,29 @@ export async function redeemValue(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
 
-    const { code, eventUserId } = req.body;
+    const { code, eventUserId, userId } = req.body;
 
     if (!code || typeof code !== 'string') {
         return res.status(400).json({ message: 'Il codice del coupon è obbligatorio' });
     }
 
-    if (!isValidObjectId(eventUserId)) {
-        return res.status(400).json({ message: 'eventUserId non valido' });
+    if (!isValidObjectId(eventUserId) && !isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'eventUserId o userId non valido' });
     }
 
     const eventUser = await EventUserModel.findOne({
-        _id: new Types.ObjectId(eventUserId),
+        ...(isValidObjectId(eventUserId)
+            ? { _id: new Types.ObjectId(eventUserId) }
+            : { userId: new Types.ObjectId(userId) }),
         eventId: eventCtx.eventId,
         isActive: true
     });
     if (!eventUser) {
-        return res.status(404).json({ message: 'Cliente non trovato per questo evento' });
+        return res.status(404).json({
+            message: isValidObjectId(eventUserId)
+                ? 'Cliente non trovato per questo evento'
+                : 'Il cliente non è registrato all\'evento'
+        });
     }
 
     if (!(await canHandleCashierOperations(req.user.id, eventCtx.eventId))) {

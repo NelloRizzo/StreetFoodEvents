@@ -608,6 +608,7 @@ ${qrHtml}
                     onAlert={setAlertMsg}
                     payWithCredits={payWithCredits}
                     creditAmount={creditAmount}
+                    customerUserId={!isDirectOrder ? selectedCustomerId : undefined}
                     lines={cart.map((i) => ({
                       eventProductId: i.eventProductId,
                       quantity: i.quantity,

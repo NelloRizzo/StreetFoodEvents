@@ -5,6 +5,7 @@ import { apiRequest } from '../lib/api'
 import type { UploadedImage } from '../lib/upload'
 import { useAuth } from '../features/auth/auth-context'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
+import { ConfirmModal } from '../components/ConfirmModal'
 import reportStyles from './EventReportPage.module.scss'
 import styles from './CashRegistersPage.module.scss'
 
@@ -67,7 +68,7 @@ function fmtDateTime(iso: string | null): string {
   })
 }
 
-function CassaRow({ item, isTotal }: { item: ReportItem; isTotal?: boolean }) {
+function CassaRow({ item, isTotal, onClose }: { item: ReportItem; isTotal?: boolean; onClose?: (item: ReportItem) => void }) {
   return (
     <tr className={isTotal ? reportStyles.tableTotals : undefined}>
       <td className={styles.cassaName}>
@@ -75,9 +76,13 @@ function CassaRow({ item, isTotal }: { item: ReportItem; isTotal?: boolean }) {
         {!isTotal && <span className={styles.sub}>Aperta il {fmtDateTime(item.openedAt)}</span>}
       </td>
       <td>
-        <span className={`${styles.statusBadge} ${item.status === 'open' ? styles.statusOpen : styles.statusClosed}`}>
-          {item.status === 'open' ? 'Aperta' : 'Chiusa'}
-        </span>
+        {isTotal ? (
+          '—'
+        ) : (
+          <span className={`${styles.statusBadge} ${item.status === 'open' ? styles.statusOpen : styles.statusClosed}`}>
+            {item.status === 'open' ? 'Aperta' : 'Chiusa'}
+          </span>
+        )}
       </td>
       <td className={styles.openerName}>{item.openedByName ?? '—'}</td>
       <td className={reportStyles.num}>{fmtEur(item.cashFloat.euro)}</td>
@@ -87,6 +92,15 @@ function CassaRow({ item, isTotal }: { item: ReportItem; isTotal?: boolean }) {
       <td className={reportStyles.num}>
         {item.sinceTotalCount}
         <span className={styles.sub}>{item.sinceTopUpCount} carichi / {item.sinceRefundCount} rimborsi</span>
+      </td>
+      <td className={styles.printHide}>
+        {!isTotal && item.status === 'open' && onClose ? (
+          <button className={styles.closeBtn} onClick={() => onClose(item)}>
+            Chiudi
+          </button>
+        ) : (
+          '—'
+        )}
       </td>
     </tr>
   )
@@ -102,6 +116,10 @@ export function CashRegistersPage() {
 
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+
+  const [closeTarget, setCloseTarget] = useState<ReportItem | null>(null)
+  const [closing, setClosing] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const load = useCallback(async (silent = false) => {
     if (!eventId || !isAuthenticated) return
@@ -142,11 +160,32 @@ export function CashRegistersPage() {
   }
   if (!eventId || !report) return null
 
+  const handleCloseCassa = async () => {
+    if (!eventId || !closeTarget || closing) return
+    setClosing(true)
+    try {
+      await apiRequest(`/exchange/${eventId}/cash-registers/${closeTarget.id}/close`, { method: 'POST', bodyJson: {} })
+      setCloseTarget(null)
+      setErrorMsg(null)
+      await load(true)
+    } catch (err) {
+      setCloseTarget(null)
+      setErrorMsg((err as { message?: string }).message || 'Errore durante la chiusura della cassa')
+    } finally {
+      setClosing(false)
+    }
+  }
+
   const { totals } = report
 
   return (
     <div className={reportStyles.page}>
       <div className="page-shell">
+        {errorMsg && (
+          <p className={styles.error} role="alert">
+            {errorMsg}
+          </p>
+        )}
         <div className={reportStyles.header}>
           <div>
             <h1 className={reportStyles.title}>
@@ -236,11 +275,12 @@ export function CashRegistersPage() {
                       <th className={reportStyles.num}>Contenuto €</th>
                       <th className={reportStyles.num}>Contenuto {report.currencyName}</th>
                       <th className={reportStyles.num}>Transazioni</th>
+                      <th className={styles.printHide}>Azioni</th>
                     </tr>
                   </thead>
                   <tbody>
                     {report.items.map((item) => (
-                      <CassaRow key={item.id} item={item} />
+                      <CassaRow key={item.id} item={item} onClose={setCloseTarget} />
                     ))}
                     <CassaRow
                       isTotal
@@ -275,6 +315,21 @@ export function CashRegistersPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={closeTarget !== null}
+        variant="confirm"
+        danger
+        title="Chiudi cassa"
+        message={
+          closeTarget
+            ? `Chiudere la cassa "${closeTarget.name}"? Non saranno più possibili operazioni su questa cassa: resterà visibile come storico in sola lettura.`
+            : ''
+        }
+        confirmLabel="Chiudi cassa"
+        onConfirm={() => void handleCloseCassa()}
+        onCancel={() => setCloseTarget(null)}
+      />
     </div>
   )
 }

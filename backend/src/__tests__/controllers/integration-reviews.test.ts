@@ -461,6 +461,8 @@ describe('Reviews API', () => {
         expect(manage.status).toBe(200);
         expect(manage.body.items).toHaveLength(1);
         expect(manage.body.items[0].reviewerEmail).toBeDefined();
+        expect(manage.body.items[0].eventName).toBe('Review Event');
+        expect(manage.body.items[0].standName).toBe('Review Stand');
 
         const hidden = await request(app)
             .patch(`/api/events/${event._id}/reviews/${reviewId}`)

@@ -1,11 +1,5 @@
 # TODO — Street Food Events
 
-## Fix di questa sessione
-- Nella pagina di review delle recensioni, il nome dell'evento appare come "Evento", mentre invece del nome dello stand c'è lo standId.
-- Il testo di verifica del coupon nella pagina di cassa dello stand è poco visibile.
-- Nella verifica del coupon nella pagina di cassa, il link "Apri Cambio Valuta" produce la visualizzazione di un errore 404; inoltre questo link deve aprire una nuova finestra.
-- Sembra che i coupon "Buono valore" (ma forse anche gli altri tipi, es. "Prodotto gratis") non funzionino (non ne vedo l'applicazione nella creazione di un ordine).
-
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
 

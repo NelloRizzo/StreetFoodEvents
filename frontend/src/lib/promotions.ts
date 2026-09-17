@@ -130,14 +130,16 @@ export function validatePromotionCode(
   })
 }
 
-export function redeemValuePromotion(eventId: string, input: { code: string; eventUserId: string }) {
-  return apiRequest<{ item: { balance: number; eventUserId: string; amount: number } }>(
-    `/events/${eventId}/promotions/redeem-value`,
-    {
-      method: 'POST',
-      bodyJson: input,
-    },
-  )
+export function redeemValuePromotion(
+  eventId: string,
+  input: { code: string; eventUserId?: string; userId?: string },
+) {
+  return apiRequest<{
+    item: { promotionId: string; code: string; valueAmount: number; eventUserId: string; balance: number; transactionId: string }
+  }>(`/events/${eventId}/promotions/redeem-value`, {
+    method: 'POST',
+    bodyJson: input,
+  })
 }
 
 export function formulaLabel(formula: PromotionFormula | null | undefined): string {

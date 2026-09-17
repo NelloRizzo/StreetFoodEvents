@@ -16,6 +16,8 @@ export type Review = {
 export type AdminReview = Review & {
   reviewerEmail: string | null
   hasGuest: boolean
+  eventName: string | null
+  standName: string | null
 }
 
 export type TargetSummary = {

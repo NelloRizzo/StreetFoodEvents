@@ -44,3 +44,35 @@
   font-size: 0.9rem;
   color: var(--color-text-muted, #6b7280);
 }
+
+.closeBtn {
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid #c5473a;
+  background: #fdeeec;
+  color: #a63027;
+  font-weight: 600;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  background: #f6dcd8;
+}
+
+.error {
+  margin: 0 0 1rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid rgba(197, 71, 58, 0.4);
+  border-radius: 8px;
+  background: rgba(197, 71, 58, 0.08);
+  color: #a63027;
+  font-size: 0.9rem;
+}
+
+@media print {
+  .printHide {
+    display: none !important;
+  }
+}

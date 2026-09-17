@@ -642,6 +642,46 @@ describe('Integration — Promotions', () => {
         expect(promo?.usedCount).toBe(1);
     });
 
+    it('redeems a value coupon by userId (cashier flow)', async () => {
+        const env = await setupPromotionEnvironment();
+
+        await request(app)
+            .post(`/api/events/${env.event._id}/promotions`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ code: 'BONO2', type: 'value', valueAmount: 5 });
+
+        const res = await request(app)
+            .post(`/api/events/${env.event._id}/promotions/redeem-value`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ code: 'BONO2', userId: env.eventUser.userId?.toString() });
+
+        expect(res.status).toBe(200);
+        expect(res.body.item.balance).toBe(105);
+    });
+
+    it('rejects redeem by userId when the user is not linked to the event', async () => {
+        const env = await setupPromotionEnvironment();
+        const stranger = await UserModel.create({
+            firstName: 'Lost',
+            lastName: 'Customer',
+            email: `lost-${Date.now()}@test.com`,
+            passwordHash: await argon2.hash('Password123!'),
+            isActive: true
+        });
+
+        await request(app)
+            .post(`/api/events/${env.event._id}/promotions`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ code: 'BONO3', type: 'value', valueAmount: 5 });
+
+        const res = await request(app)
+            .post(`/api/events/${env.event._id}/promotions/redeem-value`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ code: 'BONO3', userId: stranger._id.toString() });
+
+        expect(res.status).toBe(404);
+    });
+
     it('blocks redeeming an exhausted value coupon', async () => {
         const env = await setupPromotionEnvironment();
 

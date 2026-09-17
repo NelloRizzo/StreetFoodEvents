@@ -106,9 +106,9 @@ export function ReviewsManagePage() {
     return <div className={styles.page}>Non hai accesso alla moderazione delle recensioni.</div>
   }
 
-  const standName = (id: string | null) => {
-    if (!id) return 'Evento'
-    return stands.find((s) => s.id === id)?.name ?? id
+  const standName = (r: AdminReview) => {
+    if (!r.standId) return r.eventName || eventName || 'Evento'
+    return r.standName ?? stands.find((s) => s.id === r.standId)?.name ?? r.standId
   }
 
   return (
@@ -171,7 +171,7 @@ export function ReviewsManagePage() {
               <article key={r.id} className={`${styles.card} ${isHidden ? styles.hidden : ''}`}>
                 <div className={styles.cardTop}>
                   <span className={styles.name}>{r.reviewerName ?? 'Anonimo'}</span>
-                  <span className={styles.target}>{standName(r.standId)}</span>
+                  <span className={styles.target}>{standName(r)}</span>
                 </div>
 
                 <div className={styles.meta}>

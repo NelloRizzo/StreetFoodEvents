@@ -11,6 +11,7 @@ Considerazioni progettuali e decisioni architetturali.
 
 ## Printing approach
 - **Window.print() su HTML puro**: per stampare senza conflitti CSS SPA, si usa `window.open('', '_blank')`, si scrive HTML puro con `document.write()`, si chiama `window.print()` + `window.close()`. Evita problemi di `min-height: 100vh` e `overflow: hidden` di React/SPA.
+- **Stampa di pagine admin DENTRO la SPA** (Master Cambio, resoconti): oltre agli override generici esistenti (`html, body, #root { height: auto; overflow: visible }`, `.app { display: contents }`), va **nascosta la sidebar admin in `@media print`** con `.admin aside { display: none !important }` — `AdminSidebar` è `position: fixed; z-index: 40; height: 100vh` e senza il hide si sovrappone a ogni pagina stampata coprendo lo specchio di stampa (pagine bianche/incomplete). `AdminTopBar` è un `<header>` e viene già nascosto dalla regola globale `header, footer { display: none }`. Colonne puramente operative della tabella (es. Azioni/Chiudi cassa) vanno nascoste in stampa con una classe dedicata (`.printHide { display: none !important }`).
 
 ### Flyer page — lessons learned
 - **React Page dentro SPA (FlyerPage) con reset CSS aggressivo** è la soluzione adottata.
