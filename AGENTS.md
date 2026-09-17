@@ -9,7 +9,8 @@ I file di documentazione sono in `docs/`. Modifiche a questi file NON attivano u
 
 | File | Destinazione | Cosa scriverci |
 |---|---|---|
-| `docs/CHANGELOG.md` | **Cronologia feature** | Ogni volta che una feature viene completata, aggiungere una entry in ordine cronologico (mese anno). Include sia la checklist feature che la session history dettagliata. |
+| `docs/CHANGELOG.md` | **Cronologia feature — ULTIMO MESE** | Changelog rolling: contiene SOLO le voci del mese corrente (ultimo mese). Ogni volta che una feature viene completata, aggiungere una entry in cima alla sezione `## <Mese> <Anno>` corrente. Quando il mese corrente finisce (o la sezione cresce troppo), spostare le voci più vecchie in `docs/CHANGELOG_ANNUALE.md` così `CHANGELOG.md` resta sempre l'"ultimo mese". |
+| `docs/CHANGELOG_ANNUALE.md` | **Cronologia storica (annuale)** | Archivio delle voci uscite dal mese corrente. NON si aggiorna con nuove feature: le nuove entry vanno SOLO in `docs/CHANGELOG.md`. |
 | `docs/ARCHITECTURE.md` | **Decisioni progettuali** | Pattern architetturali, motivazioni delle scelte, "cose da non fare", gotchas che un agente AI deve conoscere per non ripetere errori. Aggiornare quando si introduce un nuovo pattern o si impara una lezione. |
 | `docs/TODO.md` | **Task in sospeso** | Feature non ancora implementate, bug aperti, attività pianificate per il futuro. Spostare qui le entry da `docs/CHANGELOG.md` solo quando diventano obsolete, non quando sono completate. |
 | `AGENTS.md` (questo file, radice) | **Setup operativo** | Istruzioni di base, comandi, struttura repo, API routes, deploy. NON contiene storia feature né progetti futuri — solo ciò che serve per operare OGGI. |
