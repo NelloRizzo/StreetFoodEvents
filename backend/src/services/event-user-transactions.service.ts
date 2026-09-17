@@ -15,6 +15,7 @@ type CreateEventUserTransactionInput = {
     realAmount?: number | null;
     description?: string | null;
     performedByUserId?: string | Types.ObjectId | null;
+    cashRegisterId?: string | Types.ObjectId | null;
     referenceType?: string | null;
     referenceId?: string | Types.ObjectId | null;
     occurredAt?: Date;
@@ -72,6 +73,7 @@ export async function createEventUserTransaction(input: CreateEventUserTransacti
             balanceAfter: nextBalance,
             description: input.description ?? null,
             performedByUserId: input.performedByUserId ?? null,
+            cashRegisterId: input.cashRegisterId ?? null,
             referenceType: input.referenceType ?? null,
             referenceId: input.referenceId ?? null,
             occurredAt: input.occurredAt ?? new Date()

@@ -354,3 +354,29 @@ Considerazioni progettuali e decisioni architetturali.
 ### GOTCHAS visti nella pratica
 - **Mai** passare la password nella query string o nei log; solo header.
 - Validazione password SOLO al momento dell'impostazione (argon2 lato server); confronto in `verifyStandSyncPassword` con `argon2.verify` asincrono — dentro `pushSyncChanges` va fatto PRIMA di iniziare gli upsert (nessun dato scritto se la password è errata).
+
+## Casse evento multiple (banco cambio) + Master Cambio (Set 2026)
+
+### Perché "casse" e non un'unica cassa
+- Fino a oggi l'evento aveva UN SOLO banco cambio logical (fondo/incassi su `Event.cashFloat`). Con più postazioni cambio (più banchi indipendenti, ognuno con il proprio denaro fisico) serve una cassa **per operatore/postazione**: `CashRegister` (collezione `cashregisters`). `EventUserTransaction.cashRegisterId` e `CashRegisterMovement.cashRegisterId` sono **nullable** per la retro-compatibilità dei record legacy.
+
+### Regole d'oro
+- **Una sola cassa APERTA per evento alla volta**: `POST /cash-registers` → 409 `code:'name_taken'` se ne esiste già una `status === 'open'`. Il flusso force (body `{ force: true, cashRegisterToClose }`) chiude l'altra e riapre sulla macchina corrente — sempre dietro conferma esplicita dell'operatore (fork bancario: l'operatore è l'unico responsabile di quale cassa è "attiva").
+- **Controllo `open` SEMPRE server-side**: `topUp`/`refund`/`setCashFloat`/`addCashMovement` con `cashRegisterId` nel body validano `status === 'open'` → 400 "Cassa chiusa, operazione non ammessa". Mai fidarsi del frontend. La UI di `EventExchangePage` rileva a runtime una cassa chiusa da altra macchina (il balance risponde `status !== 'open'`) e ricade in "Apri cassa" rimuovendo l'id da `localStorage` (`sfe_cash_register_<eventId>`).
+- **Cassa chiusa = snapshot storico, READ-ONLY**: il balance/lista di una cassa chiusa restituisce solo valori calcolati, nessuna scrittura possibile.
+- **Fondo per cassa**: `setCashFloat` con `cashRegisterId` scrive su `CashRegister.cashFloat`; senza `cashRegisterId` continua a scrivere su `Event.cashFloat` (legacy). Il contenuto per cassa = `cashFloat + topUpReal − refundReal + movimenti in − out`.
+
+### Conteggio transazioni nel Master Cambio
+- Il "numero di transazioni" di una cassa conta **SOLO `type: 'top-up' | 'refund'`** (il filtro che `getCashRegisterStats` applicava già da prima su `occurredAt` con `from`/`to`). Default `from` = `event.startDate`. Non includere i movimenti di cassa (carico/prelievo) in questo conteggio.
+
+### GOTCHAS implementativi visti in pratica
+- **Collisione di nomi `since`**: dentro `getCashRegisterStats` il nome `since` entrava in conflitto con un parametro omonimo → rinominata la variabile dell'aggregate `sinceStats` (una shadowing del parametro produciva conteggi errati).
+- **Route ordering**: `GET /:eventId/cash-registers/report` va registrata PRIMA di `/:cashRegisterId`, altrimenti `report` finirebbe nel param `cashRegisterId`. Stessa regola per `qrcodes/all` vs `/:reviewId` già vista altrove.
+- **TS + Express params**: `req.params as { cashRegisterId: string }` (Express 5 tipizza `string | undefined` in alcuni punti) per evitare errori `tsc`.
+- **`euroContent` NON scala per il rate**: `topUpReal`/`refundReal` sono già in euro (per `refund`: `credits / exchangeRate`) → `euroContent = float.euro + topUpReal − refundReal + euroIn − euroOut` senza moltiplicare. `creditsContent = float.credits − topUp + refund + creditsIn − creditsOut`.
+- **reset evento**: `resetEventOrders` deve eliminare anche `cashregisters` e `cashregistermovements` (oltre a ordini/transazioni/liquidazioni/contatori) per non lasciare residue casse orfane. Aggiungere `'cashregisters'` a `collectionsToClear` nello setup dei test.
+- **Always-same-event guard**: `findCashRegister` deve verificare che la cassa appartenga all'evento del parametro (`eventId` match), non solo l'id.
+
+### Frontend
+- `EventExchangePage` = postazione operatore: apertura/chiusura cassa (id persistito in `localStorage`), nome editabile, 409 → modale conferma force-close, saldi della cassa attiva via `GET /:cashRegisterId/balance`, **blocco top-up/refund/fondo/movimenti senza cassa aperta** (banner `.cassaLocked` + input `disabled`).
+- `CashRegistersPage` ("Master Cambio") = resoconto di TUTTE le casse: usa `GET /:eventId/cash-registers/report` con `from`/`to` (input `datetime-local` → ISO UTC), auto-refresh 5s, riga TOTALE e `window.print()`. Riusa i moduli SCSS di `EventReportPage`. La route `/admin/events/:eventId/cash-registers` NON deve matchare la regex `isExchange` di `AdminLayout` (altrimenti perde chrome/sidebar) — il segmento è `cash-registers`, non `exchange`.

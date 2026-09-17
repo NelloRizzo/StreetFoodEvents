@@ -77,6 +77,37 @@ type CashMovement = {
   occurredAt: string
 }
 
+type CashRegister = {
+  id: string
+  eventId: string
+  name: string
+  status: 'open' | 'closed'
+  openedByUserId: string | null
+  openedByName: string | null
+  openedAt: string
+  closedAt: string | null
+  cashFloat: { euro: number; credits: number; setAt: string | null }
+}
+
+type CashRegisterBalance = {
+  id: string
+  name: string
+  status: 'open' | 'closed'
+  exchangeRate: number
+  currencyName: string
+  currencySymbol: string | null
+  cashFloat: { euro: number; credits: number; setAt: string | null }
+  topUp: number
+  refund: number
+  topUpCount: number
+  refundCount: number
+  topUpReal: number
+  refundReal: number
+  euroContent: number
+  creditsContent: number
+  cashMovements: { euroIn: number; euroOut: number; creditsIn: number; creditsOut: number }
+}
+
 function CurrencySymbol({ name }: { name: string }) {
   const initial = name.charAt(0).toUpperCase()
   return (
@@ -94,6 +125,19 @@ export function EventExchangePage() {
   const [loading, setLoading] = useState(true)
   const [eventName, setEventName] = useState('')
   const [balance, setBalance] = useState<BalanceSummary | null>(null)
+
+  const cassaStorageKey = eventId ? `sfe_cash_register_${eventId}` : ''
+  const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([])
+  const [activeCassa, setActiveCassa] = useState<CashRegister | null>(null)
+  const [cassaBalance, setCassaBalance] = useState<CashRegisterBalance | null>(null)
+  const [cassaName, setCassaName] = useState('')
+  const [cassaNameEdit, setCassaNameEdit] = useState('')
+  const [cassaNotice, setCassaNotice] = useState<string | null>(null)
+  const [openingCassa, setOpeningCassa] = useState(false)
+  const [closingCassa, setClosingCassa] = useState(false)
+  const [renamingCassa, setRenamingCassa] = useState(false)
+  const [duplicateCassa, setDuplicateCassa] = useState<CashRegister | null>(null)
+  const [confirmCloseCassa, setConfirmCloseCassa] = useState(false)
 
   const [users, setUsers] = useState<ExchangeUser[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -137,11 +181,12 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       setEventName(ev.item.name)
     } catch { /* event name non essenziale */}
     try {
-      const [bal, usrs, txs, cms] = await Promise.all([
+      const [bal, usrs, txs, cms, crs] = await Promise.all([
         apiRequest<BalanceSummary>(`/exchange/${eventId}/balance`),
         apiRequest<{ items: ExchangeUser[] }>(`/exchange/${eventId}/users`),
         apiRequest<{ items: Transaction[]; pagination: { page: number; totalPages: number } }>(`/exchange/${eventId}/transactions?page=${txPage}&limit=20`),
         apiRequest<{ items: CashMovement[]; pagination: { page: number; totalPages: number } }>(`/exchange/${eventId}/cash-movements?page=${cmPage}&limit=10`),
+        apiRequest<{ items: CashRegister[] }>(`/exchange/${eventId}/cash-registers`),
       ])
       setBalance(bal)
       setUsers(usrs.items)
@@ -149,6 +194,20 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       setTxTotalPages(txs.pagination.totalPages)
       setCashMovements(cms.items)
       setCmTotalPages(cms.pagination.totalPages)
+      setCashRegisters(crs.items)
+
+      const storedId = cassaStorageKey ? localStorage.getItem(cassaStorageKey) : null
+      const stored = storedId ? crs.items.find((c) => c.id === storedId) : undefined
+      if (stored && stored.status === 'open') {
+        setActiveCassa(stored)
+      } else {
+        if (stored && stored.status === 'closed') {
+          setCassaNotice(`La cassa "${stored.name}" è stata chiusa.`)
+          if (cassaStorageKey) localStorage.removeItem(cassaStorageKey)
+        }
+        setActiveCassa(null)
+      }
+
       const currentId = selectedUserIdRef.current
       const stillExists = usrs.items.some((u) => u.id === currentId)
       if (!currentId || !stillExists) {
@@ -166,21 +225,139 @@ const [showCashSetup, setShowCashSetup] = useState(false)
     }
     if (any403) setForbidden(true)
     setLoading(false)
-  }, [eventId, isAuthenticated, txPage, cmPage])
+  }, [eventId, isAuthenticated, txPage, cmPage, cassaStorageKey])
 
   useEffect(() => { fetchData() }, [fetchData])
 
   useEffect(() => { selectedUserIdRef.current = selectedUserId }, [selectedUserId])
 
+  useEffect(() => {
+    if (activeCassa) setCassaNameEdit(activeCassa.name)
+  }, [activeCassa])
+
+  const fetchCassaBalance = useCallback(async () => {
+    if (!eventId || !activeCassa) {
+      setCassaBalance(null)
+      return
+    }
+    try {
+      const cb = await apiRequest<CashRegisterBalance>(`/exchange/${eventId}/cash-registers/${activeCassa.id}/balance`)
+      if (cb.status !== 'open') {
+        setCassaNotice(`La cassa "${cb.name}" è stata chiusa.`)
+        if (cassaStorageKey) localStorage.removeItem(cassaStorageKey)
+        setActiveCassa(null)
+        setCassaBalance(null)
+        return
+      }
+      setCassaBalance(cb)
+    } catch {
+      setCassaBalance(null)
+    }
+  }, [eventId, activeCassa, cassaStorageKey])
+
+  useEffect(() => { fetchCassaBalance() }, [fetchCassaBalance])
+
+  const activateCassa = (cassa: CashRegister) => {
+    if (cassaStorageKey) localStorage.setItem(cassaStorageKey, cassa.id)
+    setCassaNotice(null)
+    setActiveCassa(cassa)
+  }
+
+  const handleOpenCassa = async () => {
+    if (!eventId) return
+    setOpeningCassa(true)
+    try {
+      const res = await apiRequest<{ item: CashRegister }>(`/exchange/${eventId}/cash-registers`, {
+        method: 'POST',
+        bodyJson: cassaName.trim() ? { name: cassaName.trim() } : {}
+      })
+      setCassaName('')
+      setDuplicateCassa(null)
+      activateCassa(res.item)
+      fetchData()
+    } catch (err) {
+      const e = err as { status?: number; code?: string; item?: CashRegister; message?: string }
+      if (e.status === 409 && e.item) {
+        setDuplicateCassa(e.item)
+        setModal({
+          open: true,
+          variant: 'confirm',
+          title: 'Cassa già aperta',
+          message: `Esiste già una cassa aperta "${e.item.name}"${e.item.openedByName ? ` (${e.item.openedByName})` : ''}. Vuoi chiuderla e riaprirla su questa macchina?`
+        })
+      } else {
+        setModal({ open: true, variant: 'alert', title: 'Errore', message: e.message || "Errore durante l'apertura della cassa" })
+      }
+    } finally {
+      setOpeningCassa(false)
+    }
+  }
+
+  const handleForceOpenCassa = async (duplicate: CashRegister) => {
+    if (!eventId) return
+    setOpeningCassa(true)
+    try {
+      const res = await apiRequest<{ item: CashRegister }>(`/exchange/${eventId}/cash-registers`, {
+        method: 'POST',
+        bodyJson: { name: cassaName.trim() || duplicate.name, force: true, cashRegisterToClose: duplicate.id }
+      })
+      setCassaName('')
+      setDuplicateCassa(null)
+      activateCassa(res.item)
+      fetchData()
+    } catch (err) {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || "Errore durante l'apertura della cassa" })
+    } finally {
+      setOpeningCassa(false)
+    }
+  }
+
+  const handleRenameCassa = async () => {
+    if (!eventId || !activeCassa) return
+    const name = cassaNameEdit.trim()
+    if (!name || name === activeCassa.name) return
+    setRenamingCassa(true)
+    try {
+      const res = await apiRequest<{ item: CashRegister }>(`/exchange/${eventId}/cash-registers/${activeCassa.id}`, {
+        method: 'PATCH',
+        bodyJson: { name }
+      })
+      setActiveCassa(res.item)
+    } catch (err) {
+      const e = err as { status?: number; message?: string }
+      setModal({ open: true, variant: 'alert', title: e.status === 409 ? 'Nome già in uso' : 'Errore', message: e.message || 'Errore durante la rinomina della cassa' })
+      setCassaNameEdit(activeCassa.name)
+    } finally {
+      setRenamingCassa(false)
+    }
+  }
+
+  const handleCloseCassa = async () => {
+    if (!eventId || !activeCassa) return
+    setClosingCassa(true)
+    try {
+      await apiRequest(`/exchange/${eventId}/cash-registers/${activeCassa.id}/close`, { method: 'POST', bodyJson: {} })
+      if (cassaStorageKey) localStorage.removeItem(cassaStorageKey)
+      setCassaNotice(`Cassa "${activeCassa.name}" chiusa.`)
+      setActiveCassa(null)
+      setCassaBalance(null)
+      fetchData()
+    } catch (err) {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante la chiusura della cassa' })
+    } finally {
+      setClosingCassa(false)
+    }
+  }
+
   const handleTopUp = async () => {
-    if (!eventId || !selectedUserId || !topUpAmount) return
+    if (!eventId || !selectedUserId || !topUpAmount || !activeCassa) return
     const amount = parseFloat(topUpAmount)
     if (!amount || amount <= 0) return
     setSubmitting('topup')
     try {
       const res = await apiRequest<{ newBalance: number }>(`/exchange/${eventId}/top-up`, {
         method: 'POST',
-        bodyJson: { eventUserId: selectedUserId, amount, description: topUpDesc.trim() || undefined }
+        bodyJson: { eventUserId: selectedUserId, amount, description: topUpDesc.trim() || undefined, cashRegisterId: activeCassa.id }
       })
       setSelUserBalance(res.newBalance)
       setTopUpAmount('')
@@ -190,6 +367,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       const credits = amount * rate
       setModal({ open: true, variant: 'alert', title: 'Carico completato', message: `Caricati €${amount.toFixed(2)} → ${credits.toFixed(2)} ${balance?.currencyName ?? 'crediti'}. Nuovo saldo: ${res.newBalance}` })
       fetchData()
+      fetchCassaBalance()
     } catch (err) {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante il carico' })
     } finally {
@@ -198,14 +376,14 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   }
 
   const handleRefund = async () => {
-    if (!eventId || !selectedUserId || !refundAmount) return
+    if (!eventId || !selectedUserId || !refundAmount || !activeCassa) return
     const amount = parseFloat(refundAmount)
     if (!amount || amount <= 0) return
     setSubmitting('refund')
     try {
       const res = await apiRequest<{ newBalance: number }>(`/exchange/${eventId}/refund`, {
         method: 'POST',
-        bodyJson: { eventUserId: selectedUserId, amount, description: refundDesc.trim() || undefined }
+        bodyJson: { eventUserId: selectedUserId, amount, description: refundDesc.trim() || undefined, cashRegisterId: activeCassa.id }
       })
       setSelUserBalance(res.newBalance)
       setRefundAmount('')
@@ -215,6 +393,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       const real = amount / rate
       setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'} → €${real.toFixed(2)}. Nuovo saldo: ${res.newBalance}` })
       fetchData()
+      fetchCassaBalance()
     } catch (err) {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante il rimborso' })
     } finally {
@@ -223,12 +402,13 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   }
 
   const handleSaveFloat = async () => {
-    if (!eventId) return
+    if (!eventId || !activeCassa) return
     setSavingFloat(true)
     try {
       await apiRequest(`/exchange/${eventId}/cash-float`, {
         method: 'POST',
         bodyJson: {
+          cashRegisterId: activeCassa.id,
           ...(floatEuro !== '' ? { euro: parseFloat(floatEuro) } : {}),
           ...(floatCredits !== '' ? { credits: parseFloat(floatCredits) } : {})
         }
@@ -237,6 +417,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       setFloatCredits('')
       setModal({ open: true, variant: 'alert', title: 'Fondo cassa aggiornato', message: 'Il fondo cassa è stato impostato.' })
       fetchData()
+      fetchCassaBalance()
     } catch (err) {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante il salvataggio del fondo cassa' })
     } finally {
@@ -245,18 +426,19 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   }
 
   const handleAddMovement = async () => {
-    if (!eventId || !mvAmount) return
+    if (!eventId || !mvAmount || !activeCassa) return
     const amount = parseFloat(mvAmount)
     if (!amount || amount <= 0) return
     setAddingMovement(true)
     try {
       await apiRequest(`/exchange/${eventId}/cash-movements`, {
         method: 'POST',
-        bodyJson: { currency: mvCurrency, direction: mvDirection, amount, description: mvDesc.trim() || undefined }
+        bodyJson: { currency: mvCurrency, direction: mvDirection, amount, description: mvDesc.trim() || undefined, cashRegisterId: activeCassa.id }
       })
       setMvAmount('')
       setMvDesc('')
       fetchData()
+      fetchCassaBalance()
     } catch (err) {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante la registrazione del movimento' })
     } finally {
@@ -314,25 +496,67 @@ const [showCashSetup, setShowCashSetup] = useState(false)
         <>
           <section className={cambioStyles.section}>
             <h2 className={cambioStyles.exSectionTitle}>Contenuto cassa</h2>
-            {balance && (
+            {activeCassa && (
+              <div className={cambioStyles.cassaHeader}>
+                <div className={cambioStyles.cassaIdentity}>
+                  <span className={cambioStyles.cassaStatusOpen}>Aperta</span>
+                  <input
+                    className={cambioStyles.cassaName}
+                    value={cassaNameEdit}
+                    onChange={(e) => setCassaNameEdit(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className={cambioStyles.exTextBtn}
+                    onClick={handleRenameCassa}
+                    disabled={renamingCassa || !cassaNameEdit.trim() || cassaNameEdit.trim() === activeCassa.name}
+                  >
+                    {renamingCassa ? '...' : 'Rinomina'}
+                  </button>
+                  <span className={cambioStyles.cassaMeta}>
+                    aperta da {activeCassa.openedByName || 'operatore'} · {new Date(activeCassa.openedAt).toLocaleString('it-IT')}
+                  </span>
+                </div>
+                <div className={cambioStyles.cassaActions}>
+                  <button
+                    type="button"
+                    className={cambioStyles.btnCloseCassa}
+                    onClick={() => {
+                      setConfirmCloseCassa(true)
+                      setModal({
+                        open: true,
+                        variant: 'confirm',
+                        title: 'Chiudi cassa',
+                        message: `Confermi la chiusura della cassa "${activeCassa.name}"? Su questa cassa non saranno più possibili operazioni.`
+                      })
+                    }}
+                    disabled={closingCassa}
+                  >
+                    {closingCassa ? 'Chiusura...' : 'Chiudi cassa'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeCassa && cassaBalance && (
               <>
                 <div className={cambioStyles.cardRow}>
                   <div className={cambioStyles.statCard}>
                     <div className={cambioStyles.statLabel}>Euro in cassa</div>
-                    <div className={cambioStyles.statValue}>{fmtEur(balance.euroContent)}</div>
+                    <div className={cambioStyles.statValue}>{fmtEur(cassaBalance.euroContent)}</div>
                     <div className={cambioStyles.statSub}>
-                      Fondo: {fmtEur(balance.cashFloat?.euro ?? 0)}
-                      {' · '}Movimenti: +{fmtEur(balance.cashMovements.euroIn)} / -{fmtEur(balance.cashMovements.euroOut)}
-                      {' · '}Top-up − Rimborso: {fmtEur((balance.totalTopUpReal ?? 0) - (balance.totalRefundReal ?? 0))}
+                      Fondo: {fmtEur(cassaBalance.cashFloat?.euro ?? 0)}
+                      {' · '}Movimenti: +{fmtEur(cassaBalance.cashMovements.euroIn)} / -{fmtEur(cassaBalance.cashMovements.euroOut)}
+                      {' · '}Top-up − Rimborso: {fmtEur(cassaBalance.topUpReal - cassaBalance.refundReal)}
                     </div>
                   </div>
                   <div className={cambioStyles.statCard}>
                     <div className={cambioStyles.statLabel}>{currencyName} in cassa</div>
-                    <div className={cambioStyles.statValue}>{fmt(balance.creditsContent)}</div>
+                    <div className={cambioStyles.statValue}>{fmt(cassaBalance.creditsContent)}</div>
                     <div className={cambioStyles.statSub}>
-                      Fondo: {fmt(balance.cashFloat?.credits ?? 0)}
-                      {' · '}Movimenti: +{fmt(balance.cashMovements.creditsIn)} / -{fmt(balance.cashMovements.creditsOut)}
-                      {' · '}Rimborsi − Top-up: {fmt((balance.totalRefund ?? 0) - (balance.totalTopUp ?? 0))}
+                      Fondo: {fmt(cassaBalance.cashFloat?.credits ?? 0)}
+                      {' · '}Movimenti: +{fmt(cassaBalance.cashMovements.creditsIn)} / -{fmt(cassaBalance.cashMovements.creditsOut)}
+                      {' · '}Rimborsi − Top-up: {fmt(cassaBalance.refund - cassaBalance.topUp)}
                     </div>
                   </div>
                 </div>
@@ -354,13 +578,13 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                         Fondo Euro
                         <input type="number" min="0" step="0.01" value={floatEuro}
                           onChange={(e) => setFloatEuro(e.target.value)}
-                          placeholder={balance.cashFloat ? String(balance.cashFloat.euro) : '0'} />
+                          placeholder={cassaBalance.cashFloat ? String(cassaBalance.cashFloat.euro) : '0'} />
                       </label>
                       <label className={cambioStyles.field}>
                         Fondo {currencyName}
                         <input type="number" min="0" step="0.01" value={floatCredits}
                           onChange={(e) => setFloatCredits(e.target.value)}
-                          placeholder={balance.cashFloat ? String(balance.cashFloat.credits) : '0'} />
+                          placeholder={cassaBalance.cashFloat ? String(cassaBalance.cashFloat.credits) : '0'} />
                       </label>
                       <button className={cambioStyles.btnTopUp} onClick={handleSaveFloat} disabled={savingFloat || (floatEuro === '' && floatCredits === '')}>
                         {savingFloat ? 'Salvataggio...' : 'Salva fondo cassa'}
@@ -455,6 +679,29 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 )}
               </>
             )}
+
+            {!activeCassa && (
+              <div className={cambioStyles.cassaOpenCard}>
+                <h3>Apri cassa</h3>
+                <p className={cambioStyles.statSub}>
+                  Apri una cassa su questa postazione per eseguire operazioni di cambio. Il nome è modificabile.
+                </p>
+                <label className={cambioStyles.field}>
+                  Nome cassa
+                  <input
+                    type="text"
+                    value={cassaName}
+                    onChange={(e) => setCassaName(e.target.value)}
+                    placeholder={`Cassa ${cashRegisters.length + 1} (automatico)`}
+                    disabled={openingCassa}
+                  />
+                </label>
+                <button className={cambioStyles.btnTopUp} onClick={handleOpenCassa} disabled={openingCassa}>
+                  {openingCassa ? 'Apertura...' : 'Apri cassa'}
+                </button>
+                {cassaNotice && <p className={cambioStyles.cassaNotice}>{cassaNotice}</p>}
+              </div>
+            )}
           </section>
 
           <section className={cambioStyles.section}>
@@ -501,6 +748,12 @@ const [showCashSetup, setShowCashSetup] = useState(false)
             )}
           </section>
 
+          {!activeCassa && (
+            <p className={cambioStyles.cassaLocked}>
+              Nessuna cassa aperta: apri una cassa per eseguire carichi, rimborsi e movimenti.
+            </p>
+          )}
+
           <div className={cambioStyles.formGrid}>
             <section>
               <h2 className={cambioStyles.exSectionTitle}>Carica (Reale &rarr; Virtuale)</h2>
@@ -509,7 +762,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   Importo €
                   <input type="number" min="0.01" step="0.01" value={topUpAmount}
                     onChange={(e) => setTopUpAmount(e.target.value)}
-                    disabled={!selectedUserId || submitting === 'topup'} />
+                    disabled={!selectedUserId || !activeCassa || submitting === 'topup'} />
                 </label>
                 {topUpAmount && parseFloat(topUpAmount) > 0 && (
                   <p className={cambioStyles.preview}>
@@ -520,10 +773,10 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   Note (opzionale)
                   <input type="text" value={topUpDesc}
                     onChange={(e) => setTopUpDesc(e.target.value)}
-                    disabled={!selectedUserId || submitting === 'topup'} />
+                    disabled={!selectedUserId || !activeCassa || submitting === 'topup'} />
                 </label>
                 <button className={cambioStyles.btnTopUp} onClick={handleTopUp}
-                  disabled={!selectedUserId || !topUpAmount || submitting === 'topup'}>
+                  disabled={!selectedUserId || !topUpAmount || !activeCassa || submitting === 'topup'}>
                   {submitting === 'topup' ? 'Caricamento...' : `Carica €`}
                 </button>
               </div>
@@ -536,7 +789,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   Importo {currencyName}
                   <input type="number" min="0.01" step="0.01" value={refundAmount}
                     onChange={(e) => setRefundAmount(e.target.value)}
-                    disabled={!selectedUserId || submitting === 'refund'} />
+                    disabled={!selectedUserId || !activeCassa || submitting === 'refund'} />
                 </label>
                 {refundAmount && parseFloat(refundAmount) > 0 && (
                   <p className={cambioStyles.preview}>
@@ -547,10 +800,10 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   Note (opzionale)
                   <input type="text" value={refundDesc}
                     onChange={(e) => setRefundDesc(e.target.value)}
-                    disabled={!selectedUserId || submitting === 'refund'} />
+                    disabled={!selectedUserId || !activeCassa || submitting === 'refund'} />
                 </label>
                 <button className={cambioStyles.btnRefund} onClick={handleRefund}
-                  disabled={!selectedUserId || !refundAmount || submitting === 'refund'}>
+                  disabled={!selectedUserId || !refundAmount || !activeCassa || submitting === 'refund'}>
                   {submitting === 'refund' ? 'Rimborso in corso...' : `Rimborsa ${currencyName}`}
                 </button>
               </div>
@@ -629,9 +882,23 @@ const [showCashSetup, setShowCashSetup] = useState(false)
         variant={modal.variant}
         title={modal.title}
         message={modal.message}
-        confirmLabel="OK"
-        onConfirm={() => setModal((prev) => ({ ...prev, open: false }))}
-        onCancel={() => setModal((prev) => ({ ...prev, open: false }))}
+        confirmLabel={duplicateCassa || confirmCloseCassa ? 'Conferma' : 'OK'}
+        onConfirm={() => {
+          setModal((prev) => ({ ...prev, open: false }))
+          if (duplicateCassa) {
+            handleForceOpenCassa(duplicateCassa)
+            return
+          }
+          if (confirmCloseCassa) {
+            setConfirmCloseCassa(false)
+            handleCloseCassa()
+          }
+        }}
+        onCancel={() => {
+          setDuplicateCassa(null)
+          setConfirmCloseCassa(false)
+          setModal((prev) => ({ ...prev, open: false }))
+        }}
       />
     </div>
   )

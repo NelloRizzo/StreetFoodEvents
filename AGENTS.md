@@ -57,6 +57,7 @@ Express + Mongoose + argon2 session auth (httpOnly cookie). ESM, TypeScript, Nod
 - `Contest.orderedPOIIds` can contain **duplicates** — the same POI ID can appear multiple times. `scannedPOIIds` also stores duplicates (one entry per scan). Completion = `scannedPOIIds.length === orderedPOIIds.length` (total slots, NOT unique count). Do NOT use `Set` or `includes()` to check if a specific occurrence has been scanned — use occurrence-based counting (see ARCHITECTURE.md).
 - `StandSettlement` stores computed euro values (`grossEuro`/`feeEuro`/`payoutEuro`) + `exchangeRate` snapshot. `amount` (crediti) è libero — il report stand è solo informativo, nessun check di saldo residuo. Le liquidazioni NON entrano in `getBalance`.
 - `StandSettlement.direction` è `'debit' | 'credit'` (default `'credit'`). `'debit'` (DARE) = carico crediti allo stand, NESSUN pagamento in euro (`grossEuro`/`feeEuro`/`payoutEuro` = 0, `feePercent` ignorato e forzato a 0); `'credit'` (AVERE) = liquidazione con pagamento in euro. `toReturnCredits` (da restituire) = caricati − liquidati, mai negativo. Record esistenti senza `direction` valgono come `'credit'` (`$ifNull` negli aggregate).
+- **`CashRegister`** = banco cambio per evento (collezione `cashregisters`: `eventId`, `name`, `status open|closed`, `openedByUserId`, `openedAt`, `closedAt`, `cashFloat { euro, credits, setAt }`). `EventUserTransaction.cashRegisterId` e `CashRegisterMovement.cashRegisterId` sono **nullable** (record legacy senza cassa). Una `top-up`/`refund`/fondo/movimento con `cashRegisterId` nel body è **attribuita alla cassa e validata `status === 'open'`** (400 "Cassa chiusa, operazione non ammessa"); l'operatore è l'unico responsabile (fork bancario: più banchi, ciascuno con la propria cassa). `setCashFloat` con `cashRegisterId` scrive su `CashRegister.cashFloat`, senza → legacy `Event.cashFloat`. Il balance di una cassa **chiusa** = snapshot storico (sola lettura, nessuna scrittura). Il conteggio "transazioni" nel report/master conta **SOLO `top-up` + `refund`** (ripreso dal filtro già usato da `getCashRegisterStats` su `occurredAt` con `from`/`to`).
 
 ### API routes
 `GET /health` (no auth). All `/api/*` routes: GET are public except users/event-users/event-products/favorites/orders/upload. POST/PATCH/DELETE are protected.
@@ -166,7 +167,8 @@ Nota: modello `Review` — `standId` null = recensione evento; moderazione **pos
 ### Frontend — Exchange route
 | Route | Element | Description |
 |---|---|---|
-| `/events/:eventId/exchange` | EventExchangePage | Cambio valuta (crediti), solo exchange-admin / platform-admin |
+| `/events/:eventId/exchange` | EventExchangePage | Cambio valuta (crediti), solo exchange-admin / platform-admin. Ogni postazione apre/chiude la propria cassa (id in `localStorage sfe_cash_register_<eventId>`); senza cassa aperta top-up/refund/fondo/movimenti sono bloccati |
+| `/events/:eventId/cash-registers` | CashRegistersPage | **Master Cambio**: resoconto di TUTTE le casse (fondo/contenuto € e crediti, conteggio transazioni da `datetime-local` Da/, auto-refresh 5s, stampa), solo exchange-admin / platform-admin |
 | `/events/:eventId/settlements` | StandSettlementsPage | Liquidazione stand (crediti → euro con percentuale trattenuta), solo exchange-admin / platform-admin |
 | `/events/:eventId/settlements/report` | SettlementsReportPage | Resoconto liquidazioni aggregato per evento (stampa + filtro date), solo exchange-admin / platform-admin |
 
@@ -195,8 +197,14 @@ Nota: modello `Review` — `standId` null = recensione evento; moderazione **pos
 | GET | `/api/exchange/:eventId/users` | exchange-admin / platform-admin | Lista utenti cambio (auto-crea anonimo se mancante) |
 | GET | `/api/exchange/:eventId/balance` | exchange-admin / platform-admin | Saldo cassa (top-up/refund aggregati + fondo cassa e contenuto euro/token) |
 | GET | `/api/exchange/:eventId/transactions` | exchange-admin / platform-admin | Storico transazioni (paginato) |
-| POST | `/api/exchange/:eventId/top-up` | exchange-admin / platform-admin | Carica crediti (reale → virtuale) |
-| POST | `/api/exchange/:eventId/refund` | exchange-admin / platform-admin | Rimborsa crediti (virtuale → reale) |
+| GET | `/api/exchange/:eventId/cash-registers` | exchange-admin / platform-admin | Lista casse evento (con operatore di apertura) |
+| POST | `/api/exchange/:eventId/cash-registers` | exchange-admin / platform-admin | Apre cassa (auto-nome `Cassa N`). 409 `code:'name_taken'` se ne esiste già una aperta; con `{ force: true, cashRegisterToClose }` chiude l'altra e riapre qui |
+| GET | `/api/exchange/:eventId/cash-registers/report` | exchange-admin / platform-admin | Master Cambio: resoconto TUTTE le casse (fondo €/crediti, contenuto, conteggio top-up/refund), filtro `from`/`to` su `occurredAt` (default `from` = `event.startDate`), totali. Registrata PRIMA di `/:cashRegisterId` |
+| GET | `/api/exchange/:eventId/cash-registers/:cashRegisterId/balance` | exchange-admin / platform-admin | Balance di una singola cassa (fondi + contenuto + `topUpReal`/`refundReal` + conteggi since) |
+| PATCH | `/api/exchange/:eventId/cash-registers/:cashRegisterId` | exchange-admin / platform-admin | Rinomina cassa (409 se nome già in uso tra le aperte) |
+| POST | `/api/exchange/:eventId/cash-registers/:cashRegisterId/close` | exchange-admin / platform-admin | Chiude cassa (404/400 se già chiusa) |
+| POST | `/api/exchange/:eventId/top-up` | exchange-admin / platform-admin | Carica crediti (reale → virtuale). Con `cashRegisterId` nel body la transazione è attribuita alla cassa (400 se chiusa/non appartenente) |
+| POST | `/api/exchange/:eventId/refund` | exchange-admin / platform-admin | Rimborsa crediti (virtuale → reale). Con `cashRegisterId` nel body la transazione è attribuita alla cassa (400 se chiusa/non appartenente) |
 | GET | `/api/exchange/:eventId/settlements/summary` | exchange-admin / platform-admin | Riepilogo crediti guadagnati/liquidati per stand (informativo) |
 | GET | `/api/exchange/:eventId/settlements/report` | exchange-admin / platform-admin | Resoconto aggregato liquidazioni per stand (numero, crediti, lordo/trattenuta/erogato €, residuo), filtro `from`/`to`, totali evento |
 | GET | `/api/exchange/:eventId/settlements` | exchange-admin / platform-admin | Storico liquidazioni stand (paginato, filtro standId) |
@@ -308,6 +316,13 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Set 2026 — casse evento multiple + Master Cambio)
+### Completed
+- **Backend** — nuovo modello `CashRegister` (collezione `cashregisters`); `cashRegisterId` (nullable) aggiunto a `EventUserTransaction` e `CashRegisterMovement`. API `/api/exchange/:eventId/cash-registers` (exchange-admin / platform-admin): lista, apertura con auto-nome `Cassa N` (409 `name_taken` se ne esiste un'altra aperta; `force: true` + `cashRegisterToClose` per chiudere l'altra e riaprire qui), report (Master Cambio, `from`/`to` su `occurredAt`, default `from` = `event.startDate`, solo top-up/refund), rename, close, balance per singola cassa. Le operazioni `topUp`/`refund`/`setCashFloat`/`addCashMovement` accettano `cashRegisterId` e validano `status === 'open'` server-side (400 altrimenti); `setCashFloat` con cassa scrive su `CashRegister.cashFloat` (senza → legacy `Event.cashFloat`). `resetEventOrders` elimina anche casse + movimenti.
+- **Frontend `EventExchangePage`**: apertura/chiusura cassa per postazione (id in `localStorage sfe_cash_register_<eventId>`), nome editabile con Rinomina, 409 → modale di conferma force-close, balance della cassa attiva (fondi contenuti per cassa), **blocco operazioni senza cassa aperta** (banner `.cassaLocked` + input disabilitati), ricaduta automatica se rileva cassa chiusa da altra macchina.
+- **`CashRegistersPage`** ("Master Cambio", `/admin/events/:eventId/cash-registers`): tabella tutte le casse + fondo/contenuto €/crediti, conteggio transazioni con filtro `datetime-local` Da/a, riga TOTALE, auto-refresh 5s, stampa. Voce sidebar Finanziario, `SEGMENT_LABELS['cash-registers']='Master Cambio'` (la route NON matcha la regex `isExchange` di AdminLayout → chrome visibili).
+- Verifica: backend typecheck ✓, **435 test ✓** (47 file, +9 in `integration-cash-registers.test.ts`), lint 0 errori; frontend build (tsc+vite) ✓, 43 test vitest ✓, lint 0 errori (13 warning pre-esistenti). Docs aggiornate. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 
 ## Session state (Set 2026 — tracking rimosso dalla cassa + pagina dedicata per lo stand)
 ### Completed

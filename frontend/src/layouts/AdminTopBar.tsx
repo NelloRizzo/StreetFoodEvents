@@ -42,6 +42,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   cashier: 'Cassa evento',
   report: 'Resoconto',
   exchange: 'Cambio valuta',
+  'cash-registers': 'Master Cambio',
   settlements: 'Liquidazioni',
   galleria: 'Galleria',
   slideshow: 'Slideshow',

@@ -4,6 +4,7 @@ import { Types } from 'mongoose';
 import { EventUserModel } from '../models/event-user.model';
 import { EventUserTransactionModel } from '../models/event-user-transaction.model';
 import { CashRegisterMovementModel } from '../models/cash-register-movement.model';
+import { CashRegisterModel } from '../models/cash-register.model';
 import { EventModel } from '../models/event.model';
 import { OrderModel } from '../models/order.model';
 import { StandModel } from '../models/stand.model';
@@ -13,6 +14,54 @@ import { createEventUserTransaction, EventUserTransactionError } from '../servic
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
+}
+
+function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function toCashRegisterResponse(
+    cr: {
+        _id: Types.ObjectId;
+        eventId: Types.ObjectId;
+        name: string;
+        status: string;
+        openedByUserId?: Types.ObjectId | null;
+        openedAt: Date;
+        closedAt?: Date | null;
+        cashFloat?: { euro: number; credits: number; setAt?: Date | null } | null;
+    },
+    openedByName: string | null = null
+) {
+    return {
+        id: cr._id.toString(),
+        eventId: cr.eventId.toString(),
+        name: cr.name,
+        status: cr.status,
+        openedByUserId: cr.openedByUserId?.toString() ?? null,
+        openedByName,
+        openedAt: cr.openedAt,
+        closedAt: cr.closedAt ?? null,
+        cashFloat: cr.cashFloat
+            ? { euro: cr.cashFloat.euro, credits: cr.cashFloat.credits, setAt: cr.cashFloat.setAt ?? null }
+            : { euro: 0, credits: 0, setAt: null }
+    };
+}
+
+async function findCashRegister(req: Request, cashRegisterId: string) {
+    if (!isValidObjectId(cashRegisterId)) return { error: { status: 400, message: 'Valid cashRegisterId is required' } as const };
+    const cashRegister = await CashRegisterModel.findOne({ _id: cashRegisterId, eventId: req.params.eventId });
+    if (!cashRegister) return { error: { status: 404, message: 'Cash register not found for this event' } as const };
+    return { cashRegister } as const;
+}
+
+async function loadOpenerNames(cashRegisters: Array<{ openedByUserId?: Types.ObjectId | null }>) {
+    const openerIds = [...new Set(cashRegisters.map((c) => c.openedByUserId?.toString()).filter(Boolean))];
+    if (openerIds.length === 0) return new Map<string, string>();
+    const openers = await UserModel.find({ _id: { $in: openerIds } }).select('firstName lastName').lean();
+    return new Map(
+        openers.map((u) => [u._id.toString(), `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Operatore'])
+    );
 }
 
 function toTransactionResponse(t: {
@@ -27,6 +76,7 @@ function toTransactionResponse(t: {
     balanceAfter: number;
     description?: string | null;
     performedByUserId?: Types.ObjectId | null;
+    cashRegisterId?: Types.ObjectId | null;
     referenceType?: string | null;
     referenceId?: Types.ObjectId | null;
     occurredAt: Date;
@@ -44,6 +94,7 @@ function toTransactionResponse(t: {
         balanceAfter: t.balanceAfter,
         description: t.description ?? null,
         performedByUserId: t.performedByUserId?.toString() ?? null,
+        cashRegisterId: t.cashRegisterId?.toString() ?? null,
         referenceType: t.referenceType ?? null,
         referenceId: t.referenceId?.toString() ?? null,
         occurredAt: t.occurredAt,
@@ -259,7 +310,7 @@ async function setCashFloat(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
 
-    const { euro, credits } = req.body as { euro?: unknown; credits?: unknown };
+    const { euro, credits } = req.body as { euro?: unknown; credits?: unknown; cashRegisterId?: unknown };
 
     function parseAmount(value: unknown): number | undefined {
         if (value === undefined || value === null || value === '') return undefined;
@@ -273,6 +324,40 @@ async function setCashFloat(req: Request, res: Response) {
     }
     if (credits !== undefined && parseAmount(credits) === undefined) {
         return res.status(400).json({ message: 'Invalid credits amount' });
+    }
+
+    const cashRegisterId = req.body.cashRegisterId;
+
+    /* Con cashRegisterId il fondo cassa appartiene alla cassa, non più all'evento */
+    if (cashRegisterId) {
+        if (typeof cashRegisterId !== 'string' || !isValidObjectId(cashRegisterId)) {
+            return res.status(400).json({ message: 'Valid cashRegisterId is required' });
+        }
+        const cashRegister = await CashRegisterModel.findOne({
+            _id: cashRegisterId,
+            eventId: eventCtx.eventId
+        });
+        if (!cashRegister) {
+            return res.status(404).json({ message: 'Cash register not found for this event' });
+        }
+        if (cashRegister.status !== 'open') {
+            return res.status(400).json({ message: 'Cassa chiusa, operazione non ammessa' });
+        }
+
+        const current = cashRegister.cashFloat ?? { euro: 0, credits: 0, setAt: null };
+        const nextEuro = euro !== undefined ? parseAmount(euro)! : current.euro;
+        const nextCredits = credits !== undefined ? parseAmount(credits)! : current.credits;
+
+        cashRegister.cashFloat = {
+            euro: nextEuro,
+            credits: nextCredits,
+            setAt: new Date()
+        };
+        await cashRegister.save();
+
+        return res.status(200).json({
+            item: { euro: nextEuro, credits: nextCredits, setAt: cashRegister.cashFloat.setAt }
+        });
     }
 
     const current = eventCtx.event.cashFloat ?? { euro: 0, credits: 0 };
@@ -301,6 +386,7 @@ async function addCashMovement(req: Request, res: Response) {
         direction?: unknown;
         amount?: unknown;
         description?: unknown;
+        cashRegisterId?: unknown;
     };
 
     if (currency !== 'euro' && currency !== 'credits') {
@@ -319,13 +405,32 @@ async function addCashMovement(req: Request, res: Response) {
         return res.status(400).json({ message: 'Amount must be a positive number' });
     }
 
+    let cashRegisterId: Types.ObjectId | null = null;
+    if (req.body.cashRegisterId) {
+        if (typeof req.body.cashRegisterId !== 'string' || !isValidObjectId(req.body.cashRegisterId)) {
+            return res.status(400).json({ message: 'Valid cashRegisterId is required' });
+        }
+        const cashRegister = await CashRegisterModel.findOne({
+            _id: req.body.cashRegisterId,
+            eventId: eventCtx.eventId
+        });
+        if (!cashRegister) {
+            return res.status(404).json({ message: 'Cash register not found for this event' });
+        }
+        if (cashRegister.status !== 'open') {
+            return res.status(400).json({ message: 'Cassa chiusa, operazione non ammessa' });
+        }
+        cashRegisterId = cashRegister._id;
+    }
+
     const movement = await CashRegisterMovementModel.create({
         eventId: eventCtx.eventId,
         currency,
         direction,
         amount: Math.round(parsed * 100) / 100,
         description: typeof description === 'string' && description.trim() ? description.trim() : null,
-        performedByUserId: req.user?.id ?? null
+        performedByUserId: req.user?.id ?? null,
+        cashRegisterId
     });
 
     return res.status(201).json({
@@ -337,6 +442,7 @@ async function addCashMovement(req: Request, res: Response) {
             amount: movement.amount,
             description: movement.description,
             performedByUserId: movement.performedByUserId?.toString() ?? null,
+            cashRegisterId: movement.cashRegisterId?.toString() ?? null,
             occurredAt: movement.occurredAt
         }
     });
@@ -422,14 +528,36 @@ async function topUp(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
 
-    const { eventUserId, amount, description } = req.body;
+    const { eventUserId, amount, description } = req.body as {
+        eventUserId?: unknown;
+        amount?: unknown;
+        description?: unknown;
+    };
 
-    if (!eventUserId || !isValidObjectId(eventUserId)) {
+    if (typeof eventUserId !== 'string' || !isValidObjectId(eventUserId)) {
         return res.status(400).json({ message: 'Valid eventUserId is required' });
     }
 
-    if (!amount || !Number.isFinite(amount) || amount <= 0) {
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
         return res.status(400).json({ message: 'Amount must be a positive number' });
+    }
+
+    let cashRegisterId: Types.ObjectId | null = null;
+    if (req.body.cashRegisterId) {
+        if (typeof req.body.cashRegisterId !== 'string' || !isValidObjectId(req.body.cashRegisterId)) {
+            return res.status(400).json({ message: 'Valid cashRegisterId is required' });
+        }
+        const cashRegister = await CashRegisterModel.findOne({
+            _id: req.body.cashRegisterId,
+            eventId: eventCtx.eventId
+        });
+        if (!cashRegister) {
+            return res.status(404).json({ message: 'Cash register not found for this event' });
+        }
+        if (cashRegister.status !== 'open') {
+            return res.status(400).json({ message: 'Cassa chiusa, operazione non ammessa' });
+        }
+        cashRegisterId = cashRegister._id;
     }
 
     const eventUser = await EventUserModel.findById(eventUserId);
@@ -447,8 +575,9 @@ async function topUp(req: Request, res: Response) {
             direction: 'credit',
             amount: creditAmount,
             realAmount: amount,
-            description: description?.trim() || 'Cambio: carica crediti (reale → virtuale)',
+            description: typeof description === 'string' && description.trim() ? description.trim() : 'Cambio: carica crediti (reale → virtuale)',
             performedByUserId: req.user!.id,
+            cashRegisterId,
             referenceType: 'cambio',
             occurredAt: new Date()
         });
@@ -470,14 +599,36 @@ async function refund(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
 
-    const { eventUserId, amount, description } = req.body;
+    const { eventUserId, amount, description } = req.body as {
+        eventUserId?: unknown;
+        amount?: unknown;
+        description?: unknown;
+    };
 
-    if (!eventUserId || !isValidObjectId(eventUserId)) {
+    if (typeof eventUserId !== 'string' || !isValidObjectId(eventUserId)) {
         return res.status(400).json({ message: 'Valid eventUserId is required' });
     }
 
-    if (!amount || !Number.isFinite(amount) || amount <= 0) {
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
         return res.status(400).json({ message: 'Amount must be a positive number' });
+    }
+
+    let cashRegisterId: Types.ObjectId | null = null;
+    if (req.body.cashRegisterId) {
+        if (typeof req.body.cashRegisterId !== 'string' || !isValidObjectId(req.body.cashRegisterId)) {
+            return res.status(400).json({ message: 'Valid cashRegisterId is required' });
+        }
+        const cashRegister = await CashRegisterModel.findOne({
+            _id: req.body.cashRegisterId,
+            eventId: eventCtx.eventId
+        });
+        if (!cashRegister) {
+            return res.status(404).json({ message: 'Cash register not found for this event' });
+        }
+        if (cashRegister.status !== 'open') {
+            return res.status(400).json({ message: 'Cassa chiusa, operazione non ammessa' });
+        }
+        cashRegisterId = cashRegister._id;
     }
 
     const eventUser = await EventUserModel.findById(eventUserId);
@@ -495,8 +646,9 @@ async function refund(req: Request, res: Response) {
             direction: 'debit',
             amount,
             realAmount,
-            description: description?.trim() || 'Cambio: rimborso crediti (virtuale → reale)',
+            description: typeof description === 'string' && description.trim() ? description.trim() : 'Cambio: rimborso crediti (virtuale → reale)',
             performedByUserId: req.user!.id,
+            cashRegisterId,
             referenceType: 'cambio',
             occurredAt: new Date()
         });
@@ -972,6 +1124,326 @@ async function getCashRegisterReset(req: Request, res: Response) {
     });
 }
 
+async function listCashRegisters(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const match: Record<string, unknown> = { eventId: eventCtx.eventId };
+    if (req.query.status === 'open' || req.query.status === 'closed') {
+        match.status = req.query.status;
+    }
+
+    const cashRegisters = await CashRegisterModel.find(match).sort({ openedAt: -1 });
+    const openerMap = await loadOpenerNames(cashRegisters);
+
+    return res.status(200).json({
+        items: cashRegisters.map((cr) => toCashRegisterResponse(cr, openerMap.get(cr.openedByUserId?.toString() ?? '') ?? null))
+    });
+}
+
+async function createCashRegister(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const { name, force, cashRegisterToClose } = req.body as {
+        name?: unknown;
+        force?: unknown;
+        cashRegisterToClose?: unknown;
+    };
+
+    let cassaName: string;
+    if (typeof name === 'string' && name.trim()) {
+        cassaName = name.trim().slice(0, 80);
+    } else {
+        const count = await CashRegisterModel.countDocuments({ eventId: eventCtx.eventId });
+        cassaName = `Cassa ${count + 1}`;
+    }
+
+    const cleanName = cassaName.replace(/\s+/g, ' ').trim();
+    const duplicate = await CashRegisterModel.findOne({
+        eventId: eventCtx.eventId,
+        status: 'open',
+        name: { $regex: new RegExp(`^${escapeRegExp(cleanName)}$`, 'i') }
+    });
+
+    let closedDuplicate = null;
+    if (duplicate) {
+        if (force === true && typeof cashRegisterToClose === 'string' && duplicate._id.toString() === cashRegisterToClose) {
+            duplicate.status = 'closed';
+            duplicate.closedAt = new Date();
+            await duplicate.save();
+            closedDuplicate = toCashRegisterResponse(duplicate);
+        } else {
+            return res.status(409).json({
+                code: 'name_taken',
+                message: `Esiste già una cassa aperta "${duplicate.name}"`,
+                item: toCashRegisterResponse(duplicate)
+            });
+        }
+    }
+
+    const cashRegister = await CashRegisterModel.create({
+        eventId: eventCtx.eventId,
+        name: cleanName,
+        status: 'open',
+        openedByUserId: req.user!.id,
+        openedAt: new Date()
+    });
+
+    const openerMap = await loadOpenerNames([cashRegister]);
+    const item = toCashRegisterResponse(cashRegister, openerMap.get(cashRegister.openedByUserId.toString()) ?? null);
+
+    return res.status(201).json({ item, closedDuplicate });
+}
+
+async function renameCashRegister(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const { cashRegisterId } = req.params as { cashRegisterId: string };
+    const found = await findCashRegister(req, cashRegisterId);
+    if ('error' in found) return res.status(found.error.status).json({ message: found.error.message });
+    const cashRegister = found.cashRegister;
+
+    const name = req.body.name;
+    if (typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({ message: 'Valid name is required' });
+    }
+
+    const cleanName = name.replace(/\s+/g, ' ').trim().slice(0, 80);
+
+    const duplicate = await CashRegisterModel.findOne({
+        eventId: eventCtx.eventId,
+        status: 'open',
+        _id: { $ne: cashRegister._id },
+        name: { $regex: new RegExp(`^${escapeRegExp(cleanName)}$`, 'i') }
+    });
+
+    if (duplicate) {
+        return res.status(409).json({
+            code: 'name_taken',
+            message: `Esiste già una cassa aperta "${duplicate.name}"`,
+            item: toCashRegisterResponse(duplicate)
+        });
+    }
+
+    cashRegister.name = cleanName;
+    await cashRegister.save();
+
+    return res.status(200).json({ item: toCashRegisterResponse(cashRegister) });
+}
+
+async function closeCashRegister(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const { cashRegisterId } = req.params as { cashRegisterId: string };
+    const found = await findCashRegister(req, cashRegisterId);
+    if ('error' in found) return res.status(found.error.status).json({ message: found.error.message });
+    const cashRegister = found.cashRegister;
+
+    if (cashRegister.status !== 'open') {
+        return res.status(400).json({ message: 'Cassa già chiusa' });
+    }
+
+    cashRegister.status = 'closed';
+    cashRegister.closedAt = new Date();
+    await cashRegister.save();
+
+    return res.status(200).json({ item: toCashRegisterResponse(cashRegister) });
+}
+
+async function getCashRegisterStats(
+    eventId: string,
+    cashRegisterId: Types.ObjectId,
+    since?: Date | null,
+    to?: Date | null
+) {
+    const eventIdObj = new Types.ObjectId(eventId);
+    const exchangeTypes = ['top-up', 'refund'];
+
+    const allTimeMatch: Record<string, unknown> = {
+        eventId: eventIdObj,
+        cashRegisterId,
+        type: { $in: exchangeTypes }
+    };
+    const sinceMatch: Record<string, unknown> = { ...allTimeMatch };
+    const occurredAt: Record<string, Date> = {};
+    if (since && !Number.isNaN(since.getTime())) occurredAt.$gte = since;
+    if (to && !Number.isNaN(to.getTime())) occurredAt.$lte = to;
+    if (Object.keys(occurredAt).length > 0) sinceMatch.occurredAt = occurredAt;
+
+    const [txRows, txSinceRows, realRows, movementRows] = await Promise.all([
+        EventUserTransactionModel.aggregate([
+            { $match: allTimeMatch },
+            { $group: { _id: '$type', total: { $sum: '$amount' }, count: { $sum: 1 } } }
+        ]),
+        EventUserTransactionModel.aggregate([
+            { $match: sinceMatch },
+            { $group: { _id: '$type', total: { $sum: '$amount' }, count: { $sum: 1 } } }
+        ]),
+        EventUserTransactionModel.aggregate([
+            { $match: allTimeMatch },
+            { $group: { _id: '$type', real: { $sum: '$realAmount' } } }
+        ]),
+        CashRegisterMovementModel.aggregate([
+            { $match: { eventId: eventIdObj, cashRegisterId } },
+            { $group: { _id: { currency: '$currency', direction: '$direction' }, total: { $sum: '$amount' } } }
+        ])
+    ]);
+
+    function extract(rows: Array<{ _id: string; total: number; count?: number }>) {
+        let topUp = 0, refund = 0, topUpCount = 0, refundCount = 0;
+        for (const row of rows) {
+            if (row._id === 'top-up') { topUp = row.total; topUpCount = row.count ?? 0; }
+            else if (row._id === 'refund') { refund = row.total; refundCount = row.count ?? 0; }
+        }
+        return { topUp, refund, topUpCount, refundCount };
+    }
+
+    const all = extract(txRows);
+    const sinceStats = extract(txSinceRows);
+    const topUpRealEuro = realRows.find((r) => r._id === 'top-up')?.real ?? 0;
+    const refundRealEuro = realRows.find((r) => r._id === 'refund')?.real ?? 0;
+
+    let euroIn = 0, euroOut = 0, creditsIn = 0, creditsOut = 0;
+    for (const row of movementRows) {
+        if (row._id.currency === 'euro') {
+            if (row._id.direction === 'in') euroIn = row.total; else euroOut = row.total;
+        } else {
+            if (row._id.direction === 'in') creditsIn = row.total; else creditsOut = row.total;
+        }
+    }
+
+    return {
+        topUp: all.topUp,
+        refund: all.refund,
+        topUpCount: all.topUpCount,
+        refundCount: all.refundCount,
+        topUpReal: Math.round(topUpRealEuro * 100) / 100,
+        refundReal: Math.round(refundRealEuro * 100) / 100,
+        sinceTopUpCount: sinceStats.topUpCount,
+        sinceRefundCount: sinceStats.refundCount,
+        euroIn,
+        euroOut,
+        creditsIn,
+        creditsOut
+    };
+}
+
+async function getCashRegisterBalance(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const { cashRegisterId } = req.params as { cashRegisterId: string };
+    const found = await findCashRegister(req, cashRegisterId);
+    if ('error' in found) return res.status(found.error.status).json({ message: found.error.message });
+    const cashRegister = found.cashRegister;
+
+    const since = req.query.since ? new Date(req.query.since as string) : null;
+    const stats = await getCashRegisterStats(eventCtx.eventId, cashRegister._id, since);
+
+    const float = cashRegister.cashFloat ?? { euro: 0, credits: 0, setAt: null };
+
+    return res.status(200).json({
+        id: cashRegister._id.toString(),
+        name: cashRegister.name,
+        status: cashRegister.status,
+        exchangeRate: eventCtx.event.exchangeRate ?? 1,
+        currencyName: eventCtx.event.currencyName,
+        currencySymbol: eventCtx.event.currencySymbol ?? null,
+        cashFloat: { euro: float.euro, credits: float.credits, setAt: float.setAt ?? null },
+        topUp: stats.topUp,
+        refund: stats.refund,
+        topUpCount: stats.topUpCount,
+        refundCount: stats.refundCount,
+        topUpReal: stats.topUpReal,
+        refundReal: stats.refundReal,
+        euroContent: Math.round((float.euro + stats.topUpReal - stats.refundReal + stats.euroIn - stats.euroOut) * 100) / 100,
+        creditsContent: Math.round((float.credits - stats.topUp + stats.refund + stats.creditsIn - stats.creditsOut) * 100) / 100,
+        cashMovements: {
+            euroIn: stats.euroIn,
+            euroOut: stats.euroOut,
+            creditsIn: stats.creditsIn,
+            creditsOut: stats.creditsOut
+        },
+        since: since && !Number.isNaN(since.getTime()) ? since.toISOString() : null,
+        sinceTopUpCount: since && !Number.isNaN(since.getTime()) ? stats.sinceTopUpCount : null,
+        sinceRefundCount: since && !Number.isNaN(since.getTime()) ? stats.sinceRefundCount : null
+    });
+}
+
+async function getCashRegistersReport(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    let from: Date | null = req.query.from ? new Date(req.query.from as string) : null;
+    const to = req.query.to ? new Date(req.query.to as string) : null;
+    if (!from || Number.isNaN(from.getTime())) {
+        from = eventCtx.event.startDate ?? null;
+    }
+
+    const cashRegisters = await CashRegisterModel.find({ eventId: eventCtx.eventId }).sort({ openedAt: 1 });
+    const openerMap = await loadOpenerNames(cashRegisters);
+
+    const statsPerCassa = await Promise.all(
+        cashRegisters.map((cr) =>
+            getCashRegisterStats(eventCtx.eventId, cr._id, from, to ?? null).then((stats) => ({ cr, stats }))
+        )
+    );
+
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+
+    const items = statsPerCassa.map(({ cr, stats }) => {
+        const float = cr.cashFloat ?? { euro: 0, credits: 0, setAt: null };
+        const topUpReal = stats.topUpReal;
+        const refundReal = stats.refundReal;
+        return {
+            id: cr._id.toString(),
+            name: cr.name,
+            status: cr.status,
+            openedByUserId: cr.openedByUserId?.toString() ?? null,
+            openedByName: openerMap.get(cr.openedByUserId?.toString() ?? '') ?? null,
+            openedAt: cr.openedAt,
+            closedAt: cr.closedAt ?? null,
+            cashFloat: { euro: float.euro, credits: float.credits, setAt: float.setAt ?? null },
+            topUp: round2(stats.topUp),
+            refund: round2(stats.refund),
+            topUpCount: stats.topUpCount,
+            refundCount: stats.refundCount,
+            topUpReal: round2(topUpReal),
+            refundReal: round2(refundReal),
+            euroContent: round2(float.euro + topUpReal - refundReal + stats.euroIn - stats.euroOut),
+            creditsContent: round2(float.credits - stats.topUp + stats.refund + stats.creditsIn - stats.creditsOut),
+            sinceTopUpCount: stats.sinceTopUpCount,
+            sinceRefundCount: stats.sinceRefundCount,
+            sinceTotalCount: stats.sinceTopUpCount + stats.sinceRefundCount
+        };
+    });
+
+    const totals = {
+        openCount: items.filter((i) => i.status === 'open').length,
+        closedCount: items.filter((i) => i.status === 'closed').length,
+        floatEuro: round2(items.reduce((a, i) => a + i.cashFloat.euro, 0)),
+        floatCredits: round2(items.reduce((a, i) => a + i.cashFloat.credits, 0)),
+        euroContent: round2(items.reduce((a, i) => a + i.euroContent, 0)),
+        creditsContent: round2(items.reduce((a, i) => a + i.creditsContent, 0)),
+        sinceTotalCount: items.reduce((a, i) => a + i.sinceTotalCount, 0)
+    };
+
+    return res.status(200).json({
+        eventId: eventCtx.eventId,
+        eventName: eventCtx.event.name,
+        exchangeRate: eventCtx.event.exchangeRate ?? 1,
+        currencyName: eventCtx.event.currencyName,
+        currencySymbol: eventCtx.event.currencySymbol ?? null,
+        from: from && !Number.isNaN(from.getTime()) ? from.toISOString() : null,
+        to: to && !Number.isNaN(to.getTime()) ? to.toISOString() : null,
+        items,
+        totals
+    });
+}
+
 async function createGuest(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
@@ -1062,5 +1534,11 @@ export const exchangeController = {
     denominationReport,
     setCashFloat,
     addCashMovement,
-    listCashMovements
+    listCashMovements,
+    listCashRegisters,
+    createCashRegister,
+    renameCashRegister,
+    closeCashRegister,
+    getCashRegisterBalance,
+    getCashRegistersReport
 };

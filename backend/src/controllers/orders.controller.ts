@@ -13,6 +13,8 @@ import { createEventUserTransaction, EventUserTransactionError } from '../servic
 import { EventModel } from '../models/event.model';
 import { StandModel } from '../models/stand.model';
 import { StandSettlementModel } from '../models/stand-settlement.model';
+import { CashRegisterModel } from '../models/cash-register.model';
+import { CashRegisterMovementModel } from '../models/cash-register-movement.model';
 import { RoleModel } from '../models/role.model';
 import { UserRoleModel } from '../models/user-role.model';
 import { env } from '../config/env';
@@ -1383,6 +1385,8 @@ export async function resetEventOrders(req: Request, res: Response) {
         const ordersRes = await OrderModel.deleteMany({ eventId: eventObjectId }).session(session);
         const txnRes = await EventUserTransactionModel.deleteMany({ eventId: eventObjectId }).session(session);
         const settlementRes = await StandSettlementModel.deleteMany({ eventId: eventObjectId }).session(session);
+        const movementRes = await CashRegisterMovementModel.deleteMany({ eventId: eventObjectId }).session(session);
+        const cashRegisterRes = await CashRegisterModel.deleteMany({ eventId: eventObjectId }).session(session);
         const promoUsageRes = await PromotionUsageModel.deleteMany({ eventId: eventObjectId }).session(session);
         await PromotionModel.updateMany(
             { eventId: eventObjectId },
@@ -1403,7 +1407,7 @@ export async function resetEventOrders(req: Request, res: Response) {
         await session.commitTransaction();
 
         return res.status(200).json({
-            message: `Reset completo: ${ordersRes.deletedCount} ordini, ${txnRes.deletedCount} transazioni, ${settlementRes.deletedCount} liquidazioni eliminati, ${promoUsageRes.deletedCount} utilizzi coupon e contatori coupon azzerati, ${walletRes.modifiedCount} portafogli azzerati, contatori resettati per ${standIds.length} stand`
+            message: `Reset completo: ${ordersRes.deletedCount} ordini, ${txnRes.deletedCount} transazioni, ${settlementRes.deletedCount} liquidazioni eliminati, ${promoUsageRes.deletedCount} utilizzi coupon e contatori coupon azzerati, ${movementRes.deletedCount} movimenti cassa e ${cashRegisterRes.deletedCount} casse eliminati, ${walletRes.modifiedCount} portafogli azzerati, contatori resettati per ${standIds.length} stand`
         });
     } catch (error) {
         await session.abortTransaction();

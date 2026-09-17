@@ -26,3 +26,11 @@ exchangeRouter.get('/:eventId/denomination-report', asyncHandler(hasRole(['excha
 exchangeRouter.post('/:eventId/cash-float', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.setCashFloat));
 exchangeRouter.get('/:eventId/cash-movements', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.listCashMovements));
 exchangeRouter.post('/:eventId/cash-movements', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.addCashMovement));
+
+/* Casse — la route report DEVE precedere /:cashRegisterId (segmento statico) */
+exchangeRouter.get('/:eventId/cash-registers', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.listCashRegisters));
+exchangeRouter.post('/:eventId/cash-registers', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.createCashRegister));
+exchangeRouter.get('/:eventId/cash-registers/report', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.getCashRegistersReport));
+exchangeRouter.patch('/:eventId/cash-registers/:cashRegisterId', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.renameCashRegister));
+exchangeRouter.post('/:eventId/cash-registers/:cashRegisterId/close', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.closeCashRegister));
+exchangeRouter.get('/:eventId/cash-registers/:cashRegisterId/balance', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.getCashRegisterBalance));

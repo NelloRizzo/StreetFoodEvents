@@ -70,6 +70,12 @@ const eventUserTransactionSchema = new Schema(
             default: null,
             index: true
         },
+        cashRegisterId: {
+            type: Schema.Types.ObjectId,
+            ref: 'CashRegister',
+            default: null,
+            index: true
+        },
         referenceType: {
             type: String,
             trim: true,

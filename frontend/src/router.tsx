@@ -51,6 +51,7 @@ import { EventContestsPage } from './pages/EventContestsPage'
 import { ContestPage } from './pages/ContestPage'
 import { ContestPlayPage } from './pages/ContestPlayPage'
 import { ContestVerifyPage } from './pages/ContestVerifyPage'
+import { CashRegistersPage } from './pages/CashRegistersPage'
 import { EventExchangePage } from './pages/EventExchangePage'
 import { EventContestManagePage } from './pages/EventContestManagePage'
 import { StandNumberingPage } from './pages/StandNumberingPage'
@@ -138,6 +139,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/orders', element: <EventOrdersPage /> },
       { path: 'events/:eventId/report', element: <EventReportPage /> },
       { path: 'events/:eventId/exchange', element: <EventExchangePage /> },
+      { path: 'events/:eventId/cash-registers', element: <CashRegistersPage /> },
       { path: 'events/:eventId/settlements', element: <StandSettlementsPage /> },
       { path: 'events/:eventId/settlements/report', element: <SettlementsReportPage /> },
       { path: 'events/:eventId/galleria', element: <EventGalleryPage /> },

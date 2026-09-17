@@ -23,6 +23,7 @@ const collectionsToClear = [
     'socialposts',
     'standsettlements',
     'cashregistermovements',
+    'cashregisters',
     'pois',
     'usagecontracts',
     'contestpois',

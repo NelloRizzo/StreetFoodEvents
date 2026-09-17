@@ -144,6 +144,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent, track
             ...(canManageFinance
               ? [
                   { label: 'Cambio', to: `${basePath}/exchange`, icon: '\u{1F504}' } as SidebarItem,
+                  { label: 'Master Cambio', to: `${basePath}/cash-registers`, icon: '\u{1F4CA}' } as SidebarItem,
                   { label: 'Liquidazione', to: `${basePath}/settlements`, icon: '\u{1F4B8}' } as SidebarItem,
                 ]
               : []),

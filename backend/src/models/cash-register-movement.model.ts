@@ -34,6 +34,12 @@ const cashRegisterMovementSchema = new Schema(
             ref: 'User',
             default: null
         },
+        cashRegisterId: {
+            type: Schema.Types.ObjectId,
+            ref: 'CashRegister',
+            default: null,
+            index: true
+        },
         occurredAt: {
             type: Date,
             required: true,

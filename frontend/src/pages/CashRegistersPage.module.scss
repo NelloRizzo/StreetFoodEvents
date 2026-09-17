@@ -1,0 +1,46 @@
+.cassaName {
+  font-weight: 600;
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.statusOpen {
+  background: rgba(40, 167, 69, 0.15);
+  color: #1e7e34;
+}
+
+.statusClosed {
+  background: rgba(108, 117, 125, 0.15);
+  color: #495057;
+}
+
+.openerName {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.sub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.note {
+  margin: 1rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.empty {
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #6b7280);
+}
