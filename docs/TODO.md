@@ -1,7 +1,13 @@
 # TODO — Street Food Events
 
 ## Fix in questa sessione
-- Nessun fix da implementare
+- Integrare in GTM:
+    - stima dei visitatori (1 cambio token ~ 1 visitatore, oppure 10€ spesi ~ 1 visitatore??? - discutere);
+    - QR Code scansionati;
+    - utilizzo dei Token;
+    - percorsi più frequentati nei contest;
+    - performance delle diverse aree (discutere).
+- Ricreare le icone della pwa a partire da favicon.svg
 
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
