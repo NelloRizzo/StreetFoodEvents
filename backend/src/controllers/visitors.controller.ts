@@ -17,6 +17,9 @@ function isValidObjectId(value: string | undefined): value is string {
  * V1 — tabella fissa (non configurabile) di coefficienti "unità vendute → visitatori"
  * per categoria di prodotto. Le categorie sono etichette libere (EventProduct.categoryIds);
  * il match è case-insensitive, con fallback a DEFAULT_COEFFICIENT per le categorie ignote.
+ * Un prodotto può appartenere a più categorie: ogni unità venduta è attribuita UNA sola volta,
+ * alla categoria col coefficiente più alto (le altre categorie, se presenti, non ricevono la
+ * quantità) così il totale non conteggia più volte lo stesso prodotto.
  */
 const CATEGORY_COEFFICIENTS: Record<string, number> = {
     bevande: 0.33,
@@ -50,6 +53,13 @@ function round1(value: number): number {
 function coefficientFor(label: string): number {
     const key = label.trim().toLowerCase();
     return CATEGORY_COEFFICIENTS[key] ?? DEFAULT_COEFFICIENT;
+}
+
+function pickCategoryLabel(categories: string[]): string {
+    if (categories.length === 0) return NO_CATEGORY_LABEL;
+    return [...categories].sort(
+        (a, b) => coefficientFor(b) - coefficientFor(a) || a.localeCompare(b)
+    )[0] as string;
 }
 
 function isDateOnly(raw: string | undefined): boolean {
@@ -206,11 +216,9 @@ export async function getVisitorEstimate(req: Request, res: Response) {
     for (const row of categoryRows) {
         const standKey = row._id.standId.toString();
         const categories = categoryByEp.get(row._id.epId.toString()) ?? [];
-        const labels = categories.length > 0 ? categories : [NO_CATEGORY_LABEL];
+        const label = pickCategoryLabel(categories);
         const catMap = quantityByStandCategory.get(standKey) ?? new Map<string, number>();
-        for (const label of labels) {
-            catMap.set(label, (catMap.get(label) ?? 0) + row.quantity);
-        }
+        catMap.set(label, (catMap.get(label) ?? 0) + row.quantity);
         quantityByStandCategory.set(standKey, catMap);
     }
 

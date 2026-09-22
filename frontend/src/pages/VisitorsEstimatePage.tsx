@@ -183,7 +183,8 @@ export function VisitorsEstimatePage() {
           <div className={styles.note}>
             <strong>Stima approssimativa</strong> — i coefficienti trasformano le unit&agrave; vendute in visitatori
             (es. 2 panini dello stesso tipo &#8776; 2 visitatori), non identificano persone uniche.
-            Gli stand senza ordini registrati contribuiscono con zero. La stima &ldquo;token&rdquo;
+            Gli stand senza ordini registrati contribuiscono con zero. Un prodotto in pi&ugrave; categorie
+            &egrave; conteggiato una sola volta, nella categoria col coefficiente pi&ugrave; alto. La stima &ldquo;token&rdquo;
             copre tutti i visitatori solo se l&rsquo;economia dell&rsquo;evento passa dai token.{' '}
             {data.tokensPerVisitor === 10 && data.totals.nonCancelledOrders === 0 && (
               <span>Nessun ordine osservabile: usato il valore predefinito di 10 unit&agrave; per visitatore.</span>

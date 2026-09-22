@@ -414,4 +414,31 @@ describe('Integration — Visitor estimation', () => {
         expect(noData.ordersCount).toBe(0);
         expect(noData.estimatedVisitorsTotal).toBe(0);
     });
+
+    it('a product in multiple categories is counted once, in its category with the highest coefficient', async () => {
+        const env = await setupEnvironment();
+
+        const productMulti = await ProductModel.create({ name: 'Pizza fritta', price: 8 });
+        const epMulti = await EventProductModel.create({
+            eventId: env.event._id,
+            standId: env.stand1._id,
+            productId: productMulti._id,
+            stationIds: [env.station1._id],
+            categoryIds: ['Bevande', 'Dolci']
+        });
+
+        await createOrderDoc(env, {
+            standId: env.stand1._id, epId: epMulti._id, stationId: env.station1._id, quantity: 5
+        });
+
+        const res = await getVisitors(env.adminSession, env.event._id.toString());
+        expect(res.status).toBe(200);
+
+        const stand1 = res.body.stands.find((s: { standName: string }) => s.standName === 'Stand One');
+        expect(stand1.categories).toEqual([
+            expect.objectContaining({ label: 'Dolci', quantity: 5, coefficient: 0.8, estimatedVisitors: 4 })
+        ]);
+        expect(stand1.estimatedVisitorsTotal).toBe(4);
+        expect(res.body.totals.productEstimated).toBe(4);
+    });
 });

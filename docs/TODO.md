@@ -1,12 +1,8 @@
 # TODO — Street Food Events
 
 ## Fix riscontrati in questa sessione (Scrivere "Nessun fix" se risolti tutti)
-- Integrare in GTM:
-    - QR Code scansionati;
-    - utilizzo dei Token;
-    - percorsi più frequentati nei contest;
-    - performance delle diverse aree (discutere).
-    - ~~stima dei visitatori~~ — implementata come pagina admin "Stima visitatori" (`/admin/events/:eventId/visitors`, endpoint `GET /api/events/:eventId/visitors`): coefficienti fissi per categoria prodotto (default 1) + stima "token" (token netti venduti ÷ spesa media per ordine osservata, fallback 10). Eventuale push in GTM valutabile in futuro.
+Nessun fix
+
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
 
@@ -176,5 +172,13 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **API**: `/api/audit-logs` con filtri (solo admin)
 - **Frontend**: pagina audit log con filtri
 - **Motivazione**: sicurezza, compliance, debugging
+
+### 15. Integrazione GTM (eventi analytics)
+- **Descrizione**: estendere il dataLayer/GTM (già presente per ordini cassa, coupon e ordini dal menu) con eventi aggiuntivi:
+  - QR Code scansionati (scene contest, menu, recensioni);
+  - utilizzo dei Token (top-up/refund/spese osservabili via GTM);
+  - percorsi più frequentati nei contest;
+  - performance delle diverse aree (discutere).
+- **Nota**: la stima visitatori è già implementata in-app (`GET /api/events/:eventId/visitors`), l'eventuale push dei dati in GTM è valutabile in futuro.
 
 
