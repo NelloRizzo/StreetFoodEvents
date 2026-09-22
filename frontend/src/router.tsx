@@ -34,6 +34,7 @@ import { EventMapPage } from './pages/EventMapPage'
 import { EventMenuPage } from './pages/EventMenuPage'
 import { EventOrdersPage } from './pages/EventOrdersPage'
 import { EventReportPage } from './pages/EventReportPage'
+import { VisitorsEstimatePage } from './pages/VisitorsEstimatePage'
 import { EventGalleryPage } from './pages/EventGalleryPage'
 import { PublicGalleryPage } from './pages/PublicGalleryPage'
 import { PoiDetailPage } from './pages/PoiDetailPage'
@@ -138,6 +139,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/adhesion-form', element: <AdhesionFormManagePage /> },
       { path: 'events/:eventId/orders', element: <EventOrdersPage /> },
       { path: 'events/:eventId/report', element: <EventReportPage /> },
+      { path: 'events/:eventId/visitors', element: <VisitorsEstimatePage /> },
       { path: 'events/:eventId/exchange', element: <EventExchangePage /> },
       { path: 'events/:eventId/cash-registers', element: <CashRegistersPage /> },
       { path: 'events/:eventId/settlements', element: <StandSettlementsPage /> },

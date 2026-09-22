@@ -1,12 +1,12 @@
 # TODO — Street Food Events
 
-## Fix in questa sessione
+## Fix riscontrati in questa sessione (Scrivere "Nessun fix" se risolti tutti)
 - Integrare in GTM:
-    - stima dei visitatori (1 cambio token ~ 1 visitatore, oppure 10€ spesi ~ 1 visitatore??? - discutere);
     - QR Code scansionati;
     - utilizzo dei Token;
     - percorsi più frequentati nei contest;
     - performance delle diverse aree (discutere).
+    - ~~stima dei visitatori~~ — implementata come pagina admin "Stima visitatori" (`/admin/events/:eventId/visitors`, endpoint `GET /api/events/:eventId/visitors`): coefficienti fissi per categoria prodotto (default 1) + stima "token" (token netti venduti ÷ spesa media per ordine osservata, fallback 10). Eventuale push in GTM valutabile in futuro.
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
 

@@ -41,6 +41,7 @@ import { promotionsRouter } from './routes/promotions.routes';
 import { standAdhesionsRouter } from './routes/stand-adhesions.routes';
 import { advertisementsRouter } from './routes/advertisements.routes';
 import { reviewsRouter } from './routes/reviews.routes';
+import { visitorsRouter } from './routes/visitors.routes';
 
 export const app = express();
 
@@ -116,6 +117,7 @@ app.use('/api/events/:eventId/promotions', promotionsRouter);
 app.use('/api/events/:eventId/adhesions', standAdhesionsRouter);
 app.use('/api/advertisements', advertisementsRouter);
 app.use('/api/events/:eventId/reviews', reviewsRouter);
+app.use('/api/events/:eventId/visitors', visitorsRouter);
 
 app.use((req, res) => {
     return res.status(404).json({

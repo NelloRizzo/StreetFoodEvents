@@ -1,0 +1,267 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.title {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  color: var(--color-ink-strong);
+  margin-top: 0.75rem;
+}
+
+.dateGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.dateLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+
+.dateInput {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+  font-size: 0.82rem;
+}
+
+.reportGrid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.card {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 250, 242, 0.84);
+}
+
+.cardHighlight {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.cardTitle {
+  font-weight: 800;
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.cardNote {
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  margin-top: 0.3rem;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+}
+
+.bigValue {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--color-brand-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.table th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-soft);
+  border-bottom: 2px solid var(--color-line);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-strong);
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover td {
+  background: var(--color-brand-glow);
+}
+
+.tableTotals td {
+  font-weight: 800;
+  border-top: 2px solid var(--color-ink-strong);
+  background: var(--color-brand-soft);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.standName {
+  font-weight: 600;
+}
+
+.estimate {
+  color: var(--color-brand-deep);
+}
+
+.empty {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  padding: 1rem 0;
+}
+
+.emptyCell {
+  color: var(--color-ink-soft);
+}
+
+.noDataBadge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-warning);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.catDetails {
+  margin: 0;
+}
+
+.catSummary {
+  cursor: pointer;
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.catList {
+  display: grid;
+  gap: 0.15rem;
+  margin-top: 0.4rem;
+}
+
+.catRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: var(--color-ink);
+  text-align: left;
+}
+
+.catLabel {
+  font-weight: 600;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catQty {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  line-height: 1.5;
+  border: 1px dashed var(--color-line-strong);
+  border-radius: var(--radius-card);
+  padding: 0.75rem 1rem;
+  background: rgba(255, 250, 242, 0.5);
+}
+
+.coeffNote {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+}
+
+.secondaryBtn {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.secondaryBtn:hover {
+  background: var(--color-surface-soft);
+}
+
+@media print {
+  .headerActions,
+  .dateGroup,
+  .noDataBadge,
+  .secondaryBtn {
+    display: none !important;
+  }
+
+  .page {
+    padding: 0;
+  }
+
+  .card {
+    border: none;
+    padding: 0;
+    background: transparent;
+  }
+
+  .tableWrap {
+    overflow: visible;
+  }
+
+  .note {
+    border: none;
+    background: transparent;
+    padding: 0.5rem 0;
+  }
+}

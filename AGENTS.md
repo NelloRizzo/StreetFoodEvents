@@ -192,6 +192,11 @@ Nota: modello `Review` — `standId` null = recensione evento; moderazione **pos
 | GET | `/orders/report/stand/:standId` | auth | Report per singolo stand (stand owner) |
 | GET | `/orders/report/event/:eventId` | auth | Report evento aggregato per-stand (event-admin/event-cashier) |
 
+### API routes — Stima visitatori
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/events/:eventId/visitors` | event-admin / event-cashier / platform-admin | Stima visitatori: per stand = quantità vendute × coefficiente per categoria di prodotto (tabella fissa in codice, default 1); per evento = token netti venduti (top-up − refund) ÷ spesa media per ordine osservata (fallback 10). Query: `from`/`to` (default finestra evento; `to` date-only → fine giornata), `standId`, `stationId`. Omaggi (`isGift`) e ordini cancellati esclusi dalle quantità. |
+
 ### API routes — Cambio valuta
 | Method | Route | Auth | Description |
 |---|---|---|---|

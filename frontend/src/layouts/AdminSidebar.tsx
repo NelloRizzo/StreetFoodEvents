@@ -91,6 +91,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent, track
   const manageEvent = Boolean(basePath && (isPlatformAdmin || hasEventRole(selectedEventId)))
   const canManageFinance = Boolean(basePath && (isPlatformAdmin || hasEventSlug(selectedEventId, ['exchange-admin'])))
   const canManagePhotos = Boolean(basePath && (isPlatformAdmin || hasEventSlug(selectedEventId, ['photo-admin', 'photo-print'])))
+  const canSeeStats = Boolean(basePath && (isPlatformAdmin || hasEventSlug(selectedEventId, ['event-admin', 'event-cashier'])))
 
   const sections: SidebarSection[] = [
     ...(manageEvent
@@ -148,6 +149,14 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent, track
                   { label: 'Liquidazione', to: `${basePath}/settlements`, icon: '\u{1F4B8}' } as SidebarItem,
                 ]
               : []),
+          ],
+        } as SidebarSection]
+      : []),
+    ...(canSeeStats
+      ? [{
+          label: 'Statistiche',
+          items: [
+            { label: 'Stima visitatori', to: `${basePath}/visitors`, icon: '\u{1F4CA}' } as SidebarItem,
           ],
         } as SidebarSection]
       : []),
