@@ -7,8 +7,6 @@
     - utilizzo dei Token;
     - percorsi più frequentati nei contest;
     - performance delle diverse aree (discutere).
-- ~~Ricreare le icone della PWA a partire da favicon.svg~~ → **fatto** (Set 2026): `apple-touch-icon-180x180.png`, `maskable-icon-512x512.png`, `pwa-64x64.png`, `pwa-192x192.png`, `pwa-512x512.png` rigenerate da `frontend/public/favicon.svg` tramite `sharp` (design piatto `#bf5a2a` coltello+forchetta, coerente col brand — le vecchie derivavano da `pwa-icon.svg` design circolare); dimensioni verificate via `sharp.metadata`. Nessuna rigenerazione di `distro/local-app.tar` necessaria (icone in `frontend/public/`, solo file cloud: **da committare + push**).
-
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
 
