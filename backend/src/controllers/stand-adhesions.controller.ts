@@ -5,7 +5,7 @@ import { env } from '../config/env';
 import { EventModel } from '../models/event.model';
 import { RoleModel } from '../models/role.model';
 import { StandModel } from '../models/stand.model';
-import { StandAdhesionModel, type StandAdhesion } from '../models/stand-adhesion.model';
+import { StandAdhesionModel, plasticFreeScore, type StandAdhesion } from '../models/stand-adhesion.model';
 import { UserModel } from '../models/user.model';
 import { UserRoleModel } from '../models/user-role.model';
 import { hashAdhesionToken, generateAdhesionAccessToken } from '../utils/adhesion-access-token';
@@ -30,6 +30,7 @@ const EDITABLE_FIELDS = [
     'haccpNote',
     'acceptsPointLight',
     'energyNeeds',
+    'plasticFreePractices',
     'participationFeeAccepted',
     'depositAccepted',
     'feesAccepted',
@@ -165,6 +166,7 @@ function toAdhesionResponse(adhesion: {
     haccpNote?: unknown;
     acceptsPointLight?: unknown;
     energyNeeds?: unknown;
+    plasticFreePractices?: unknown;
     participationFeeAccepted?: unknown;
     depositAccepted?: unknown;
     feesAccepted?: unknown;
@@ -199,6 +201,8 @@ function toAdhesionResponse(adhesion: {
         haccpNote: adhesion.haccpNote ?? null,
         acceptsPointLight: adhesion.acceptsPointLight ?? false,
         energyNeeds: adhesion.energyNeeds ?? [],
+        plasticFreePractices: (adhesion.plasticFreePractices ?? []) as string[],
+        plasticFreeScore: plasticFreeScore((adhesion.plasticFreePractices ?? []) as string[]),
         participationFeeAccepted: adhesion.participationFeeAccepted ?? false,
         depositAccepted: adhesion.depositAccepted ?? false,
         feesAccepted: adhesion.feesAccepted ?? false,

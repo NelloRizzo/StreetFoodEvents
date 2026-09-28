@@ -5,6 +5,7 @@ import { apiRequest } from '../lib/api'
 import { ImageUploader } from '../components/ImageUploader'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { ALLERGEN_OPTIONS } from '../lib/allergens'
+import { PLASTIC_FREE_PRACTICES, plasticFreeScore } from '../lib/plasticFree'
 import type { UploadedImage } from '../lib/upload'
 import styles from './StandAdhesionWizardPage.module.scss'
 
@@ -44,6 +45,8 @@ type AdhesionResponse = {
   haccpNote: string | null
   acceptsPointLight: boolean
   energyNeeds: EnergyNeed[]
+  plasticFreePractices: string[]
+  plasticFreeScore: number
   participationFeeAccepted: boolean
   depositAccepted: boolean
   feesAccepted: boolean
@@ -102,6 +105,7 @@ type FormState = {
   haccpNote: string
   acceptsPointLight: boolean
   energyNeeds: EnergyDraft[]
+  plasticFreePractices: string[]
   participationFeeAccepted: boolean
   depositAccepted: boolean
   feesAccepted: boolean
@@ -127,6 +131,7 @@ const emptyForm: FormState = {
   haccpNote: '',
   acceptsPointLight: false,
   energyNeeds: [],
+  plasticFreePractices: [],
   participationFeeAccepted: false,
   depositAccepted: false,
   feesAccepted: false,
@@ -208,6 +213,7 @@ function fromAdhesion(a: AdhesionResponse): FormState {
       powerKw: String(n.powerKw),
       connectionType: n.connectionType,
     })),
+    plasticFreePractices: a.plasticFreePractices ?? [],
     participationFeeAccepted: a.participationFeeAccepted,
     depositAccepted: a.depositAccepted,
     feesAccepted: a.feesAccepted,
@@ -251,6 +257,7 @@ function buildPayload(form: FormState) {
         powerKw: n.powerKw ? Number(n.powerKw) : 0,
         connectionType: n.connectionType,
       })),
+    plasticFreePractices: form.plasticFreePractices,
     participationFeeAccepted: form.participationFeeAccepted,
     depositAccepted: form.depositAccepted,
     feesAccepted: form.feesAccepted,
@@ -774,6 +781,44 @@ export function StandAdhesionWizardPage() {
             <button type="button" className={styles.secondaryBtn} onClick={() => set('energyNeeds', [...form.energyNeeds, newEnergyNeed()])}>
               + Aggiungi esigenza energetica
             </button>
+          </fieldset>
+
+          <fieldset className={styles.fieldset} disabled={!editable}>
+            <legend className={styles.legend}>
+              {'\u2463'}bis Plastic free e sostenibilità
+              <span className={styles.optionalBadge}>facoltativa</span>
+            </legend>
+            <p className={styles.hint}>
+              Sezione facoltativa: seleziona le pratiche sostenibili che adotterai allo stand. Un punteggio più
+              alto può qualificarti per agevolazioni alla partecipazione o per essere preferito ad altri stand
+              che offrono lo stesso prodotto.
+            </p>
+            <div className={styles.feeBox}>
+              {PLASTIC_FREE_PRACTICES.map((p) => (
+                <label className={styles.checkLabel} key={p.key}>
+                  <input
+                    type="checkbox"
+                    checked={form.plasticFreePractices.includes(p.key)}
+                    onChange={(e) => {
+                      const current = form.plasticFreePractices
+                      const next = e.target.checked
+                        ? [...current, p.key]
+                        : current.filter((k) => k !== p.key)
+                      set('plasticFreePractices', next)
+                    }}
+                  />
+                  <span>
+                    {p.label} <em className={styles.plasticFreeWeight}>+{p.weight}</em>
+                  </span>
+                </label>
+              ))}
+              <div className={styles.scoreBox}>
+                <strong>Punteggio plastic free:</strong>{' '}
+                <span className={styles.scoreValue}>
+                  {plasticFreeScore(form.plasticFreePractices)} punti
+                </span>
+              </div>
+            </div>
           </fieldset>
 
           <fieldset className={styles.fieldset} disabled={!editable}>

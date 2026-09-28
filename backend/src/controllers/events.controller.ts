@@ -146,7 +146,12 @@ export async function listEvents(req: Request, res: Response) {
     const canManage = req.user ? await isEventManager(req.user.id) : false;
     const filter = !forcePublic && canManage ? {} : { isPublic: { $ne: false } };
 
-    const items = await EventModel.find(filter).sort({ startDate: 1, createdAt: -1 });
+    // Le liste amministrative mostrano prima le edizioni più recenti (data decrescente);
+    // le liste pubbliche (eventi in arrivo) restano ascendenti.
+    const sort = !forcePublic && canManage
+        ? { startDate: -1 as const, createdAt: -1 as const }
+        : { startDate: 1 as const, createdAt: -1 as const };
+    const items = await EventModel.find(filter).sort(sort);
 
     return res.status(200).json({
         items: items.map(toEventResponse)

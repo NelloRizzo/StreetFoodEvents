@@ -163,6 +163,10 @@ export function AdminTopBar({ onMenuToggle, trackingEnabled, onToggleTracking }:
     return crumb.label
   }
 
+  const eventCrumb = breadcrumbs.find((c) => c.kind === 'event')
+  const eventId = eventCrumb?.segment
+  const publicHref = eventId ? `/events/${eventId}` : '/'
+
   return (
     <header className={styles.topbar}>
       <div className={styles.left}>
@@ -208,8 +212,8 @@ export function AdminTopBar({ onMenuToggle, trackingEnabled, onToggleTracking }:
             </svg>
           </button>
         )}
-        <Link className={styles.publicLink} to="/" target="_blank" rel="noopener">
-          {'\u{1F310}'} Modalità pubblica
+        <Link className={styles.publicLink} to={publicHref} target="_blank" rel="noopener">
+          {'\u{1F310}'} {eventId ? 'Pagina pubblica evento' : 'Modalità pubblica'}
         </Link>
         <Link className={styles.userLink} to="/admin/dashboard">
           <Avatar

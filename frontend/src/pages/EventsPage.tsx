@@ -1243,9 +1243,9 @@ export function EventsPage() {
                 {ev.shortDescription && <span className={styles.cardDesc} dangerouslySetInnerHTML={{ __html: ev.shortDescription }} />}
               </div>
               <div className={styles.cardActions}>
-                <Link className={styles.textBtn} to={`/events/${ev.id}`}>
-                  Vedi
-                </Link>
+                <a className={styles.textBtn} href={`/events/${ev.id}`} target="_blank" rel="noopener noreferrer">
+                  Pagina pubblica
+                </a>
                 <button
                   className={`${styles.favBtn} ${favoriteIds.has(ev.id) ? styles.favBtnActive : ''}`}
                   onClick={() => toggleFavorite(ev.id)}

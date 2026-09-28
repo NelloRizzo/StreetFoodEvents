@@ -153,6 +153,38 @@ describe('Integration — Stand Adhesions', () => {
         expect(res.body.item.standId).toBe(stand._id.toString());
     });
 
+    it('create: plasticFreePractices round-trips with computed score', async () => {
+        const { adminToken, event, stand } = await setupEnvironment();
+
+        const payload = completePayload(stand._id.toString()) as Record<string, unknown>;
+        payload.plasticFreePractices = ['compostable-plates', 'compostable-cups', 'digital-menu'];
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(payload);
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.plasticFreePractices).toEqual(['compostable-plates', 'compostable-cups', 'digital-menu']);
+        expect(res.body.item.plasticFreeScore).toBe(5);
+
+        const id = res.body.item.id;
+        const getRes = await request(app)
+            .get(`/api/events/${event._id}/adhesions/${id}`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(getRes.status).toBe(200);
+        expect(getRes.body.item.plasticFreePractices).toEqual(['compostable-plates', 'compostable-cups', 'digital-menu']);
+        expect(getRes.body.item.plasticFreeScore).toBe(5);
+
+        const patchRes = await request(app)
+            .patch(`/api/events/${event._id}/adhesions/${id}`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send({ plasticFreePractices: ['used-oil-container'] });
+        expect(patchRes.status).toBe(200);
+        expect(patchRes.body.item.plasticFreePractices).toEqual(['used-oil-container']);
+        expect(patchRes.body.item.plasticFreeScore).toBe(1);
+    });
+
     it('create: admin links adhesion by stand NAME (resolved to id)', async () => {
         const { adminToken, event, stand } = await setupEnvironment();
 

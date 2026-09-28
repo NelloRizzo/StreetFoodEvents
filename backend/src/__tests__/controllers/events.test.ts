@@ -452,4 +452,72 @@ describe('Events API', () => {
         expect(updated.status).toBe(200);
         expect(updated.body.item.isPublic).toBe(true);
     });
+
+    it('orders the admin list by startDate descending', async () => {
+        app = createTestApp();
+
+        const user = await UserModel.create({
+            firstName: 'Admin',
+            lastName: 'User',
+            email: `admin-${Date.now()}@test.com`,
+            passwordHash: await argon2.hash('Password123!'),
+            isActive: true
+        });
+        await assignPlatformAdmin(user._id);
+
+        const sessionToken = generateSessionToken();
+        await SessionModel.create({
+            userId: user._id,
+            tokenHash: hashSessionToken(sessionToken),
+            expiresAt: getSessionExpiryDate(),
+            lastActivityAt: new Date()
+        });
+
+        await EventModel.create({
+            name: 'Older Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+        await EventModel.create({
+            name: 'Newer Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-09-01'),
+            endDate: new Date('2026-09-07'),
+            currencyName: 'TC'
+        });
+
+        const res = await request(app)
+            .get('/api/events')
+            .set('Cookie', `sid=${sessionToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.items.map((i: { name: string }) => i.name)).toEqual(['Newer Event', 'Older Event']);
+    });
+
+    it('keeps the public list ordered by startDate ascending', async () => {
+        app = createTestApp();
+
+        await EventModel.create({
+            name: 'Newer Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-09-01'),
+            endDate: new Date('2026-09-07'),
+            currencyName: 'TC'
+        });
+        await EventModel.create({
+            name: 'Older Event',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2026-06-01'),
+            endDate: new Date('2026-06-07'),
+            currencyName: 'TC'
+        });
+
+        const res = await request(app)
+            .get('/api/events?public=true');
+
+        expect(res.status).toBe(200);
+        expect(res.body.items.map((i: { name: string }) => i.name)).toEqual(['Older Event', 'Newer Event']);
+    });
 });

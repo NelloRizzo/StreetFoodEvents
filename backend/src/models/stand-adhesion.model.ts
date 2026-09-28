@@ -6,6 +6,29 @@ import { imageSchema } from './schemas/image.schema';
 export const ADHESION_STATUS_VALUES = ['draft', 'submitted', 'integration', 'approved', 'rejected'] as const;
 export type AdhesionStatus = (typeof ADHESION_STATUS_VALUES)[number];
 
+/**
+ * Pratiche "plastic free" dichiarabili dallo stand (sezione facoltativa).
+ * Ogni pratica ha un peso; il punteggio serve per agevolazioni o come criterio
+ * di scelta tra stand che offrono lo stesso prodotto.
+ */
+export const PLASTIC_FREE_PRACTICES = [
+    { key: 'compostable-plates', label: 'Piatti compostabili', weight: 2 },
+    { key: 'compostable-cups', label: 'Bicchieri compostabili', weight: 2 },
+    { key: 'waste-separation', label: 'Raccolta differenziata allo stand', weight: 1 },
+    { key: 'used-oil-container', label: 'Contenitore olio esausto', weight: 1 },
+    { key: 'km0-ingredients', label: 'Ingredienti locali a km 0 certificati', weight: 2 },
+    { key: 'waste-reduction-docs', label: 'Documentazione per la riduzione di sprechi', weight: 1 },
+    { key: 'digital-menu', label: 'Menu digitale', weight: 1 },
+    { key: 'plastic-free-setup', label: 'Allestimento senza plastica', weight: 2 }
+] as const;
+
+export const PLASTIC_FREE_VALUES: string[] = PLASTIC_FREE_PRACTICES.map((p) => p.key);
+
+export function plasticFreeScore(keys: readonly string[]): number {
+    const weights = new Map<string, number>(PLASTIC_FREE_PRACTICES.map((p) => [p.key, p.weight]));
+    return keys.reduce((sum, key) => sum + (weights.get(key) ?? 0), 0);
+}
+
 const adhesionProductSchema = new Schema(
     {
         name: {
@@ -185,6 +208,11 @@ const standAdhesionSchema = new Schema(
         },
         energyNeeds: {
             type: [energyNeedSchema],
+            default: []
+        },
+        plasticFreePractices: {
+            type: [String],
+            enum: PLASTIC_FREE_VALUES,
             default: []
         },
         participationFeeAccepted: {

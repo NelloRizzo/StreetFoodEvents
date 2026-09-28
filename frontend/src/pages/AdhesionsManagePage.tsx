@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { ALLERGEN_LABELS } from '../lib/allergens'
+import { PLASTIC_FREE_LABELS } from '../lib/plasticFree'
 import type { UploadedImage } from '../lib/upload'
 import styles from './AdhesionsManagePage.module.scss'
 
@@ -39,6 +40,8 @@ type AdhesionItem = {
   haccpNote: string | null
   acceptsPointLight: boolean
   energyNeeds: Array<{ equipment: string; powerKw: number; connectionType: string }>
+  plasticFreePractices: string[]
+  plasticFreeScore: number
   participationFeeAccepted: boolean
   depositAccepted: boolean
   feesAccepted: boolean
@@ -292,6 +295,12 @@ export function AdhesionsManagePage() {
                       <p>
                         Esigenze energetiche:{' '}
                         {a.energyNeeds.map((n) => `${n.equipment} (${n.powerKw} kW, ${n.connectionType})`).join(', ')}
+                      </p>
+                    )}
+                    {(a.plasticFreePractices?.length ?? 0) > 0 && (
+                      <p>
+                        Plastic free ({a.plasticFreeScore} punti):{' '}
+                        {a.plasticFreePractices.map((k) => PLASTIC_FREE_LABELS[k] ?? k).join(', ')}
                       </p>
                     )}
                     {event?.participationFee != null && (
