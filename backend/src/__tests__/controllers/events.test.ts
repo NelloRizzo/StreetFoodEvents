@@ -453,6 +453,64 @@ describe('Events API', () => {
         expect(updated.body.item.isPublic).toBe(true);
     });
 
+    it('round-trips the adhesionEnabled flag through create and read', async () => {
+        app = createTestApp();
+
+        const user = await UserModel.create({
+            firstName: 'Admin',
+            lastName: 'User',
+            email: `admin-${Date.now()}@test.com`,
+            passwordHash: await argon2.hash('Password123!'),
+            isActive: true
+        });
+        await assignPlatformAdmin(user._id);
+
+        const sessionToken = generateSessionToken();
+        await SessionModel.create({
+            userId: user._id,
+            tokenHash: hashSessionToken(sessionToken),
+            expiresAt: getSessionExpiryDate(),
+            lastActivityAt: new Date()
+        });
+
+        const created = await request(app)
+            .post('/api/events')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                name: 'Adhesion Event',
+                location: { label: 'Piazza', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+                startDate: '2026-07-01',
+                endDate: '2026-07-05',
+                currencyName: 'Coin',
+                adhesionEnabled: true
+            });
+
+        expect(created.status).toBe(201);
+        expect(created.body.item.adhesionEnabled).toBe(true);
+
+        const createdDefault = await request(app)
+            .post('/api/events')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({
+                name: 'Default Event',
+                location: { label: 'Piazza', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+                startDate: '2026-07-01',
+                endDate: '2026-07-05',
+                currencyName: 'Coin'
+            });
+
+        expect(createdDefault.status).toBe(201);
+        expect(createdDefault.body.item.adhesionEnabled).toBe(false);
+
+        const patched = await request(app)
+            .patch(`/api/events/${created.body.item.id}`)
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ adhesionEnabled: false });
+
+        expect(patched.status).toBe(200);
+        expect(patched.body.item.adhesionEnabled).toBe(false);
+    });
+
     it('orders the admin list by startDate descending', async () => {
         app = createTestApp();
 

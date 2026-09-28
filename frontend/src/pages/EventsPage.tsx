@@ -38,6 +38,7 @@ type EventItem = {
   participationFeeDeadline: string | null
   depositDeadline: string | null
   adhesionDeadline: string | null
+  adhesionEnabled: boolean
   url: string | null
   shortDescription: string | null
   longDescription: string | null
@@ -82,6 +83,7 @@ type EventFormData = {
   participationFeeDeadline: string
   depositDeadline: string
   adhesionDeadline: string
+  adhesionEnabled: boolean
   url: string
   shortDescription: string
   longDescription: string
@@ -123,6 +125,7 @@ const emptyForm: EventFormData = {
   participationFeeDeadline: '',
   depositDeadline: '',
   adhesionDeadline: '',
+  adhesionEnabled: false,
   url: '',
   shortDescription: '',
   longDescription: '',
@@ -424,6 +427,7 @@ export function EventsPage() {
       participationFeeDeadline: ev.participationFeeDeadline ? ev.participationFeeDeadline.slice(0, 10) : '',
       depositDeadline: ev.depositDeadline ? ev.depositDeadline.slice(0, 10) : '',
       adhesionDeadline: ev.adhesionDeadline ? ev.adhesionDeadline.slice(0, 10) : '',
+      adhesionEnabled: ev.adhesionEnabled ?? false,
       url: ev.url ?? '',
       shortDescription: ev.shortDescription ?? '',
       longDescription: ev.longDescription ?? '',
@@ -501,6 +505,7 @@ export function EventsPage() {
       participationFeeDeadline: form.participationFeeDeadline ? new Date(form.participationFeeDeadline).toISOString() : null,
       depositDeadline: form.depositDeadline ? new Date(form.depositDeadline).toISOString() : null,
       adhesionDeadline: form.adhesionDeadline ? new Date(form.adhesionDeadline).toISOString() : null,
+      adhesionEnabled: form.adhesionEnabled,
       url: form.url || null,
       shortDescription: form.shortDescription || null,
       longDescription: form.longDescription || null,
@@ -1169,6 +1174,19 @@ export function EventsPage() {
                     onChange={(e) => setForm({ ...form, adhesionDeadline: e.target.value })}
                   />
                   <small>Le adesioni online chiudono dopo questa data (vuoto = nessun limite).</small>
+                </div>
+                <div className={styles.checkField} style={{ alignSelf: 'flex-end' }}>
+                  <label className={styles.checkLabel}>
+                    <input
+                      type="checkbox"
+                      checked={form.adhesionEnabled}
+                      onChange={(e) => setForm({ ...form, adhesionEnabled: e.target.checked })}
+                    />
+                    <span>Mostra modulo di adesione nella parte pubblica</span>
+                  </label>
+                  <p className={styles.fieldHint}>
+                    Se non flaggato, il collegamento al modulo di adesione non appare nel menu pubblico dell'evento.
+                  </p>
                 </div>
               </div>
             </fieldset>

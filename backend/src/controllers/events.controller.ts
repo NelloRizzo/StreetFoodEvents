@@ -79,6 +79,7 @@ function toEventResponse(event: {
     participationFeeDeadline?: Date | null;
     depositDeadline?: Date | null;
     adhesionDeadline?: Date | null;
+    adhesionEnabled?: boolean | null;
     themeBrand?: string | null;
     themeText?: string | null;
     themeSurface?: string | null;
@@ -115,6 +116,7 @@ function toEventResponse(event: {
         participationFeeDeadline: event.participationFeeDeadline ?? null,
         depositDeadline: event.depositDeadline ?? null,
         adhesionDeadline: event.adhesionDeadline ?? null,
+        adhesionEnabled: event.adhesionEnabled ?? false,
         themeBrand: event.themeBrand ?? null,
         themeText: event.themeText ?? null,
         themeSurface: event.themeSurface ?? null,
@@ -246,6 +248,7 @@ export async function createEvent(req: Request, res: Response) {
         participationFeeDeadline,
         depositDeadline,
         adhesionDeadline,
+        adhesionEnabled,
         themeBrand,
         themeText,
         themeSurface,
@@ -283,6 +286,7 @@ export async function createEvent(req: Request, res: Response) {
         participationFeeDeadline: participationFeeDeadline ? new Date(participationFeeDeadline) : null,
         depositDeadline: depositDeadline ? new Date(depositDeadline) : null,
         adhesionDeadline: adhesionDeadline ? new Date(adhesionDeadline) : null,
+        adhesionEnabled: adhesionEnabled ?? false,
         themeBrand: themeBrand ?? null,
         themeText: themeText ?? null,
         themeSurface: themeSurface ?? null,
@@ -338,6 +342,7 @@ export async function updateEvent(req: Request, res: Response) {
         participationFeeDeadline,
         depositDeadline,
         adhesionDeadline,
+        adhesionEnabled,
         themeBrand,
         themeText,
         themeSurface,
@@ -408,6 +413,10 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (adhesionDeadline !== undefined) {
         event.adhesionDeadline = adhesionDeadline ? new Date(adhesionDeadline) : null;
+    }
+
+    if (adhesionEnabled !== undefined) {
+        event.adhesionEnabled = adhesionEnabled;
     }
 
     if (themeBrand !== undefined) {
@@ -683,6 +692,7 @@ export async function duplicateEvent(req: Request, res: Response) {
         gallery: source.gallery ?? [],
         cashPaymentsEnabled: source.cashPaymentsEnabled ?? true,
         unifiedCashierEnabled: source.unifiedCashierEnabled ?? false,
+        adhesionEnabled: source.adhesionEnabled ?? false,
         slideshowTitle: source.slideshowTitle ?? null,
         isPublic: typeof isPublic === 'boolean' ? isPublic : (source.isPublic ?? true),
         feeBands: source.feeBands ?? [],

@@ -133,6 +133,10 @@ const eventSchema = new Schema(
             type: Date,
             default: null
         },
+        adhesionEnabled: {
+            type: Boolean,
+            default: false
+        },
         themeBrand: {
             type: String,
             trim: true,
