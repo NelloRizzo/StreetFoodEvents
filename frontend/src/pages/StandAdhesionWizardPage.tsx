@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { ImageUploader } from '../components/ImageUploader'
@@ -442,6 +442,11 @@ export function StandAdhesionWizardPage() {
                 </p>
               )}
             </div>
+            <div className={styles.headerActions}>
+              <Link className={styles.backBtn} to={`/events/${eventId}`}>
+                <span aria-hidden="true">&larr;</span> Torna all&apos;evento
+              </Link>
+            </div>
           </div>
           <div className={styles.noRegulation}>
             Il modulo di adesione è disponibile solo se l&apos;organizzazione ha pubblicato il regolamento
@@ -472,6 +477,11 @@ export function StandAdhesionWizardPage() {
                   {new Date(event.endDate).toLocaleDateString('it-IT')}
                 </p>
               )}
+            </div>
+            <div className={styles.headerActions}>
+              <Link className={styles.backBtn} to={`/events/${eventId}`}>
+                <span aria-hidden="true">&larr;</span> Torna all&apos;evento
+              </Link>
             </div>
           </div>
           <div className={styles.deadlineNotice}>
@@ -504,6 +514,14 @@ export function StandAdhesionWizardPage() {
                 {STATUS_LABEL[adhesion.status]}
               </span>
             )}
+            {/* Uscita dal wizard: il modulo e' una pagina lunga e in mezzo
+               ci sono solo i campi, quindi serve un modo esplicito per
+               tornare alla scheda dell'evento senza usare la navbar (non
+               presente nella variante sotto AdminLayout). Punta sempre alla
+               pagina pubblica dell'evento. */}
+            <Link className={styles.backBtn} to={`/events/${eventId}`}>
+              <span aria-hidden="true">&larr;</span> Torna all&apos;evento
+            </Link>
           </div>
         </div>
 
