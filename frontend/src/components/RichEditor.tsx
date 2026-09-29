@@ -1,10 +1,11 @@
+import { useCallback, useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Highlight from '@tiptap/extension-highlight'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
-import { useCallback } from 'react'
+import { uploadImage } from '../lib/upload'
 import styles from './RichEditor.module.scss'
 
 type RichEditorProps = {
@@ -12,9 +13,15 @@ type RichEditorProps = {
   onChange: (html: string) => void
   placeholder?: string
   maxLength?: number
+  /* Se valorizzato, il pulsante immagine apre il caricamento su Cloudinary
+   * (cartella dedicata lato API) invece di chiedere un URL. */
+  imageUploadType?: string
 }
 
-export function RichEditor({ value, onChange, placeholder, maxLength }: RichEditorProps) {
+export function RichEditor({ value, onChange, placeholder, maxLength, imageUploadType }: RichEditorProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -61,10 +68,37 @@ export function RichEditor({ value, onChange, placeholder, maxLength }: RichEdit
 
   const setImage = useCallback(() => {
     if (!editor) return
-    const url = window.prompt('URL immagine')
-    if (url === null) return
-    editor.chain().focus().setImage({ src: url }).run()
-  }, [editor])
+    /* Senza imageUploadType si mantiene il flusso storico (URL incollato). */
+    if (!imageUploadType) {
+      const url = window.prompt('URL immagine')
+      if (url === null) return
+      editor.chain().focus().setImage({ src: url }).run()
+      return
+    }
+    setUploadError(null)
+    fileInputRef.current?.click()
+  }, [editor, imageUploadType])
+
+  const onFileSelected = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      /* Permette di riselezionare subito lo stesso file. */
+      event.target.value = ''
+      if (!file || !editor || !imageUploadType) return
+
+      setIsUploading(true)
+      setUploadError(null)
+      try {
+        const uploaded = await uploadImage(file, imageUploadType)
+        editor.chain().focus().setImage({ src: uploaded.url, alt: file.name }).run()
+      } catch {
+        setUploadError('Caricamento immagine non riuscito. Riprova.')
+      } finally {
+        setIsUploading(false)
+      }
+    },
+    [editor, imageUploadType],
+  )
 
   if (!editor) return null
 
@@ -172,11 +206,23 @@ export function RichEditor({ value, onChange, placeholder, maxLength }: RichEdit
           type="button"
           className={styles.toolBtn}
           onClick={setImage}
-          title="Immagine (URL)"
+          disabled={isUploading}
+          title={imageUploadType ? 'Carica immagine' : 'Immagine (URL)'}
         >
-          🖼
+          {isUploading ? '⏳' : '🖼'}
         </button>
+        {imageUploadType && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={onFileSelected}
+          />
+        )}
       </div>
+
+      {uploadError && <div className={styles.error}>{uploadError}</div>}
 
       <EditorContent editor={editor} />
 

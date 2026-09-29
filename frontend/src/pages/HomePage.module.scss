@@ -2,6 +2,35 @@
   min-height: 100%;
 }
 
+/* Home a due colonne: gli eventi a sinistra, l'aside delle notizie a
+   destra. Sotto 900px l'aside scende sotto gli eventi e resta leggibile. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 2rem;
+  align-items: start;
+}
+
+.mainColumn {
+  min-width: 0;
+}
+
+.aside {
+  position: sticky;
+  top: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .aside {
+    position: static;
+    margin-top: 2rem;
+  }
+}
+
 .showcase {
   padding: 2.5rem 0 4rem;
   position: relative;

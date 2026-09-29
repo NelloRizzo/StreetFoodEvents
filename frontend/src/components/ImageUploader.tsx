@@ -8,7 +8,7 @@ type ImageUploaderProps = {
   value?: UploadedImage | UploadedImage[] | null
   onChange: (data: UploadedImage | UploadedImage[] | null) => void
   label?: string
-  type?: 'stand' | 'event' | 'product' | 'user' | 'poi'
+  type?: 'stand' | 'event' | 'product' | 'user' | 'poi' | 'blog'
 }
 
 export function ImageUploader({ mode, value, onChange, label, type }: ImageUploaderProps) {

@@ -65,6 +65,13 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent, track
 
   const basePath = selectedEvent ? `/admin/events/${selectedEvent.id}` : null
 
+  /* Voci del blog: trasversali (scope platform), quindi visibili senza
+   * evento selezionato. writer vede le notizie, blog-admin anche le
+   * categorie. */
+  const platformRoleSlugs = roles.filter((r) => r.scope === 'platform').map((r) => r.slug)
+  const canWriteBlog = isPlatformAdmin || platformRoleSlugs.some((slug) => slug === 'writer' || slug === 'blog-admin')
+  const canManageBlog = isPlatformAdmin || platformRoleSlugs.some((slug) => slug === 'blog-admin')
+
   const nameCollator = new Intl.Collator('it', { sensitivity: 'base' })
   const managedStands = selectedEventId
     ? myStands
@@ -191,6 +198,17 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent, track
             { label: 'Volantino', to: '/flyer', icon: '\u{1F4E2}' },
           ],
         } as SidebarSection]
+      : []),
+    ...(canWriteBlog
+      ? [{
+        label: 'Contenuti',
+        items: [
+          { label: 'Notizie', to: '/admin/blog', icon: '\u{1F4F0}' },
+          ...(canManageBlog
+            ? [{ label: 'Categorie blog', to: '/admin/blog/categories', icon: '\u{1F3F7}' } as SidebarItem]
+            : []),
+        ],
+      } as SidebarSection]
       : []),
   ]
 

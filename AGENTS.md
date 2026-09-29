@@ -130,6 +130,47 @@ Pubblicazione Meta: account UNICO della piattaforma via env opzionali `META_PAGE
 
 Nota: modello `Review` — `standId` null = recensione evento; moderazione **post-hoc** (visibili subito, nascondibili). Guardia route admin: `reviewsRouter.use(authMiddleware)` + `hasRole(['event-admin','platform-admin'])` — la registrazione `GET /qrcodes/all` è PRIMA di `/:reviewId` (il segmento `all` non deve finire nel param).
 
+### API routes — Blog
+Router montato in `app.ts` su `/api/blog` (`blog.routes.ts`). **Trasversale**: i post NON sono legati a un evento, ma ogni post può collegarsi a un `Event` (facoltativo) e a una `BlogCategory` (facoltativa).
+
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/blog` | no | Elenco paginato pubblicati (`page`/`limit`/`category`/`eventId`) |
+| GET | `/api/blog/home` | no | Aside home: **tutte le pinnate** (dalla più recente pin) **+ le ultime 5 pubblicate**, deduplicato per `_id` |
+| GET | `/api/blog/categories` | no | Elenco categorie pubblicate |
+| GET | `/api/blog/:slug` | no | Dettaglio pubblicato (incrementa `viewCount`); 404 se draft |
+| GET | `/api/blog/:slug/comments` | no | Commenti `status: 'visible'` |
+| POST | `/api/blog/:slug/comments` | auth | Crea commento (solo registrati, max 2000, 1 per utente/post → 409) |
+| GET | `/api/blog/manage/posts` | writer / blog-admin / platform-admin | Lista gestione (**senza `contentHtml`**, include i draft) con filtri stato/pin/categoria/evento |
+| POST | `/api/blog/manage/posts` | writer / blog-admin / platform-admin | Crea notizia (nuova = `draft`; `isPinned` nel body è **ignorato**, la notizia nasce sempre non pinnata) |
+| GET | `/api/blog/manage/posts/:postId` | writer / blog-admin / platform-admin | Dettaglio per l'editor (include il corpo sanificato, anche dei draft) |
+| PATCH | `/api/blog/manage/posts/:postId` | writer / blog-admin / platform-admin | Modifica; `isPinned` solo blog-admin/platform-admin |
+| DELETE | `/api/blog/manage/posts/:postId` | blog-admin / platform-admin | Elimina (anche i commenti) |
+| GET/POST | `/api/blog/manage/categories` | GET: writer+ / POST: blog-admin | Elenco / creazione categoria |
+| PATCH/DELETE | `/api/blog/manage/categories/:categoryId` | blog-admin / platform-admin | Modifica / elimina (i post restano, `categoryId` → null) |
+| GET | `/api/blog/manage/comments` | blog-admin / platform-admin | Tutti i commenti con filtro stato |
+| PATCH/DELETE | `/api/blog/manage/comments/:commentId` | blog-admin / platform-admin | Nasconda (`hidden`) / elimina |
+
+**Gotcha blog**:
+- **Ruoli** (scope `platform`, in `roles-populate.ts`): `writer` = `blog:read|create|update`; `blog-admin` = anche `delete`, `categories`, `comments`. Nuovi ruoli → **ri-eseguire `npm run populate:database`** in produzione, poi assegnarli da `UserRolesPage`.
+- **Ordine delle route**: `GET /:slug` e `POST /:slug/comments` sono registrati **PRIMA** di `/manage/*`; `/manage` come slug inesistente darebbe solo un 404 innocuo, ma **mai** registrare `/manage/:x` dopo `/:slug/comments`.
+- **XSS**: il body passa sempre da `sanitizeBlogHtml()` in scrittura **e in lettura** (forza `target="_blank"` + `rel="noopener noreferrer nofollow"` su ogni `<a>`). Non fidarsi mai del `contentHtml` salvato: i record scritti prima della regola o modificati fuori dall'app possono avere link senza `target`.
+- `GET /api/blog/home` deduplica per `_id`: una pinnata fra le ultime 5 non aggiunge un elemento. Il frontend (`BlogNewsAside`) **non ri-ordina** e non renderizza nulla se la lista è vuota (niente box vuoto in home).
+- `RichEditor` ha la prop opzionale `imageUploadType`: con la prop il pulsante immagine carica su Cloudinary (`type=blog` → cartella `blog`), senza resta il prompt URL. Non rimuovere la prop senza aggiornare i call site (`BlogPostEditPage` la passa, `EventsPage`/`AdhesionFormManagePage` no).
+- `useBlogRoleAccess` (`features/blog/use-blog-role.ts`) è solo un gate **UI** con gli stessi slug/scope del guard API e fallisce chiuso: la protezione reale è `hasRole` lato backend.
+
+### Frontend — Blog routes
+| Route | Element | Description |
+|---|---|---|
+| `/blog` | BlogListPage | Elenco pubblico con filtro categoria |
+| `/blog/:slug` | BlogPostPage | Notizia + commenti (richiede login per commentare) |
+| `/admin/blog` | BlogManagePage | Gestione notizie + moderazione commenti |
+| `/admin/blog/categories` | BlogCategoriesPage | CRUD categorie (solo blog-admin) |
+| `/admin/blog/new` | BlogPostEditPage | Nuova notizia |
+| `/admin/blog/:postId/edit` | BlogPostEditPage | Modifica (anche bozze, via `GET /manage/posts/:postId`) |
+
+Nota: la sidebar admin (`AdminSidebar`) mostra la sezione «Contenuti» → «Notizie» (e «Categorie blog» solo per `blog-admin/platform-admin`) **senza bisogno di evento selezionato**: il blog è trasversale, quindi niente dipendenza da `selectedEventId`. La PWA clienti (`customer-router`) **non** monta le rotte blog e `PublicLayout` non ha una voce di menu per il blog: è raggiungibile solo dal sito operatore.
+
 ### Frontend — Alias routes
 | Route | Element | Description |
 |---|---|---|

@@ -1,0 +1,204 @@
+.page {
+  padding-block: 2rem 4rem;
+}
+
+.article {
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.backLink {
+  display: inline-block;
+  margin-bottom: 1.25rem;
+  color: var(--color-text-muted, #666);
+  text-decoration: none;
+  font-size: 0.9rem;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.category {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--color-brand, #1a1a2e);
+  color: #fff;
+}
+
+.title {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #666);
+}
+
+.eventLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--color-brand, #1a1a2e);
+  border-radius: 999px;
+  color: var(--color-brand, #1a1a2e);
+  text-decoration: none;
+
+  img {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+}
+
+.cover {
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.excerpt {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--color-text-muted, #555);
+}
+
+/* Corpo della notizia: il backend ha gia' sanificato l'HTML e forza
+   target="_blank" + rel="noopener noreferrer nofollow" su ogni <a>. */
+.content {
+  line-height: 1.75;
+
+  :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-block: 1rem;
+  }
+
+  :global(a) {
+    color: var(--color-brand, #1a1a2e);
+    text-decoration: underline;
+  }
+
+  :global(blockquote) {
+    margin-inline: 0;
+    padding-left: 1rem;
+    border-left: 3px solid var(--color-brand, #1a1a2e);
+    color: var(--color-text-muted, #555);
+  }
+}
+
+.comments {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.commentsTitle {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.commentForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 0.7rem;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+.submit {
+  align-self: flex-start;
+  padding: 0.55rem 1.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-brand, #1a1a2e);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.loginHint {
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #666);
+  margin-bottom: 1.5rem;
+}
+
+.notice {
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+
+  &.error {
+    background: #fdecec;
+    color: #8f1d1d;
+    border: 1px solid #f0b4b4;
+  }
+
+  &.success {
+    background: #e8f5e9;
+    color: #1b5e20;
+    border: 1px solid #a5d6a7;
+  }
+}
+
+.comment {
+  padding: 0.9rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.commentHead {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #666);
+  margin-bottom: 0.25rem;
+
+  strong {
+    color: var(--color-text, #111);
+    font-size: 0.95rem;
+  }
+}
+
+.commentBody {
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.empty {
+  color: var(--color-text-muted, #666);
+  font-style: italic;
+}

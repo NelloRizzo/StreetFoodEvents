@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+import { BlogNewsAside } from '../components/BlogNewsAside'
 import { useAuth } from '../features/auth/auth-context'
 import { trackEventClick } from '../lib/analytics'
 import homeStyles from './HomePage.module.scss'
@@ -57,100 +58,108 @@ export function HomePage() {
     <main className={homeStyles.page}>
       <section className={homeStyles.showcase}>
         <div className="page-shell">
-          <div className={homeStyles.showcaseHeader}>
-            {/* Il brand "Street Food Events" e' gia' nel PublicHeader: ripeterlo
-               qui lo mostrava due volte di fila (header + eyebrow). */}
-            <h1 className={homeStyles.showcaseTitle}>Eventi in programma</h1>
-            <p className={homeStyles.showcaseCopy}>
-              Scopri gli eventi di street food, esplora stand e menu.
-            </p>
-          </div>
+          <div className={homeStyles.layout}>
+            <div className={homeStyles.mainColumn}>
+              <div className={homeStyles.showcaseHeader}>
+                {/* Il brand "Street Food Events" e' gia' nel PublicHeader: ripeterlo
+                   qui lo mostrava due volte di fila (header + eyebrow). */}
+                <h1 className={homeStyles.showcaseTitle}>Eventi in programma</h1>
+                <p className={homeStyles.showcaseCopy}>
+                  Scopri gli eventi di street food, esplora stand e menu.
+                </p>
+              </div>
 
-          {isLoading && <p className={homeStyles.empty}>Caricamento...</p>}
+              {isLoading && <p className={homeStyles.empty}>Caricamento...</p>}
 
-          {!isLoading && upcomingEvents.length === 0 && (
-            <p className={homeStyles.empty}>Nessun evento in programma al momento.</p>
-          )}
+              {!isLoading && upcomingEvents.length === 0 && (
+                <p className={homeStyles.empty}>Nessun evento in programma al momento.</p>
+              )}
 
-          <div className={homeStyles.eventGrid}>
-            {upcomingEvents.map((event) => (
-              <Link
-                key={event.id}
-                to={`/events/${event.id}`}
-                className={homeStyles.eventCard}
-                onClick={() => trackEventClick({ eventId: event.id, eventName: event.name, section: 'home' })}
-              >
-                {event.coverImage?.url && (
-                  <div className={homeStyles.cardCover}>
-                    <img src={event.coverImage.url} alt="" />
-                    {event.logo?.url && (
-                      <div className={homeStyles.cardLogoBadge}>
-                        <img src={event.logo.url} alt={`${event.name} logo`} />
-                      </div>
-                    )}
-                  </div>
-                )}
-                <div className={homeStyles.cardBody}>
-                  {!event.coverImage?.url && event.logo?.url && (
-                    <div className={homeStyles.cardLogoInline}>
-                      <img src={event.logo.url} alt={`${event.name} logo`} />
-                    </div>
-                  )}
-                  <strong className={homeStyles.eventName}>{event.name}</strong>
-                  {event.shortDescription && (
-                    <span className={homeStyles.eventDesc} dangerouslySetInnerHTML={{ __html: event.shortDescription }} />
-                  )}
-                  <div className={homeStyles.eventMeta}>
-                    <span className={homeStyles.eventDate}>
-                      {new Date(event.startDate).toLocaleDateString('it-IT', {
-                        day: 'numeric', month: 'long', year: 'numeric'
-                      })}
-                      {' — '}
-                      {new Date(event.endDate).toLocaleDateString('it-IT', {
-                        day: 'numeric', month: 'long', year: 'numeric'
-                      })}
-                    </span>
-                    <span className={homeStyles.eventLocation}>
-                      {event.location.label}{event.location.city ? `, ${event.location.city}` : ''}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {finishedEvents.length > 0 && (
-            <section className={homeStyles.pastSection}>
-              <h2 className={homeStyles.pastTitle}>Eventi terminati</h2>
-              <div className={homeStyles.pastList}>
-                {finishedEvents.map((event) => (
+              <div className={homeStyles.eventGrid}>
+                {upcomingEvents.map((event) => (
                   <Link
                     key={event.id}
                     to={`/events/${event.id}`}
-                    className={homeStyles.pastItem}
-                    onClick={() => trackEventClick({ eventId: event.id, eventName: event.name, section: 'home_past' })}
+                    className={homeStyles.eventCard}
+                    onClick={() => trackEventClick({ eventId: event.id, eventName: event.name, section: 'home' })}
                   >
-                    {event.logo?.url && (
-                      <img className={homeStyles.pastLogo} src={event.logo.url} alt="" />
+                    {event.coverImage?.url && (
+                      <div className={homeStyles.cardCover}>
+                        <img src={event.coverImage.url} alt="" />
+                        {event.logo?.url && (
+                          <div className={homeStyles.cardLogoBadge}>
+                            <img src={event.logo.url} alt={`${event.name} logo`} />
+                          </div>
+                        )}
+                      </div>
                     )}
-                    <span className={homeStyles.pastName}>{event.name}</span>
-                    <span className={homeStyles.pastDate}>
-                      {new Date(event.startDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
-                      {' – '}
-                      {new Date(event.endDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </span>
+                    <div className={homeStyles.cardBody}>
+                      {!event.coverImage?.url && event.logo?.url && (
+                        <div className={homeStyles.cardLogoInline}>
+                          <img src={event.logo.url} alt={`${event.name} logo`} />
+                        </div>
+                      )}
+                      <strong className={homeStyles.eventName}>{event.name}</strong>
+                      {event.shortDescription && (
+                        <span className={homeStyles.eventDesc} dangerouslySetInnerHTML={{ __html: event.shortDescription }} />
+                      )}
+                      <div className={homeStyles.eventMeta}>
+                        <span className={homeStyles.eventDate}>
+                          {new Date(event.startDate).toLocaleDateString('it-IT', {
+                            day: 'numeric', month: 'long', year: 'numeric'
+                          })}
+                          {' — '}
+                          {new Date(event.endDate).toLocaleDateString('it-IT', {
+                            day: 'numeric', month: 'long', year: 'numeric'
+                          })}
+                        </span>
+                        <span className={homeStyles.eventLocation}>
+                          {event.location.label}{event.location.city ? `, ${event.location.city}` : ''}
+                        </span>
+                      </div>
+                    </div>
                   </Link>
                 ))}
               </div>
-            </section>
-          )}
 
-          {!isAuthenticated && (
-            <div className={homeStyles.ctaSection}>
-              <Link to="/login" className={homeStyles.ctaPrimary}>Accedi</Link>
-              <Link to="/register" className={homeStyles.ctaSecondary}>Registrati</Link>
+              {finishedEvents.length > 0 && (
+                <section className={homeStyles.pastSection}>
+                  <h2 className={homeStyles.pastTitle}>Eventi terminati</h2>
+                  <div className={homeStyles.pastList}>
+                    {finishedEvents.map((event) => (
+                      <Link
+                        key={event.id}
+                        to={`/events/${event.id}`}
+                        className={homeStyles.pastItem}
+                        onClick={() => trackEventClick({ eventId: event.id, eventName: event.name, section: 'home_past' })}
+                      >
+                        {event.logo?.url && (
+                          <img className={homeStyles.pastLogo} src={event.logo.url} alt="" />
+                        )}
+                        <span className={homeStyles.pastName}>{event.name}</span>
+                        <span className={homeStyles.pastDate}>
+                          {new Date(event.startDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                          {' – '}
+                          {new Date(event.endDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {!isAuthenticated && (
+                <div className={homeStyles.ctaSection}>
+                  <Link to="/login" className={homeStyles.ctaPrimary}>Accedi</Link>
+                  <Link to="/register" className={homeStyles.ctaSecondary}>Registrati</Link>
+                </div>
+              )}
             </div>
-          )}
+
+            <div className={homeStyles.aside}>
+              <BlogNewsAside />
+            </div>
+          </div>
         </div>
       </section>
     </main>

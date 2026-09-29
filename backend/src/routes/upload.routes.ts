@@ -19,6 +19,10 @@ const typeFolderMap: Record<string, string> = {
     product: 'products',
     user: 'users',
     poi: 'pois',
+    /* Sezione dedicata alle immagini del blog (cover e immagini nel corpo
+     * delle notizie): tengere fuori da 'events' per non mischiare i media
+     * editoriali con quelli degli eventi. */
+    blog: 'blog'
 };
 
 function resolveFolder(req: import('express').Request): string {

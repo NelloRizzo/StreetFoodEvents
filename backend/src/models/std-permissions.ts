@@ -43,5 +43,12 @@ export const permissions = [
     'frames:delete',
 
     'exchanges:read',
-    'exchanges:create'
+    'exchanges:create',
+
+    'blog:read',
+    'blog:create',
+    'blog:update',
+    'blog:delete',
+    'blog:categories',
+    'blog:comments'
 ] as const;

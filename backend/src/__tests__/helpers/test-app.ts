@@ -30,6 +30,7 @@ import { adhesionFormRouter } from '../../routes/adhesion-form.routes';
 import { promotionsRouter } from '../../routes/promotions.routes';
 import { standAdhesionsRouter } from '../../routes/stand-adhesions.routes';
 import { advertisementsRouter } from '../../routes/advertisements.routes';
+import { blogRouter } from '../../routes/blog.routes';
 import { reviewsRouter } from '../../routes/reviews.routes';
 import { visitorsRouter } from '../../routes/visitors.routes';
 
@@ -72,6 +73,7 @@ export function createTestApp() {
     app.use('/api/events/:eventId/promotions', promotionsRouter);
     app.use('/api/events/:eventId/adhesions', standAdhesionsRouter);
     app.use('/api/advertisements', advertisementsRouter);
+    app.use('/api/blog', blogRouter);
     app.use('/api/sync', syncRouter);
     app.use('/api/events/:eventId/reviews', reviewsRouter);
     app.use('/api/events/:eventId/visitors', visitorsRouter);

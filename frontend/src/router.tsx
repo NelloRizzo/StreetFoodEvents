@@ -49,6 +49,11 @@ import { AliasRedirectPage } from './pages/AliasRedirectPage'
 import { SlideshowPage } from './pages/SlideshowPage'
 import { FramesPage } from './pages/FramesPage'
 import { AdvertisementsPage } from './pages/AdvertisementsPage'
+import { BlogListPage } from './pages/BlogListPage'
+import { BlogPostPage } from './pages/BlogPostPage'
+import { BlogManagePage } from './pages/BlogManagePage'
+import { BlogCategoriesPage } from './pages/BlogCategoriesPage'
+import { BlogPostEditPage } from './pages/BlogPostEditPage'
 import { EventContestsPage } from './pages/EventContestsPage'
 import { ContestPage } from './pages/ContestPage'
 import { ContestPlayPage } from './pages/ContestPlayPage'
@@ -84,6 +89,8 @@ export const router = createBrowserRouter([
     element: <PublicLayout />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'blog', element: <BlogListPage /> },
+      { path: 'blog/:slug', element: <BlogPostPage /> },
       { path: 'platform', element: <PlatformPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
@@ -175,6 +182,10 @@ export const router = createBrowserRouter([
       { path: 'user-roles', element: <UserRolesPage /> },
       { path: 'frames', element: <FramesPage /> },
       { path: 'advertisements', element: <AdvertisementsPage /> },
+      { path: 'blog', element: <BlogManagePage /> },
+      { path: 'blog/categories', element: <BlogCategoriesPage /> },
+      { path: 'blog/new', element: <BlogPostEditPage /> },
+      { path: 'blog/:postId/edit', element: <BlogPostEditPage /> },
       { path: 'usage-contracts', element: <UsageContractsPage /> },
       { path: 'menu-print', element: <MenuPrintPage /> },
       { path: 'documents', element: <DocumentsPage /> },

@@ -147,3 +147,13 @@
   color: var(--color-ink-soft, #888);
   border-top: 1px solid var(--color-line, #ccc);
 }
+
+.error {
+  margin: 0.4rem 0.75rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #8f1d1d;
+  background: #fdecec;
+  border: 1px solid #f0b4b4;
+}

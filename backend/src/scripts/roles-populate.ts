@@ -133,7 +133,23 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     permissions: ['exchanges:read', 'exchanges:create', 'payments:read', 'payments:create', 'payments:refund'],
   });
 
-  if (!platformAdminRole || !eventAdminRole || !standAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole || !photoAdminRole || !photoPrintRole || !contestAdminRole || !exchangeAdminRole) {
+  const blogAdminRole = await upsertRole({
+    name: 'Blog Admin',
+    slug: 'blog-admin',
+    scope: 'platform',
+    description: 'Gestisce il blog: notizie, categorie, pin e moderazione dei commenti.',
+    permissions: ['blog:read', 'blog:create', 'blog:update', 'blog:delete', 'blog:categories', 'blog:comments'],
+  });
+
+  const writerRole = await upsertRole({
+    name: 'Writer',
+    slug: 'writer',
+    scope: 'platform',
+    description: 'Scrive e modifica le notizie del blog, ma non gestisce categorie, pin, moderazione o eliminazione.',
+    permissions: ['blog:read', 'blog:create', 'blog:update'],
+  });
+
+  if (!platformAdminRole || !eventAdminRole || !standAdminRole || !cashierRole || !kitchenRole || !eventCashierRole || !standPickupRole || !photoAdminRole || !photoPrintRole || !contestAdminRole || !exchangeAdminRole || !blogAdminRole || !writerRole) {
     throw new Error('Failed to seed roles');
   }
 
@@ -169,6 +185,8 @@ export async function populateRoles(seedUsers: SeedUsersResult) {
     photoPrintRole,
     contestAdminRole,
     exchangeAdminRole,
+    blogAdminRole,
+    writerRole,
   };
 }
 
