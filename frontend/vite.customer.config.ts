@@ -21,7 +21,7 @@ export default defineConfig(({ command }) => {
         registerType: 'prompt',
         includeAssets: ['pwa-icon.svg', 'pwa-64x64.png', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-icon-512x512.png', 'apple-touch-icon-180x180.png'],
         manifest: {
-          name: 'Street Food Events — Clienti',
+          name: 'Street Food Events',
           short_name: 'Street Food Events',
           description: 'Menu, mappa, ordini, recensioni e foto degli stand di street food.',
           lang: 'it',

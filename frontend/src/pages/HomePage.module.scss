@@ -24,14 +24,6 @@
   position: relative;
 }
 
-.eyebrow {
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-brand);
-}
-
 .showcaseTitle {
   font-family: var(--font-display, inherit);
   font-size: clamp(2rem, 5vw, 3rem);

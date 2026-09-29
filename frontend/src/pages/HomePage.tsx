@@ -58,7 +58,8 @@ export function HomePage() {
       <section className={homeStyles.showcase}>
         <div className="page-shell">
           <div className={homeStyles.showcaseHeader}>
-            <span className={homeStyles.eyebrow}>Street Food Events</span>
+            {/* Il brand "Street Food Events" e' gia' nel PublicHeader: ripeterlo
+               qui lo mostrava due volte di fila (header + eyebrow). */}
             <h1 className={homeStyles.showcaseTitle}>Eventi in programma</h1>
             <p className={homeStyles.showcaseCopy}>
               Scopri gli eventi di street food, esplora stand e menu.
