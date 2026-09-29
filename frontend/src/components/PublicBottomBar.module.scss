@@ -66,6 +66,13 @@
   position: relative;
 }
 
+/* PWA clienti: il tab profilo e' un link diretto a /profilo (nessun
+   dropdown, nessun rimando alla dashboard operatore). */
+.tabUserLink {
+  flex: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .tabUserBtn {
   flex: 1;
   display: flex;

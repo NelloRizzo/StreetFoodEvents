@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../features/auth/auth-context'
+import { isCustomersPwa } from '../lib/app-mode'
 import styles from './LoginPage.module.scss'
 
 export function LoginPage() {
@@ -14,6 +15,11 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  /* Destinazione dopo il login: nella PWA clienti la dashboard operatore
+     (/dashboard -> /admin/dashboard) non esiste, quindi si atterra sul
+     profilo utente classico. */
+  const fallbackPath = isCustomersPwa() ? '/profilo' : '/dashboard'
+
   const nextPath =
     typeof location.state === 'object' &&
     location.state !== null &&
@@ -23,7 +29,7 @@ export function LoginPage() {
     'pathname' in location.state.from &&
     typeof location.state.from.pathname === 'string'
       ? location.state.from.pathname
-      : '/dashboard'
+      : fallbackPath
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

@@ -27,6 +27,24 @@ const MIME = {
   '.woff2': 'font/woff2',
 }
 
+/* Files with a stable name that must ALWAYS be revalidated, never cached
+   immutably:
+   - sw.js               the service worker script: the browser must see a new
+                         version immediately, otherwise clients stay pinned to
+                         the old worker (and the "update available" prompt
+                         never resolves);
+   - *.webmanifest       the PWA manifest, same reason;
+   - *.html              the SPA shell, so a deploy is picked up on reload.
+   The asset files in /assets/ are content-hashed, so those can safely stay
+   immutable. */
+function cacheControlFor(filePath) {
+  const name = filePath.slice(filePath.lastIndexOf(sep) + 1)
+  if (name === 'sw.js') return 'no-cache'
+  const ext = extname(filePath)
+  if (ext === '.html' || ext === '.webmanifest') return 'no-cache'
+  return 'public, max-age=31536000, immutable'
+}
+
 /* Resolve a path inside `dist` honoring the SPA fallback: if the requested
    file doesn't exist (or is a directory) we serve index.html instead, and we
    never allow escaping the dist root (path-traversal guard). */
@@ -57,10 +75,7 @@ createServer((req, res) => {
 
   const ext = extname(filePath)
   res.setHeader('Content-Type', MIME[ext] ?? 'application/octet-stream')
-  res.setHeader(
-    'Cache-Control',
-    ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable',
-  )
+  res.setHeader('Cache-Control', cacheControlFor(filePath))
 
   createReadStream(filePath).pipe(res)
 }).listen(PORT, () => {

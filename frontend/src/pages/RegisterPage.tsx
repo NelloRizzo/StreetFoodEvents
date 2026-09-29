@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../features/auth/auth-context'
+import { isCustomersPwa } from '../lib/app-mode'
 import styles from './LoginPage.module.scss'
 
 export function RegisterPage() {
@@ -22,7 +23,9 @@ export function RegisterPage() {
 
     try {
       await register({ firstName, lastName, email, password })
-      navigate('/dashboard', { replace: true })
+      /* Nella PWA clienti la dashboard operatore non esiste: dopo la
+         registrazione si atterra sul profilo utente classico. */
+      navigate(isCustomersPwa() ? '/profilo' : '/dashboard', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registrazione non riuscita')
     } finally {

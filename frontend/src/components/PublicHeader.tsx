@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../features/auth/auth-context'
+import { isCustomersPwa } from '../lib/app-mode'
 import { Avatar } from './Avatar'
 import styles from './PublicHeader.module.scss'
 
@@ -15,6 +16,10 @@ export function PublicHeader({ showTracking, trackingEnabled, onToggleTracking }
   const { isAuthenticated, user, logout } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  /* La PWA clienti non contiene la dashboard operatore (/admin/*): il link
+     "Operatore" sparisce e l'avatar porta alla pagina profilo. */
+  const isPwa = isCustomersPwa()
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -51,22 +56,35 @@ export function PublicHeader({ showTracking, trackingEnabled, onToggleTracking }
           )}
           {isAuthenticated ? (
             <>
-              <Link className={styles.adminLink} to="/admin/dashboard">
-                Operatore
-              </Link>
-              <button
-                type="button"
-                className={styles.avatarBtn}
-                onClick={() => setIsMenuOpen((v) => !v)}
-                aria-label="Menu utente"
-              >
-                <Avatar
-                  src={user?.avatar?.url ?? null}
-                  firstName={user?.firstName ?? '?'}
-                  lastName={user?.lastName ?? '?'}
-                  size="sm"
-                />
-              </button>
+              {!isPwa && (
+                <Link className={styles.adminLink} to="/admin/dashboard">
+                  Operatore
+                </Link>
+              )}
+              {!isPwa ? (
+                <button
+                  type="button"
+                  className={styles.avatarBtn}
+                  onClick={() => setIsMenuOpen((v) => !v)}
+                  aria-label="Menu utente"
+                >
+                  <Avatar
+                    src={user?.avatar?.url ?? null}
+                    firstName={user?.firstName ?? '?'}
+                    lastName={user?.lastName ?? '?'}
+                    size="sm"
+                  />
+                </button>
+              ) : (
+                <Link className={styles.avatarBtn} to="/profilo" aria-label="Profilo utente">
+                  <Avatar
+                    src={user?.avatar?.url ?? null}
+                    firstName={user?.firstName ?? '?'}
+                    lastName={user?.lastName ?? '?'}
+                    size="sm"
+                  />
+                </Link>
+              )}
             </>
           ) : (
             <Link className={styles.loginBtn} to="/login">

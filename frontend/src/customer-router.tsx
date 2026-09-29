@@ -4,6 +4,8 @@ import { HomePage } from './pages/HomePage'
 import { PlatformPage } from './pages/PlatformPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { ProfilePage } from './pages/ProfilePage'
+import { FavoritesPage } from './pages/FavoritesPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventMenuPage } from './pages/EventMenuPage'
 import { EventMapPage } from './pages/EventMapPage'
@@ -49,6 +51,8 @@ export const customerRouter = createBrowserRouter(
         { path: 'platform', element: <PlatformPage /> },
         { path: 'login', element: <LoginPage /> },
         { path: 'register', element: <RegisterPage /> },
+        { path: 'profilo', element: <ProfilePage /> },
+        { path: 'favorites', element: <FavoritesPage /> },
         { path: 'events/:eventId', element: <EventDetailPage /> },
         { path: 'events/:eventId/menu', element: <EventMenuPage /> },
         { path: 'events/:eventId/mappa', element: <EventMapPage /> },
@@ -81,9 +85,13 @@ export const customerRouter = createBrowserRouter(
     { path: '/orders/station/:stationId', element: <StationQueuePage /> },
     { path: '/events/:eventId/stands/:standId/tracking', element: <StandTrackingPage /> },
     { path: '/show/:entityType/:alias', element: <AliasRedirectPage /> },
-    { path: '/flyer/:eventId', element: <Navigate to="/flyer" replace /> },
     { path: '/attiva/:token', element: <ActivationPage /> },
     { path: '/events/:eventId/adhesion-form', element: <AdhesionFormPublicPage /> },
+
+    /* Catch-all: in questa build le rotte admin (/admin/*, /dashboard, ...)
+       non esistono. Un bookmark o un link residuo verso la dashboard
+       riporterebbe a un 404 "Unexpected Application Error": meglio la home. */
+    { path: '*', element: <Navigate to="/" replace /> },
   ],
   { basename: '/customers' },
 )

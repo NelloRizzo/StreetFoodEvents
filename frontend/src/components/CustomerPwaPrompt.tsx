@@ -23,8 +23,13 @@ export function CustomerPwaPrompt() {
   const [installEvt, setInstallEvt] = useState<BeforeInstallPrompt | null>(null)
   const [showIos, setShowIos] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
 
-  const showInstall = !installEvt && !isStandalone() && !dismissed
+  /* Il banner di installazione resta finche' l'utente non installa o non
+     chiude: `showInstall` non deve dipendere da `installEvt`, altrimenti il
+     ramo col bottone "Installa l'app" (quando l'evento e' disponibile)
+     diventerebbe irraggiungibile. */
+  const showInstall = !isStandalone() && !dismissed
 
   useEffect(() => {
     const onPrompt = (e: Event) => {
@@ -43,6 +48,25 @@ export function CustomerPwaPrompt() {
     setInstallEvt(null)
   }
 
+  /* updateServiceWorker(true) -> il SW riceve SKIP_WAITING e si attiva; con
+     clientsClaim il nuovo SW prende il controllo della pagina, scatta
+     controllerchange e workbox-window ricarica da solo. Se pero' il reload
+     non arriva (per es. controllerchange non supportato, o un'altra scheda
+     tiene il vecchio SW) il banner resterebbe fisso per sempre: qui si
+     forza il reload dopo una breve attesa. */
+  const onUpdate = async () => {
+    if (isUpdating) return
+    setIsUpdating(true)
+    try {
+      await updateServiceWorker(true)
+    } catch {
+      /* registro non riuscito: il reload forzato sotto chiude il ciclo */
+    }
+    window.setTimeout(() => {
+      window.location.reload()
+    }, 1500)
+  }
+
   if (isStandalone() && !installEvt && !needRefresh && !offlineReady) return null
 
   return (
@@ -50,8 +74,14 @@ export function CustomerPwaPrompt() {
       {offlineReady && <p className={styles.toast}>App pronta: funzionerà anche offline.</p>}
       {needRefresh && (
         <p className={styles.banner}>
-          Nuova versione disponibile.{' '}
-          <button onClick={() => updateServiceWorker(true)}>Aggiorna</button>
+          {isUpdating ? (
+            'Aggiornamento in corso...'
+          ) : (
+            <>
+              <span>È disponibile un aggiornamento.</span>{' '}
+              <button onClick={onUpdate}>Aggiorna</button>
+            </>
+          )}
         </p>
       )}
       {showInstall && (

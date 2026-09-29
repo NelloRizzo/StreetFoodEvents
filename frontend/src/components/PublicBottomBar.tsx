@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 
 import { useAuth } from '../features/auth/auth-context'
+import { isCustomersPwa } from '../lib/app-mode'
 import { Avatar } from './Avatar'
 import styles from './PublicBottomBar.module.scss'
 
@@ -10,6 +11,11 @@ export function PublicBottomBar() {
   const location = useLocation()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
+
+  /* Nella PWA clienti non esiste la dashboard operatore: il tab "QR"
+     (che in app operatore porta a /admin/dashboard) diventa il profilo
+     utente classico, e il link "Modalita operatore" sparisce. */
+  const isPwa = isCustomersPwa()
 
   const lastEventId = localStorage.getItem('lastEventId') || ''
 
@@ -56,71 +62,85 @@ export function PublicBottomBar() {
         <span className={styles.tabLabel}>Mappa</span>
       </NavLink>
 
-      <NavLink
-        className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}
-        to={isAuthenticated ? '/admin/dashboard' : '/login'}
-      >
-        <span className={styles.tabIcon}>{'\u{1F4F1}'}</span>
-        <span className={styles.tabLabel}>QR</span>
-      </NavLink>
-
-      <div className={`${styles.tab} ${styles.tabUser}`} ref={userMenuRef}>
-        <button
-          type="button"
-          className={styles.tabUserBtn}
-          onClick={() => setIsUserMenuOpen((v) => !v)}
+      {!isPwa && (
+        <NavLink
+          className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}
+          to={isAuthenticated ? '/admin/dashboard' : '/login'}
         >
-          {isAuthenticated ? (
-            <Avatar
-              src={user?.avatar?.url ?? null}
-              firstName={user?.firstName ?? '?'}
-              lastName={user?.lastName ?? '?'}
-              size="sm"
-            />
-          ) : (
-            <span className={styles.tabIcon}>{'\u{1F464}'}</span>
-          )}
-          <span className={styles.tabLabel}>{isAuthenticated ? 'Profilo' : 'Accedi'}</span>
-        </button>
+          <span className={styles.tabIcon}>{'\u{1F4F1}'}</span>
+          <span className={styles.tabLabel}>QR</span>
+        </NavLink>
+      )}
 
-        {isUserMenuOpen && (
-          <div className={styles.userDropdown}>
+      {isPwa ? (
+        <Link className={`${styles.tab} ${styles.tabUserLink}`} to="/profilo">
+          <Avatar
+            src={isAuthenticated ? (user?.avatar?.url ?? null) : null}
+            firstName={user?.firstName ?? '?'}
+            lastName={user?.lastName ?? '?'}
+            size="sm"
+          />
+          <span className={styles.tabLabel}>{isAuthenticated ? 'Profilo' : 'Accedi'}</span>
+        </Link>
+      ) : (
+        <div className={`${styles.tab} ${styles.tabUser}`} ref={userMenuRef}>
+          <button
+            type="button"
+            className={styles.tabUserBtn}
+            onClick={() => setIsUserMenuOpen((v) => !v)}
+          >
             {isAuthenticated ? (
-              <>
-                <span className={styles.userDropdownName}>
-                  {user?.firstName} {user?.lastName}
-                </span>
-                <span className={styles.userDropdownEmail}>{user?.email}</span>
-                <Link className={styles.userDropdownAction} to="/admin/dashboard">
-                  Modalità operatore
-                </Link>
-                <Link className={styles.userDropdownAction} to="/favorites">
-                  Preferiti
-                </Link>
-                <button
-                  type="button"
-                  className={styles.userDropdownAction}
-                  onClick={async () => {
-                    setIsUserMenuOpen(false)
-                    await logout()
-                  }}
-                >
-                  Esci
-                </button>
-              </>
+              <Avatar
+                src={user?.avatar?.url ?? null}
+                firstName={user?.firstName ?? '?'}
+                lastName={user?.lastName ?? '?'}
+                size="sm"
+              />
             ) : (
-              <>
-                <Link className={styles.userDropdownAction} to="/login" onClick={() => setIsUserMenuOpen(false)}>
-                  Accedi
-                </Link>
-                <Link className={styles.userDropdownAction} to="/register" onClick={() => setIsUserMenuOpen(false)}>
-                  Registrati
-                </Link>
-              </>
+              <span className={styles.tabIcon}>{'\u{1F464}'}</span>
             )}
-          </div>
-        )}
-      </div>
+            <span className={styles.tabLabel}>{isAuthenticated ? 'Profilo' : 'Accedi'}</span>
+          </button>
+
+          {isUserMenuOpen && (
+            <div className={styles.userDropdown}>
+              {isAuthenticated ? (
+                <>
+                  <span className={styles.userDropdownName}>
+                    {user?.firstName} {user?.lastName}
+                  </span>
+                  <span className={styles.userDropdownEmail}>{user?.email}</span>
+                  <Link className={styles.userDropdownAction} to="/admin/dashboard">
+                    Modalità operatore
+                  </Link>
+                  <Link className={styles.userDropdownAction} to="/favorites">
+                    Preferiti
+                  </Link>
+                  <button
+                    type="button"
+                    className={styles.userDropdownAction}
+                    onClick={async () => {
+                      setIsUserMenuOpen(false)
+                      await logout()
+                    }}
+                  >
+                    Esci
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link className={styles.userDropdownAction} to="/login" onClick={() => setIsUserMenuOpen(false)}>
+                    Accedi
+                  </Link>
+                  <Link className={styles.userDropdownAction} to="/register" onClick={() => setIsUserMenuOpen(false)}>
+                    Registrati
+                  </Link>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </nav>
   )
 }

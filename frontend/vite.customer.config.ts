@@ -44,6 +44,14 @@ export default defineConfig(({ command }) => {
           cleanupOutdatedCaches: true,
           navigateFallback: '/customers/index.html',
           navigateFallbackDenylist: [/^\/api\//],
+          /* registerType 'prompt': skipWaiting resta false (l'aggiornamento
+             parte solo quando l'utente preme "Aggiorna"), ma clientsClaim
+             deve essere true. Senza, il nuovo SW si attiva senza prendere il
+             controllo della pagina, l'evento controllerchange non scatta e
+             quindi il reload automatico non avviene mai: il banner
+             "aggiornamento disponibile" resterebbe fisso e il pulsante
+             sembrerebbe non fare nulla. */
+          clientsClaim: true,
         },
         devOptions: {
           enabled: true,

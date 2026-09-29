@@ -1,0 +1,126 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  color: var(--color-ink-strong);
+  margin-top: 0.5rem;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 1.25rem;
+}
+
+.identity {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.name {
+  color: var(--color-ink-strong);
+  font-size: 1.25rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.email {
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.roleBadge {
+  justify-self: start;
+  margin-top: 0.3rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-strong);
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--ease-standard),
+    box-shadow var(--ease-standard),
+    transform var(--ease-standard);
+}
+
+.item:hover {
+  border-color: var(--color-brand);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+
+.itemIcon {
+  font-size: 1.2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.itemChevron {
+  margin-left: auto;
+  color: var(--color-ink-soft);
+  flex-shrink: 0;
+}
+
+.danger {
+  color: var(--color-danger);
+  border-color: rgba(192, 57, 43, 0.3);
+}
+
+.danger:hover {
+  border-color: var(--color-danger);
+  background: rgba(192, 57, 43, 0.06);
+}
+
+.guestCard {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.5rem 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.guestCopy {
+  color: var(--color-ink-soft);
+}

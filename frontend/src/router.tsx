@@ -7,6 +7,7 @@ import { EventProductsPage } from './pages/EventProductsPage'
 import { EventUsersPage } from './pages/EventUsersPage'
 import { EventsPage } from './pages/EventsPage'
 import { FavoritesPage } from './pages/FavoritesPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
@@ -107,6 +108,7 @@ export const router = createBrowserRouter([
       { path: 'privacy', element: <PrivacyPage /> },
       { path: 'guide/:role', element: <GuidePage /> },
       { path: 'theme-preview', element: <ThemePreviewPage /> },
+      { path: 'profilo', element: <ProfilePage /> },
 
       /* Legacy admin redirects (old URLs → /admin/*) */
       { path: 'dashboard', element: <Navigate to="/admin/dashboard" replace /> },
