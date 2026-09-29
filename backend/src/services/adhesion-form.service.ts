@@ -4,8 +4,16 @@ import { Types } from 'mongoose';
 import { sanitizeHtmlContent } from '../utils/html-sanitizer';
 import { AdhesionFormModel, type AdhesionForm, type AdhesionFormSection } from '../models/adhesion-form.model';
 import { EventModel, type Event } from '../models/event.model';
+import { PLASTIC_FREE_PRACTICES } from '../models/stand-adhesion.model';
 
 const GUIDED_SLUGS = ['event-header', 'currency', 'fees'] as const;
+
+/**
+ * Bumpare quando la struttura delle sezioni statiche del modulo cambia
+ * (nuova sezione, rimozione, rinumerazione). Va nel fingerprint perché i
+ * moduli già generati risultino "stale" e l'admin li rigeneri.
+ */
+const TEMPLATE_VERSION = 2;
 
 export interface AdhesionSectionInput {
     slug: string;
@@ -58,6 +66,7 @@ function formatDate(d: Date | string | undefined | null): string {
 export function computeEventFingerprint(event: Event): string {
     const location = (event.location ?? {}) as { label?: string | null; city?: string | null; addressLine1?: string | null };
     const payload = {
+        templateVersion: TEMPLATE_VERSION,
         name: event.name,
         locationLabel: location.label ?? null,
         locationCity: location.city ?? null,
@@ -259,6 +268,25 @@ function staticSections(): GeneratedSection[] {
             ].join('')
         },
         {
+            slug: 'plastic-free',
+            title: 'Sezione E bis — Plastic free e sostenibilità (facoltativa)',
+            generatedFrom: null,
+            content: [
+                `<p>Sezione <strong>facoltativa</strong>: il sottoscritto dichiara le pratiche sostenibili che adotterà allo stand (barrare). Un punteggio più alto può qualificare lo stand per agevolazioni alla partecipazione o per essere preferito ad altri stand che offrono lo stesso prodotto.</p>`,
+                `<p><strong>Pratiche plastic free adottate (barrare):</strong></p>`,
+                `<ul>`,
+                ...PLASTIC_FREE_PRACTICES.map(
+                    (p) => `<li>\u2610 ${esc(p.label)} <em>(+${p.weight})</em></li>`
+                ),
+                `</ul>`,
+                `<p>\u2610 <strong>Nessuna pratica plastic free</strong></p>`,
+                `<p><strong>Punteggio dichiarato:</strong> ______ punti (calcolato dall'organizzazione)</p>`,
+                `<p><strong>Note:</strong></p>`,
+                `<p>______________________________________________________________________</p>`,
+                `<p><strong>Data:</strong> ____ / ____ / ________</p>`
+            ].join('')
+        },
+        {
             slug: 'participation-price',
             title: 'Sezione G — Prezzo di partecipazione',
             generatedFrom: null,
@@ -331,7 +359,7 @@ export function buildSectionsFromEvent(event: Event): GeneratedSection[] {
         ordered.push(section);
         if (section.slug === 'haccp') {
             ordered.push(currency);
-        } else if (section.slug === 'energy') {
+        } else if (section.slug === 'plastic-free') {
             ordered.push(fees);
         }
     }

@@ -91,6 +91,32 @@ Eventuali **esigenze elettriche aggiuntive** (macchinari, frigoriferi, cucine, e
 
 ---
 
+## Sezione E bis — Plastic free e sostenibilità (facoltativa)
+
+Sezione **facoltativa**, presente sia nel wizard online sia nel modulo stampabile generato. Il richiedente **barra** le pratiche sostenibili che adotterà allo stand. Un punteggio più alto può qualificare lo stand per **agevolazioni alla partecipazione** o per essere **preferito ad altri stand che offrono lo stesso prodotto**.
+
+> **Nota**: la lista delle pratiche e i pesi sono condivisi con il wizard web (`PLASTIC_FREE_PRACTICES` in `backend/src/models/stand-adhesion.model.ts` e `frontend/src/lib/plasticFree.ts`) — modificando l'elenco, il modulo generato si aggiorna insieme.
+
+| Pratica | Punti |
+|---|---|
+| [ ] Piatti compostabili | +2 |
+| [ ] Bicchieri compostabili | +2 |
+| [ ] Raccolta differenziata allo stand | +1 |
+| [ ] Contenitore olio esausto | +1 |
+| [ ] Ingredienti locali a km 0 certificati | +2 |
+| [ ] Documentazione per la riduzione di sprechi | +1 |
+| [ ] Menu digitale | +1 |
+| [ ] Allestimento senza plastica | +2 |
+| [ ] **Nessuna pratica plastic free** | — |
+
+| | |
+|---|---|
+| Punteggio dichiarato | ______ punti (calcolato dall'organizzazione) |
+| Note | _________________________________________ |
+| Data | ____ / ____ / ________ |
+
+---
+
 ## Sezione F — Commissioni sugli incassi
 
 L'organizzatore applica una **commissione sugli incassi** dello stand secondo le fasce indicate nella definizione dell'evento; con la firma di accettazione lo stand ne **prende atto e le accetta**. Se non sono previste commissioni, barrare la casella "nessuna commissione".

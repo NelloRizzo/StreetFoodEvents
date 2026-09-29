@@ -7,6 +7,7 @@ import { AdhesionFormModel } from '../../models/adhesion-form.model';
 import { EventModel } from '../../models/event.model';
 import { RoleModel } from '../../models/role.model';
 import { SessionModel } from '../../models/session.model';
+import { PLASTIC_FREE_PRACTICES } from '../../models/stand-adhesion.model';
 import { UserModel } from '../../models/user.model';
 import { UserRoleModel } from '../../models/user-role.model';
 import {
@@ -105,6 +106,7 @@ describe('Integration — Adhesion Form', () => {
             'haccp',
             'currency',
             'energy',
+            'plastic-free',
             'fees',
             'participation-price',
             'deposit',
@@ -140,7 +142,53 @@ describe('Integration — Adhesion Form', () => {
 
         const res = await request(app).get(`/api/events/${env.event._id}/adhesion-form`);
         expect(res.status).toBe(200);
-        expect(res.body.item.sections).toHaveLength(11);
+        expect(res.body.item.sections).toHaveLength(12);
+    });
+
+    it('includes the plastic free section with all the shared practices', async () => {
+        const env = await setupAdhesionEnvironment();
+
+        await request(app)
+            .post(`/api/events/${env.event._id}/adhesion-form/generate`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        const res = await request(app).get(`/api/events/${env.event._id}/adhesion-form`);
+        const section = res.body.item.sections.find((s: { slug: string }) => s.slug === 'plastic-free');
+
+        expect(section).toBeTruthy();
+        expect(section.generatedFrom).toBeNull();
+        expect(section.title).toContain('Plastic free');
+        for (const practice of PLASTIC_FREE_PRACTICES) {
+            expect(section.content).toContain(practice.label);
+        }
+        expect(section.content).toContain('\u2610');
+
+        // la sezione resta manuale: una personalizzazione sopravvive alla rigenerazione
+        const patched = await request(app)
+            .patch(`/api/events/${env.event._id}/adhesion-form`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({
+                sections: [
+                    { slug: 'plastic-free', title: section.title, content: '<p>Testo personalizzato</p>' },
+                    ...res.body.item.sections
+                        .filter((s: { slug: string }) => s.slug !== 'plastic-free')
+                        .map((s: { slug: string; title: string; content: string }) => ({
+                            slug: s.slug,
+                            title: s.title,
+                            content: s.content
+                        }))
+                ]
+            });
+        expect(patched.status).toBe(200);
+
+        await request(app)
+            .post(`/api/events/${env.event._id}/adhesion-form/generate`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        const after = await request(app).get(`/api/events/${env.event._id}/adhesion-form`);
+        expect(
+            after.body.item.sections.find((s: { slug: string }) => s.slug === 'plastic-free').content
+        ).toBe('<p>Testo personalizzato</p>');
     });
 
     it('highlights the currency name and embeds its logo', async () => {
@@ -358,7 +406,7 @@ describe('Integration — Adhesion Form', () => {
 
         const stored = await AdhesionFormModel.findOne({ eventId: env.event._id });
         expect(stored).toBeTruthy();
-        expect(stored?.sections).toHaveLength(11);
+        expect(stored?.sections).toHaveLength(12);
     });
 
     it('returns 404 when generating for a missing event', async () => {
