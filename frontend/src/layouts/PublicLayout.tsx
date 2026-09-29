@@ -11,6 +11,7 @@ import { getConsent } from '../lib/consent'
 import { useAuth } from '../features/auth/auth-context'
 import { apiRequest } from '../lib/api'
 import { useTrackingEnabled } from '../lib/tracking'
+import { isCustomersPwa } from '../lib/app-mode'
 
 type RolesPayload = {
   isPlatformAdmin: boolean
@@ -26,8 +27,13 @@ export function PublicLayout() {
   const [canTrack, setCanTrack] = useState(false)
   const { enabled: trackingEnabled, toggle: onToggleTracking } = useTrackingEnabled('public', params.eventId)
 
+  /* Il tracking ordini (pulsante mirino + modale) e' uno strumento operativo
+     degli admin: in PWA clienti non serve e non deve comparire. */
+  const trackingAllowed = !isCustomersPwa()
+
   useEffect(() => {
-    if (!user) {
+    /* in PWA il tracking e' disabilitato: niente fetch dei ruoli */
+    if (!trackingAllowed || !user) {
       setCanTrack(false)
       return
     }
@@ -39,7 +45,7 @@ export function PublicLayout() {
         setCanTrack(isAdminRole)
       })
       .catch(() => {})
-  }, [user])
+  }, [user, trackingAllowed])
 
   useEffect(() => {
     const consent = getConsent()
@@ -68,7 +74,13 @@ export function PublicLayout() {
 
   return (
     <div className={styles.layout} id="top">
-      {!hideChrome && <PublicHeader showTracking={canTrack && Boolean(params.eventId)} trackingEnabled={trackingEnabled} onToggleTracking={onToggleTracking} />}
+      {!hideChrome && (
+        <PublicHeader
+          showTracking={trackingAllowed && canTrack && Boolean(params.eventId)}
+          trackingEnabled={trackingEnabled}
+          onToggleTracking={onToggleTracking}
+        />
+      )}
 
       <main className={styles.main}>
         <Outlet />
@@ -87,7 +99,7 @@ export function PublicLayout() {
 
       <CookieConsentBanner />
 
-      {canTrack && trackingEnabled && params.eventId && !hideChrome && (
+      {trackingAllowed && canTrack && trackingEnabled && params.eventId && !hideChrome && (
         <OrderTrackingModal
           open
           eventId={params.eventId}

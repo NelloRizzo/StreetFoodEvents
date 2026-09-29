@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { useKeepAlive } from '../hooks/useKeepAlive'
 import { useTrackingEnabled } from '../lib/tracking'
+import { isCustomersPwa } from '../lib/app-mode'
 import { OrderTrackingModal } from '../components/OrderTrackingModal'
 import styles from './SlideshowPage.module.scss'
 
@@ -59,6 +60,9 @@ export function SlideshowPage() {
   const { eventId } = useParams<{ eventId: string }>()
   useKeepAlive()
   const { enabled: trackingEnabled, toggle: onToggleTracking } = useTrackingEnabled('slideshow', eventId)
+  /* Il tracking ordini e' uno strumento operativo degli admin: la slideshow e'
+     raggiungibile anche dalla PWA clienti, dove il toggle non deve comparire. */
+  const trackingAllowed = !isCustomersPwa()
 
   const [batch, setBatch] = useState<Photo[]>([])
   const [eventData, setEventData] = useState<EventData | null>(null)
@@ -211,7 +215,7 @@ export function SlideshowPage() {
             <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
           </svg>
         </button>
-        {eventId && (
+        {eventId && trackingAllowed && (
           <button
             className={`${styles.trackBtn} ${trackingEnabled ? styles.trackBtnActive : ''}`}
             onClick={onToggleTracking}
@@ -308,7 +312,7 @@ export function SlideshowPage() {
         </div>
       )}
 
-      {eventId && (
+      {eventId && trackingAllowed && (
         <OrderTrackingModal
           open={trackingEnabled}
           eventId={eventId}
