@@ -8,7 +8,7 @@ Ai sensi del Regolamento UE 2016/679 (GDPR) e del D.Lgs. 196/2003 ss.mm.ii., il 
 |---|---|
 | **Denominazione** | Uniamoci |
 | **Sede legale** | via delle Ginestre, 8 - 84046 Ascea (SA) |
-| **Email** | notticilentane@gmail.com |
+| **Email** | uniamociascea@gmail.com |
 
 ## 2. Finalità del trattamento
 
@@ -50,7 +50,7 @@ L'interessato ha diritto di:
 - **Opposizione** (Art. 21 GDPR) — opporsi al trattamento per finalità di marketing diretto
 - **Revoca del consenso** — in qualsiasi momento, senza pregiudicare la liceità del trattamento basata sul consenso prestato prima della revoca
 
-Per esercitare i diritti, contattare: **notticilentane@gmail.com**
+Per esercitare i diritti, contattare: **uniamociascea@gmail.com**
 
 L'interessato ha altresì il diritto di proporre reclamo all'autorità di controllo (Garante per la Protezione dei Dati Personali, www.garanteprivacy.it).
 
@@ -65,10 +65,10 @@ Il conferimento dell'indirizzo email è necessario per ricevere la foto. Il conf
 Il/La sottoscritto/a, ricevuta l'informativa di cui sopra,
 | | |
 |---|---|
-| Cognome e Nome | _____________________________________________ |
-| Email |  _____________________________________________ |
-| Evento | _____________________________________________ |
-| Data | ____ / _____ / _________|
+| Cognome e Nome | <br>_____________________________________________ |
+| Email |  <br>_____________________________________________ |
+| Evento | <br>_____________________________________________ |
+| Data | <br>____ / _____ / _________|
 
 ### Consenso al trattamento per finalità promozionali
 
@@ -86,8 +86,10 @@ Il sottoscritto dichiara di aver ricevuto e compreso l'informativa privacy compl
 
 **Firma:** ______________________________
 
+<br>
+
 **Luogo e data:** ______________________________
 
 ---
 
-*Documento aggiornato al: 29/07/2026*
+*Documento aggiornato al: 29/09/2026*

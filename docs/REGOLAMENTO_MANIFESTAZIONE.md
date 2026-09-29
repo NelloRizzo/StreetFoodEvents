@@ -1,14 +1,14 @@
 # Regolamento standard di partecipazione alla manifestazione — Bozza
 
-> **Documento allegato all'adesione stand** (vedi `docs/ADESIONE_STAND.md`, Sezione I). Bozza standard da personalizzare per ogni evento/imprevisto legale. Titolo/ragione sociale manifestazione: ________________________________.
+> **Documento allegato all'adesione stand** (vedi `docs/ADESIONE_STAND.md`, Sezione I). Bozza standard da personalizzare per ogni evento/imprevisto legale. 
 
 | | |
 |---|---|
-| **Manifestazione (evento)** | ________________________________ |
-| **Edizione / periodo** | dal ____ / ____ / ________ al ____ / ____ / ________ |
-| **Luogo** | ________________________________ |
-| **Versione regolamento** | ____________ (data ____ / ____ / ________) |
-| **Organizzatore** | ________________________________ |
+| **Manifestazione (evento)** | <br>________________________________ |
+| **Edizione / periodo** | <br>dal ____ / ____ / ________ al ____ / ____ / ________ |
+| **Luogo** | <br>________________________________ |
+| **Versione regolamento** | <br>____________ (data ____ / ____ / ________) |
+| **Organizzatore** | <br>________________________________ |
 
 ---
 
@@ -38,10 +38,11 @@ Il presente regolamento disciplina la partecipazione degli **stand** (di seguito
 4. Il personale addetto è formato in materia di igiene alimentare e rispetta le buone pratiche igieniche.
 5. L'Organizzatore può effettuare, anche a campione, **verifiche** igienico-sanitarie; l'esito negativo comprovato costituisce inadempimento (Art. 9).
 
-## Art. 6 — Pulizia e rifiuti
+## Art. 6 — Politiche Ambientali
 1. L'area di ogni stand deve essere **pulita e ordinata** per l'intera durata della manifestazione.
 2. **Raccolta differenziata** secondo le indicazioni dell'Organizzatore; i rifiuti vanno conferiti nei contenitori e nelle modalità predisposte.
 3. Nessun materiale può essere abbandonato nel luogo a fine evento: l'area va riconsegnata libera e pulita.
+4. Particolare attenzione viene applicata alle politiche **plastic-free**, che potranno essere utilizzate dall'Associazione per determinare *premialità* o *sconti* a seguito dell'adozione di tali politiche da parte degli stand partecipanti.
 
 ## Art. 7 — Rumore, orari e comportamento
 1. Il limite di **rumore** e gli **orari di attività** sono quelli stabiliti dall'Organizzatore (nel rispetto delle ordinanze comunali); l'uso di amplificazione è subordinato ad autorizzazione.
@@ -75,11 +76,11 @@ Il presente regolamento disciplina la partecipazione degli **stand** (di seguito
 
 ## Accettazione
 
-Il sottoscritto dichiara di aver letto, compreso e **accettato integralmente** il presente regolamento (ver. ____________), unitamente alla **clausola di esclusione** di cui all'Art. 9.
+Il sottoscritto dichiara di aver letto, compreso e **accettato integralmente** il presente regolamento (ver. _____), unitamente alla **clausola di esclusione** di cui all'Art. 9.
 
 | | |
 |---|---|
-| **Firma gestore stand** | ______________________ |
-| **Data** | ____ / ____ / ________ |
-| **Firma organizzatore** | ______________________ |
-| **Data** | ____ / ____ / ________ |
+| **Firma gestore stand** | <br>____________________________________________ |
+| **Data** | <br>____ / ____ / ________ |
+| **Firma organizzatore** | <br>____________________________________________ |
+| **Data** | <br>____ / ____ / ________ |
