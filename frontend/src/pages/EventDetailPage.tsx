@@ -9,6 +9,7 @@ import { QRCodeDownload } from '../components/QRCodeDownload'
 import { CurrencyDisplay, isBareCurrencySymbol } from '../components/CurrencyDisplay'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { fetchReviewsSummary, type ReviewsSummary } from '../lib/reviews'
+import { safeExternalUrl } from '../lib/externalUrl'
 import { trackStandClick } from '../lib/analytics'
 import { PhotoBoothModal } from './PhotoBoothModal'
 import styles from './EventDetailPage.module.scss'
@@ -39,6 +40,7 @@ type Event = {
   currencySymbol: UploadedImage | null
   shortDescription: string | null
   longDescription: string | null
+  url: string | null
   coverImage: UploadedImg | null
   logo: UploadedImg | null
   regulationDocument: UploadedDoc | null
@@ -209,6 +211,9 @@ export function EventDetailPage() {
   const standNumber = (stand: Stand) =>
     stand.numbers?.find((n) => n.eventId === eventId)?.number ?? null
 
+  /* Sito ufficiale dell'evento: null se assente o se lo schema non è http(s). */
+  const officialSite = safeExternalUrl(event?.url)
+
   const sortedStands = [...stands].sort((a, b) => {
     const na = standNumber(a)
     const nb = standNumber(b)
@@ -271,6 +276,20 @@ export function EventDetailPage() {
             {event.location.googleMapsUrl && (
               <a href={event.location.googleMapsUrl} target="_blank" rel="noopener noreferrer" className={styles.actionBtnOutline}>
                 Google Maps
+              </a>
+            )}
+            {/* "Sito ufficiale" dell'evento: apertura in nuova scheda. Il valore
+                arriva da un form admin, quindi passa da safeExternalUrl(), che
+                forza https e scarta schemi non http(s) (evita stored-XSS). */}
+            {officialSite && (
+              <a
+                href={officialSite}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.actionBtnOutline}
+                title={officialSite}
+              >
+                Sito ufficiale
               </a>
             )}
             <Link to={`/events/${eventId}/menu`} className={styles.actionBtnOutline}>
