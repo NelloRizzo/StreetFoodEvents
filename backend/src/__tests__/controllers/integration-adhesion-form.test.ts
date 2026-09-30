@@ -7,7 +7,7 @@ import { AdhesionFormModel } from '../../models/adhesion-form.model';
 import { EventModel } from '../../models/event.model';
 import { RoleModel } from '../../models/role.model';
 import { SessionModel } from '../../models/session.model';
-import { PLASTIC_FREE_PRACTICES } from '../../models/stand-adhesion.model';
+import { PLASTIC_FREE_PRACTICES, FOOD_WASTE_PRACTICES, FOOD_WASTE_GROUPS } from '../../models/stand-adhesion.model';
 import { UserModel } from '../../models/user.model';
 import { UserRoleModel } from '../../models/user-role.model';
 import {
@@ -107,6 +107,7 @@ describe('Integration — Adhesion Form', () => {
             'currency',
             'energy',
             'plastic-free',
+            'food-waste',
             'fees',
             'participation-price',
             'deposit',
@@ -142,7 +143,36 @@ describe('Integration — Adhesion Form', () => {
 
         const res = await request(app).get(`/api/events/${env.event._id}/adhesion-form`);
         expect(res.status).toBe(200);
-        expect(res.body.item.sections).toHaveLength(12);
+        expect(res.body.item.sections).toHaveLength(13);
+    });
+
+    it('includes the food waste section with all the shared practices', async () => {
+        const env = await setupAdhesionEnvironment();
+
+        await request(app)
+            .post(`/api/events/${env.event._id}/adhesion-form/generate`)
+            .set('Cookie', `sid=${env.sessionToken}`);
+
+        const res = await request(app).get(`/api/events/${env.event._id}/adhesion-form`);
+        const section = res.body.item.sections.find((s: { slug: string }) => s.slug === 'food-waste');
+
+        expect(section).toBeTruthy();
+        expect(section.generatedFrom).toBeNull();
+        expect(section.title).toContain('Riduzione degli sprechi alimentari');
+        for (const practice of FOOD_WASTE_PRACTICES) {
+            expect(section.content).toContain(practice.label);
+        }
+        /* Raggruppate per tipologia e con la casella "nessuna pratica". */
+        for (const group of FOOD_WASTE_GROUPS) {
+            expect(section.content).toContain(group);
+        }
+        expect(section.content).toContain('Nessuna pratica di riduzione sprechi');
+        expect(section.content).toContain('Punteggio dichiarato');
+        /* Le due pratiche spostate non devono piu' comparire nella sezione
+         * plastic free (sono ora elencate qui). */
+        const plasticFree = res.body.item.sections.find((s: { slug: string }) => s.slug === 'plastic-free');
+        expect(plasticFree.content).not.toContain('km 0');
+        expect(plasticFree.content).not.toContain('riduzione di sprechi');
     });
 
     it('includes the plastic free section with all the shared practices', async () => {
@@ -406,7 +436,7 @@ describe('Integration — Adhesion Form', () => {
 
         const stored = await AdhesionFormModel.findOne({ eventId: env.event._id });
         expect(stored).toBeTruthy();
-        expect(stored?.sections).toHaveLength(12);
+        expect(stored?.sections).toHaveLength(13);
     });
 
     it('returns 404 when generating for a missing event', async () => {

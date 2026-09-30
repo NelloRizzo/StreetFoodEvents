@@ -103,8 +103,6 @@ Sezione **facoltativa**, presente sia nel wizard online sia nel modulo stampabil
 | [ ] Bicchieri compostabili | +2 |
 | [ ] Raccolta differenziata allo stand | +1 |
 | [ ] Contenitore olio esausto | +1 |
-| [ ] Ingredienti locali a km 0 certificati | +2 |
-| [ ] Documentazione per la riduzione di sprechi | +1 |
 | [ ] Menu digitale | +1 |
 | [ ] Allestimento senza plastica | +2 |
 | [ ] **Nessuna pratica plastic free** | — |
@@ -114,6 +112,56 @@ Sezione **facoltativa**, presente sia nel wizard online sia nel modulo stampabil
 | Punteggio dichiarato | ______ punti (calcolato dall'organizzazione) |
 | Note | _________________________________________ |
 | Data | ____ / ____ / ________ |
+
+---
+
+## Sezione E ter - Riduzione degli sprechi alimentari (facoltativa)
+
+Sezione **facoltativa**, presente sia nel wizard online sia nel modulo stampabile generato. Il richiedente **barra** le pratiche di riduzione degli sprechi alimentari che adotterà allo stand. Un punteggio più alto può qualificare lo stand per **agevolazioni alla partecipazione** o per essere **preferito ad altri stand che offrono lo stesso prodotto**.
+
+Le pratiche sono **operative e verificabili**, non dichiarazioni generiche: una casella che chiunque può spuntare senza fare nulla non avrebbe alcun valore. Il punteggio massimo è **16 punti**.
+
+> **Nota**: la lista e i pesi sono condivisi con il wizard web (`FOOD_WASTE_PRACTICES` in `backend/src/models/stand-adhesion.model.ts` e `frontend/src/lib/foodWaste.ts`).
+
+**Approvvigionamento**
+
+| Pratica | Punti |
+|---|---|
+| [ ] Ordini ai fornitori basati su una stima di vendita | +2 |
+| [ ] Acquisti in formati adatti al consumo dello stand | +1 |
+| [ ] Fornitori locali | +1 |
+
+**Conservazione**
+
+| Pratica | Punti |
+|---|---|
+| [ ] FIFO con etichettatura e data di apertura dei prodotti | +2 |
+| [ ] Stoccaggio in contenitori chiusi e separati per tipologia | +1 |
+
+**Preparazione e servizio**
+
+| Pratica | Punti |
+|---|---|
+| [ ] Preparazione in piccoli lotti o a richiesta, invece che in anticipo | +2 |
+| [ ] Brodi, salse e preparazioni base quantificate sul venduto | +2 |
+| [ ] Sconto dichiarato sul cibo in eccedenza a fine servizio | +1 |
+
+**Eccedenze e misura**
+
+| Pratica | Punti |
+|---|---|
+| [ ] Donazione delle eccedenze a soggetto autorizzato in convenzione | +2 |
+| [ ] Ritiro a fine evento del non venduto anziché smaltimento | +2 |
+| [ ] Registro delle quantità di spreco | +1 |
+
+| | |
+|---|---|
+| [ ] **Nessuna pratica di riduzione sprechi** | — |
+| Punteggio dichiarato | ______ punti (calcolato dall'organizzazione) |
+| Note | _________________________________________ |
+| Data | ____ / ____ / ________ |
+
+> **Nota**: le pratiche *Fornitori locali* e *Registro delle quantità di spreco* erano fino a Settembre 2026 nella Sezione E bis (Plastic free). Sono state spostate qui perché riguardano gli sprechi alimentari e non la plastica; le adesioni già compilate vengono **normalizzate automaticamente** in lettura, quindi nessun punteggio va perso.
 
 ---
 

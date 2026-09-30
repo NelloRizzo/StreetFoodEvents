@@ -4,7 +4,7 @@ import { Types } from 'mongoose';
 import { sanitizeHtmlContent } from '../utils/html-sanitizer';
 import { AdhesionFormModel, type AdhesionForm, type AdhesionFormSection } from '../models/adhesion-form.model';
 import { EventModel, type Event } from '../models/event.model';
-import { PLASTIC_FREE_PRACTICES } from '../models/stand-adhesion.model';
+import { PLASTIC_FREE_PRACTICES, FOOD_WASTE_PRACTICES, FOOD_WASTE_GROUPS } from '../models/stand-adhesion.model';
 
 const GUIDED_SLUGS = ['event-header', 'currency', 'fees'] as const;
 
@@ -13,7 +13,7 @@ const GUIDED_SLUGS = ['event-header', 'currency', 'fees'] as const;
  * (nuova sezione, rimozione, rinumerazione). Va nel fingerprint perché i
  * moduli già generati risultino "stale" e l'admin li rigeneri.
  */
-const TEMPLATE_VERSION = 2;
+const TEMPLATE_VERSION = 3;
 
 export interface AdhesionSectionInput {
     slug: string;
@@ -287,6 +287,27 @@ function staticSections(): GeneratedSection[] {
             ].join('')
         },
         {
+            slug: 'food-waste',
+            title: 'Sezione E ter — Riduzione degli sprechi alimentari (facoltativa)',
+            generatedFrom: null,
+            content: [
+                `<p>Sezione <strong>facoltativa</strong>: il sottoscritto dichiara le pratiche di riduzione degli sprechi alimentari che adotterà allo stand (barrare). Un punteggio più alto può qualificare lo stand per agevolazioni alla partecipazione o per essere preferito ad altri stand che offrono lo stesso prodotto.</p>`,
+                ...FOOD_WASTE_GROUPS.flatMap((group) => [
+                    `<p><strong>${esc(group)} (barrare):</strong></p>`,
+                    `<ul>`,
+                    ...FOOD_WASTE_PRACTICES
+                        .filter((p) => p.group === group)
+                        .map((p) => `<li>☐ ${esc(p.label)} <em>(+${p.weight})</em></li>`),
+                    `</ul>`
+                ]),
+                `<p>☐ <strong>Nessuna pratica di riduzione sprechi</strong></p>`,
+                `<p><strong>Punteggio dichiarato:</strong> ______ punti (calcolato dall'organizzazione)</p>`,
+                `<p><strong>Note:</strong></p>`,
+                `<p>______________________________________________________________________</p>`,
+                `<p><strong>Data:</strong> ____ / ____ / ________</p>`
+            ].join('')
+        },
+        {
             slug: 'participation-price',
             title: 'Sezione G — Prezzo di partecipazione',
             generatedFrom: null,
@@ -359,7 +380,10 @@ export function buildSectionsFromEvent(event: Event): GeneratedSection[] {
         ordered.push(section);
         if (section.slug === 'haccp') {
             ordered.push(currency);
-        } else if (section.slug === 'plastic-free') {
+        } else if (section.slug === 'food-waste') {
+            /* Le commissioni seguono le due sezioni facoltative di
+             * sostenibilita', cosi' l'ordine del documento e' quello del
+             * wizard: ③bis plastic free, ③ter sprechi, ④ commissioni. */
             ordered.push(fees);
         }
     }

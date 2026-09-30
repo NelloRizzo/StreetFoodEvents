@@ -377,6 +377,14 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
 
+## Session state (Set 2026 — adesione: nuova sezione "Riduzione degli sprechi alimentari")
+### Completed
+- **Nuova sezione facoltativa "③ter / E ter — Riduzione degli sprechi alimentari"**: 11 pratiche con peso, max 16 punti, raggruppate in 4 gruppi (`FOOD_WASTE_PRACTICES` con campo `group` + `FOOD_WASTE_GROUPS`). Sono pratiche **operative e verificabili**, non dichiarazioni: una casella che chiunque può spuntare senza fare nulla non vale niente. Il **porzionamento è stato escluso di proposito**: in street food è il default, non distingue. Specchio frontend in `frontend/src/lib/foodWaste.ts`.
+- **Normalizzazione in lettura** (`normalizePractices`/`splitPractices` in `stand-adhesion.model.ts`): le due pratiche spostate dalla E bis (`km0-ingredients` → `local-suppliers`, `waste-reduction-docs` → `waste-log`) vengono rimappate e deduplicate in `toAdhesionResponse`, quindi **le adesioni già salvate non perdono il punteggio** e il primo salvaggio le riscrive in forma valida. La normalizzazione **è** la migrazione: niente script one-off. **GOTCHA**: se si tocca una lista bisogna tenere allineati i due `enum` e le due copie delle costanti (backend + `lib/foodWaste.ts`).
+- **Modulo stampabile**: sezione statica `slug: 'food-waste'` (4 gruppi + "Nessuna pratica" + punteggio); `buildSectionsFromEvent` inietta `fees` dopo `food-waste` (ordine wizard = documento) e **`TEMPLATE_VERSION` 2 → 3** → i moduli già generati risultano `stale` e vanno rigenerati.
+- **Wizard**: fieldset ③ter tra ③bis e ④, badge "facoltativa", box punteggio; `AdhesionsManagePage` mostra "Riduzione sprechi (N punti)".
+- Verifica: backend typecheck ✓, suite completa **537 test ✓** (51 file), lint 0 errori; frontend typecheck ✓, **96 test vitest ✓** (15 file), lint 0 errori (11 warning pre-esistenti), build ✓. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+
 ## Session state (Set 2026 — liquidazione: fee solo da Event.feeBands + sovrascrittura)
 ### Completed
 - **Fee solo dall'evento, fee per stand eliminati**: `Stand.numbers[].feePercent`/`feeFlat` **rimossi** dal modello, il body `eventFees` non è più accettato da `POST /stands`/`PATCH /stands/:id`, `toStandResponse` non li espone, `duplicateEvent` non li copia, e il fieldset "Commissioni per evento" è sparito da `StandsPage`. Motivo: gestire fasce diverse per stand per evento era troppo complesso.

@@ -185,6 +185,74 @@ describe('Integration — Stand Adhesions', () => {
         expect(patchRes.body.item.plasticFreeScore).toBe(1);
     });
 
+    it('foodWastePractices round-trips with computed score, separately from plastic free', async () => {
+        const { adminToken, event, stand } = await setupEnvironment();
+
+        const payload = completePayload(stand._id.toString()) as Record<string, unknown>;
+        payload.plasticFreePractices = ['compostable-plates'];
+        payload.foodWastePractices = ['purchase-planning', 'fifo-labelling', 'donate-surplus'];
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(payload);
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.foodWastePractices).toEqual(['purchase-planning', 'fifo-labelling', 'donate-surplus']);
+        /* 2 + 2 + 2 */
+        expect(res.body.item.foodWasteScore).toBe(6);
+        /* Le due liste restano indipendenti. */
+        expect(res.body.item.plasticFreePractices).toEqual(['compostable-plates']);
+        expect(res.body.item.plasticFreeScore).toBe(2);
+
+        const id = res.body.item.id;
+        const patchRes = await request(app)
+            .patch(`/api/events/${event._id}/adhesions/${id}`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send({ foodWastePractices: ['waste-log'] });
+        expect(patchRes.status).toBe(200);
+        expect(patchRes.body.item.foodWastePractices).toEqual(['waste-log']);
+        expect(patchRes.body.item.foodWasteScore).toBe(1);
+        expect(patchRes.body.item.plasticFreePractices).toEqual(['compostable-plates']);
+    });
+
+    /* Le due pratiche ricategorizzate (km0 e documentazione sprechi) erano nella
+     * lista plastic free: senza normalizzazione in lettura un'adesione gia'
+     * salvata perderebbe il punteggio, perche' l'enum non accetta piu' le
+     * chiavi vecchie. */
+    it('normalizes the legacy plastic-free keys into the food waste list', async () => {
+        const { adminToken, event, stand } = await setupEnvironment();
+
+        const payload = completePayload(stand._id.toString()) as Record<string, unknown>;
+        const res = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(payload);
+        expect(res.status).toBe(201);
+
+        /* Scrive direttamente le vecchie chiavi, come farebbe un record gia'
+         * salvato prima della riorganizzazione (enum non applicato in lettura). */
+        await StandAdhesionModel.updateOne(
+            { _id: res.body.item.id },
+            {
+                $set: {
+                    plasticFreePractices: ['compostable-plates', 'km0-ingredients', 'waste-reduction-docs'],
+                    foodWastePractices: []
+                }
+            }
+        );
+
+        const getRes = await request(app)
+            .get(`/api/events/${event._id}/adhesions/${res.body.item.id}`)
+            .set('Cookie', [`sid=${adminToken}`]);
+        expect(getRes.status).toBe(200);
+        expect(getRes.body.item.plasticFreePractices).toEqual(['compostable-plates']);
+        expect(getRes.body.item.plasticFreeScore).toBe(2);
+        expect(getRes.body.item.foodWastePractices).toEqual(['local-suppliers', 'waste-log']);
+        /* 1 + 1 */
+        expect(getRes.body.item.foodWasteScore).toBe(2);
+    });
+
     it('create: admin links adhesion by stand NAME (resolved to id)', async () => {
         const { adminToken, event, stand } = await setupEnvironment();
 

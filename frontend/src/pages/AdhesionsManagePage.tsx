@@ -5,6 +5,7 @@ import { apiRequest } from '../lib/api'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { ALLERGEN_LABELS } from '../lib/allergens'
 import { PLASTIC_FREE_LABELS } from '../lib/plasticFree'
+import { FOOD_WASTE_LABELS } from '../lib/foodWaste'
 import type { UploadedImage } from '../lib/upload'
 import styles from './AdhesionsManagePage.module.scss'
 
@@ -42,6 +43,8 @@ type AdhesionItem = {
   energyNeeds: Array<{ equipment: string; powerKw: number; connectionType: string }>
   plasticFreePractices: string[]
   plasticFreeScore: number
+  foodWastePractices: string[]
+  foodWasteScore: number
   participationFeeAccepted: boolean
   depositAccepted: boolean
   feesAccepted: boolean
@@ -301,6 +304,12 @@ export function AdhesionsManagePage() {
                       <p>
                         Plastic free ({a.plasticFreeScore} punti):{' '}
                         {a.plasticFreePractices.map((k) => PLASTIC_FREE_LABELS[k] ?? k).join(', ')}
+                      </p>
+                    )}
+                    {(a.foodWastePractices?.length ?? 0) > 0 && (
+                      <p>
+                        Riduzione sprechi ({a.foodWasteScore} punti):{' '}
+                        {a.foodWastePractices.map((k) => FOOD_WASTE_LABELS[k] ?? k).join(', ')}
                       </p>
                     )}
                     {event?.participationFee != null && (

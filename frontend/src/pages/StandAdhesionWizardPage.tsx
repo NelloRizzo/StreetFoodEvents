@@ -6,6 +6,7 @@ import { ImageUploader } from '../components/ImageUploader'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { ALLERGEN_OPTIONS } from '../lib/allergens'
 import { PLASTIC_FREE_PRACTICES, plasticFreeScore } from '../lib/plasticFree'
+import { FOOD_WASTE_PRACTICES, FOOD_WASTE_GROUPS, foodWasteScore } from '../lib/foodWaste'
 import type { UploadedImage } from '../lib/upload'
 import styles from './StandAdhesionWizardPage.module.scss'
 
@@ -47,6 +48,8 @@ type AdhesionResponse = {
   energyNeeds: EnergyNeed[]
   plasticFreePractices: string[]
   plasticFreeScore: number
+  foodWastePractices: string[]
+  foodWasteScore: number
   participationFeeAccepted: boolean
   depositAccepted: boolean
   feesAccepted: boolean
@@ -106,6 +109,7 @@ type FormState = {
   acceptsPointLight: boolean
   energyNeeds: EnergyDraft[]
   plasticFreePractices: string[]
+  foodWastePractices: string[]
   participationFeeAccepted: boolean
   depositAccepted: boolean
   feesAccepted: boolean
@@ -132,6 +136,7 @@ const emptyForm: FormState = {
   acceptsPointLight: false,
   energyNeeds: [],
   plasticFreePractices: [],
+  foodWastePractices: [],
   participationFeeAccepted: false,
   depositAccepted: false,
   feesAccepted: false,
@@ -214,6 +219,7 @@ function fromAdhesion(a: AdhesionResponse): FormState {
       connectionType: n.connectionType,
     })),
     plasticFreePractices: a.plasticFreePractices ?? [],
+    foodWastePractices: a.foodWastePractices ?? [],
     participationFeeAccepted: a.participationFeeAccepted,
     depositAccepted: a.depositAccepted,
     feesAccepted: a.feesAccepted,
@@ -258,6 +264,7 @@ function buildPayload(form: FormState) {
         connectionType: n.connectionType,
       })),
     plasticFreePractices: form.plasticFreePractices,
+    foodWastePractices: form.foodWastePractices,
     participationFeeAccepted: form.participationFeeAccepted,
     depositAccepted: form.depositAccepted,
     feesAccepted: form.feesAccepted,
@@ -834,6 +841,52 @@ export function StandAdhesionWizardPage() {
                 <strong>Punteggio plastic free:</strong>{' '}
                 <span className={styles.scoreValue}>
                   {plasticFreeScore(form.plasticFreePractices)} punti
+                </span>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset className={styles.fieldset} disabled={!editable}>
+            <legend className={styles.legend}>
+              {'\u2463'}ter Riduzione degli sprechi alimentari
+              <span className={styles.optionalBadge}>facoltativa</span>
+            </legend>
+            <p className={styles.hint}>
+              Sezione facoltativa: seleziona le pratiche che adotterai per non buttare cibo. Sono gesti
+              operativi verificabili, non dichiarazioni: un punteggio più alto può qualificarti per
+              agevolazioni alla partecipazione o per essere preferito ad altri stand che offrono lo
+              stesso prodotto.
+            </p>
+            <div className={styles.feeBox}>
+              {FOOD_WASTE_GROUPS.map((group) => (
+                <div key={group}>
+                  <div className={styles.feeLine}>
+                    <strong>{group}:</strong>
+                  </div>
+                  {FOOD_WASTE_PRACTICES.filter((p) => p.group === group).map((p) => (
+                    <label className={styles.checkLabel} key={p.key}>
+                      <input
+                        type="checkbox"
+                        checked={form.foodWastePractices.includes(p.key)}
+                        onChange={(e) => {
+                          const current = form.foodWastePractices
+                          const next = e.target.checked
+                            ? [...current, p.key]
+                            : current.filter((k) => k !== p.key)
+                          set('foodWastePractices', next)
+                        }}
+                      />
+                      <span>
+                        {p.label} <em className={styles.plasticFreeWeight}>+{p.weight}</em>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ))}
+              <div className={styles.scoreBox}>
+                <strong>Punteggio riduzione sprechi:</strong>{' '}
+                <span className={styles.scoreValue}>
+                  {foodWasteScore(form.foodWastePractices)} punti
                 </span>
               </div>
             </div>
