@@ -310,9 +310,10 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   /* Richieste aperte della postazione attiva: servono al bottone "Richiedi"
    * (per non spingere duplicati) e al controllo automatico sotto soglia. */
   const [myRequests, setMyRequests] = useState<CashRequestItem[]>([])
-  const [reqKind, setReqKind] = useState<CashRequestKind>('both')
-  const [reqEuro, setReqEuro] = useState('')
-  const [reqCredits, setReqCredits] = useState('')
+  /* Una richiesta per volta puo' citare UNA sola valuta: l'importo euro e
+   * quello in token vanno richiesti con due richieste separate. */
+  const [reqKind, setReqKind] = useState<CashRequestKind>('euro')
+  const [reqAmount, setReqAmount] = useState('')
   const [reqNote, setReqNote] = useState('')
   const [sendingRequest, setSendingRequest] = useState(false)
   const [requestNotice, setRequestNotice] = useState<string | null>(null)
@@ -373,11 +374,10 @@ const [showCashSetup, setShowCashSetup] = useState(false)
               kind,
               /* L'invio automatico non porta con se' gli importi del form
                * manuale: la master decide quanto servire. */
-              ...(!automatic && reqEuro !== '' && (kind === 'euro' || kind === 'both')
-                ? { amountEuro: parseFloat(reqEuro) }
-                : {}),
-              ...(!automatic && reqCredits !== '' && (kind === 'credits' || kind === 'both')
-                ? { amountCredits: parseFloat(reqCredits) }
+              ...(!automatic && reqAmount !== ''
+                ? kind === 'euro'
+                  ? { amountEuro: parseFloat(reqAmount) }
+                  : { amountCredits: parseFloat(reqAmount) }
                 : {}),
               ...(!automatic && reqNote.trim() ? { note: reqNote.trim() } : {}),
               isAutomatic: automatic,
@@ -395,6 +395,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
               : 'Richiesta inviata alla cassa master.'
           )
         }
+        setReqAmount('')
         setReqNote('')
         await fetchMyRequests()
       } catch (err) {
@@ -403,7 +404,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
         setSendingRequest(false)
       }
     },
-    [eventId, activeCassa, reqEuro, reqCredits, reqNote, cassaBalance, fetchMyRequests]
+    [eventId, activeCassa, reqAmount, reqNote, cassaBalance, fetchMyRequests]
   )
 
   const handleSendRequest = () => { void sendRequest(reqKind, false) }
@@ -507,6 +508,10 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   const openRequests = myRequests.filter(
     (r) => r.status === 'pending' || r.status === 'acknowledged' || r.status === 'delivered'
   )
+
+  /* Una richiesta 'both' (vecchi record) blocca entrambe le valuta. */
+  const kindAlreadyOpen = (kind: CashRequestKind) =>
+    openRequests.some((r) => r.kind === kind || r.kind === 'both')
 
   /* Una richiesta aperta non deve mai restare nascosta: si riapre il pannello. */
   useEffect(() => {
@@ -633,7 +638,8 @@ const [showCashSetup, setShowCashSetup] = useState(false)
 
   const handleRefund = async () => {
     if (!eventId || !selectedUserId || !refundAmount || !activeCassa) return
-    const amount = parseFloat(refundAmount)
+    /* Il campo e' in euro: si converte in token (unita' del saldo). */
+    const amount = Math.round(parseFloat(refundAmount) * (rate || 1) * 100) / 100
     if (!amount || amount <= 0) return
     setSubmitting('refund')
     try {
@@ -645,9 +651,8 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       setRefundAmount('')
       setRefundDesc('')
       trackCurrencyExchange({ eventId, amount, type: 'refund' })
-      const rate = balance?.exchangeRate ?? 1
-      const real = amount / rate
-      setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'} → €${real.toFixed(2)}. Nuovo saldo: ${res.newBalance}` })
+      const real = amount / (rate || 1)
+      setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati €${real.toFixed(2)} → ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'}. Nuovo saldo: ${res.newBalance}` })
       fetchData()
       fetchCassaBalance()
     } catch (err) {
@@ -724,9 +729,15 @@ const [showCashSetup, setShowCashSetup] = useState(false)
 
   const selectedUser = users.find((u) => u.id === selectedUserId)
   const rate = balance?.exchangeRate ?? 1
+  const rateSafe = rate || 1
   const currencyName = balance?.currencyName ?? 'crediti'
-  /* Il rimborso si puo' fare solo entro il saldo del cliente. */
-  const refundOverBalance = !!refundAmount && parseFloat(refundAmount) > selUserBalance
+  /* Il rimborso si inserisce in EURO (e' euro che l'operatore conta) ma il
+   * saldo del cliente e' in token: il massimo e' il saldo convertito, e il
+   * messaggio di superamento riporta la valuta del campo. */
+  const refundMaxEuro = selUserBalance / rateSafe
+  const refundEuro = parseFloat(refundAmount)
+  const refundTokens = Math.round(refundEuro * rateSafe * 100) / 100
+  const refundOverBalance = !!refundAmount && refundTokens > selUserBalance + 0.005
 
   function fmt(v: number) { return v.toFixed(2) }
   function fmtEur(v: number) { return `€${v.toFixed(2)}` }
@@ -819,7 +830,37 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                     </div>
                   </div>
                 </div>
+              </>
+            )}
 
+            {!activeCassa && (
+              <div className={cambioStyles.cassaOpenCard}>
+                <h3>Apri cassa</h3>
+                <p className={cambioStyles.statSub}>
+                  Apri una cassa su questa postazione per eseguire operazioni di cambio. Il nome è modificabile.
+                </p>
+                <label className={cambioStyles.field}>
+                  Nome cassa
+                  <input
+                    type="text"
+                    value={cassaName}
+                    onChange={(e) => setCassaName(e.target.value)}
+                    placeholder={`Cassa ${cashRegisters.length + 1} (automatico)`}
+                    disabled={openingCassa}
+                  />
+                </label>
+                <button className={cambioStyles.btnTopUp} onClick={handleOpenCassa} disabled={openingCassa}>
+                  {openingCassa ? 'Apertura...' : 'Apri cassa'}
+                </button>
+                {cassaNotice && <p className={cambioStyles.cassaNotice}>{cassaNotice}</p>}
+              </div>
+            )}
+          </section>
+
+          <section className={cambioStyles.section}>
+            <h2 className={cambioStyles.exSectionTitle}>Richieste alla master e impostazioni cassa</h2>
+            {activeCassa && cassaBalance && (
+              <>
                 <button
                   type="button"
                   className={cambioStyles.exTextBtn}
@@ -834,8 +875,8 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   <h3>Richiesta alla cassa master</h3>
                   <p className={cambioStyles.statSub}>
                     Serve contante o token? Invia la richiesta: la cassa master la prende in carico e la consegna
-                    versandola in questa cassa. Se il contenuto scende sotto la soglia di sicurezza la richiesta
-                    parte da sola.
+                    versandola in questa cassa. Ogni richiesta riguarda una sola valuta. Se il contenuto scende
+                    sotto la soglia di sicurezza la richiesta parte da sola.
                   </p>
 
                   {openRequests.length > 0 && (
@@ -886,44 +927,34 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                       <h3 style={{ marginTop: 0 }}>Richiedi</h3>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <label className={cambioStyles.field} style={{ flex: 1 }}>
-                          Cosa serve
+                          Valuta
                           <select
                             className={cambioStyles.userSelect}
                             value={reqKind}
-                            onChange={(e) => setReqKind(e.target.value as CashRequestKind)}
+                            onChange={(e) => {
+                              setReqKind(e.target.value as CashRequestKind)
+                              setReqAmount('')
+                            }}
                           >
-                            <option value="both">Euro e token</option>
-                            <option value="euro">Solo euro</option>
-                            <option value="credits">Solo token</option>
+                            <option value="euro">Euro</option>
+                            <option value="credits">{currencyName}</option>
                           </select>
                         </label>
-                        {reqKind !== 'credits' && (
-                          <label className={cambioStyles.field} style={{ flex: 1 }}>
-                            Importo euro (opz.)
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={reqEuro}
-                              onChange={(e) => setReqEuro(e.target.value)}
-                              placeholder="decidi la master"
-                            />
-                          </label>
-                        )}
-                        {reqKind !== 'euro' && (
-                          <label className={cambioStyles.field} style={{ flex: 1 }}>
-                            Importo {currencyName} (opz.)
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={reqCredits}
-                              onChange={(e) => setReqCredits(e.target.value)}
-                              placeholder="decidi la master"
-                            />
-                          </label>
-                        )}
+                        <label className={cambioStyles.field} style={{ flex: 1 }}>
+                          Importo {reqKind === 'euro' ? '€' : currencyName} (opz.)
+                          <input
+                            type="number"
+                            min="0"
+                            step={reqKind === 'euro' ? '0.01' : '1'}
+                            value={reqAmount}
+                            onChange={(e) => setReqAmount(e.target.value)}
+                            placeholder="decidi la master"
+                          />
+                        </label>
                       </div>
+                      <p className={cambioStyles.statSub}>
+                        Una richiesta per valuta: se servono sia euro che {currencyName}, apri due richieste.
+                      </p>
                       <label className={cambioStyles.field}>
                         Note (opzionale)
                         <input
@@ -937,11 +968,11 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                         type="button"
                         className={cambioStyles.btnTopUp}
                         onClick={handleSendRequest}
-                        disabled={sendingRequest || openRequests.some((r) => r.kind === reqKind)}
+                        disabled={sendingRequest || kindAlreadyOpen(reqKind)}
                       >
                         {sendingRequest
                           ? 'Invio...'
-                          : openRequests.some((r) => r.kind === reqKind)
+                          : kindAlreadyOpen(reqKind)
                             ? 'Richiesta già aperta'
                             : 'Richiedi alla master'}
                       </button>
@@ -1063,84 +1094,12 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   </div>
                 )}
 
-                <h3>Movimenti di cassa</h3>
-                {cashMovements.length === 0 ? (
-                  <p className={cambioStyles.exEmpty}>Nessun movimento di cassa registrato.</p>
-                ) : (
-                  <>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
-                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
-                            <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo</th>
-                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Note</th>
-                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Operatore</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {cashMovements.map((cm) => (
-                            <tr key={cm.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                              <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
-                                {new Date(cm.occurredAt).toLocaleString('it-IT')}
-                              </td>
-                              <td style={{ padding: '0.5rem' }}>
-                                {cm.direction === 'in' ? 'Carico' : 'Prelievo'} {cm.currency === 'euro' ? '€' : currencyName}
-                              </td>
-                              <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: cm.direction === 'in' ? 'var(--color-green)' : 'var(--color-red)' }}>
-                                {cm.direction === 'in' ? '+' : '-'}{cm.currency === 'euro' ? fmtEur(cm.amount) : fmt(cm.amount)}
-                              </td>
-                              <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden' }}>{cm.description || '-'}</td>
-                              <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>{cm.performedByName || '-'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {cmTotalPages > 1 && (
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
-                        <button className={cambioStyles.exTextBtn} disabled={cmPage <= 1} onClick={() => setCmPage((p) => Math.max(1, p - 1))}>
-                          Precedente
-                        </button>
-                        <span style={{ padding: '0.25rem 0.5rem' }}>{cmPage} / {cmTotalPages}</span>
-                        <button className={cambioStyles.exTextBtn} disabled={cmPage >= cmTotalPages} onClick={() => setCmPage((p) => p + 1)}>
-                          Successivo
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
               </>
-            )}
-
-            {!activeCassa && (
-              <div className={cambioStyles.cassaOpenCard}>
-                <h3>Apri cassa</h3>
-                <p className={cambioStyles.statSub}>
-                  Apri una cassa su questa postazione per eseguire operazioni di cambio. Il nome è modificabile.
-                </p>
-                <label className={cambioStyles.field}>
-                  Nome cassa
-                  <input
-                    type="text"
-                    value={cassaName}
-                    onChange={(e) => setCassaName(e.target.value)}
-                    placeholder={`Cassa ${cashRegisters.length + 1} (automatico)`}
-                    disabled={openingCassa}
-                  />
-                </label>
-                <button className={cambioStyles.btnTopUp} onClick={handleOpenCassa} disabled={openingCassa}>
-                  {openingCassa ? 'Apertura...' : 'Apri cassa'}
-                </button>
-                {cassaNotice && <p className={cambioStyles.cassaNotice}>{cassaNotice}</p>}
-              </div>
             )}
           </section>
 
           <section className={cambioStyles.section}>
-            <h2 className={cambioStyles.exSectionTitle}>Seleziona utente</h2>
+            <h2 className={cambioStyles.exSectionTitle}>Operazioni verso i clienti</h2>
             <div className={cambioStyles.userRow}>
               <select
                 value={selectedUserId}
@@ -1181,9 +1140,8 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 {selectedUser.isAnonymous && ' - Cliente generico'}
               </p>
             )}
-          </section>
 
-          {!activeCassa && (
+            {!activeCassa && (
             <p className={cambioStyles.cassaLocked}>
               Nessuna cassa aperta: apri una cassa per eseguire carichi, rimborsi e movimenti.
             </p>
@@ -1239,30 +1197,32 @@ const [showCashSetup, setShowCashSetup] = useState(false)
               <div className={cambioStyles.formCard}>
                 <p className={cambioStyles.statSub}>
                   Saldo cliente: <strong>{fmt(selUserBalance)} {currencyName}</strong>
+                  <span className={cambioStyles.eurValue}> ({fmtEur(selUserBalance / rateSafe)})</span>
                   {selectedUserId ? '' : ' · seleziona un cliente'}
                 </p>
                 <label className={cambioStyles.field}>
-                  Importo {currencyName}
-                  <input type="number" min="0.01" max={selUserBalance} step="0.01" value={refundAmount}
+                  Importo €
+                  <input type="number" min="0.01" max={refundMaxEuro} step="0.01" value={refundAmount}
                     onChange={(e) => setRefundAmount(e.target.value)}
                     disabled={!selectedUserId || !activeCassa || submitting === 'refund'} />
                 </label>
                 <button
                   type="button"
                   className={cambioStyles.exTextBtn}
-                  onClick={() => setRefundAmount(String(selUserBalance))}
+                  onClick={() => setRefundAmount(refundMaxEuro.toFixed(2))}
                   disabled={!selectedUserId || selUserBalance <= 0 || submitting === 'refund'}
                 >
-                  Rimborsa tutto il saldo
+                  Rimborsa tutto il saldo ({fmtEur(refundMaxEuro)})
                 </button>
-                {refundAmount && parseFloat(refundAmount) > 0 && (
+                {refundAmount && refundEuro > 0 && !refundOverBalance && (
                   <p className={cambioStyles.preview}>
-                    ≈ €{(parseFloat(refundAmount) / rate).toFixed(2)}
+                    ≈ {fmt(refundTokens)} {currencyName}
                   </p>
                 )}
                 {refundOverBalance && (
                   <p className={cambioStyles.cassaLocked}>
-                    Importo superiore al saldo: massimo {fmt(selUserBalance)} {currencyName}.
+                    Importo superiore al saldo: massimo {fmtEur(refundMaxEuro)}
+                    {' '}({fmt(selUserBalance)} {currencyName}).
                   </p>
                 )}
                 <label className={cambioStyles.field}>
@@ -1285,11 +1245,68 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 </label>
                 <button className={cambioStyles.btnRefund} onClick={handleRefund}
                   disabled={!selectedUserId || !refundAmount || refundOverBalance || !activeCassa || submitting === 'refund'}>
-                  {submitting === 'refund' ? 'Rimborso in corso...' : `Rimborsa ${currencyName}`}
+                  {submitting === 'refund' ? 'Rimborso in corso...' : 'Rimborsa'}
                 </button>
               </div>
             </section>
           </div>
+          </section>
+
+          <section className={cambioStyles.section}>
+            <h2 className={cambioStyles.exSectionTitle}>Movimenti di cassa</h2>
+            {activeCassa && cassaBalance ? (
+              cashMovements.length === 0 ? (
+                <p className={cambioStyles.exEmpty}>Nessun movimento di cassa registrato.</p>
+              ) : (
+                <>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                          <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
+                          <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
+                          <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo</th>
+                          <th style={{ textAlign: 'left', padding: '0.5rem' }}>Note</th>
+                          <th style={{ textAlign: 'left', padding: '0.5rem' }}>Operatore</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cashMovements.map((cm) => (
+                          <tr key={cm.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                            <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
+                              {new Date(cm.occurredAt).toLocaleString('it-IT')}
+                            </td>
+                            <td style={{ padding: '0.5rem' }}>
+                              {cm.direction === 'in' ? 'Carico' : 'Prelievo'} {cm.currency === 'euro' ? '€' : currencyName}
+                            </td>
+                            <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: cm.direction === 'in' ? 'var(--color-green)' : 'var(--color-red)' }}>
+                              {cm.direction === 'in' ? '+' : '-'}{cm.currency === 'euro' ? fmtEur(cm.amount) : fmt(cm.amount)}
+                            </td>
+                            <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden' }}>{cm.description || '-'}</td>
+                            <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>{cm.performedByName || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {cmTotalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                      <button className={cambioStyles.exTextBtn} disabled={cmPage <= 1} onClick={() => setCmPage((p) => Math.max(1, p - 1))}>
+                        Precedente
+                      </button>
+                      <span style={{ padding: '0.25rem 0.5rem' }}>{cmPage} / {cmTotalPages}</span>
+                      <button className={cambioStyles.exTextBtn} disabled={cmPage >= cmTotalPages} onClick={() => setCmPage((p) => p + 1)}>
+                        Successivo
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
+            ) : (
+              <p className={cambioStyles.exEmpty}>Apri una cassa per visualizzare i movimenti.</p>
+            )}
+          </section>
 
           <section>
             <h2 className={cambioStyles.exSectionTitle}>Storico transazioni</h2>
