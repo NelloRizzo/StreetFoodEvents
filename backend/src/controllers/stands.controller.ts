@@ -32,7 +32,7 @@ function toStandResponse(stand: {
     description?: string | null;
     eventIds: Types.ObjectId[];
     locations?: Array<{ eventId: Types.ObjectId; location?: Record<string, unknown> | null }> | null;
-    numbers?: Array<{ eventId: Types.ObjectId; number: number; showOnMap?: boolean; feePercent?: number | null; feeFlat?: number | null }> | null;
+    numbers?: Array<{ eventId: Types.ObjectId; number: number; showOnMap?: boolean }> | null;
     coverImage?: unknown | null;
     logo?: unknown | null;
     gallery?: unknown[];
@@ -55,9 +55,7 @@ function toStandResponse(stand: {
             eventId: el.eventId.toString(),
             number: el.number,
             showOnMap: el.showOnMap ?? true,
-            feePercent: el.feePercent ?? null,
-            feeFlat: el.feeFlat ?? null,
-        } as { eventId: string; number: number; showOnMap: boolean; feePercent: number | null; feeFlat: number | null })),
+        } as { eventId: string; number: number; showOnMap: boolean })),
         coverImage: stand.coverImage ?? null,
         logo: stand.logo ?? null,
         gallery: stand.gallery ?? [],
@@ -111,25 +109,21 @@ export async function createStand(req: Request, res: Response) {
         description,
         eventIds,
         locations,
-        eventFees,
         coverImage,
         logo,
         gallery
     } = req.body;
 
     const eventIdList: string[] = Array.isArray(eventIds) ? eventIds : [];
-    const feesMap: Record<string, { feePercent?: number | null; feeFlat?: number | null }> = eventFees && typeof eventFees === 'object' ? eventFees : {};
     const numbers = (await Promise.all(
         eventIdList.map(async (eid) => {
             if (!isValidObjectId(eid)) return null;
-            const fee = feesMap[eid];
             return {
                 eventId: eid,
-                number: await nextStandNumber(eid),
-                ...(fee ? { feePercent: fee.feePercent ?? null, feeFlat: fee.feeFlat ?? null } : {})
+                number: await nextStandNumber(eid)
             };
         })
-    )).filter((n): n is { eventId: string; number: number; feePercent?: number | null; feeFlat?: number | null } => n !== null);
+    )).filter((n): n is { eventId: string; number: number } => n !== null);
 
     const stand = await StandModel.create({
         type: type ?? 'food',
@@ -173,7 +167,6 @@ export async function updateStand(req: Request, res: Response) {
         description,
         eventIds,
         locations,
-        eventFees,
         coverImage,
         logo,
         gallery
@@ -255,48 +248,22 @@ export async function updateStand(req: Request, res: Response) {
         /* Assign progressive numbers for newly linked events and drop numbers for removed ones */
         if (addedEventIds.length > 0 || removedEventIdStrings.length > 0) {
             const removedSet = new Set(removedEventIdStrings);
-            const feesMap: Record<string, { feePercent?: number | null; feeFlat?: number | null }> = eventFees && typeof eventFees === 'object' ? eventFees : {};
-            const kept: Array<{ eventId: string; number: number; feePercent?: number | null; feeFlat?: number | null }> = (stand.numbers ?? [])
+            const kept: Array<{ eventId: string; number: number; showOnMap?: boolean }> = (stand.numbers ?? [])
                 .filter((n) => !removedSet.has(n.eventId.toString()))
-                .map((n) => {
-                    const eid = n.eventId.toString();
-                    const fee = feesMap[eid];
-                    return {
-                        eventId: eid,
-                        number: n.number,
-                        feePercent: fee?.feePercent ?? n.feePercent ?? null,
-                        feeFlat: fee?.feeFlat ?? n.feeFlat ?? null,
-                    };
-                });
+                .map((n) => ({
+                    eventId: n.eventId.toString(),
+                    number: n.number,
+                    showOnMap: n.showOnMap ?? true
+                }));
             for (const addedEventId of addedEventIds) {
                 if (!isValidObjectId(addedEventId)) continue;
-                const fee = feesMap[addedEventId];
                 kept.push({
                     eventId: addedEventId,
-                    number: await nextStandNumber(addedEventId),
-                    ...(fee ? { feePercent: fee.feePercent ?? null, feeFlat: fee.feeFlat ?? null } : {})
+                    number: await nextStandNumber(addedEventId)
                 });
             }
             stand.set('numbers', kept);
         }
-    }
-
-    /* Update fee overrides for existing events without changing eventIds */
-    if (eventIds === undefined && eventFees && typeof eventFees === 'object') {
-        const feesMap: Record<string, { feePercent?: number | null; feeFlat?: number | null }> = eventFees;
-        const updatedNumbers = (stand.numbers ?? []).map((n) => {
-            const eid = n.eventId.toString();
-            const fee = feesMap[eid];
-            if (!fee) return { eventId: eid, number: n.number, showOnMap: n.showOnMap ?? true, feePercent: n.feePercent ?? null, feeFlat: n.feeFlat ?? null };
-            return {
-                eventId: eid,
-                number: n.number,
-                showOnMap: n.showOnMap ?? true,
-                feePercent: fee.feePercent !== undefined ? fee.feePercent : n.feePercent ?? null,
-                feeFlat: fee.feeFlat !== undefined ? fee.feeFlat : n.feeFlat ?? null,
-            };
-        });
-        stand.set('numbers', updatedNumbers);
     }
 
     if (locations !== undefined) {

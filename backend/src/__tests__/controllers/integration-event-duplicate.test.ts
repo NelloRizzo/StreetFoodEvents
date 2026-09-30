@@ -206,7 +206,9 @@ describe('POST /api/events/:eventId/duplicate', () => {
         const dupNumber = reloadedStand!.numbers!.find((n) => n.eventId.toString() === duplicateId);
         expect(dupNumber!.number).toBe(1);
         expect(dupNumber!.showOnMap).toBe(false);
-        expect(dupNumber!.feePercent).toBe(10);
+        /* I fee per stand non esistono piu': la commissione si risolve dalle
+         * fasce dell'evento (o dalla sovrascrittura in liquidazione). */
+        expect((dupNumber as unknown as Record<string, unknown>).feePercent).toBeUndefined();
 
         const copiedProducts = await EventProductModel.find({ eventId: duplicateId }).lean();
         expect(copiedProducts).toHaveLength(1);

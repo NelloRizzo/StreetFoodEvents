@@ -239,52 +239,49 @@ describe('Integration — Stand Settlements', () => {
         expect(forced.body.item.feeEuro).toBe(0);
     });
 
-    it('the stand fee override wins over the event bands and adds the flat quota', async () => {
+    it('la sovrascrittura in liquidazione vince sulla fascia, anche a 0, e la quota fissa si somma', async () => {
         const env = await setupSettlementEnvironment();
         await EventModel.updateOne(
             { _id: env.event._id },
             { $set: { feeBands: [{ maxAmount: 0, feePercent: 20, feeFlat: 0 }] } }
         );
-        /* Override dello stand per l'evento: 5% + 3 EUR fissi */
-        await StandModel.updateOne(
-            { _id: env.stand1._id },
-            {
-                $set: {
-                    numbers: [{ eventId: env.event._id, number: 1, showOnMap: true, feePercent: 5, feeFlat: 3 }]
-                }
-            }
-        );
 
-        const res = await request(app)
+        /* Il gestore porta il dovuto a 5% + 3 EUR fissi (lordo 50). */
+        const overridden = await request(app)
             .post(`/api/exchange/${env.event._id}/settlements`)
             .set('Cookie', `sid=${env.sessionToken}`)
-            .send({ standId: env.stand1._id.toString(), amount: 100 });
-        expect(res.status).toBe(201);
-        expect(res.body.item.feeSource).toBe('stand');
-        expect(res.body.item.feePercent).toBe(5);
-        expect(res.body.item.feeFlat).toBe(3);
+            .send({ standId: env.stand1._id.toString(), amount: 100, feePercent: 5, feeFlat: 3 });
+        expect(overridden.status).toBe(201);
+        expect(overridden.body.item.feeSource).toBe('custom');
+        expect(overridden.body.item.feePercent).toBe(5);
+        expect(overridden.body.item.feeFlat).toBe(3);
         /* lordo 50: 50*5% = 2.50 + 3 fissi = 5.50 */
-        expect(res.body.item.feeEuro).toBe(5.5);
-        expect(res.body.item.payoutEuro).toBe(44.5);
+        expect(overridden.body.item.feeEuro).toBe(5.5);
+        expect(overridden.body.item.payoutEuro).toBe(44.5);
 
-        /* La quota fissa non puo' azzerare il payout: la trattenuta e' limitata al lordo. */
-        await StandModel.updateOne(
-            { _id: env.stand1._id },
-            {
-                $set: {
-                    numbers: [{ eventId: env.event._id, number: 1, showOnMap: true, feePercent: 0, feeFlat: 500 }]
-                }
-            }
-        );
+        /* Sovrascrittura a ZERO: la fascia del 20% NON deve entrare. */
+        const zeroed = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 100, feePercent: 0, feeFlat: 0 });
+        expect(zeroed.status).toBe(201);
+        expect(zeroed.body.item.feeSource).toBe('custom');
+        expect(zeroed.body.item.feePercent).toBe(0);
+        expect(zeroed.body.item.feeEuro).toBe(0);
+        expect(zeroed.body.item.payoutEuro).toBe(50);
+    });
+
+    it('la quota fissa non puo\' azzerare il payout: la trattenuta e\' limitata al lordo', async () => {
+        const env = await setupSettlementEnvironment();
+
         const capped = await request(app)
             .post(`/api/exchange/${env.event._id}/settlements`)
             .set('Cookie', `sid=${env.sessionToken}`)
-            .send({ standId: env.stand1._id.toString(), amount: 100 });
+            .send({ standId: env.stand1._id.toString(), amount: 100, feePercent: 0, feeFlat: 500 });
         expect(capped.status).toBe(201);
         expect(capped.body.item.feeEuro).toBe(50);
         expect(capped.body.item.payoutEuro).toBe(0);
     });
-
     it('no fee configured means no deduction', async () => {
         const plain = await setupSettlementEnvironment();
         const none = await request(app)

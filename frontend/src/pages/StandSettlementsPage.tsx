@@ -47,8 +47,8 @@ type Settlement = {
   feePercent: number
   /** Quota fissa di commissione applicata (Event.feeBands / Stand.numbers). */
   feeFlat?: number
-  /** 'stand' = override per evento, 'band' = fascia evento, 'none' = nessuna. */
-  feeSource?: 'stand' | 'band' | 'none'
+  /** 'band' = fascia dell'evento, 'custom' = sovrascrittura in liquidazione. */
+  feeSource?: 'band' | 'custom' | 'stand' | 'none'
   grossEuro: number
   feeEuro: number
   payoutEuro: number
@@ -97,11 +97,9 @@ export function StandSettlementsPage() {
 
   const [eventDenoms, setEventDenoms] = useState<EventDenomination[]>([])
   const [eventFeeBands, setEventFeeBands] = useState<EventFeeBand[]>([])
-  const [standFeeOverride, setStandFeeOverride] = useState<{ feePercent: number | null; feeFlat: number | null } | null>(null)
   const [denomCounts, setDenomCounts] = useState<Record<string, string>>({})
   const [denomReport, setDenomReport] = useState<DenominationReportItem[]>([])
   const [showDenomReport, setShowDenomReport] = useState(false)
-  const [feePrefilled, setFeePrefilled] = useState(false)
 
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [totals, setTotals] = useState<{ loadedCredits: number; settledCredits: number; loadedEuro: number; settledEuro: number; payoutEuro: number; count: number }>({ loadedCredits: 0, settledCredits: 0, loadedEuro: 0, settledEuro: 0, payoutEuro: 0, count: 0 })
@@ -167,18 +165,14 @@ export function StandSettlementsPage() {
   /* La commissione configurata (override dello stand per l'evento, altrimenti
    fasce dell'evento) e' risolta anche dal server: qui la mostriamo all'operatore
    come default, lasciandogli la facolta' di modificarla per quella voce. */
-  type ResolvedFee = { percent: number; flat: number; source: 'stand' | 'band' | 'none'; label: string }
+  type ResolvedFee = { percent: number; flat: number; source: 'band' | 'none'; label: string }
 
+  /* Unica fonte: le FASCE DELL'EVENTO, scelte sugli euro lordi di questa
+   * liquidazione. Non esistono fee per stand (gestire fasce diverse per stand
+   * era troppo complesso): l'unica deroga e' la sovrascrittura manuale qui sotto. */
   const resolveFee = (ge: number): ResolvedFee => {
     const capped = eventFeeBands.filter((b) => b.maxAmount > 0).sort((a, b) => a.maxAmount - b.maxAmount)
     const residual = eventFeeBands.find((b) => b.maxAmount <= 0)
-    if (standFeeOverride?.feePercent != null || standFeeOverride?.feeFlat != null) {
-      const p = standFeeOverride?.feePercent ?? 0
-      const f = standFeeOverride?.feeFlat ?? 0
-      const parts = [`${p}%`]
-      if (f > 0) parts.push(`+ ${f.toFixed(2)} € fissi`)
-      return { percent: p, flat: f, source: 'stand', label: `impostata sullo stand per questo evento (${parts.join(' ')})` }
-    }
     const matchingBand = capped.find((b) => ge <= b.maxAmount) ?? residual
     if (!matchingBand) return { percent: 0, flat: 0, source: 'none', label: '' }
     const f = matchingBand.feeFlat ?? 0
@@ -219,8 +213,22 @@ export function StandSettlementsPage() {
     const flat = String(resolvedFee.flat)
     if (percent !== feePercent) setFeePercent(percent)
     if (flat !== feeFlat) setFeeFlat(flat)
-    setFeePrefilled(resolvedFee.source !== 'none')
   }, [feeBaseCredits, isCredit, isEuro, feeTouched, resolvedFee.source, resolvedFee.percent, resolvedFee.flat, feePercent, feeFlat])
+
+  /* Descrizione della commissione effettivamente APPLICATA (dal server),
+   * con la quota fissa e la fonte: serve a far verificare al cassiere che la
+   * fascia configurata e' stata usata. */
+  function describeAppliedFee(s: Settlement) {
+    const flat = s.feeFlat ?? 0
+    const parts = [`${s.feePercent}%`]
+    if (flat > 0) parts.push(`+ ${flat.toFixed(2)} € fissi`)
+    const from = s.feeSource === 'band'
+      ? 'fascia evento'
+      : s.feeSource === 'custom'
+        ? 'sovrascritta'
+        : null
+    return `${parts.join(' ')}${from ? ` (${from})` : ''}`
+  }
 
   const switchUnit = (next: SettlementUnit) => {
     if (next === unit) return
@@ -233,7 +241,6 @@ export function StandSettlementsPage() {
   const handleSelectStand = async (standId: string) => {
     setSelectedStandId(standId)
     setDenomCounts({})
-    setFeePrefilled(false)
     /* Cambiando stand la commissione va risolta da capo. */
     setFeeTouched(false)
     const stand = summary?.stands.find((s) => s.standId === standId)
@@ -241,15 +248,6 @@ export function StandSettlementsPage() {
       setAmount(!isEuro && isCredit && stand.earnedCredits > 0 ? String(stand.earnedCredits) : '')
     } else {
       setAmount('')
-    }
-    if (eventId && standId) {
-      try {
-        const standData = await apiRequest<{ item: { numbers?: Array<{ eventId: string; feePercent: number | null; feeFlat: number | null }> } }>(`/stands/${standId}`)
-        const num = standData.item.numbers?.find((n) => n.eventId === eventId)
-        setStandFeeOverride(num ? { feePercent: num.feePercent, feeFlat: num.feeFlat } : null)
-      } catch {
-        setStandFeeOverride(null)
-      }
     }
   }
 
@@ -277,8 +275,11 @@ export function StandSettlementsPage() {
           amount: creditsNum,
           direction,
           unit,
-          feePercent: feeNum,
-          feeFlat: isCredit && !isEuro ? feeFlatNum : 0,
+          /* La commissione si manda SOLO se l'operatore l'ha toccata: altrimenti
+           * il campo viaggia come 0 e, vincendo il client, la fascia
+           * configurata (evento o stand) non verrebbe mai applicata. Lasciando
+           * fuori i campi il server la risolve (resolveSettlementFee). */
+          ...(isCredit && !isEuro && feeTouched ? { feePercent: feeNum, feeFlat: feeFlatNum } : {}),
           description: description.trim() || undefined,
           denominations: denominationsPayload,
         }
@@ -296,7 +297,7 @@ export function StandSettlementsPage() {
           : isEuro
             ? `${res.item.standName}: pagati €${res.item.payoutEuro.toFixed(2)} (voce contabile in euro, senza conversione).`
             : isCredit
-              ? `${res.item.standName}: ${res.item.amount.toFixed(2)} ${currencyName} → €${res.item.payoutEuro.toFixed(2)} da corrispondere (€${res.item.grossEuro.toFixed(2)} lordi, ${res.item.feePercent}% trattenuta = €${res.item.feeEuro.toFixed(2)}).`
+              ? `${res.item.standName}: ${res.item.amount.toFixed(2)} ${currencyName} → €${res.item.payoutEuro.toFixed(2)} da corrispondere (€${res.item.grossEuro.toFixed(2)} lordi, ${describeAppliedFee(res.item)} trattenuta = €${res.item.feeEuro.toFixed(2)}).`
               : `${res.item.standName}: caricati ${res.item.amount.toFixed(2)} ${currencyName} da restituire in fase di liquidazione (nessun pagamento in euro).`
       })
       fetchData()
@@ -478,24 +479,37 @@ export function StandSettlementsPage() {
                   )}
                   {isCredit && !isEuro && (
                     <>
+                      {/* La commissione segue le FASCE DELL'EVENTO. I campi qui
+                          sotto sono la SOVRASCRITTURA per questa liquidazione:
+                          toccarli (anche mettendo 0) fa vincere il valore
+                          digitato sulla fascia configurata. */}
+                      <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: '0 0 -0.5rem' }}>
+                        Commissione: {feeTouched
+                          ? 'sovrascritta per questa liquidazione'
+                          : resolvedFee.label
+                            ? `fascia dell'evento — ${resolvedFee.label}`
+                            : 'nessuna fascia configurata per l\'evento'}
+                      </p>
                       <label className={cambioStyles.field}>
-                        Percentuale trattenuta dal gestore (%) — default 0
+                        Sovrascrivi percentuale trattenuta (%)
                         <input type="number" min="0" max="100" step="0.1" value={feePercent}
                           onChange={(e) => { setFeePercent(e.target.value); setFeeTouched(true) }}
-                          placeholder="0"
+                          placeholder={String(resolvedFee.percent)}
                           disabled={submitting} />
                       </label>
                       <label className={cambioStyles.field}>
-                        Quota fissa di commissione (€)
+                        Sovrascrivi quota fissa di commissione (€)
                         <input type="number" min="0" step="0.01" value={feeFlat}
                           onChange={(e) => { setFeeFlat(e.target.value); setFeeTouched(true) }}
-                          placeholder="0"
+                          placeholder={String(resolvedFee.flat)}
                           disabled={submitting} />
                       </label>
-                      {feePrefilled && !feeTouched && resolvedFee.label && (
-                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '-0.25rem' }}>
-                          Commissione configurata: {resolvedFee.label}
-                        </p>
+                      {feeTouched && (
+                        <button type="button" className={cambioStyles.exTextBtn}
+                          onClick={() => { setFeeTouched(false); setFeePercent(''); setFeeFlat('') }}
+                          style={{ alignSelf: 'flex-start' }}>
+                          Torna alla fascia dell'evento
+                        </button>
                       )}
                     </>
                   )}

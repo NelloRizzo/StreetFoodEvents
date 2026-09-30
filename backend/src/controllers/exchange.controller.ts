@@ -1121,37 +1121,31 @@ async function listSettlements(req: Request, res: Response) {
     });
 }
 
-type ResolvedFee = { feePercent: number; feeFlat: number; source: 'stand' | 'band' | 'none' };
+type ResolvedFee = { feePercent: number; feeFlat: number; source: 'band' | 'none' };
 
 /* Commissione da applicare a una liquidazione, risolta lato server.
  *
- * Priorita': la fee impostata sullo STAND per quell'evento
- * (`Stand.numbers[].feePercent` / `feeFlat`, non null) vince su tutto; altrimenti
- * valgono le fasce dell'EVENTO, scelte sugli euro LORDI di questa liquidazione:
- * la prima fascia col tetto che copre il lordo, altrimenti la fascia residuale
- * "senza tetto" (`maxAmount <= 0` = incassi oltre l'ultimo tetto).
+ * L'unica fonte sono le FASCE DELL'EVENTO (`Event.feeBands`), scelte sugli euro
+ * LORDI di questa liquidazione: la prima fascia col tetto che copre il lordo,
+ * altrimenti la fascia residuale "senza tetto" (`maxAmount <= 0` = incassi
+ * oltre l'ultimo tetto). Non esistono fee per stand: gestire fasce diverse a
+ * stand per evento era troppo complesso e incoerente.
+ *
+ * Se il client invia comunque `feePercent`/`feeFlat` (campo di sovrascrittura
+ * della liquidazione) quei valori vengono usati COSI' COME SONO, anche 0: e'
+ * l'unico modo per un gestore di derogare alla fascia per quella voce.
  *
  * Prima questa logica esisteva SOLO nel frontend (`StandSettlementsPage`), che
  * pero' pre-compilava l'input solo in rari casi (servivano i tagli) e solo come
  * suggerimento: chi chiamava l'API senza feePercent non tratteneva nulla. */
 export function resolveSettlementFee(params: {
     feeBands?: Array<{ maxAmount?: number | null; feePercent?: number | null; feeFlat?: number | null }> | null;
-    standFee?: { feePercent?: number | null | undefined; feeFlat?: number | null | undefined } | null;
     grossEuro: number;
 }): ResolvedFee {
-    const { feeBands, standFee, grossEuro } = params;
+    const { feeBands, grossEuro } = params;
 
     const pct = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
     const flat = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
-
-    /* Override dello stand per quell'evento: se impostato, vale da solo. */
-    if (standFee && (standFee.feePercent != null || standFee.feeFlat != null)) {
-        return {
-            feePercent: pct(standFee.feePercent),
-            feeFlat: flat(standFee.feeFlat),
-            source: 'stand'
-        };
-    }
 
     const bands = Array.isArray(feeBands) ? feeBands : [];
     if (bands.length === 0) return { feePercent: 0, feeFlat: 0, source: 'none' };
@@ -1266,28 +1260,28 @@ async function createSettlement(req: Request, res: Response) {
      * casella che registra un pagamento in euro con commissione). */
     const feeApplies = direction === 'credit' && unit === 'credits';
 
-    /* Se il client non manda la percentuale (o la quota fissa) le deriviamo da
-     * stand/evento: prima senza questo la commissione configurata non entrava
-     * nella liquidazione, il default silenzioso era 0. Un valore inviato dal
-     * client vince sempre (permette una trattenuta diversa per quella voce). */
-    const standEventFee = stand.numbers?.find((n) => n.eventId.toString() === eventCtx.eventId);
+    /* Se il client non manda la percentuale (o la quota fissa) le deriviamo dalle
+     * FASCE DELL'EVENTO: prima senza questo la commissione configurata non entrava
+     * nella liquidazione, il default silenzioso era 0. Un valore inviato dal client
+     * e' la SOVRASCRITTURA della liquidazione e vince sempre, anche 0. */
     const resolved = feeApplies
         ? resolveSettlementFee({
             feeBands: eventCtx.event.feeBands,
-            standFee: standEventFee ? { feePercent: standEventFee.feePercent, feeFlat: standEventFee.feeFlat } : null,
             grossEuro
         })
         : { feePercent: 0, feeFlat: 0, source: 'none' as const };
 
+    const hasOverridePercent = feePercent !== undefined && feePercent !== null && feePercent !== '';
+    const hasOverrideFlat = feeFlat !== undefined && feeFlat !== null && feeFlat !== '';
     const feeNum = feeApplies
-        ? (feePercent === undefined || feePercent === null || feePercent === '' ? resolved.feePercent : Number(feePercent))
+        ? (hasOverridePercent ? Number(feePercent) : resolved.feePercent)
         : 0;
     if (!Number.isFinite(feeNum) || feeNum < 0 || feeNum > 100) {
         return res.status(400).json({ message: 'Fee percentage must be between 0 and 100' });
     }
 
     const feeFlatNum = feeApplies
-        ? (feeFlat === undefined || feeFlat === null || feeFlat === '' ? resolved.feeFlat : Number(feeFlat))
+        ? (hasOverrideFlat ? Number(feeFlat) : resolved.feeFlat)
         : 0;
     if (!Number.isFinite(feeFlatNum) || feeFlatNum < 0) {
         return res.status(400).json({ message: 'Fee flat must be a positive number' });
@@ -1298,6 +1292,11 @@ async function createSettlement(req: Request, res: Response) {
         ? Math.min(grossEuro, Math.round((grossEuro * (feeNum / 100) + feeFlatNum) * 100) / 100)
         : 0;
     const payoutEuro = direction === 'debit' ? 0 : Math.round((grossEuro - feeEuro) * 100) / 100;
+
+    /* 'custom' = il gestore ha sovrascritto la fascia in questa liquidazione. */
+    const feeSource = !feeApplies
+        ? 'none'
+        : (hasOverridePercent || hasOverrideFlat) ? 'custom' : resolved.source;
 
     try {
         const settlement = await StandSettlementModel.create({
@@ -1311,7 +1310,7 @@ async function createSettlement(req: Request, res: Response) {
             exchangeRate,
             feePercent: feeNum,
             feeFlat: feeFlatNum,
-            feeSource: feeApplies ? resolved.source : 'none',
+            feeSource,
             grossEuro,
             feeEuro,
             payoutEuro,

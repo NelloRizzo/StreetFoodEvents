@@ -1,7 +1,7 @@
 # TODO — Street Food Events
 
-## Fix riscontrati in questa sessione (Scrivere "Nessun fix" se risolti tutti)
-Nessun fix
+## Fix riscontrati in questa sessione 
+- _(sezione vuota: nessun bug riscontrato)_
 
 ## Prossime Implementazioni
 - _(sezione vuota: nessuna attività pianificata)_

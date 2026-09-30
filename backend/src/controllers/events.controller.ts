@@ -696,7 +696,7 @@ export async function duplicateEvent(req: Request, res: Response) {
     // Collega gli stand dell'evento sorgente alla nuova edizione, preservando
     // l'ordine di ingresso (numero progressivo) e le impostazioni per-evento.
     const linkedStands = await StandModel.find({ eventIds: sourceId }).lean();
-    const sourceNumber = (stand: { numbers?: Array<{ eventId: Types.ObjectId; number: number; showOnMap?: boolean; feePercent?: number | null; feeFlat?: number | null }> }) =>
+    const sourceNumber = (stand: { numbers?: Array<{ eventId: Types.ObjectId; number: number; showOnMap?: boolean }> }) =>
         stand.numbers?.find((n) => n.eventId.equals(sourceId)) ?? null;
 
     linkedStands.sort((a, b) => {
@@ -716,9 +716,7 @@ export async function duplicateEvent(req: Request, res: Response) {
                     numbers: {
                         eventId: duplicateId,
                         number: nextNumber++,
-                        showOnMap: srcNum?.showOnMap ?? true,
-                        feePercent: srcNum?.feePercent ?? null,
-                        feeFlat: srcNum?.feeFlat ?? null
+                        showOnMap: srcNum?.showOnMap ?? true
                     }
                 }
             }
