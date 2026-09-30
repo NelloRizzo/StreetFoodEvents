@@ -247,7 +247,8 @@ Nota: la sidebar admin (`AdminSidebar`) mostra la sezione «Contenuti» → «No
 ### API routes — Cambio valuta
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| GET | `/api/exchange/:eventId/users` | exchange-admin / platform-admin | Lista utenti cambio (auto-crea anonimo se mancante) |
+| GET | `/api/exchange/:eventId/users` | exchange-admin / platform-admin | Lista utenti cambio (auto-crea il generico se mancante; espone `isGeneric` = anonimo **senza** `displayName`) |
+| GET | `/api/exchange/:eventId/users/:eventUserId/balance` | exchange-admin / platform-admin | Saldo di un singolo wallet (`{ id, balance }`): endpoint **leggero** per il polling della postazione, che interroga solo il cliente generico (400 id non valido, 404 di un altro evento) |
 | GET | `/api/exchange/:eventId/balance` | exchange-admin / platform-admin | Saldo cassa (top-up/refund aggregati + fondo cassa e contenuto euro/token) |
 | GET | `/api/exchange/:eventId/transactions` | exchange-admin / platform-admin | Storico transazioni (paginato) |
 | GET | `/api/exchange/:eventId/cash-registers` | exchange-admin / platform-admin | Lista casse evento (con operatore di apertura) |
@@ -266,7 +267,7 @@ Nota: la sidebar admin (`AdminSidebar`) mostra la sezione «Contenuti» → «No
 | GET | `/api/exchange/:eventId/settlements/report` | exchange-admin / platform-admin | Resoconto aggregato liquidazioni per stand (numero, crediti, lordo/trattenuta/erogato €, residuo), filtro `from`/`to`, totali evento |
 | GET | `/api/exchange/:eventId/settlements` | exchange-admin / platform-admin | Storico liquidazioni stand (paginato, filtro standId) |
 | POST | `/api/exchange/:eventId/settlements` | exchange-admin / platform-admin | Crea liquidazione stand (standId, amount crediti libero, feePercent default 0) |
-| POST | `/api/exchange/:eventId/guests` | exchange-admin / platform-admin | Crea cliente al volo (displayName opzionale) |
+| POST | `/api/exchange/:eventId/guests` | exchange-admin / platform-admin | Crea cliente al volo (displayName opzionale). **Senza nome NON crea un wallet nuovo**: riusa il cliente generico dell'evento (`{ reused: true }`, 200) |
 | POST | `/api/exchange/:eventId/cash-float` | exchange-admin / platform-admin | Imposta/modifica fondo cassa (euro, credits); con `cashRegisterId` scrive sul `CashRegister.cashFloat` (cassa deve essere `open`), senza → legacy `Event.cashFloat`. Il pulsante "Azzera" del Master Cambio lo riusa con `{ cashRegisterId, euro: 0, credits: 0 }` |
 | GET | `/api/exchange/:eventId/cash-movements` | exchange-admin / platform-admin | Storico movimenti cassa (paginato) |
 | POST | `/api/exchange/:eventId/cash-movements` | exchange-admin / platform-admin | Registra movimento carico/prelievo (currency euro/credits, direction in/out) |
@@ -374,6 +375,14 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Set 2026 — saldo sempre aggiornato, wallet unico "Non collegato a clienti")
+### Completed
+- **Il saldo NON è per cassa**: `EventUser.balance` è **un documento per (evento, cliente)** (`services/event-user-transactions.service.ts` scrive il saldo sul wallet; `cashRegisterId` è solo un campo di audit sulla transazione) → un rimborso da Cassa 2 usa i token caricati su Cassa 1. Il bug era che **la pagina non rileggeva mai `users`**: il polling dei 5s chiudeva solo `fetchCassaBalance()`/`fetchMyRequests()`, quindi il saldo era lo snapshot del caricamento e una cassa bloccava un rimborso appena abilitato dall'altra.
+- **Polling solo del cliente generico**: ripollare `GET /exchange/:eventId/users` ogni 5s è caro (no paginazione, `populate`, `sort` su tutti i wallet) → nuovo endpoint leggero **`GET /api/exchange/:eventId/users/:eventUserId/balance`** (`{ id, balance }`, un documento, 400 id non valido, 404 di un altro evento). Il frontend lo interroga **solo per il cliente generico** (`fetchGenericBalance`, `genericBalance`); `targetBalance` e le etichette della select usano `balanceOf(u)` che preferisce la rilettura live. **GOTCHA**: la lista clienti NON va ripollata — si ricarica solo all'apertura e dopo ogni operazione locale (estratta in `fetchUsers`).
+- **Un solo wallet anonimo condiviso**: `POST /exchange/:eventId/guests` **senza nome riusa** il cliente generico (`{ reused: true }`, 200) invece di creare un `EventUser` — prima ogni "+ Crea" a vuoto creava un **secondo wallet anonimo con saldo 0** e `users.find(isAnonymous)` poteva risolvere su quello → "Saldo: 0.00" e rimborso bloccato. `GET /users` espone **`isGeneric`** (anonimo **senza** `displayName`, distinto dagli ospiti con nome) e il frontend usa `users.find(isGeneric) ?? users.find(isAnonymous)`.
+- **UI**: "Cliente generico" è di nuovo la **selezione di default** (il trattino `—` resta scorciatoia verso lo stesso wallet) e in UI si chiama **"Non collegato a clienti"** (select + riga del saldo).
+- Verifica: backend typecheck ✓, suite completa **521 test ✓** (50 file, +1 su generico unico / endpoint saldo), lint 0 errori; frontend typecheck ✓, **96 test vitest ✓** (15 file), lint 0 errori, build (tsc+vite) ✓. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 
 ## Session state (Set 2026 — cliente non obbligatorio, Chiudi tutte, cassa chiusa in sola lettura)
 ### Completed

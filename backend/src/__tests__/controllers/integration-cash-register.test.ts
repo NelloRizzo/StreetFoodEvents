@@ -184,4 +184,59 @@ describe('Integration: cash register float and movements', () => {
         expect(list.body.items).toHaveLength(2);
         expect(list.body.pagination.totalPages).toBe(2);
     });
+
+    it('saldo di un singolo wallet: rilettura leggera per il polling', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const { cookie } = await createExchangeAdmin();
+
+        /* Il wallet generico e' quello anonimo senza nome, default delle operazioni. */
+        const users = await request(app)
+            .get(`/api/exchange/${event._id}/users`)
+            .set('Cookie', cookie);
+        expect(users.status).toBe(200);
+        const generic = users.body.items.find((u: { isGeneric?: boolean }) => u.isGeneric);
+        expect(generic).toBeDefined();
+
+        /* "+ Crea" senza nome NON crea un secondo wallet anonimo: riusa il generico. */
+        const guest = await request(app)
+            .post(`/api/exchange/${event._id}/guests`)
+            .set('Cookie', cookie)
+            .send({});
+        expect(guest.status).toBe(200);
+        expect(guest.body.reused).toBe(true);
+        expect(guest.body.item.id).toBe(generic.id);
+
+        /* "+ Crea" con nome crea invece un ospite nominato (non e' il generico). */
+        const named = await request(app)
+            .post(`/api/exchange/${event._id}/guests`)
+            .set('Cookie', cookie)
+            .send({ displayName: 'Mario' });
+        expect(named.status).toBe(201);
+        expect(named.body.item.isGeneric).toBe(false);
+        expect(named.body.item.id).not.toBe(generic.id);
+
+        /* Il saldo del generico si aggiorna e si legge da solo endpoint.
+         * exchangeRate = 2 nel fixture: 10 EUR -> 20 token. */
+        await request(app)
+            .post(`/api/exchange/${event._id}/top-up`)
+            .set('Cookie', cookie)
+            .send({ eventUserId: generic.id, amount: 10 });
+
+        const bal = await request(app)
+            .get(`/api/exchange/${event._id}/users/${generic.id}/balance`)
+            .set('Cookie', cookie);
+        expect(bal.status).toBe(200);
+        expect(bal.body).toEqual({ id: generic.id, balance: 20 });
+
+        /* 400 su id non valido, 404 su wallet di un altro evento. */
+        expect((await request(app)
+            .get(`/api/exchange/${event._id}/users/not-an-id/balance`)
+            .set('Cookie', cookie)).status).toBe(400);
+
+        const otherEvent = await createEvent();
+        expect((await request(app)
+            .get(`/api/exchange/${otherEvent._id}/users/${generic.id}/balance`)
+            .set('Cookie', cookie)).status).toBe(404);
+    });
 });

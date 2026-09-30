@@ -251,12 +251,44 @@ async function listUsers(req: Request, res: Response) {
         email: (eu.userId as { email?: string })?.email ?? null,
         balance: eu.balance,
         isAnonymous: !eu.userId,
+        /* Il "cliente generico" e' l'anonimo condiviso dell'evento (nessun
+         * userId e nessun displayName): e' il destinatario predefinito delle
+         * operazioni senza cliente. Gli anonimi con nome vengono creati dal
+         * pulsante "+ Crea" e NON sono il generico. */
+        isGeneric: !eu.userId && !eu.displayName,
         isActive: eu.isActive,
         joinedAt: eu.joinedAt,
         displayName: (eu as { displayName?: string }).displayName ?? null
     }));
 
     return res.status(200).json({ items });
+}
+
+/* Saldo di un singolo wallet: endpoint leggero pensato per il polling della
+ * postazione (un solo documento, niente populate, niente lista). Serve perche'
+ * il saldo del cliente cambia anche sugli ALTRI banchi del banco cambio e, senza
+ * una rilettura, la cassa mostrerebbe uno snapshot e bloccherebbe un rimborso
+ * che l'altra cassa ha appena abilitato. */
+async function getEventUserBalance(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const { eventUserId } = req.params as { eventUserId: string };
+    if (typeof eventUserId !== 'string' || !isValidObjectId(eventUserId)) {
+        return res.status(400).json({ message: 'Valid eventUserId is required' });
+    }
+
+    const eventUser = await EventUserModel.findOne({
+        _id: eventUserId,
+        eventId: eventCtx.eventId,
+        isActive: true
+    }).select('balance').lean();
+
+    if (!eventUser) {
+        return res.status(404).json({ message: 'Event user not found for this event' });
+    }
+
+    return res.status(200).json({ id: eventUserId, balance: eventUser.balance });
 }
 
 async function getBalance(req: Request, res: Response) {
@@ -2173,8 +2205,43 @@ async function createGuest(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
 
-    const { displayName } = req.body as { displayName?: string };
+const { displayName } = req.body as { displayName?: string };
     const name = displayName?.trim() || null;
+
+    /* Un ospite SENZA nome non e' un cliente nuovo: e' il cliente generico
+     * dell'evento, quello di default per le operazioni senza cliente. Senza
+     * questo ogni "+ Crea" a vuoto creava un SECONDO wallet anonimo con saldo
+     * 0, e la select poteva finire su quello: saldo 0 e rimborso bloccato. */
+    if (!name) {
+        const generic = (await EventUserModel.findOne({
+            eventId: eventCtx.eventId,
+            userId: null,
+            displayName: null,
+            isActive: true
+        }).sort({ joinedAt: 1 })) ?? (await EventUserModel.create({
+            eventId: eventCtx.eventId,
+            userId: null,
+            balance: 0
+        }));
+
+        return res.status(200).json({
+            item: {
+                id: generic._id.toString(),
+                eventId: generic.eventId.toString(),
+                userId: null,
+                firstName: null,
+                lastName: null,
+                email: null,
+                balance: generic.balance,
+                isAnonymous: true,
+                isGeneric: true,
+                isActive: generic.isActive,
+                joinedAt: generic.joinedAt,
+                displayName: null
+            },
+            reused: true
+        });
+    }
 
     const eventUser = await EventUserModel.create({
         eventId: eventCtx.eventId,
@@ -2193,9 +2260,10 @@ async function createGuest(req: Request, res: Response) {
             email: null,
             balance: 0,
             isAnonymous: true,
+            isGeneric: false,
             isActive: true,
-            joinedAt: eventUser.joinedAt,
-            displayName: name
+joinedAt: eventUser.joinedAt,
+            displayName: eventUser.displayName
         }
     });
 }
@@ -2245,6 +2313,7 @@ async function denominationReport(req: Request, res: Response) {
 
 export const exchangeController = {
     listUsers,
+    getEventUserBalance,
     getBalance,
     listTransactions,
     topUp,

@@ -15,6 +15,8 @@ type ExchangeUser = {
   email: string | null
   balance: number
   isAnonymous: boolean
+  /** Anonimo condiviso dell'evento (nessun nome): il default delle operazioni. */
+  isGeneric?: boolean
   isActive: boolean
   joinedAt: string
   displayName: string | null
@@ -208,6 +210,8 @@ const [showCashSetup, setShowCashSetup] = useState(false)
 
   const [selectedUserId, setSelectedUserId] = useState('')
   const selectedUserIdRef = useRef('')
+  /* Saldo riletto alla bisogna del solo "cliente generico" (vedi il polling). */
+  const [genericBalance, setGenericBalance] = useState<{ id: string; balance: number } | null>(null)
   const [topUpAmount, setTopUpAmount] = useState('')
   const [topUpDesc, setTopUpDesc] = useState('')
   const [refundAmount, setRefundAmount] = useState('')
@@ -221,6 +225,25 @@ const [showCashSetup, setShowCashSetup] = useState(false)
     open: false, variant: 'alert', title: '', message: ''
   })
 
+  /* I saldi dei clienti li tocca anche ALTRO banco: senza una rilettura
+   * periodica questa pagina mostrerebbe uno snapshot del caricamento e
+   * bloccherebbe un rimborso che l'altra cassa ha appena abilitato. La lista
+   * NON viene ripollerata (con molti clienti costerebbe troppo): si riletta
+   * solo il saldo del cliente generico, vedi fetchGenericBalance. */
+  const fetchUsers = useCallback(async () => {
+    if (!eventId || !isAuthenticated) return
+    const usrs = await apiRequest<{ items: ExchangeUser[] }>(`/exchange/${eventId}/users`)
+    setUsers(usrs.items)
+    /* Default = cliente generico. Se il cliente scelto e' sparito dalla lista
+     * (o non e' mai stato scelto) si torna al generico / al trattino. */
+    const anon = usrs.items.find((u) => u.isGeneric) ?? usrs.items.find((u) => u.isAnonymous)
+    const currentId = selectedUserIdRef.current
+    if (currentId && usrs.items.some((u) => u.id === currentId)) return
+    const fallbackId = anon?.id ?? ''
+    setSelectedUserId(fallbackId)
+    selectedUserIdRef.current = fallbackId
+  }, [eventId, isAuthenticated])
+
   const fetchData = useCallback(async () => {
     if (!eventId || !isAuthenticated) return
     setLoading(true)
@@ -230,15 +253,14 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       setEventName(ev.item.name)
     } catch { /* event name non essenziale */}
     try {
-      const [bal, usrs, txs, cms, crs] = await Promise.all([
+      const [bal, txs, cms, crs] = await Promise.all([
         apiRequest<BalanceSummary>(`/exchange/${eventId}/balance`),
-        apiRequest<{ items: ExchangeUser[] }>(`/exchange/${eventId}/users`),
         apiRequest<{ items: Transaction[]; pagination: { page: number; totalPages: number } }>(`/exchange/${eventId}/transactions?page=${txPage}&limit=20`),
         apiRequest<{ items: CashMovement[]; pagination: { page: number; totalPages: number } }>(`/exchange/${eventId}/cash-movements?page=${cmPage}&limit=10`),
         apiRequest<{ items: CashRegister[] }>(`/exchange/${eventId}/cash-registers`),
       ])
+      await fetchUsers()
       setBalance(bal)
-      setUsers(usrs.items)
       setTransactions(txs.items)
       setTxTotalPages(txs.pagination.totalPages)
       setCashMovements(cms.items)
@@ -256,16 +278,6 @@ const [showCashSetup, setShowCashSetup] = useState(false)
         }
         setActiveCassa(null)
       }
-
-      /* Il "trattino" della select (nessun cliente scelto) e' il cliente
-       * anonimo: non lo forziamo piu' a essere selezionato per id. Se il
-       * cliente scelto e' sparito dalla lista si torna al trattino. */
-      const currentId = selectedUserIdRef.current
-      const stillExists = usrs.items.some((u) => u.id === currentId)
-      if (currentId && !stillExists) {
-        setSelectedUserId('')
-        selectedUserIdRef.current = ''
-      }
     } catch (err) {
       if ((err as { status?: number }).status === 403) {
         any403 = true
@@ -273,7 +285,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
     }
     if (any403) setForbidden(true)
     setLoading(false)
-  }, [eventId, isAuthenticated, txPage, cmPage, cassaStorageKey])
+  }, [eventId, isAuthenticated, txPage, cmPage, cassaStorageKey, fetchUsers])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -725,13 +737,20 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   const selectedUser = users.find((u) => u.id === selectedUserId) ?? null
   /* Il trattino nella select NON e' "nessun cliente": e' il cliente anonimo.
    * Cariche e rimborsi non hanno bisogno di un cliente registrato, quindi se
-   * non ne e' stato scelto uno operiamo sul wallet anonimo dell'evento. Il
-   * saldo viene letto da `users` (unica fonte di verita': si aggiorna da solo
-   * dopo ogni operazione, che richiama fetchData). */
-  const anonymousUser = users.find((u) => u.isAnonymous) ?? null
+   * non ne e' stato scelto uno operiamo sul "cliente generico" dell'evento. */
+  const anonymousUser =
+    users.find((u) => u.isGeneric) ?? users.find((u) => u.isAnonymous) ?? null
   const targetUser = selectedUser ?? anonymousUser
   const targetUserId = targetUser?.id ?? ''
-  const targetBalance = targetUser?.balance ?? 0
+  /* Il saldo viene riletto ogni 5s SOLO per il cliente generico (un documento,
+   * niente lista): e' il wallet che gli altri banchi modificano piu' spesso e,
+   * senza la rilettura, questa cassa mostrerebbe uno snapshot e bloccherebbe un
+   * rimborso che l'altra cassa ha appena abilitare. Per un cliente nominato
+   * vale il saldo della lista, ricaricata a ogni operazione. */
+  const targetBalance =
+    targetUser && genericBalance?.id === targetUser.id
+      ? genericBalance.balance
+      : targetUser?.balance ?? 0
   const rate = balance?.exchangeRate ?? 1
   const rateSafe = rate || 1
   const currencyName = balance?.currencyName ?? 'crediti'
@@ -742,6 +761,33 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   const refundEuro = parseFloat(refundAmount)
   const refundTokens = Math.round(refundEuro * rateSafe * 100) / 100
   const refundOverBalance = !!refundAmount && refundTokens > targetBalance + 0.005
+
+  /* Polling del SOLO cliente generico: un documento, niente lista, quindi
+   * costa poco anche con molti clienti. Gli altri clienti non vengono
+   * ripollati (il saldo arriva dalla lista, ricaricata a ogni operazione). */
+  const genericUserId = anonymousUser?.id ?? ''
+  const fetchGenericBalance = useCallback(async () => {
+    if (!eventId || !isAuthenticated || !genericUserId) return
+    const res = await apiRequest<{ id: string; balance: number }>(
+      `/exchange/${eventId}/users/${genericUserId}/balance`
+    )
+    setGenericBalance({ id: res.id, balance: res.balance })
+  }, [eventId, isAuthenticated, genericUserId])
+
+  useEffect(() => {
+    if (!genericUserId) {
+      setGenericBalance(null)
+      return
+    }
+    void fetchGenericBalance()
+    const timer = window.setInterval(() => { void fetchGenericBalance() }, 5000)
+    return () => window.clearInterval(timer)
+  }, [fetchGenericBalance, genericUserId])
+
+  /** Saldo da mostrare: la rilettura live se c'e', altrimenti quello in lista. */
+  function balanceOf(u: ExchangeUser) {
+    return genericBalance?.id === u.id ? genericBalance.balance : u.balance
+  }
 
   function fmt(v: number) { return v.toFixed(2) }
   function fmtEur(v: number) { return `€${v.toFixed(2)}` }
@@ -1123,8 +1169,8 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.isAnonymous
-                      ? (u.displayName ? `\u{1F464} ${u.displayName} (saldo: ${fmt(u.balance)})` : `\u{1F464} Cliente generico (saldo: ${fmt(u.balance)})`)
-                      : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${fmt(u.balance)}`}
+                      ? (u.displayName ? `\u{1F464} ${u.displayName} (saldo: ${fmt(balanceOf(u))})` : `\u{1F464} Non collegato a clienti (saldo: ${fmt(balanceOf(u))})`)
+                      : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${fmt(balanceOf(u))}`}
                   </option>
                 ))}
               </select>
@@ -1144,7 +1190,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
               <p className={cambioStyles.userInfo}>
                 Saldo: <strong>{fmt(targetBalance)}</strong>
                 <span className={cambioStyles.eurValue}> ({fmtEur(targetBalance / rateSafe)})</span>
-                {selectedUser ? '' : ' - cliente anonimo'}
+                {targetUser.isAnonymous ? ' - non collegato a clienti' : ''}
               </p>
             )}
 
@@ -1205,7 +1251,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 <p className={cambioStyles.statSub}>
                   Saldo cliente: <strong>{fmt(targetBalance)} {currencyName}</strong>
                   <span className={cambioStyles.eurValue}> ({fmtEur(targetBalance / rateSafe)})</span>
-                  {selectedUser ? '' : ' · cliente anonimo'}
+                  {targetUser?.isAnonymous ? ' · non collegato a clienti' : ''}
                 </p>
                 <label className={cambioStyles.field}>
                   Importo €
