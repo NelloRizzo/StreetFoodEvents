@@ -31,6 +31,8 @@ exchangeRouter.post('/:eventId/cash-movements', asyncHandler(hasRole(['exchange-
 exchangeRouter.get('/:eventId/cash-registers', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.listCashRegisters));
 exchangeRouter.post('/:eventId/cash-registers', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.createCashRegister));
 exchangeRouter.get('/:eventId/cash-registers/report', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.getCashRegistersReport));
+/* Registrata PRIMA di /:cashRegisterId: chiude tutte le casse ancora aperte. */
+exchangeRouter.post('/:eventId/cash-registers/close-all', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.closeAllCashRegisters));
 exchangeRouter.patch('/:eventId/cash-registers/:cashRegisterId', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.updateCashRegister));
 exchangeRouter.post('/:eventId/cash-registers/:cashRegisterId/close', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.closeCashRegister));
 exchangeRouter.get('/:eventId/cash-registers/:cashRegisterId/balance', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.getCashRegisterBalance));

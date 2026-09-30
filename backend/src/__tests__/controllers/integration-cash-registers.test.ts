@@ -370,6 +370,56 @@ describe('Integration: cash registers (multi-cassa)', () => {
         expect(reportBefore.body.items[0].sinceTopUpCount).toBe(0);
     });
 
+    it('close-all chiude ogni cassa aperta e lascia intatte le chiuse', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const { cookie } = await createExchangeAdmin();
+
+        /* Nomi diversi: force chiude l'altra cassa solo in caso di conflitto di
+         * nome, quindi qui le due restano entrambe aperte. */
+        const a = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers`)
+            .set('Cookie', cookie)
+            .send({ name: 'Banco A' });
+        expect(a.status).toBe(201);
+        const b = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers`)
+            .set('Cookie', cookie)
+            .send({ name: 'Banco B' });
+        expect(b.status).toBe(201);
+
+        const closed = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers/close-all`)
+            .set('Cookie', cookie);
+        expect(closed.status).toBe(200);
+        expect(closed.body.closedRegisters).toBe(2);
+
+        const registers = await CashRegisterModel.find({ eventId: event._id }).sort({ name: 1 });
+        expect(registers).toHaveLength(2);
+        for (const reg of registers) {
+            expect(reg.status).toBe('closed');
+            expect(reg.closedAt).not.toBeNull();
+        }
+
+        /* Idempotente: la seconda chiamata non trova piu' casse aperte. */
+        const again = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers/close-all`)
+            .set('Cookie', cookie);
+        expect(again.status).toBe(200);
+        expect(again.body.closedRegisters).toBe(0);
+
+        /* Un altro evento non viene toccato. */
+        const otherEvent = await createEvent();
+        const otherReg = await request(app)
+            .post(`/api/exchange/${otherEvent._id}/cash-registers`)
+            .set('Cookie', cookie)
+            .send({ name: 'Altro banco' });
+        expect(otherReg.status).toBe(201);
+        await request(app).post(`/api/exchange/${event._id}/cash-registers/close-all`).set('Cookie', cookie);
+        const untouched = await CashRegisterModel.findById(otherReg.body.item.id);
+        expect(untouched!.status).toBe('open');
+    });
+
     it('azzeramento totale: chiude tutte le casse e cancella fisicamente le transazioni', async () => {
         app = createTestApp();
         const event = await createEvent();

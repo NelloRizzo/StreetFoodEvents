@@ -176,6 +176,16 @@
   font-size: 0.9rem;
 }
 
+.notice {
+  margin: 0 0 1rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid rgba(40, 122, 72, 0.4);
+  border-radius: 8px;
+  background: rgba(40, 122, 72, 0.08);
+  color: #1f6b3f;
+  font-size: 0.9rem;
+}
+
 @media print {
   .printHide {
     display: none !important;

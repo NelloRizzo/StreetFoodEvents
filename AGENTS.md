@@ -256,6 +256,7 @@ Nota: la sidebar admin (`AdminSidebar`) mostra la sezione «Contenuti» → «No
 | GET | `/api/exchange/:eventId/cash-registers/:cashRegisterId/balance` | exchange-admin / platform-admin | Balance di una singola cassa (fondi + contenuto + `topUpReal`/`refundReal` + conteggi since) |
 | PATCH | `/api/exchange/:eventId/cash-registers/:cashRegisterId` | exchange-admin / platform-admin | Rinomina e/o soglie di sicurezza (`name` e `lowThreshold { euro, credits }` indipendenti; entrambe le soglie `null` azzerano il sottodocumento; `null` = soglia disattivata; 409 `name_taken` invariato) |
 | POST | `/api/exchange/:eventId/cash-registers/:cashRegisterId/close` | exchange-admin / platform-admin | Chiude cassa (404/400 se già chiusa) |
+| POST | `/api/exchange/:eventId/cash-registers/close-all` | exchange-admin / platform-admin | Chiude **tutte** le casse `open` dell'evento (`updateMany`), risponde `{ closedRegisters }`, idempotente. Registrata PRIMA di `/:cashRegisterId` |
 | GET | `/api/exchange/:eventId/cash-requests` | exchange-admin / platform-admin | Richieste delle postazioni alla master (filtri `status` csv, `cashRegisterId`, `from`/`to` su `requestedAt`, `limit`; `pendingCount` = pending+acknowledged) |
 | POST | `/api/exchange/:eventId/cash-requests` | exchange-admin / platform-admin | Crea richiesta (cassa `open` obbligatoria; importi mai misti; **idempotente**: stessa cassa + stesso `kind` in `pending|acknowledged|delivered` → `200 { duplicate: true }`) |
 | PATCH | `/api/exchange/:eventId/cash-requests/:requestId` | exchange-admin / platform-admin | `acknowledged` (solo da pending) / `delivered` (implica l'ack, registra i movimenti `in` nella cassa ricevente) / `confirmed` (da acknowledged|delivered, implica l'ack) / `cancelled`; `delivered`, `confirmed` e `cancelled` sono immutabili |
@@ -373,6 +374,14 @@ React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 ### Files esclusi dal deploy
 Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard per ogni servizio:
 **Settings → Build Filters → Ignored Paths**: `docs/**`
+
+## Session state (Set 2026 — cliente non obbligatorio, Chiudi tutte, cassa chiusa in sola lettura)
+### Completed
+- **Cliente non più obbligatorio nelle operazioni di cambio**: la select di `EventExchangePage` mostra `-- Seleziona --` non più ma un **trattino `—`** = **cliente anonimo** (spesso le operazioni non hanno un cliente registrato). Nuovi derivati: `anonymousUser` = primo `isAnonymous` di `users`, `targetUser = selectedUser ?? anonymousUser`, `targetUserId`, `targetBalance`; `topUp`/`refund` mandano `eventUserId: targetUserId` e i `disabled` usano `!targetUserId`. **GOTCHA**: lo stato `selUserBalance` è stato **eliminato**: il saldo viene letto da `users[].balance` (unica fonte di verità, si aggiorna da sola perché ogni operazione richiama `fetchData()`). L'auto-select del "Cliente Generico" **non forza più l'id** — resta il trattino come default e pulisce solo la selezione se il cliente non esiste più. I pulsanti restano disabilitati solo senza cassa attiva o senza wallet anonimo.
+- **`POST /api/exchange/:eventId/cash-registers/close-all`** (exchange-admin / platform-admin, **registrata PRIMA di `/:cashRegisterId`**): chiude con un `updateMany` tutte le casse `open` dell'evento, risponde `{ closedRegisters }`, **idempotente** (0 alla seconda chiamata) e scoped all'evento. Master Cambio: bottone "**Chiudi tutte (N)**" con `ConfirmModal` danger, disabilitato se `openCount === 0`; rimuove `sfe_cash_register_<eventId>` dal `localStorage` e mostra un banner verde (`.notice`, gemello di `.error`).
+- **Cassa chiusa = solo rendiconti**: anche l'intera `<section>` "Richieste alla master e impostazioni cassa" è gateata su `activeCassa` (prima restava l'`<h2>` a sezione vuota). Rimaste solo la card "Apri cassa", "Movimenti di cassa" e "Storico transazioni".
+- **GOTCHA `force`**: `POST /cash-registers` con `force: true` chiude l'altra cassa **solo se c'è conflitto di nome** (è il flusso 409 `name_taken`), non in generale. Per chiudere le altre serve `close-all`.
+- Verifica: backend typecheck ✓, **520 test ✓** (50 file, +1 `close-all`), lint 0 errori; frontend typecheck ✓, **96 test vitest ✓** (15 file), lint 0 errori sui file toccati, build (tsc+vite) ✓. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 
 ## Session state (Set 2026 — cassa chiusa in sola lettura, Azzera per cassa, Azzera tutto)
 ### Completed

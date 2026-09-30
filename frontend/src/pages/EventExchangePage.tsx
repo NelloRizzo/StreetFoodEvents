@@ -208,7 +208,6 @@ const [showCashSetup, setShowCashSetup] = useState(false)
 
   const [selectedUserId, setSelectedUserId] = useState('')
   const selectedUserIdRef = useRef('')
-  const [selUserBalance, setSelUserBalance] = useState(0)
   const [topUpAmount, setTopUpAmount] = useState('')
   const [topUpDesc, setTopUpDesc] = useState('')
   const [refundAmount, setRefundAmount] = useState('')
@@ -258,15 +257,14 @@ const [showCashSetup, setShowCashSetup] = useState(false)
         setActiveCassa(null)
       }
 
+      /* Il "trattino" della select (nessun cliente scelto) e' il cliente
+       * anonimo: non lo forziamo piu' a essere selezionato per id. Se il
+       * cliente scelto e' sparito dalla lista si torna al trattino. */
       const currentId = selectedUserIdRef.current
       const stillExists = usrs.items.some((u) => u.id === currentId)
-      if (!currentId || !stillExists) {
-        const anon = usrs.items.find((u) => u.isAnonymous)
-        if (anon) {
-          setSelectedUserId(anon.id)
-          selectedUserIdRef.current = anon.id
-          setSelUserBalance(anon.balance)
-        }
+      if (currentId && !stillExists) {
+        setSelectedUserId('')
+        selectedUserIdRef.current = ''
       }
     } catch (err) {
       if ((err as { status?: number }).status === 403) {
@@ -611,16 +609,15 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   }
 
   const handleTopUp = async () => {
-    if (!eventId || !selectedUserId || !topUpAmount || !activeCassa) return
+    if (!eventId || !targetUserId || !topUpAmount || !activeCassa) return
     const amount = parseFloat(topUpAmount)
     if (!amount || amount <= 0) return
     setSubmitting('topup')
     try {
       const res = await apiRequest<{ newBalance: number }>(`/exchange/${eventId}/top-up`, {
         method: 'POST',
-        bodyJson: { eventUserId: selectedUserId, amount, description: topUpDesc.trim() || undefined, cashRegisterId: activeCassa.id, paymentMethod }
+        bodyJson: { eventUserId: targetUserId, amount, description: topUpDesc.trim() || undefined, cashRegisterId: activeCassa.id, paymentMethod }
       })
-      setSelUserBalance(res.newBalance)
       setTopUpAmount('')
       setTopUpDesc('')
       trackCurrencyExchange({ eventId, amount, type: 'topup' })
@@ -637,7 +634,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   }
 
   const handleRefund = async () => {
-    if (!eventId || !selectedUserId || !refundAmount || !activeCassa) return
+    if (!eventId || !targetUserId || !refundAmount || !activeCassa) return
     /* Il campo e' in euro: si converte in token (unita' del saldo). */
     const amount = Math.round(parseFloat(refundAmount) * (rate || 1) * 100) / 100
     if (!amount || amount <= 0) return
@@ -645,9 +642,8 @@ const [showCashSetup, setShowCashSetup] = useState(false)
     try {
       const res = await apiRequest<{ newBalance: number }>(`/exchange/${eventId}/refund`, {
         method: 'POST',
-        bodyJson: { eventUserId: selectedUserId, amount, description: refundDesc.trim() || undefined, cashRegisterId: activeCassa.id, paymentMethod }
+        bodyJson: { eventUserId: targetUserId, amount, description: refundDesc.trim() || undefined, cashRegisterId: activeCassa.id, paymentMethod }
       })
-      setSelUserBalance(res.newBalance)
       setRefundAmount('')
       setRefundDesc('')
       trackCurrencyExchange({ eventId, amount, type: 'refund' })
@@ -718,7 +714,6 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       setGuestName('')
       setSelectedUserId(res.item.id)
       selectedUserIdRef.current = res.item.id
-      setSelUserBalance(res.item.balance)
       fetchData()
     } catch (err) {
       setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Errore durante la creazione del cliente' })
@@ -727,17 +722,26 @@ const [showCashSetup, setShowCashSetup] = useState(false)
     }
   }
 
-  const selectedUser = users.find((u) => u.id === selectedUserId)
+  const selectedUser = users.find((u) => u.id === selectedUserId) ?? null
+  /* Il trattino nella select NON e' "nessun cliente": e' il cliente anonimo.
+   * Cariche e rimborsi non hanno bisogno di un cliente registrato, quindi se
+   * non ne e' stato scelto uno operiamo sul wallet anonimo dell'evento. Il
+   * saldo viene letto da `users` (unica fonte di verita': si aggiorna da solo
+   * dopo ogni operazione, che richiama fetchData). */
+  const anonymousUser = users.find((u) => u.isAnonymous) ?? null
+  const targetUser = selectedUser ?? anonymousUser
+  const targetUserId = targetUser?.id ?? ''
+  const targetBalance = targetUser?.balance ?? 0
   const rate = balance?.exchangeRate ?? 1
   const rateSafe = rate || 1
   const currencyName = balance?.currencyName ?? 'crediti'
   /* Il rimborso si inserisce in EURO (e' euro che l'operatore conta) ma il
    * saldo del cliente e' in token: il massimo e' il saldo convertito, e il
    * messaggio di superamento riporta la valuta del campo. */
-  const refundMaxEuro = selUserBalance / rateSafe
+  const refundMaxEuro = targetBalance / rateSafe
   const refundEuro = parseFloat(refundAmount)
   const refundTokens = Math.round(refundEuro * rateSafe * 100) / 100
-  const refundOverBalance = !!refundAmount && refundTokens > selUserBalance + 0.005
+  const refundOverBalance = !!refundAmount && refundTokens > targetBalance + 0.005
 
   function fmt(v: number) { return v.toFixed(2) }
   function fmtEur(v: number) { return `€${v.toFixed(2)}` }
@@ -859,9 +863,10 @@ const [showCashSetup, setShowCashSetup] = useState(false)
             )}
           </section>
 
+          {activeCassa && (
           <section className={cambioStyles.section}>
             <h2 className={cambioStyles.exSectionTitle}>Richieste alla master e impostazioni cassa</h2>
-            {activeCassa && cassaBalance && (
+            {cassaBalance && (
               <>
                 <button
                   type="button"
@@ -1099,6 +1104,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
               </>
             )}
           </section>
+          )}
 
           {activeCassa && (
           <section className={cambioStyles.section}>
@@ -1111,11 +1117,9 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   const uid = e.target.value
                   setSelectedUserId(uid)
                   selectedUserIdRef.current = uid
-                  const u = users.find((x) => x.id === uid)
-                  setSelUserBalance(u?.balance ?? 0)
                 }}
               >
-                <option value="">-- Seleziona --</option>
+                <option value="">—</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.isAnonymous
@@ -1136,11 +1140,11 @@ const [showCashSetup, setShowCashSetup] = useState(false)
               </div>
             </div>
 
-            {selectedUser && (
+            {targetUser && (
               <p className={cambioStyles.userInfo}>
-                Saldo: <strong>{fmt(selUserBalance ?? selectedUser.balance)}</strong>
-                <span className={cambioStyles.eurValue}> ({fmtEur((selUserBalance ?? selectedUser.balance) / rate)})</span>
-                {selectedUser.isAnonymous && ' - Cliente generico'}
+                Saldo: <strong>{fmt(targetBalance)}</strong>
+                <span className={cambioStyles.eurValue}> ({fmtEur(targetBalance / rateSafe)})</span>
+                {selectedUser ? '' : ' - cliente anonimo'}
               </p>
             )}
 
@@ -1158,7 +1162,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   Importo €
                   <input type="number" min="0.01" step="0.01" value={topUpAmount}
                     onChange={(e) => setTopUpAmount(e.target.value)}
-                    disabled={!selectedUserId || !activeCassa || submitting === 'topup'} />
+                    disabled={!targetUserId || !activeCassa || submitting === 'topup'} />
                 </label>
                 <label className={cambioStyles.field}>
                   Incasso con
@@ -1166,7 +1170,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                     className={cambioStyles.userSelect}
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                    disabled={!selectedUserId || !activeCassa || submitting === 'topup'}
+                    disabled={!targetUserId || !activeCassa || submitting === 'topup'}
                   >
                     <option value="cash">Contanti</option>
                     <option value="pos">POS (carta)</option>
@@ -1181,10 +1185,10 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   Note (opzionale)
                   <input type="text" value={topUpDesc}
                     onChange={(e) => setTopUpDesc(e.target.value)}
-                    disabled={!selectedUserId || !activeCassa || submitting === 'topup'} />
+                    disabled={!targetUserId || !activeCassa || submitting === 'topup'} />
                 </label>
                 <button className={cambioStyles.btnTopUp} onClick={handleTopUp}
-                  disabled={!selectedUserId || !topUpAmount || !activeCassa || submitting === 'topup'}>
+                  disabled={!targetUserId || !topUpAmount || !activeCassa || submitting === 'topup'}>
                   {submitting === 'topup' ? 'Caricamento...' : `Carica €`}
                 </button>
                 {paymentMethod === 'pos' && (
@@ -1199,21 +1203,21 @@ const [showCashSetup, setShowCashSetup] = useState(false)
               <h2 className={cambioStyles.exSectionTitle}>Rimborsa (Virtuale &rarr; Reale)</h2>
               <div className={cambioStyles.formCard}>
                 <p className={cambioStyles.statSub}>
-                  Saldo cliente: <strong>{fmt(selUserBalance)} {currencyName}</strong>
-                  <span className={cambioStyles.eurValue}> ({fmtEur(selUserBalance / rateSafe)})</span>
-                  {selectedUserId ? '' : ' · seleziona un cliente'}
+                  Saldo cliente: <strong>{fmt(targetBalance)} {currencyName}</strong>
+                  <span className={cambioStyles.eurValue}> ({fmtEur(targetBalance / rateSafe)})</span>
+                  {selectedUser ? '' : ' · cliente anonimo'}
                 </p>
                 <label className={cambioStyles.field}>
                   Importo €
                   <input type="number" min="0.01" max={refundMaxEuro} step="0.01" value={refundAmount}
                     onChange={(e) => setRefundAmount(e.target.value)}
-                    disabled={!selectedUserId || !activeCassa || submitting === 'refund'} />
+                    disabled={!targetUserId || !activeCassa || submitting === 'refund'} />
                 </label>
                 <button
                   type="button"
                   className={cambioStyles.exTextBtn}
                   onClick={() => setRefundAmount(refundMaxEuro.toFixed(2))}
-                  disabled={!selectedUserId || selUserBalance <= 0 || submitting === 'refund'}
+                  disabled={!targetUserId || targetBalance <= 0 || submitting === 'refund'}
                 >
                   Rimborsa tutto il saldo ({fmtEur(refundMaxEuro)})
                 </button>
@@ -1225,7 +1229,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 {refundOverBalance && (
                   <p className={cambioStyles.cassaLocked}>
                     Importo superiore al saldo: massimo {fmtEur(refundMaxEuro)}
-                    {' '}({fmt(selUserBalance)} {currencyName}).
+                    {' '}({fmt(targetBalance)} {currencyName}).
                   </p>
                 )}
                 <label className={cambioStyles.field}>
@@ -1234,7 +1238,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                     className={cambioStyles.userSelect}
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                    disabled={!selectedUserId || !activeCassa || submitting === 'refund'}
+                    disabled={!targetUserId || !activeCassa || submitting === 'refund'}
                   >
                     <option value="cash">Contanti</option>
                     <option value="pos">POS (carta)</option>
@@ -1244,10 +1248,10 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   Note (opzionale)
                   <input type="text" value={refundDesc}
                     onChange={(e) => setRefundDesc(e.target.value)}
-                    disabled={!selectedUserId || !activeCassa || submitting === 'refund'} />
+                    disabled={!targetUserId || !activeCassa || submitting === 'refund'} />
                 </label>
                 <button className={cambioStyles.btnRefund} onClick={handleRefund}
-                  disabled={!selectedUserId || !refundAmount || refundOverBalance || !activeCassa || submitting === 'refund'}>
+                  disabled={!targetUserId || !refundAmount || refundOverBalance || !activeCassa || submitting === 'refund'}>
                   {submitting === 'refund' ? 'Rimborso in corso...' : 'Rimborsa'}
                 </button>
               </div>

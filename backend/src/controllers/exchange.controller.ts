@@ -1425,6 +1425,22 @@ async function closeCashRegister(req: Request, res: Response) {
     return res.status(200).json({ item: toCashRegisterResponse(cashRegister) });
 }
 
+/* Chiusura collettiva di ogni cassa ancora aperta dell'evento: la master
+ * chiude il banco a fine serata senza dover passare cassa per cassa. */
+async function closeAllCashRegisters(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const result = await CashRegisterModel.updateMany(
+        { eventId: new Types.ObjectId(eventCtx.eventId), status: 'open' },
+        { $set: { status: 'closed', closedAt: new Date() } }
+    );
+
+    return res.status(200).json({
+        closedRegisters: result.modifiedCount ?? 0
+    });
+}
+
 /* Azzeramento totale del banco cambio dell'evento: chiude ogni cassa, azzera
  * i fondi e i portafogli e cancella FISICAMENTE lo storico delle transazioni
  * (nessuno storico residuo). Usato dal pulsante "Azzera tutto" del Master Cambio. */
@@ -2248,6 +2264,7 @@ export const exchangeController = {
     createCashRegister,
     updateCashRegister,
     closeCashRegister,
+    closeAllCashRegisters,
     resetAllCashRegisters,
     getCashRegisterBalance,
     getCashRegistersReport,

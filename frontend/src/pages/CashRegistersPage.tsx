@@ -175,6 +175,7 @@ export function CashRegistersPage() {
   const [resetFloatTarget, setResetFloatTarget] = useState<ReportItem | null>(null)
   const [resettingFloat, setResettingFloat] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [noticeMsg, setNoticeMsg] = useState<string | null>(null)
 
   /* Richieste dalle postazioni: la master le prende in carico e le consegna. */
   const [requests, setRequests] = useState<CashRequestItem[]>([])
@@ -184,6 +185,9 @@ export function CashRegistersPage() {
   const [deliverCredits, setDeliverCredits] = useState('')
   const [resetAllOpen, setResetAllOpen] = useState(false)
   const [resettingAll, setResettingAll] = useState(false)
+  /* Chiusura collettiva delle casse aperte (fine serata). */
+  const [closeAllOpen, setCloseAllOpen] = useState(false)
+  const [closingAll, setClosingAll] = useState(false)
 
   const loadRequests = useCallback(async () => {
     if (!eventId || !isAuthenticated) return
@@ -198,6 +202,32 @@ export function CashRegistersPage() {
       setRequests([])
     }
   }, [eventId, isAuthenticated])
+
+  const handleCloseAll = async () => {
+    if (!eventId || closingAll) return
+    setClosingAll(true)
+    try {
+      const res = await apiRequest<{ closedRegisters: number }>(
+        `/exchange/${eventId}/cash-registers/close-all`,
+        { method: 'POST', bodyJson: {} }
+      )
+      setCloseAllOpen(false)
+      setErrorMsg(null)
+      /* Le postazioni non devono restare agganciate a una cassa chiusa. */
+      if (eventId) localStorage.removeItem(`sfe_cash_register_${eventId}`)
+      await load(true)
+      setNoticeMsg(
+        res.closedRegisters > 0
+          ? `${res.closedRegisters} ${res.closedRegisters === 1 ? 'cassa chiusa' : 'casse chiuse'}.`
+          : 'Nessuna cassa era aperta.'
+      )
+    } catch (err) {
+      setCloseAllOpen(false)
+      setErrorMsg((err as { message?: string }).message || 'Chiusura non riuscita')
+    } finally {
+      setClosingAll(false)
+    }
+  }
 
   const handleResetAll = async () => {
     if (!eventId) return
@@ -371,6 +401,11 @@ export function CashRegistersPage() {
             {errorMsg}
           </p>
         )}
+        {noticeMsg && (
+          <p className={styles.notice} role="status">
+            {noticeMsg}
+          </p>
+        )}
         <div className={reportStyles.header}>
           <div>
             <h1 className={reportStyles.title}>
@@ -404,6 +439,14 @@ export function CashRegistersPage() {
             </div>
             <button className={reportStyles.secondaryBtn} onClick={() => window.print()}>
               Stampa
+            </button>
+            <button
+              className={`${reportStyles.secondaryBtn} ${styles.printHide}`}
+              onClick={() => setCloseAllOpen(true)}
+              disabled={closingAll || totals.openCount === 0}
+              title={totals.openCount === 0 ? 'Nessuna cassa aperta' : undefined}
+            >
+              {closingAll ? 'Chiusura...' : `Chiudi tutte (${totals.openCount})`}
             </button>
             <button
               className={`${reportStyles.secondaryBtn} ${styles.printHide}`}
@@ -688,6 +731,19 @@ export function CashRegistersPage() {
         confirmLabel="Azzera fondo"
         onConfirm={() => void handleResetFloat()}
         onCancel={() => setResetFloatTarget(null)}
+      />
+
+      <ConfirmModal
+        open={closeAllOpen}
+        variant="confirm"
+        danger
+        title="Chiudi tutte le casse"
+        message={`Chiudere tutte le ${totals.openCount} ${totals.openCount === 1 ? 'cassa aperta' : 'casse aperte'} dell'evento? `
+          + `Su ognuna non saranno più possibili operazioni: le postazioni dovranno riaprirne una. `
+          + `Fondi, movimenti e transazioni restano intatti (le casse chiuse si vedono come storico in sola lettura).`}
+        confirmLabel="Chiudi tutte"
+        onConfirm={() => void handleCloseAll()}
+        onCancel={() => setCloseAllOpen(false)}
       />
 
       <ConfirmModal
