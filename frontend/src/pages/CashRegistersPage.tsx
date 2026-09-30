@@ -68,7 +68,7 @@ type CashRequestItem = {
   isAutomatic: boolean
   contentEuro: number | null
   contentCredits: number | null
-  status: 'pending' | 'acknowledged' | 'delivered' | 'cancelled'
+  status: 'pending' | 'acknowledged' | 'delivered' | 'confirmed' | 'cancelled'
   requestedByName: string | null
   requestedAt: string
   acknowledgedAt: string | null
@@ -158,12 +158,16 @@ export function CashRegistersPage() {
   const [deliverTarget, setDeliverTarget] = useState<CashRequestItem | null>(null)
   const [deliverEuro, setDeliverEuro] = useState('')
   const [deliverCredits, setDeliverCredits] = useState('')
+  const [resetAllOpen, setResetAllOpen] = useState(false)
+  const [resettingAll, setResettingAll] = useState(false)
 
   const loadRequests = useCallback(async () => {
     if (!eventId || !isAuthenticated) return
     try {
       const res = await apiRequest<{ items: CashRequestItem[] }>(
-        `/exchange/${eventId}/cash-requests?status=pending,acknowledged&limit=50`
+        /* Anche le consegnate non confermate: la master deve vedere che la
+         * postazione non ha ancora confermato la ricezione. */
+        `/exchange/${eventId}/cash-requests?status=pending,acknowledged,delivered&limit=50`
       )
       setRequests(res.items)
     } catch {
@@ -171,8 +175,26 @@ export function CashRegistersPage() {
     }
   }, [eventId, isAuthenticated])
 
-  const load = useCallback(async (silent = false) => {
-    if (!eventId || !isAuthenticated) return
+  const handleResetAll = async () => {
+    if (!eventId) return
+    setResettingAll(true)
+    try {
+      await apiRequest(`/exchange/${eventId}/cash-registers/reset-all`, { method: 'POST', bodyJson: {} })
+      setResetAllOpen(false)
+      setErrorMsg(null)
+      /* Il reset invalida tutto: la postazione non deve più puntare a una cassa
+       * chiusa dallo zero. */
+      if (eventId) localStorage.removeItem(`sfe_cash_register_${eventId}`)
+      await Promise.all([loadRequests(), load(true)])
+    } catch (err) {
+      setResetAllOpen(false)
+      setErrorMsg((err as { message?: string }).message || 'Azzeramento non riuscito')
+    } finally {
+      setResettingAll(false)
+    }
+  }
+
+  const load = useCallback(async (silent = false) => {    if (!eventId || !isAuthenticated) return
     if (!silent) setIsLoading(true)
     try {
       const params = new URLSearchParams()
@@ -340,6 +362,13 @@ export function CashRegistersPage() {
             <button className={reportStyles.secondaryBtn} onClick={() => window.print()}>
               Stampa
             </button>
+            <button
+              className={`${reportStyles.secondaryBtn} ${styles.printHide}`}
+              onClick={() => setResetAllOpen(true)}
+              disabled={resettingAll}
+            >
+              {resettingAll ? 'Azzeramento...' : 'Azzera tutto'}
+            </button>
           </div>
         </div>
 
@@ -388,6 +417,11 @@ export function CashRegistersPage() {
                           <span className={`${styles.statusBadge} ${r.status === 'pending' ? styles.statusPending : styles.statusAck}`}>
                             {r.status === 'pending' ? 'In attesa' : 'Presa in carico'}
                           </span>
+                          {r.status === 'delivered' && (
+                            <span className={`${styles.statusBadge} ${styles.statusAck} ${styles.printHide}`}>
+                              Consegnata · in attesa conferma postazione
+                            </span>
+                          )}
                         </td>
                         <td className={styles.openerName}>
                           {r.requestedByName ?? '—'}
@@ -404,21 +438,27 @@ export function CashRegistersPage() {
                                 Prendi in carico
                               </button>
                             )}
-                            <button
-                              className={styles.reqBtnPrimary}
-                              disabled={busyRequest === r.id}
-                              onClick={() => openDeliver(r)}
-                            >
-                              Consegna
-                            </button>
-                            <button
-                              className={styles.closeBtn}
-                              disabled={busyRequest === r.id}
-                              onClick={() => void handleCancelRequest(r)}
-                            >
-                              Rifiuta
-                            </button>
-                          </div>
+                            {r.status !== 'delivered' && (
+                              <>
+                                <button
+                                  className={styles.reqBtnPrimary}
+                                  disabled={busyRequest === r.id}
+                                  onClick={() => openDeliver(r)}
+                                >
+                                  Consegna
+                                </button>
+                                <button
+                                  className={styles.closeBtn}
+                                  disabled={busyRequest === r.id}
+                                  onClick={() => void handleCancelRequest(r)}
+                                >
+                                  Rifiuta
+                                </button>
+                              </>
+                            )}
+                            {r.status === 'delivered' && (
+                              <span className={styles.sub}>in attesa conferma della postazione</span>
+                            )}                          </div>
                         </td>
                       </tr>
                     ))}
@@ -588,6 +628,23 @@ export function CashRegistersPage() {
         confirmLabel="Chiudi cassa"
         onConfirm={() => void handleCloseCassa()}
         onCancel={() => setCloseTarget(null)}
+      />
+
+      <ConfirmModal
+        open={resetAllOpen}
+        variant="confirm"
+        danger
+        title="Azzera tutto il banco cambio"
+        message={`Cosa verrà fatto, senza possibilità di annullare:
+- chiuse TUTTE le casse dell'evento (anche quelle aperte) e azzera i loro fondi;
+- cancella fisicamente tutte le transazioni di cambio (carichi e rimborsi);
+- cancella i movimenti di cassa e le richieste delle postazioni;
+- azzera a zero tutti i portafogli clienti dell'evento.
+
+Restano invece invariati ordini e liquidazioni stand.`}
+        confirmLabel="Azzera tutto"
+        onConfirm={() => void handleResetAll()}
+        onCancel={() => setResetAllOpen(false)}
       />
     </div>
   )

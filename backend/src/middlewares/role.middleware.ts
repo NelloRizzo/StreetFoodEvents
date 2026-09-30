@@ -33,6 +33,17 @@ export function hasRole(
             ? req.params[options.standParam]
             : null;
 
+        /* Un event-admin puo' fare TUTTO sul proprio evento: e' il ruolo di
+         * gestione dell'evento, quindi soddisfa anche i guard dei ruoli piu'
+         * specifici (exchange-admin, contest-admin, photo-admin, ...).
+         * Vale solo con eventParam, cosi' non si estende ad altri eventi.
+         * NOTA: platform-admin NON viene aggiunto qui, perche' alcune route lo
+         * escludono esplicitamente (es. approvazione adesioni) e devono
+         * continuare a farlo. */
+        const allowedSlugs = options.eventParam
+            ? [...requiredRoles, 'event-admin']
+            : requiredRoles;
+
         const userRole = await UserRoleModel.findOne({
             userId: req.user.id,
             isActive: true,
@@ -41,7 +52,7 @@ export function hasRole(
         }).populate({
             path: 'roleId',
             match: {
-                slug: { $in: requiredRoles },
+                slug: { $in: allowedSlugs },
                 isActive: true
             },
             select: 'slug scope isActive'

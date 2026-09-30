@@ -116,6 +116,11 @@ const orderSchema = new Schema(
             default: false,
             index: true
         },
+        isPos: {
+            type: Boolean,
+            default: false,
+            index: true
+        },
         promotionId: {
             type: Schema.Types.ObjectId,
             ref: 'Promotion',

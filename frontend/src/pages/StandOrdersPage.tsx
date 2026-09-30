@@ -273,6 +273,22 @@ export function StandOrdersPage() {
                 <span className={styles.reportStatValue}>&euro;{(report.summary.totalExternalRevenue / (report.exchangeRate ?? 1)).toFixed(2)}</span>
                 <span className={styles.reportStatLabel}>Esterni</span>
               </div>
+              {report.summary.posRevenue > 0 && (
+                <>
+                  <div className={styles.reportStat}>
+                    <span className={styles.reportStatValue}>
+                      &euro;{(report.summary.cashRevenue / (report.exchangeRate ?? 1)).toFixed(2)}
+                    </span>
+                    <span className={styles.reportStatLabel}>Contanti</span>
+                  </div>
+                  <div className={styles.reportStat}>
+                    <span className={styles.reportStatValue}>
+                      &euro;{(report.summary.posRevenue / (report.exchangeRate ?? 1)).toFixed(2)}
+                    </span>
+                    <span className={styles.reportStatLabel}>POS ({report.summary.posOrders} ordini)</span>
+                  </div>
+                </>
+              )}
               {report.summary.totalRefunded > 0 && (
                 <div className={styles.reportStat}>
                   <span className={`${styles.reportStatValue} ${styles.reportRefunded}`}>

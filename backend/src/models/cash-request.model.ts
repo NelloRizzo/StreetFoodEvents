@@ -1,7 +1,21 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
 
 export const cashRequestKindValues = ['euro', 'credits', 'both'] as const;
-export const cashRequestStatusValues = ['pending', 'acknowledged', 'delivered', 'cancelled'] as const;
+
+/**
+ * pending      -> la postazione ha chiesto, la master non si e' ancora fatta vivo
+ * acknowledged -> la master ha preso in carico
+ * delivered    -> la master ha consegnato contanti/token (movementi registrati)
+ * confirmed    -> la postazione ha confermato la ricezione (chiude il ciclo)
+ * cancelled    -> annullata (prima della consegna)
+ */
+export const cashRequestStatusValues = [
+    'pending',
+    'acknowledged',
+    'delivered',
+    'confirmed',
+    'cancelled'
+] as const;
 
 const cashRequestSchema = new Schema(
     {
@@ -106,6 +120,17 @@ const cashRequestSchema = new Schema(
         },
         cancelledAt: {
             type: Date,
+            default: null
+        },
+        /* Conferma di ricezione della postazione richiedente: avviene solo dopo
+         * che la master ha accettato (acknowledged) o consegnato (delivered). */
+        confirmedAt: {
+            type: Date,
+            default: null
+        },
+        confirmedByUserId: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
             default: null
         }
     },

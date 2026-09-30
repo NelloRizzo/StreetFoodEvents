@@ -22,13 +22,14 @@ function saveCashBasis(eventId: string, basis: number) {
   localStorage.setItem(CASH_BASIS_KEY + eventId, JSON.stringify({ basis, updatedAt: new Date().toISOString() }))
 }
 
-function StandRow({ stand, isTotal, showCash, showCredits, showDiscount, rate }: { stand: EventReportStand; isTotal?: boolean; showCash: boolean; showCredits: boolean; showDiscount: boolean; rate: number }) {
+function StandRow({ stand, isTotal, showCash, showCredits, showPos, showDiscount, rate }: { stand: EventReportStand; isTotal?: boolean; showCash: boolean; showCredits: boolean; showPos: boolean; showDiscount: boolean; rate: number }) {
   return (
     <tr className={isTotal ? styles.tableTotals : undefined}>
       <td className={styles.standName}>{stand.standName}</td>
       <td className={styles.num}>{stand.paidOrders}</td>
       <td className={styles.num}>{fmt(stand.totalRevenue, rate)}</td>
       {showCash && <td className={`${styles.num} ${styles.totalCash}`}>{fmt(stand.cashRevenue, rate)}</td>}
+      {showPos && <td className={styles.num}>{fmt(stand.posRevenue, rate)}</td>}
       {showCredits && <td className={`${styles.num} ${styles.totalCredits}`}>{fmt(stand.creditRevenue, rate)}</td>}
       {showDiscount && <td className={`${styles.num} ${styles.totalDiscount}`}>{fmt(stand.discountAmount, rate)}</td>}
       <td className={styles.num}>{stand.pendingOrders}</td>
@@ -96,6 +97,8 @@ export function EventReportPage() {
   const hasCredits = report.stands.some((s) => s.creditRevenue > 0)
   const hasDiscount = report.stands.some((s) => s.discountAmount > 0)
   const hasCash = report.cashPaymentsEnabled
+  /* Colonna POS solo se ci sono ordini incassati col POS. */
+  const hasPos = report.stands.some((s) => s.posRevenue > 0)
   const rate = report.exchangeRate ?? 1
   const stands = selectedStandId
     ? report.stands.filter((s) => s.standId === selectedStandId)
@@ -197,6 +200,12 @@ export function EventReportPage() {
                   <span className={`${styles.totalValue} ${styles.totalCash}`}>{fmt(report.totals.cashRevenue, rate)}</span>
                 </div>
               )}
+              {hasPos && (
+                <div className={styles.totalItem}>
+                  <span className={styles.totalLabel}>POS</span>
+                  <span className={styles.totalValue}>{fmt(report.totals.posRevenue, rate)}</span>
+                </div>
+              )}
               {hasCredits && (
                 <div className={styles.totalItem}>
                   <span className={styles.totalLabel}>Crediti</span>
@@ -247,6 +256,7 @@ export function EventReportPage() {
                       <th className={styles.num}>Pagati</th>
                       <th className={styles.num}>Totale</th>
                       {hasCash && <th className={styles.num}>Contanti</th>}
+                      {hasPos && <th className={styles.num}>POS</th>}
                       {hasCredits && <th className={styles.num}>Crediti</th>}
                       {hasDiscount && <th className={styles.num}>Sconti</th>}
                       <th className={styles.num}>Pendenti</th>
@@ -257,7 +267,7 @@ export function EventReportPage() {
                   </thead>
                   <tbody>
                     {stands.map((stand) => (
-                      <StandRow key={stand.standId} stand={stand} showCash={hasCash} showCredits={hasCredits} showDiscount={hasDiscount} rate={rate} />
+                      <StandRow key={stand.standId} stand={stand} showCash={hasCash} showCredits={hasCredits} showPos={hasPos} showDiscount={hasDiscount} rate={rate} />
                     ))}
                     <StandRow
                       stand={{
@@ -270,6 +280,8 @@ export function EventReportPage() {
                               giftOrders: acc.giftOrders + s.giftOrders,
                               totalRevenue: acc.totalRevenue + s.totalRevenue,
                               cashRevenue: acc.cashRevenue + s.cashRevenue,
+                              posRevenue: acc.posRevenue + s.posRevenue,
+                              posOrders: acc.posOrders + s.posOrders,
                               creditRevenue: acc.creditRevenue + s.creditRevenue,
                               discountAmount: acc.discountAmount + s.discountAmount,
                               pendingOrders: acc.pendingOrders + s.pendingOrders,
@@ -277,7 +289,8 @@ export function EventReportPage() {
                               refundedAmount: acc.refundedAmount + s.refundedAmount,
                             }), {
                               totalOrders: 0, paidOrders: 0, giftOrders: 0, totalRevenue: 0,
-                              cashRevenue: 0, creditRevenue: 0, discountAmount: 0, pendingOrders: 0,
+                              cashRevenue: 0, posRevenue: 0, posOrders: 0, creditRevenue: 0,
+                              discountAmount: 0, pendingOrders: 0,
                               pendingAmount: 0, refundedAmount: 0,
                             })
                           : report.totals),
@@ -286,6 +299,7 @@ export function EventReportPage() {
                       isTotal
                       showCash={hasCash}
                       showCredits={hasCredits}
+                      showPos={hasPos}
                       showDiscount={hasDiscount}
                       rate={rate}
                     />

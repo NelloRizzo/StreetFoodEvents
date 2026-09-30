@@ -11,6 +11,7 @@ import {
     cashRequestStatusValues
 } from '../models/cash-request.model';
 import { EventModel } from '../models/event.model';
+import { PromotionUsageModel } from '../models/promotion.model';
 import { OrderModel } from '../models/order.model';
 import { StandModel } from '../models/stand.model';
 import { StandSettlementModel } from '../models/stand-settlement.model';
@@ -74,6 +75,65 @@ async function loadOpenerNames(cashRegisters: Array<{ openedByUserId?: Types.Obj
     );
 }
 
+type RealByMethodRow = {
+    _id: { type: string; method: string | null };
+    real: number;
+    count: number;
+};
+
+/**
+ * Aggrega gli importi reali (EUR) di top-up/refund separando contanti e POS.
+ * I record legacy non hanno `paymentMethod`: finiscono nel bucket `method: null`,
+ * che va trattato come 'cash' (mai `$eq: 'cash'` nelle query, usare `$ne: 'pos'`).
+ */
+function realByMethodPipeline(match: Record<string, unknown>) {
+    return [
+        { $match: match },
+        {
+            $group: {
+                _id: { type: '$type', method: '$paymentMethod' },
+                real: { $sum: '$realAmount' },
+                count: { $sum: 1 }
+            }
+        }
+    ];
+}
+
+function extractRealSplit(rows: RealByMethodRow[]) {
+    let topUpCash = 0, topUpPos = 0, topUpCount = 0, topUpPosCount = 0;
+    let refundCash = 0, refundPos = 0, refundCount = 0, refundPosCount = 0;
+
+    for (const row of rows) {
+        const real = row.real ?? 0;
+        const count = row.count ?? 0;
+        const isPos = row._id.method === 'pos';
+
+        if (row._id.type === 'top-up') {
+            topUpCount += count;
+            if (isPos) { topUpPos += real; topUpPosCount += count; }
+            else { topUpCash += real; }
+        } else if (row._id.type === 'refund') {
+            refundCount += count;
+            if (isPos) { refundPos += real; refundPosCount += count; }
+            else { refundCash += real; }
+        }
+    }
+
+    return { topUpCash, topUpPos, topUpCount, topUpPosCount, refundCash, refundPos, refundCount, refundPosCount };
+}
+
+const roundEuro = (n: number) => Math.round((n || 0) * 100) / 100;
+
+/**
+ * Normalizza il metodo di pagamento reale di top-up/refund.
+ * `undefined`/null → 'cash' (default), valore non valido → null (400 al chiamante).
+ */
+function parsePaymentMethod(value: unknown): 'cash' | 'pos' | null {
+    if (value === undefined || value === null || value === '') return 'cash';
+    if (value === 'cash' || value === 'pos') return value;
+    return null;
+}
+
 function toTransactionResponse(t: {
     _id: Types.ObjectId;
     eventUserId: Types.ObjectId;
@@ -83,6 +143,7 @@ function toTransactionResponse(t: {
     direction: string;
     amount: number;
     realAmount?: number | null;
+    paymentMethod?: string | null;
     balanceAfter: number;
     description?: string | null;
     performedByUserId?: Types.ObjectId | null;
@@ -101,6 +162,7 @@ function toTransactionResponse(t: {
         direction: t.direction,
         amount: t.amount,
         realAmount: t.realAmount ?? null,
+        paymentMethod: t.paymentMethod ?? 'cash',
         balanceAfter: t.balanceAfter,
         description: t.description ?? null,
         performedByUserId: t.performedByUserId?.toString() ?? null,
@@ -268,12 +330,10 @@ async function getBalance(req: Request, res: Response) {
         }
     }
 
-    const topUpReal = await EventUserTransactionModel.aggregate([
-        { $match: allTimeMatch },
-        { $group: { _id: '$type', real: { $sum: '$realAmount' } } }
-    ]);
-    const topUpRealEuro = topUpReal.find((r) => r._id === 'top-up')?.real ?? 0;
-    const refundRealEuro = topUpReal.find((r) => r._id === 'refund')?.real ?? 0;
+    const realSplitRows = await EventUserTransactionModel.aggregate(realByMethodPipeline(allTimeMatch));
+    const realSplit = extractRealSplit(realSplitRows);
+    const topUpRealCash = realSplit.topUpCash;
+    const refundRealCash = realSplit.refundCash;
 
     return res.status(200).json({
         totalTopUp: all.topUp,
@@ -281,8 +341,15 @@ async function getBalance(req: Request, res: Response) {
         netBalance: all.topUp - all.refund,
         topUpCount: all.topUpCount,
         refundCount: all.refundCount,
-        totalTopUpReal: Math.round(topUpRealEuro * 100) / 100,
-        totalRefundReal: Math.round(refundRealEuro * 100) / 100,
+        totalTopUpReal: roundEuro(realSplit.topUpCash + realSplit.topUpPos),
+        totalRefundReal: roundEuro(realSplit.refundCash + realSplit.refundPos),
+        totalTopUpRealCash: roundEuro(realSplit.topUpCash),
+        totalRefundRealCash: roundEuro(realSplit.refundCash),
+        totalTopUpRealPos: roundEuro(realSplit.topUpPos),
+        totalRefundRealPos: roundEuro(realSplit.refundPos),
+        totalPosNetReal: roundEuro(realSplit.topUpPos - realSplit.refundPos),
+        topUpPosCount: realSplit.topUpPosCount,
+        refundPosCount: realSplit.refundPosCount,
         myTopUp: my.topUp,
         myRefund: my.refund,
         myNetBalance: my.topUp - my.refund,
@@ -304,7 +371,7 @@ async function getBalance(req: Request, res: Response) {
             setAt: floatSetAt ?? event.updatedAt ?? null
         },
         euroContent:
-            Math.round((floatEuro + topUpRealEuro - refundRealEuro + euroIn - euroOut) * 100) / 100,
+            roundEuro(floatEuro + topUpRealCash - refundRealCash + euroIn - euroOut),
         creditsContent:
             Math.round((floatCredits - all.topUp + all.refund + creditsIn - creditsOut) * 100) / 100,
         cashMovements: {
@@ -544,6 +611,12 @@ async function topUp(req: Request, res: Response) {
         description?: unknown;
     };
 
+    const paymentMethod = parsePaymentMethod(req.body.paymentMethod);
+
+    if (paymentMethod === null) {
+        return res.status(400).json({ message: 'paymentMethod must be cash or pos' });
+    }
+
     if (typeof eventUserId !== 'string' || !isValidObjectId(eventUserId)) {
         return res.status(400).json({ message: 'Valid eventUserId is required' });
     }
@@ -585,7 +658,12 @@ async function topUp(req: Request, res: Response) {
             direction: 'credit',
             amount: creditAmount,
             realAmount: amount,
-            description: typeof description === 'string' && description.trim() ? description.trim() : 'Cambio: carica crediti (reale → virtuale)',
+            paymentMethod,
+            description: typeof description === 'string' && description.trim()
+                ? description.trim()
+                : paymentMethod === 'pos'
+                    ? 'Cambio: carica crediti con POS (reale → virtuale)'
+                    : 'Cambio: carica crediti (reale → virtuale)',
             performedByUserId: req.user!.id,
             cashRegisterId,
             referenceType: 'cambio',
@@ -614,6 +692,12 @@ async function refund(req: Request, res: Response) {
         amount?: unknown;
         description?: unknown;
     };
+
+    const paymentMethod = parsePaymentMethod(req.body.paymentMethod);
+
+    if (paymentMethod === null) {
+        return res.status(400).json({ message: 'paymentMethod must be cash or pos' });
+    }
 
     if (typeof eventUserId !== 'string' || !isValidObjectId(eventUserId)) {
         return res.status(400).json({ message: 'Valid eventUserId is required' });
@@ -647,6 +731,17 @@ async function refund(req: Request, res: Response) {
     }
 
     const exchangeRate = eventCtx.event.exchangeRate ?? 1;
+    const currencyName = eventCtx.event.currencyName;
+
+    /* L'importo del rimborso e' in moneta evento (crediti), non in euro: se il
+     * cassiere digita gli euro sbaglia sempre il saldo. Rispondiamo subito con
+     * entrambi i numeri invece di far fallire la transazione piu' a valle. */
+    if (amount > eventUser.balance) {
+        return res.status(400).json({
+            message: `Saldo insufficiente: il cliente ha ${eventUser.balance} ${currencyName}, ne hai chiesti ${amount} ${currencyName} (${roundEuro(amount / exchangeRate)} €).`
+        });
+    }
+
     const realAmount = Math.round(amount / exchangeRate * 100) / 100;
 
     try {
@@ -656,7 +751,12 @@ async function refund(req: Request, res: Response) {
             direction: 'debit',
             amount,
             realAmount,
-            description: typeof description === 'string' && description.trim() ? description.trim() : 'Cambio: rimborso crediti (virtuale → reale)',
+            paymentMethod,
+            description: typeof description === 'string' && description.trim()
+                ? description.trim()
+                : paymentMethod === 'pos'
+                    ? 'Cambio: rimborso crediti con POS (virtuale → reale)'
+                    : 'Cambio: rimborso crediti (virtuale → reale)',
             performedByUserId: req.user!.id,
             cashRegisterId,
             referenceType: 'cambio',
@@ -1192,12 +1292,34 @@ async function createCashRegister(req: Request, res: Response) {
         }
     }
 
+    /* Le soglie di sicurezza appartengono alla POSTAZIONE, non alla singola
+     * cassa: chiudere e riaprire una cassa non deve spegnere l'invio automatico
+     * delle richieste alla master. La nuova cassa eredita le soglie dalla cassa
+     * che sta sostituendo, altrimenti dall'ultima cassa chiusa dell'evento. */
+    let inheritedLowThreshold: { euro: number | null; credits: number | null } | null =
+        closedDuplicate && closedDuplicate.lowThreshold
+            ? { euro: closedDuplicate.lowThreshold.euro ?? null, credits: closedDuplicate.lowThreshold.credits ?? null }
+            : null;
+    if (!inheritedLowThreshold) {
+        const lastClosed = await CashRegisterModel.findOne({
+            eventId: eventCtx.eventId,
+            status: 'closed'
+        }).sort({ closedAt: -1 });
+        if (lastClosed?.lowThreshold) {
+            inheritedLowThreshold = {
+                euro: lastClosed.lowThreshold.euro ?? null,
+                credits: lastClosed.lowThreshold.credits ?? null
+            };
+        }
+    }
+
     const cashRegister = await CashRegisterModel.create({
         eventId: eventCtx.eventId,
         name: cleanName,
         status: 'open',
         openedByUserId: req.user!.id,
-        openedAt: new Date()
+        openedAt: new Date(),
+        lowThreshold: inheritedLowThreshold ?? null
     });
 
     const openerMap = await loadOpenerNames([cashRegister]);
@@ -1303,6 +1425,49 @@ async function closeCashRegister(req: Request, res: Response) {
     return res.status(200).json({ item: toCashRegisterResponse(cashRegister) });
 }
 
+/* Azzeramento totale del banco cambio dell'evento: chiude ogni cassa, azzera
+ * i fondi e i portafogli e cancella FISICAMENTE lo storico delle transazioni
+ * (nessuno storico residuo). Usato dal pulsante "Azzera tutto" del Master Cambio. */
+async function resetAllCashRegisters(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const eventIdObj = new Types.ObjectId(eventCtx.eventId);
+    const now = new Date();
+
+    const closedRegisters = await CashRegisterModel.updateMany(
+        { eventId: eventIdObj },
+        {
+            $set: {
+                status: 'closed',
+                closedAt: now,
+                /* Il subdocumento puo' essere null: si imposta per intero,
+                 * un dotted path su { cashFloat: null } fallirebbe. */
+                cashFloat: { euro: 0, credits: 0, setAt: now }
+            }
+        }
+    );
+
+    const [transactions, movements, requests, usages, wallets] = await Promise.all([
+        EventUserTransactionModel.deleteMany({ eventId: eventIdObj }),
+        CashRegisterMovementModel.deleteMany({ eventId: eventIdObj }),
+        CashRequestModel.deleteMany({ eventId: eventIdObj }),
+        PromotionUsageModel.deleteMany({ eventId: eventIdObj }),
+        EventUserModel.updateMany({ eventId: eventIdObj }, { $set: { balance: 0 } })
+    ]);
+
+    return res.status(200).json({
+        closedRegisters: closedRegisters.modifiedCount ?? 0,
+        deletedTransactions: transactions.deletedCount ?? 0,
+        deletedMovements: movements.deletedCount ?? 0,
+        deletedRequests: requests.deletedCount ?? 0,
+        deletedPromotionUsages: usages.deletedCount ?? 0,
+        resetWallets: wallets.modifiedCount ?? 0,
+        resetAt: now.toISOString()
+    });
+}
+
+
 /* ------------------------------------------------------------------ *
  * Richieste dalle postazioni alla cassa master
  * ------------------------------------------------------------------ */
@@ -1328,6 +1493,8 @@ type CashRequestDoc = {
     deliveredEuro?: number | null;
     deliveredCredits?: number | null;
     cancelledAt?: Date | null;
+    confirmedAt?: Date | null;
+    confirmedByUserId?: Types.ObjectId | null;
 };
 
 function toCashRequestResponse(
@@ -1359,7 +1526,9 @@ function toCashRequestResponse(
         deliveredEuro: r.deliveredEuro ?? null,
         deliveredCredits: r.deliveredCredits ?? null,
         handledByName,
-        cancelledAt: r.cancelledAt ?? null
+        cancelledAt: r.cancelledAt ?? null,
+        confirmedAt: r.confirmedAt ?? null,
+        confirmedByUserId: r.confirmedByUserId?.toString() ?? null
     };
 }
 
@@ -1529,7 +1698,9 @@ async function createCashRequest(req: Request, res: Response) {
         eventId: eventCtx.eventId,
         cashRegisterId: cashRegister._id,
         kind,
-        status: { $in: ['pending', 'acknowledged'] }
+        /* 'delivered' resta bloccata finche' la postazione non conferma la
+         * ricezione: durante quel tempo non si duplica la richiesta. */
+        status: { $in: ['pending', 'acknowledged', 'delivered'] }
     }).sort({ requestedAt: -1 });
 
     if (existing) {
@@ -1600,14 +1771,45 @@ async function updateCashRequest(req: Request, res: Response) {
         return res.status(400).json({ message: 'Invalid status' });
     }
 
-    /* pending -> acknowledged -> delivered/cancelled. Una richiesta gia'
-     * consegnata o annullata e' immutabile. */
-    if (request.status === 'delivered' || request.status === 'cancelled') {
-        return res.status(400).json({
-            message: `Richiesta gia' ${request.status === 'delivered' ? 'consegnata' : 'annullata'}`
+    const currentStatus: string = request.status;
+
+    /* pending -> acknowledged -> delivered/cancelled, e la postazione chiude il
+     * ciclo con 'confirmed' dopo l'accettazione (o la consegna) della master. */
+    if (status === 'confirmed') {
+        if (currentStatus !== 'acknowledged' && currentStatus !== 'delivered') {
+            return res.status(400).json({
+                message: 'La postazione può confermare solo dopo l\'accettazione o la consegna della cassa master'
+            });
+        }
+
+        request.status = 'confirmed';
+        request.confirmedAt = new Date();
+        request.confirmedByUserId = new Types.ObjectId(req.user!.id);
+        await request.save();
+
+        const { registerMap, userMap } = await loadCashRequestNames([request as unknown as CashRequestDoc]);
+        return res.status(200).json({
+            item: toCashRequestResponse(
+                request as unknown as CashRequestDoc,
+                registerMap.get(request.cashRegisterId.toString()) ?? null,
+                userMap.get(request.requestedByUserId.toString()) ?? null,
+                userMap.get(req.user!.id) ?? null
+            )
         });
     }
-    if (status === 'acknowledged' && request.status !== 'pending') {
+
+    /* 'delivered', 'confirmed' e 'cancelled' sono immutabili. */
+    if (currentStatus === 'delivered' || currentStatus === 'cancelled' || currentStatus === 'confirmed') {
+        const labels: Record<string, string> = {
+            delivered: 'consegnata',
+            cancelled: 'annullata',
+            confirmed: 'gia\' confermata dalla postazione'
+        };
+        return res.status(400).json({
+            message: `Richiesta ${labels[currentStatus] ?? currentStatus}`
+        });
+    }
+    if (status === 'acknowledged' && currentStatus !== 'pending') {
         return res.status(400).json({ message: 'Richiesta non in attesa di presa in carico' });
     }
     if (status === 'pending') {
@@ -1760,10 +1962,7 @@ async function getCashRegisterStats(
             { $match: sinceMatch },
             { $group: { _id: '$type', total: { $sum: '$amount' }, count: { $sum: 1 } } }
         ]),
-        EventUserTransactionModel.aggregate([
-            { $match: allTimeMatch },
-            { $group: { _id: '$type', real: { $sum: '$realAmount' } } }
-        ]),
+        EventUserTransactionModel.aggregate(realByMethodPipeline(allTimeMatch)),
         CashRegisterMovementModel.aggregate([
             { $match: { eventId: eventIdObj, cashRegisterId } },
             { $group: { _id: { currency: '$currency', direction: '$direction' }, total: { $sum: '$amount' } } }
@@ -1781,8 +1980,9 @@ async function getCashRegisterStats(
 
     const all = extract(txRows);
     const sinceStats = extract(txSinceRows);
-    const topUpRealEuro = realRows.find((r) => r._id === 'top-up')?.real ?? 0;
-    const refundRealEuro = realRows.find((r) => r._id === 'refund')?.real ?? 0;
+    const split = extractRealSplit(realRows);
+    const topUpRealEuro = split.topUpCash + split.topUpPos;
+    const refundRealEuro = split.refundCash + split.refundPos;
 
     let euroIn = 0, euroOut = 0, creditsIn = 0, creditsOut = 0;
     for (const row of movementRows) {
@@ -1798,8 +1998,15 @@ async function getCashRegisterStats(
         refund: all.refund,
         topUpCount: all.topUpCount,
         refundCount: all.refundCount,
-        topUpReal: Math.round(topUpRealEuro * 100) / 100,
-        refundReal: Math.round(refundRealEuro * 100) / 100,
+        topUpReal: roundEuro(topUpRealEuro),
+        refundReal: roundEuro(refundRealEuro),
+        topUpRealCash: roundEuro(split.topUpCash),
+        refundRealCash: roundEuro(split.refundCash),
+        topUpRealPos: roundEuro(split.topUpPos),
+        refundRealPos: roundEuro(split.refundPos),
+        posNetReal: roundEuro(split.topUpPos - split.refundPos),
+        topUpPosCount: split.topUpPosCount,
+        refundPosCount: split.refundPosCount,
         sinceTopUpCount: sinceStats.topUpCount,
         sinceRefundCount: sinceStats.refundCount,
         euroIn,
@@ -1841,7 +2048,16 @@ async function getCashRegisterBalance(req: Request, res: Response) {
         refundCount: stats.refundCount,
         topUpReal: stats.topUpReal,
         refundReal: stats.refundReal,
-        euroContent: Math.round((float.euro + stats.topUpReal - stats.refundReal + stats.euroIn - stats.euroOut) * 100) / 100,
+        topUpRealCash: stats.topUpRealCash,
+        refundRealCash: stats.refundRealCash,
+        topUpRealPos: stats.topUpRealPos,
+        refundRealPos: stats.refundRealPos,
+        posNetReal: stats.posNetReal,
+        topUpPosCount: stats.topUpPosCount,
+        refundPosCount: stats.refundPosCount,
+        // Il contenuto fisico della cassa conta SOLO i contanti: un top-up con POS
+        // incassa sul terminale e non entra nel cassettone (idem il rimborso POS).
+        euroContent: roundEuro(float.euro + stats.topUpRealCash - stats.refundRealCash + stats.euroIn - stats.euroOut),
         creditsContent: Math.round((float.credits - stats.topUp + stats.refund + stats.creditsIn - stats.creditsOut) * 100) / 100,
         cashMovements: {
             euroIn: stats.euroIn,
@@ -1899,7 +2115,14 @@ async function getCashRegistersReport(req: Request, res: Response) {
             refundCount: stats.refundCount,
             topUpReal: round2(topUpReal),
             refundReal: round2(refundReal),
-            euroContent: round2(float.euro + topUpReal - refundReal + stats.euroIn - stats.euroOut),
+            topUpRealCash: round2(stats.topUpRealCash),
+            refundRealCash: round2(stats.refundRealCash),
+            topUpRealPos: round2(stats.topUpRealPos),
+            refundRealPos: round2(stats.refundRealPos),
+            posNetReal: round2(stats.posNetReal),
+            topUpPosCount: stats.topUpPosCount,
+            refundPosCount: stats.refundPosCount,
+            euroContent: round2(float.euro + stats.topUpRealCash - stats.refundRealCash + stats.euroIn - stats.euroOut),
             creditsContent: round2(float.credits - stats.topUp + stats.refund + stats.creditsIn - stats.creditsOut),
             sinceTopUpCount: stats.sinceTopUpCount,
             sinceRefundCount: stats.sinceRefundCount,
@@ -1914,6 +2137,13 @@ async function getCashRegistersReport(req: Request, res: Response) {
         floatCredits: round2(items.reduce((a, i) => a + i.cashFloat.credits, 0)),
         euroContent: round2(items.reduce((a, i) => a + i.euroContent, 0)),
         creditsContent: round2(items.reduce((a, i) => a + i.creditsContent, 0)),
+        topUpRealCash: round2(items.reduce((a, i) => a + i.topUpRealCash, 0)),
+        refundRealCash: round2(items.reduce((a, i) => a + i.refundRealCash, 0)),
+        topUpRealPos: round2(items.reduce((a, i) => a + i.topUpRealPos, 0)),
+        refundRealPos: round2(items.reduce((a, i) => a + i.refundRealPos, 0)),
+        posNetReal: round2(items.reduce((a, i) => a + i.posNetReal, 0)),
+        topUpPosCount: items.reduce((a, i) => a + i.topUpPosCount, 0),
+        refundPosCount: items.reduce((a, i) => a + i.refundPosCount, 0),
         sinceTotalCount: items.reduce((a, i) => a + i.sinceTotalCount, 0),
         sinceTopUpCount: items.reduce((a, i) => a + i.sinceTopUpCount, 0),
         sinceRefundCount: items.reduce((a, i) => a + i.sinceRefundCount, 0)
@@ -2027,6 +2257,7 @@ export const exchangeController = {
     createCashRegister,
     updateCashRegister,
     closeCashRegister,
+    resetAllCashRegisters,
     getCashRegisterBalance,
     getCashRegistersReport,
     listCashRequests,

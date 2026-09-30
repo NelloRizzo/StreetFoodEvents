@@ -35,6 +35,9 @@ exchangeRouter.patch('/:eventId/cash-registers/:cashRegisterId', asyncHandler(ha
 exchangeRouter.post('/:eventId/cash-registers/:cashRegisterId/close', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.closeCashRegister));
 exchangeRouter.get('/:eventId/cash-registers/:cashRegisterId/balance', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.getCashRegisterBalance));
 
+/* Azzeramento totale del banco cambio dell'evento (Master Cambio) */
+exchangeRouter.post('/:eventId/cash-registers/reset-all', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.resetAllCashRegisters));
+
 /* Richieste contanti/token dalle postazioni alla cassa master */
 exchangeRouter.get('/:eventId/cash-requests', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.listCashRequests));
 exchangeRouter.post('/:eventId/cash-requests', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.createCashRequest));

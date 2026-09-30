@@ -12,6 +12,14 @@ export const transactionTypeValues = [
 
 export const transactionDirectionValues = ['credit', 'debit'] as const;
 
+/**
+ * Come è stato incassato/restituito il denaro reale della transazione.
+ * 'cash' = contanti fisici, 'pos' = terminale carta.
+ * I record legacy non hanno il campo: le query POS devono usare `$eq: 'pos'`
+ * per il POS e `$ne: 'pos'` per i contanti (mai `$eq: 'cash'`).
+ */
+export const paymentMethodValues = ['cash', 'pos'] as const;
+
 const eventUserTransactionSchema = new Schema(
     {
         eventUserId: {
@@ -52,6 +60,11 @@ const eventUserTransactionSchema = new Schema(
             type: Number,
             default: null,
             min: 0
+        },
+        paymentMethod: {
+            type: String,
+            enum: paymentMethodValues,
+            default: 'cash'
         },
         balanceAfter: {
             type: Number,
@@ -106,6 +119,7 @@ eventUserTransactionSchema.index({ eventId: 1, userId: 1, occurredAt: -1 });
 export type EventUserTransaction = InferSchemaType<typeof eventUserTransactionSchema>;
 export type EventUserTransactionType = (typeof transactionTypeValues)[number];
 export type EventUserTransactionDirection = (typeof transactionDirectionValues)[number];
+export type PaymentMethod = (typeof paymentMethodValues)[number];
 
 export const EventUserTransactionModel = model(
     'EventUserTransaction',

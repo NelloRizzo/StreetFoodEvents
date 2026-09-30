@@ -5,41 +5,12 @@ import * as qrcode from 'qrcode';
 import { EventModel } from '../models/event.model';
 import { EventUserModel } from '../models/event-user.model';
 import { FavoriteModel } from '../models/favorite.model';
-import { RoleModel } from '../models/role.model';
-import { UserRoleModel } from '../models/user-role.model';
 import { sanitizeHtmlContent } from '../utils/html-sanitizer';
 import { computeEventFingerprint, markAdhesionFormStaleIfChanged } from '../services/adhesion-form.service';
+import { getEventAccess } from '../services/event-access.service';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
-}
-
-async function isEventManager(userId: string) {
-    const platformRoleIds = await RoleModel.find({ scope: 'platform' }).distinct('_id');
-    if (platformRoleIds.length > 0) {
-        const platformRole = await UserRoleModel.findOne({
-            userId,
-            roleId: { $in: platformRoleIds },
-            isActive: true
-        });
-        if (platformRole) {
-            return true;
-        }
-    }
-
-    const eventRoleIds = await RoleModel.find({ scope: 'event' }).distinct('_id');
-    if (eventRoleIds.length > 0) {
-        const eventRole = await UserRoleModel.findOne({
-            userId,
-            roleId: { $in: eventRoleIds },
-            isActive: true
-        });
-        if (eventRole) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 function generateGoogleMapsUrl(location: {
@@ -145,8 +116,23 @@ export async function listEvents(req: Request, res: Response) {
     // `?public=true`: surface pubbliche (home, menu Eventi navbar) — mostra SOLO eventi visibili,
     // anche se l'utente è un gestore (che altrove vede anche gli eventi nascosti).
     const forcePublic = req.query.public === 'true';
-    const canManage = req.user ? await isEventManager(req.user.id) : false;
-    const filter = !forcePublic && canManage ? {} : { isPublic: { $ne: false } };
+    const access = req.user ? await getEventAccess(req.user.id) : null;
+    const canManage = !!access && (access.isPlatform || access.hasEventRole || access.fromStandRoles.length > 0);
+
+    let filter: Record<string, unknown> = {};
+    if (forcePublic || !canManage) {
+        filter = { isPublic: { $ne: false } };
+    }
+
+    /* Un gestore NON deve vedere gli eventi su cui non ha ruoli: nemmeno se
+     * pubblici. La lista amministrativa e' ristretta agli eventi accessibili. */
+    if (!forcePublic && canManage && access && !access.isPlatform) {
+        const allowed = [...new Set([...access.fromEventRoles, ...access.fromStandRoles])];
+        if (allowed.length === 0) {
+            return res.status(200).json({ items: [] });
+        }
+        filter = { _id: { $in: allowed.map((id) => new Types.ObjectId(id)) } };
+    }
 
     // Le liste amministrative mostrano prima le edizioni più recenti (data decrescente);
     // le liste pubbliche (eventi in arrivo) restano ascendenti.

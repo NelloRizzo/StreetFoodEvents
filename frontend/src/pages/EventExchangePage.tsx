@@ -20,6 +20,9 @@ type ExchangeUser = {
   displayName: string | null
 }
 
+/** Come e' stato incassato l'importo reale: contanti (nel cassetto) o POS (carta). */
+type PaymentMethod = 'cash' | 'pos'
+
 type Transaction = {
   id: string
   eventUserId: string
@@ -29,6 +32,7 @@ type Transaction = {
   direction: string
   amount: number
   realAmount: number | null
+  paymentMethod: PaymentMethod
   balanceAfter: number
   description: string | null
   performedByUserId: string | null
@@ -44,6 +48,12 @@ type BalanceSummary = {
   refundCount: number
   totalTopUpReal: number
   totalRefundReal: number
+  /* Stessi totali reali ma solo incassati con POS. */
+  totalTopUpRealPos: number
+  totalRefundRealPos: number
+  totalPosNetReal: number
+  topUpPosCount: number
+  refundPosCount: number
   myTopUp: number
   myRefund: number
   myNetBalance: number
@@ -104,6 +114,12 @@ type CashRegisterBalance = {
   refundCount: number
   topUpReal: number
   refundReal: number
+  /* Importi reali incassati con POS: entrano nei report, non nel cassetto. */
+  topUpRealPos: number
+  refundRealPos: number
+  posNetReal: number
+  topUpPosCount: number
+  refundPosCount: number
   euroContent: number
   creditsContent: number
   cashMovements: { euroIn: number; euroOut: number; creditsIn: number; creditsOut: number }
@@ -124,7 +140,7 @@ type CashRequestItem = {
   isAutomatic: boolean
   contentEuro: number | null
   contentCredits: number | null
-  status: 'pending' | 'acknowledged' | 'delivered' | 'cancelled'
+  status: 'pending' | 'acknowledged' | 'delivered' | 'confirmed' | 'cancelled'
   requestedByName: string | null
   requestedAt: string
   acknowledgedAt: string | null
@@ -132,6 +148,7 @@ type CashRequestItem = {
   deliveredEuro: number | null
   deliveredCredits: number | null
   cancelledAt: string | null
+  confirmedAt: string | null
 }
 
 function kindLabel(kind: CashRequestKind): string {
@@ -196,6 +213,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   const [topUpDesc, setTopUpDesc] = useState('')
   const [refundAmount, setRefundAmount] = useState('')
   const [refundDesc, setRefundDesc] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [submitting, setSubmitting] = useState<'topup' | 'refund' | null>(null)
   const [guestName, setGuestName] = useState('')
   const [creatingGuest, setCreatingGuest] = useState(false)
@@ -301,6 +319,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   const [threshEuro, setThreshEuro] = useState('')
   const [threshCredits, setThreshCredits] = useState('')
   const [savingThresh, setSavingThresh] = useState(false)
+  const [showCashRequests, setShowCashRequests] = useState(true)
   const autoSentRef = useRef<Set<string>>(new Set())
 
   const fetchMyRequests = useCallback(async () => {
@@ -319,6 +338,18 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   }, [eventId, activeCassa])
 
   useEffect(() => { fetchMyRequests() }, [fetchMyRequests])
+
+  /* Polling della postazione: contenuto cassa e richieste aperte si
+   * aggiornano da soli, altrimenti un auto-invio sotto soglia (o un
+   * contenuto negativo) resterebbero invisibili fino al refresh manuale. */
+  useEffect(() => {
+    if (!activeCassa) return
+    const timer = window.setInterval(() => {
+      void fetchCassaBalance()
+      void fetchMyRequests()
+    }, 5000)
+    return () => window.clearInterval(timer)
+  }, [activeCassa, fetchCassaBalance, fetchMyRequests])
 
   /* Allinea i campi soglia alla cassa attiva (e li azzera cambiando cassa). */
   useEffect(() => {
@@ -411,10 +442,27 @@ const [showCashSetup, setShowCashSetup] = useState(false)
         bodyJson: { status: 'cancelled' }
       })
       setRequestNotice('Richiesta annullata.')
-      autoSentRef.current.delete(requestId)
+      /* NON si sblocca l'invio automatico: se il contenuto e' ancora sotto
+       * soglia l'auto-invio ripartirebbe subito e l'operatore non potrebbe
+       * mai chiudere la richiesta. Il kind si ri-arma solo quando il
+       * contenuto torna sopra soglia. */
       await fetchMyRequests()
     } catch (err) {
       setRequestNotice(err instanceof Error ? err.message : 'Annullamento non riuscito')
+    }
+  }
+
+  const handleConfirmRequest = async (requestId: string) => {
+    if (!eventId) return
+    try {
+      await apiRequest(`/exchange/${eventId}/cash-requests/${requestId}`, {
+        method: 'PATCH',
+        bodyJson: { status: 'confirmed' }
+      })
+      setRequestNotice('Ricezione confermata: la cassa master non ha piu\' nulla da fare.')
+      await fetchMyRequests()
+    } catch (err) {
+      setRequestNotice(err instanceof Error ? err.message : 'Conferma non riuscita')
     }
   }
 
@@ -423,11 +471,15 @@ const [showCashSetup, setShowCashSetup] = useState(false)
    * non esiste gia' una richiesta aperta di quel tipo, si manda da soli.
    * autoSentRef blocca i POST ripetuti a ogni poll; la soglia si ri-arma quando
    * il contenuto torna sopra, cosi' un eventuale shortfall si richiede al
-   * prossimo ricrossamento senza loop. */
+   * prossimo ricrossamento senza loop.
+   * Un contenuto NEGATIVO fa scattare la richiesta anche senza soglia
+   * impostata: la cassa e' in rosso e serve comunque un intervento master. */
   useEffect(() => {
     if (!activeCassa || !cassaBalance) return
     const openKinds = new Set(
-      myRequests.filter((r) => r.status === 'pending' || r.status === 'acknowledged').map((r) => r.kind)
+      myRequests
+        .filter((r) => r.status === 'pending' || r.status === 'acknowledged' || r.status === 'delivered')
+        .map((r) => r.kind)
     )
     const th = cassaBalance.lowThreshold
     const below: CashRequestKind[] = []
@@ -435,10 +487,14 @@ const [showCashSetup, setShowCashSetup] = useState(false)
     if (th?.euro !== null && th?.euro !== undefined) {
       if (cassaBalance.euroContent < th.euro) below.push('euro')
       else above.push('euro')
+    } else if (cassaBalance.euroContent < 0) {
+      below.push('euro')
     }
     if (th?.credits !== null && th?.credits !== undefined) {
       if (cassaBalance.creditsContent < th.credits) below.push('credits')
       else above.push('credits')
+    } else if (cassaBalance.creditsContent < 0) {
+      below.push('credits')
     }
     for (const kind of above) autoSentRef.current.delete(kind)
     for (const kind of below) {
@@ -448,7 +504,14 @@ const [showCashSetup, setShowCashSetup] = useState(false)
     }
   }, [activeCassa, cassaBalance, myRequests, sendRequest])
 
-  const openRequests = myRequests.filter((r) => r.status === 'pending' || r.status === 'acknowledged')
+  const openRequests = myRequests.filter(
+    (r) => r.status === 'pending' || r.status === 'acknowledged' || r.status === 'delivered'
+  )
+
+  /* Una richiesta aperta non deve mai restare nascosta: si riapre il pannello. */
+  useEffect(() => {
+    if (openRequests.length > 0) setShowCashRequests(true)
+  }, [openRequests.length])
 
   const activateCassa = (cassa: CashRegister) => {
     if (cassaStorageKey) localStorage.setItem(cassaStorageKey, cassa.id)
@@ -550,7 +613,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
     try {
       const res = await apiRequest<{ newBalance: number }>(`/exchange/${eventId}/top-up`, {
         method: 'POST',
-        bodyJson: { eventUserId: selectedUserId, amount, description: topUpDesc.trim() || undefined, cashRegisterId: activeCassa.id }
+        bodyJson: { eventUserId: selectedUserId, amount, description: topUpDesc.trim() || undefined, cashRegisterId: activeCassa.id, paymentMethod }
       })
       setSelUserBalance(res.newBalance)
       setTopUpAmount('')
@@ -576,7 +639,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
     try {
       const res = await apiRequest<{ newBalance: number }>(`/exchange/${eventId}/refund`, {
         method: 'POST',
-        bodyJson: { eventUserId: selectedUserId, amount, description: refundDesc.trim() || undefined, cashRegisterId: activeCassa.id }
+        bodyJson: { eventUserId: selectedUserId, amount, description: refundDesc.trim() || undefined, cashRegisterId: activeCassa.id, paymentMethod }
       })
       setSelUserBalance(res.newBalance)
       setRefundAmount('')
@@ -662,6 +725,8 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   const selectedUser = users.find((u) => u.id === selectedUserId)
   const rate = balance?.exchangeRate ?? 1
   const currencyName = balance?.currencyName ?? 'crediti'
+  /* Il rimborso si puo' fare solo entro il saldo del cliente. */
+  const refundOverBalance = !!refundAmount && parseFloat(refundAmount) > selUserBalance
 
   function fmt(v: number) { return v.toFixed(2) }
   function fmtEur(v: number) { return `€${v.toFixed(2)}` }
@@ -740,7 +805,8 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                     <div className={cambioStyles.statSub}>
                       Fondo: {fmtEur(cassaBalance.cashFloat?.euro ?? 0)}
                       {' · '}Movimenti: +{fmtEur(cassaBalance.cashMovements.euroIn)} / -{fmtEur(cassaBalance.cashMovements.euroOut)}
-                      {' · '}Top-up − Rimborso: {fmtEur(cassaBalance.topUpReal - cassaBalance.refundReal)}
+                      {' · '}Contanti − Rimborsi: {fmtEur(cassaBalance.topUpReal - cassaBalance.refundReal)}
+                      {cassaBalance.posNetReal !== 0 && ` · POS: ${fmtEur(cassaBalance.posNetReal)}`}
                     </div>
                   </div>
                   <div className={cambioStyles.statCard}>
@@ -757,11 +823,13 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 <button
                   type="button"
                   className={cambioStyles.exTextBtn}
-                  onClick={() => setShowCashSetup((v) => !v)}
+                  onClick={() => setShowCashRequests((v) => !v)}
                 >
-                  {showCashSetup ? '\u25BE Nascondi impostazioni cassa' : '\u25B8 Fondo cassa e movimenti'}
+                  {showCashRequests ? '\u25BE Nascondi richiesta alla cassa master' : '\u25B8 Richiesta alla cassa master'}
+                  {openRequests.length > 0 ? ` (${openRequests.length})` : ''}
                 </button>
 
+                {showCashRequests && (
                 <div className={cambioStyles.cassaRequest}>
                   <h3>Richiesta alla cassa master</h3>
                   <p className={cambioStyles.statSub}>
@@ -778,19 +846,36 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                             <strong>{kindLabel(r.kind)}</strong>
                             {r.amountEuro !== null && ` · ${fmtEur(r.amountEuro)}`}
                             {r.amountCredits !== null && ` · ${fmt(r.amountCredits)} ${currencyName}`}
+                            {r.status === 'delivered' && r.deliveredEuro !== null && ` · consegnati ${fmtEur(r.deliveredEuro)}`}
+                            {r.status === 'delivered' && r.deliveredCredits !== null && ` · ${fmt(r.deliveredCredits)} ${currencyName}`}
                             {' · '}
-                            {r.status === 'acknowledged' ? 'presa in carico' : 'in attesa'}
+                            {r.status === 'acknowledged'
+                              ? 'presa in carico dalla master'
+                              : r.status === 'delivered'
+                                ? 'consegnata, manca la tua conferma'
+                                : 'in attesa'}
                             {r.isAutomatic && ' · automatica'}
                             {' · '}
                             {new Date(r.requestedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                          <button
-                            type="button"
-                            className={cambioStyles.exTextBtn}
-                            onClick={() => void handleCancelRequest(r.id)}
-                          >
-                            Annulla
-                          </button>
+                          <span style={{ display: 'flex', gap: '0.75rem' }}>
+                            {r.status === 'delivered' && (
+                              <button
+                                type="button"
+                                className={cambioStyles.exTextBtn}
+                                onClick={() => void handleConfirmRequest(r.id)}
+                              >
+                                Confermo la ricezione
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className={cambioStyles.exTextBtn}
+                              onClick={() => void handleCancelRequest(r.id)}
+                            >
+                              Annulla
+                            </button>
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -901,7 +986,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                       </button>
                       <p className={cambioStyles.statSub}>
                         {cassaBalance.lowThreshold?.euro === null && cassaBalance.lowThreshold?.credits === null
-                          ? 'Invio automatico disattivato.'
+                          ? 'Invio automatico disattivato (ma un contenuto negativo chiede comunque aiuto).'
                           : `Richiesta automatica sotto ${cassaBalance.lowThreshold?.euro !== null ? fmtEur(cassaBalance.lowThreshold?.euro ?? 0) : ''}` +
                             `${cassaBalance.lowThreshold?.euro !== null && cassaBalance.lowThreshold?.credits !== null ? ' / ' : ''}` +
                             `${cassaBalance.lowThreshold?.credits !== null ? fmt(cassaBalance.lowThreshold?.credits ?? 0) : ''}`}
@@ -909,6 +994,15 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                     </div>
                   </div>
                 </div>
+                )}
+
+                <button
+                  type="button"
+                  className={cambioStyles.exTextBtn}
+                  onClick={() => setShowCashSetup((v) => !v)}
+                >
+                  {showCashSetup ? '\u25BE Nascondi fondo cassa e movimenti' : '\u25B8 Fondo cassa e movimenti'}
+                </button>
 
                 {showCashSetup && (
                   <div className={cambioStyles.formGrid}>
@@ -1105,6 +1199,18 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                     onChange={(e) => setTopUpAmount(e.target.value)}
                     disabled={!selectedUserId || !activeCassa || submitting === 'topup'} />
                 </label>
+                <label className={cambioStyles.field}>
+                  Incasso con
+                  <select
+                    className={cambioStyles.userSelect}
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                    disabled={!selectedUserId || !activeCassa || submitting === 'topup'}
+                  >
+                    <option value="cash">Contanti</option>
+                    <option value="pos">POS (carta)</option>
+                  </select>
+                </label>
                 {topUpAmount && parseFloat(topUpAmount) > 0 && (
                   <p className={cambioStyles.preview}>
                     ≈ {(parseFloat(topUpAmount) * rate).toFixed(2)} {currencyName}
@@ -1120,23 +1226,57 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                   disabled={!selectedUserId || !topUpAmount || !activeCassa || submitting === 'topup'}>
                   {submitting === 'topup' ? 'Caricamento...' : `Carica €`}
                 </button>
+                {paymentMethod === 'pos' && (
+                  <p className={cambioStyles.statSub}>
+                    Pagamento POS: l&apos;importo entra nei report ma NON nel contenuto fisico della cassa.
+                  </p>
+                )}
               </div>
             </section>
 
             <section>
               <h2 className={cambioStyles.exSectionTitle}>Rimborsa (Virtuale &rarr; Reale)</h2>
               <div className={cambioStyles.formCard}>
+                <p className={cambioStyles.statSub}>
+                  Saldo cliente: <strong>{fmt(selUserBalance)} {currencyName}</strong>
+                  {selectedUserId ? '' : ' · seleziona un cliente'}
+                </p>
                 <label className={cambioStyles.field}>
                   Importo {currencyName}
-                  <input type="number" min="0.01" step="0.01" value={refundAmount}
+                  <input type="number" min="0.01" max={selUserBalance} step="0.01" value={refundAmount}
                     onChange={(e) => setRefundAmount(e.target.value)}
                     disabled={!selectedUserId || !activeCassa || submitting === 'refund'} />
                 </label>
+                <button
+                  type="button"
+                  className={cambioStyles.exTextBtn}
+                  onClick={() => setRefundAmount(String(selUserBalance))}
+                  disabled={!selectedUserId || selUserBalance <= 0 || submitting === 'refund'}
+                >
+                  Rimborsa tutto il saldo
+                </button>
                 {refundAmount && parseFloat(refundAmount) > 0 && (
                   <p className={cambioStyles.preview}>
                     ≈ €{(parseFloat(refundAmount) / rate).toFixed(2)}
                   </p>
                 )}
+                {refundOverBalance && (
+                  <p className={cambioStyles.cassaLocked}>
+                    Importo superiore al saldo: massimo {fmt(selUserBalance)} {currencyName}.
+                  </p>
+                )}
+                <label className={cambioStyles.field}>
+                  Restituisci con
+                  <select
+                    className={cambioStyles.userSelect}
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                    disabled={!selectedUserId || !activeCassa || submitting === 'refund'}
+                  >
+                    <option value="cash">Contanti</option>
+                    <option value="pos">POS (carta)</option>
+                  </select>
+                </label>
                 <label className={cambioStyles.field}>
                   Note (opzionale)
                   <input type="text" value={refundDesc}
@@ -1144,7 +1284,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                     disabled={!selectedUserId || !activeCassa || submitting === 'refund'} />
                 </label>
                 <button className={cambioStyles.btnRefund} onClick={handleRefund}
-                  disabled={!selectedUserId || !refundAmount || !activeCassa || submitting === 'refund'}>
+                  disabled={!selectedUserId || !refundAmount || refundOverBalance || !activeCassa || submitting === 'refund'}>
                   {submitting === 'refund' ? 'Rimborso in corso...' : `Rimborsa ${currencyName}`}
                 </button>
               </div>
@@ -1178,6 +1318,9 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                           </td>
                           <td style={{ padding: '0.5rem' }}>
                             {tx.type === 'top-up' ? 'Carico' : 'Rimborso'}
+                            {tx.paymentMethod === 'pos' && (
+                              <span className={cambioStyles.eurValue}> · POS</span>
+                            )}
                           </td>
                           <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: tx.type === 'top-up' ? 'var(--color-green)' : 'var(--color-red)' }}>
                             {tx.type === 'top-up' ? '+' : '-'}{fmt(tx.amount)}

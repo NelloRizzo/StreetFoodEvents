@@ -167,7 +167,7 @@ describe('Integration: richieste alla cassa master', () => {
         expect(await CashRequestModel.countDocuments({ eventId: event._id })).toBe(2);
     });
 
-    it('dopo la consegna una nuova richiesta della stessa cassa torna a crearsi', async () => {
+    it('dopo la consegna la richiesta resta bloccata finche\' la postazione non conferma', async () => {
         app = createTestApp();
         const event = await createEvent();
         const { cookie } = await createExchangeAdmin();
@@ -182,12 +182,81 @@ describe('Integration: richieste alla cassa master', () => {
             .set('Cookie', cookie)
             .send({ status: 'delivered', deliveredEuro: 100 });
 
+        /* Consegnata ma non confermata: niente duplicati. */
+        const blocked = await request(app)
+            .post(`/api/exchange/${event._id}/cash-requests`)
+            .set('Cookie', cookie)
+            .send({ cashRegisterId: register._id.toString(), kind: 'euro' });
+        expect(blocked.status).toBe(200);
+        expect(blocked.body.duplicate).toBe(true);
+        expect(blocked.body.item.status).toBe('delivered');
+
+        const confirmed = await request(app)
+            .patch(`/api/exchange/${event._id}/cash-requests/${first.body.item.id}`)
+            .set('Cookie', cookie)
+            .send({ status: 'confirmed' });
+        expect(confirmed.status).toBe(200);
+        expect(confirmed.body.item.status).toBe('confirmed');
+        expect(confirmed.body.item.confirmedAt).toBeTruthy();
+        expect(confirmed.body.item.confirmedByUserId).toBeTruthy();
+
+        /* Chiuso il ciclo: la postazione puo' chiedere di nuovo. */
         const again = await request(app)
             .post(`/api/exchange/${event._id}/cash-requests`)
             .set('Cookie', cookie)
             .send({ cashRegisterId: register._id.toString(), kind: 'euro' });
         expect(again.status).toBe(201);
         expect(again.body.duplicate).toBe(false);
+    });
+
+    it('la postazione puo\' confermare dopo la presa in carico, prima della consegna', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const { cookie } = await createExchangeAdmin();
+        const register = await openRegister(event._id.toString());
+
+        const created = await request(app)
+            .post(`/api/exchange/${event._id}/cash-requests`)
+            .set('Cookie', cookie)
+            .send({ cashRegisterId: register._id.toString(), kind: 'credits', amountCredits: 40 });
+
+        await request(app)
+            .patch(`/api/exchange/${event._id}/cash-requests/${created.body.item.id}`)
+            .set('Cookie', cookie)
+            .send({ status: 'acknowledged' });
+
+        const confirmed = await request(app)
+            .patch(`/api/exchange/${event._id}/cash-requests/${created.body.item.id}`)
+            .set('Cookie', cookie)
+            .send({ status: 'confirmed' });
+        expect(confirmed.status).toBe(200);
+        expect(confirmed.body.item.status).toBe('confirmed');
+
+        /* 'confirmed' e' terminale. */
+        const twice = await request(app)
+            .patch(`/api/exchange/${event._id}/cash-requests/${created.body.item.id}`)
+            .set('Cookie', cookie)
+            .send({ status: 'confirmed' });
+        expect(twice.status).toBe(400);
+    });
+
+    it('una richiesta in attesa non puo\' essere confermata dalla postazione', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const { cookie } = await createExchangeAdmin();
+        const register = await openRegister(event._id.toString());
+
+        const created = await request(app)
+            .post(`/api/exchange/${event._id}/cash-requests`)
+            .set('Cookie', cookie)
+            .send({ cashRegisterId: register._id.toString(), kind: 'euro' });
+
+        const confirmed = await request(app)
+            .patch(`/api/exchange/${event._id}/cash-requests/${created.body.item.id}`)
+            .set('Cookie', cookie)
+            .send({ status: 'confirmed' });
+        expect(confirmed.status).toBe(400);
+        expect(confirmed.body.message).toMatch(/accettazione o la consegna/);
     });
 
     it('preso in carico e poi consegna: registra i movimenti in ingresso nella cassa', async () => {

@@ -19,6 +19,7 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
 import { EventModel } from '../../models/event.model';
 import { RoleModel } from '../../models/role.model';
 import { SessionModel } from '../../models/session.model';
+import { StandModel } from '../../models/stand.model';
 import { UserModel } from '../../models/user.model';
 import { UserRoleModel } from '../../models/user-role.model';
 import {
@@ -76,6 +77,16 @@ async function createRoleWithUser(
     });
 
     return { role, assignment };
+}
+
+async function createEvent(name: string) {
+    return EventModel.create({
+        name,
+        location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+        startDate: new Date('2026-06-01'),
+        endDate: new Date('2026-06-07'),
+        currencyName: 'TC'
+    });
 }
 
 describe('Integration: role-based access across controllers', () => {
@@ -233,5 +244,100 @@ describe('Integration: role-based access across controllers', () => {
         expect(res.status).toBe(200);
         expect(res.body.items).toHaveLength(1);
         expect(res.body.items[0].eventId.toString()).toBe(eventA._id.toString());
+    });
+
+    describe('event-admin: potere pieno sul proprio evento, nessun accesso agli altri', () => {
+        it('un event-admin puo\' usare le funzioni di cambio del proprio evento senza essere exchange-admin', async () => {
+            app = createTestApp();
+            const event = await createEvent('Sagra Mia');
+            const { user, sessionToken } = await createAuthSession();
+            await createRoleWithUser('event', 'event-admin', user._id.toString(), event._id.toString());
+
+            /* exchange-admin di norma: senza il superset sarebbe 403. */
+            const balance = await request(app)
+                .get(`/api/exchange/${event._id}/balance`)
+                .set('Cookie', `sid=${sessionToken}`);
+            expect(balance.status).toBe(200);
+
+            const registers = await request(app)
+                .get(`/api/exchange/${event._id}/cash-registers`)
+                .set('Cookie', `sid=${sessionToken}`);
+            expect(registers.status).toBe(200);
+
+            /* Stessa cosa su di un altro evento: resta negato. */
+            const other = await createEvent('Altra Sagra');
+            const forbidden = await request(app)
+                .get(`/api/exchange/${other._id}/balance`)
+                .set('Cookie', `sid=${sessionToken}`);
+            expect(forbidden.status).toBe(403);
+        });
+
+        it('la lista eventi restituisce solo gli eventi su cui l\'utente ha ruoli', async () => {
+            app = createTestApp();
+            const mine = await createEvent('Il Mio Evento');
+            await createEvent('Evento Di Un Altro');
+            const { user, sessionToken } = await createAuthSession();
+            await createRoleWithUser('event', 'event-admin', user._id.toString(), mine._id.toString());
+
+            const res = await request(app)
+                .get('/api/events')
+                .set('Cookie', `sid=${sessionToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.items).toHaveLength(1);
+            expect(res.body.items[0].id).toBe(mine._id.toString());
+        });
+
+        it('un utente senza ruoli non vede eventi pubblici nella lista amministrativa', async () => {
+            app = createTestApp();
+            await createEvent('Pubblico A');
+            await createEvent('Pubblico B');
+            const { sessionToken } = await createAuthSession();
+
+            const res = await request(app)
+                .get('/api/events')
+                .set('Cookie', `sid=${sessionToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.items).toHaveLength(2);
+        });
+
+        it('il platform-admin vede tutti gli eventi', async () => {
+            app = createTestApp();
+            await createEvent('Uno');
+            await createEvent('Due');
+            const { sessionToken } = await createAuthSession({ platformAdmin: true });
+
+            const res = await request(app)
+                .get('/api/events')
+                .set('Cookie', `sid=${sessionToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.items).toHaveLength(2);
+        });
+
+        it('lo stand-admin vede gli eventi dei propri stand', async () => {
+            app = createTestApp();
+            const event = await createEvent('Evento dello Stand');
+            const { user, sessionToken } = await createAuthSession();
+
+            const stand = await StandModel.create({
+                name: 'Stand Uno',
+                eventIds: [event._id]
+            });
+            await createRoleWithUser('stand', 'stand-admin', user._id.toString());
+            await UserRoleModel.updateOne(
+                { userId: user._id, eventId: { $exists: false } },
+                { $set: { standId: stand._id } }
+            );
+
+            const res = await request(app)
+                .get('/api/events')
+                .set('Cookie', `sid=${sessionToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.items).toHaveLength(1);
+            expect(res.body.items[0].id).toBe(event._id.toString());
+        });
     });
 });

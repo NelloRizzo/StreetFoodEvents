@@ -24,6 +24,8 @@ export type Order = {
   customerName: string | null
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
   isGift: boolean
+  /** Parte reale dell'ordine incassata con POS (carta) invece che in contanti. */
+  isPos?: boolean
   items: OrderItem[]
   total: number
   creditAmountUsed: number
@@ -58,6 +60,8 @@ export type CreateOrderInput = {
   }>
   paymentOnCreate?: boolean | { creditAmount: number }
   isGift?: boolean
+  /** Incassa la parte reale col POS invece che in contanti. */
+  isPos?: boolean
   promotionCode?: string
   notes?: string
 }
@@ -92,6 +96,8 @@ export type StandReport = {
     totalRevenue: number
     totalCreditRevenue: number
     cashRevenue: number
+    posRevenue: number
+    posOrders: number
     totalExternalRevenue: number
     totalRefunded: number
     discountAmount: number
@@ -111,6 +117,8 @@ export type EventReportStand = {
   giftOrders: number
   totalRevenue: number
   cashRevenue: number
+  posRevenue: number
+  posOrders: number
   creditRevenue: number
   discountAmount: number
   pendingOrders: number
@@ -138,6 +146,8 @@ export type EventReport = {
     giftOrders: number
     totalRevenue: number
     cashRevenue: number
+    posRevenue: number
+    posOrders: number
     creditRevenue: number
     discountAmount: number
     pendingOrders: number

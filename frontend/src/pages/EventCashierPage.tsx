@@ -83,6 +83,7 @@ export function EventCashierPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
   const [isDirectOrder, setIsDirectOrder] = useState(false)
   const [isGift, setIsGift] = useState(false)
+  const [isPos, setIsPos] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [payWithCredits, setPayWithCredits] = useState(false)
   const [creditAmount, setCreditAmount] = useState(0)
@@ -170,6 +171,7 @@ export function EventCashierPage() {
         setSelectedCustomerId('')
         setIsDirectOrder(false)
         setIsGift(false)
+        setIsPos(false)
         setPayWithCredits(false)
         setCreditAmount(0)
         loadGiftStats()
@@ -257,6 +259,7 @@ export function EventCashierPage() {
     setSelectedCustomerId('')
     setIsDirectOrder(false)
     setIsGift(false)
+    setIsPos(false)
     setPayWithCredits(false)
     setCreditAmount(0)
     setCoupon(null)
@@ -292,6 +295,7 @@ export function EventCashierPage() {
         paymentOnCreate: isGift ? undefined : { creditAmount: effectiveCredit },
         promotionCode: coupon && !isGift ? coupon.code : undefined,
         isGift,
+        isPos: !isGift && isPos,
       })
 
       await updateOrderStatus(response.item.id, 'preparing')
@@ -576,6 +580,10 @@ ${qrHtml}
                     <label className={styles.checkbox}>
                       <input type="checkbox" checked={payWithCredits} onChange={(e) => setPayWithCredits(e.target.checked)} />
                       Paga con crediti evento
+                    </label>
+                    <label className={styles.checkbox}>
+                      <input type="checkbox" checked={isPos} onChange={(e) => setIsPos(e.target.checked)} />
+                      Incassa col POS (carta)
                     </label>
                     {payWithCredits && total > 0 && (
                       <div className={styles.creditField}>

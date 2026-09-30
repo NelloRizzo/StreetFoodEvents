@@ -139,6 +139,56 @@ describe('Integration: cash registers (multi-cassa)', () => {
         expect(closed!.closedAt).not.toBeNull();
     });
 
+    it('la cassa riaperta eredita le soglie di sicurezza (chiudere/riaprire non spegne l\'invio automatico)', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const { cookie } = await createExchangeAdmin();
+
+        const first = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers`)
+            .set('Cookie', cookie)
+            .send({ name: 'Banco A' });
+        const firstId = first.body.item.id;
+
+        await request(app)
+            .patch(`/api/exchange/${event._id}/cash-registers/${firstId}`)
+            .set('Cookie', cookie)
+            .send({ lowThreshold: { euro: 50, credits: 20 } });
+
+        /* Forzo-chiusura + riapertura sulla stessa postazione. */
+        const forced = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers`)
+            .set('Cookie', cookie)
+            .send({ name: 'Banco A', force: true, cashRegisterToClose: firstId });
+        expect(forced.status).toBe(201);
+        expect(forced.body.item.lowThreshold).toEqual({ euro: 50, credits: 20 });
+
+        /* Chiusura normale e riapertura successiva: eredita l'ultima cassa chiusa. */
+        await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers/${forced.body.item.id}/close`)
+            .set('Cookie', cookie);
+        const reopened = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers`)
+            .set('Cookie', cookie)
+            .send({ name: 'Banco B' });
+        expect(reopened.status).toBe(201);
+        expect(reopened.body.item.lowThreshold).toEqual({ euro: 50, credits: 20 });
+
+        /* Se la posizione spegne le soglie, la nuova cassa parte senza soglie. */
+        await request(app)
+            .patch(`/api/exchange/${event._id}/cash-registers/${reopened.body.item.id}`)
+            .set('Cookie', cookie)
+            .send({ lowThreshold: { euro: null, credits: null } });
+        await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers/${reopened.body.item.id}/close`)
+            .set('Cookie', cookie);
+        const fresh = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers`)
+            .set('Cookie', cookie)
+            .send({ name: 'Banco C' });
+        expect(fresh.body.item.lowThreshold).toEqual({ euro: null, credits: null });
+    });
+
     it('renames a cassa and rejects collisions', async () => {
         app = createTestApp();
         const event = await createEvent();
@@ -317,6 +367,73 @@ describe('Integration: cash registers (multi-cassa)', () => {
             .get(`/api/exchange/${event._id}/cash-registers/report?from=${encodeURIComponent(future)}`)
             .set('Cookie', cookie);
         expect(reportBefore.body.items[0].sinceTopUpCount).toBe(0);
+    });
+
+    it('azzeramento totale: chiude tutte le casse e cancella fisicamente le transazioni', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const { cookie } = await createExchangeAdmin();
+        const wallet = await createAnonymousWallet(event._id.toString());
+
+        const a = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers`)
+            .set('Cookie', cookie)
+            .send({ name: 'Banco A' });
+        const b = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers`)
+            .set('Cookie', cookie)
+            .send({ name: 'Banco B' });
+
+        await request(app)
+            .post(`/api/exchange/${event._id}/top-up`)
+            .set('Cookie', cookie)
+            .send({ eventUserId: wallet._id.toString(), amount: 50, cashRegisterId: a.body.item.id });
+        await request(app)
+            .post(`/api/exchange/${event._id}/cash-float`)
+            .set('Cookie', cookie)
+            .send({ euro: 200, credits: 100, cashRegisterId: b.body.item.id });
+        await request(app)
+            .post(`/api/exchange/${event._id}/cash-movements`)
+            .set('Cookie', cookie)
+            .send({ currency: 'euro', direction: 'out', amount: 20, cashRegisterId: a.body.item.id });
+
+        const reset = await request(app)
+            .post(`/api/exchange/${event._id}/cash-registers/reset-all`)
+            .set('Cookie', cookie);
+        expect(reset.status).toBe(200);
+        expect(reset.body.deletedTransactions).toBe(1);
+        expect(reset.body.deletedMovements).toBe(1);
+
+        /* Nessuno storico residuo e saldi azzerati. */
+        expect(await EventUserTransactionModel.countDocuments({ eventId: event._id })).toBe(0);
+        expect(await CashRegisterMovementModel.countDocuments({ eventId: event._id })).toBe(0);
+        const reloadedWallet = await EventUserModel.findById(wallet._id);
+        expect(reloadedWallet!.balance).toBe(0);
+
+        /* Tutte le casse chiuse con fondo azzerato. */
+        const registers = await CashRegisterModel.find({ eventId: event._id });
+        expect(registers).toHaveLength(2);
+        for (const reg of registers) {
+            expect(reg.status).toBe('closed');
+            expect(reg.closedAt).not.toBeNull();
+            expect(reg.cashFloat?.euro ?? 0).toBe(0);
+            expect(reg.cashFloat?.credits ?? 0).toBe(0);
+        }
+
+        /* Un altro evento non viene toccato. */
+        const otherEvent = await createEvent();
+        const otherWallet = await createAnonymousWallet(otherEvent._id.toString());
+        await EventUserTransactionModel.create({
+            eventId: otherEvent._id,
+            eventUserId: otherWallet._id,
+            type: 'top-up',
+            direction: 'credit',
+            amount: 10,
+            realAmount: 5,
+            balanceAfter: 10
+        });
+        await request(app).post(`/api/exchange/${event._id}/cash-registers/reset-all`).set('Cookie', cookie);
+        expect(await EventUserTransactionModel.countDocuments({ eventId: otherEvent._id })).toBe(1);
     });
 
     it('legacy exchanges (without cashRegisterId) keep working', async () => {

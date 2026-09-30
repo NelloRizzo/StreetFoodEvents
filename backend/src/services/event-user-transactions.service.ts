@@ -3,7 +3,8 @@ import mongoose, { type ClientSession, type Types } from 'mongoose';
 import {
     EventUserTransactionModel,
     type EventUserTransactionDirection,
-    type EventUserTransactionType
+    type EventUserTransactionType,
+    type PaymentMethod
 } from '../models/event-user-transaction.model';
 import { EventUserModel } from '../models/event-user.model';
 
@@ -13,6 +14,7 @@ type CreateEventUserTransactionInput = {
     direction: EventUserTransactionDirection;
     amount: number;
     realAmount?: number | null;
+    paymentMethod?: PaymentMethod;
     description?: string | null;
     performedByUserId?: string | Types.ObjectId | null;
     cashRegisterId?: string | Types.ObjectId | null;
@@ -70,6 +72,7 @@ export async function createEventUserTransaction(input: CreateEventUserTransacti
             direction: input.direction,
             amount: input.amount,
             realAmount: input.realAmount ?? null,
+            paymentMethod: input.paymentMethod ?? 'cash',
             balanceAfter: nextBalance,
             description: input.description ?? null,
             performedByUserId: input.performedByUserId ?? null,

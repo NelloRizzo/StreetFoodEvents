@@ -41,6 +41,7 @@ function toOrderResponse(order: {
     customerName?: string | null;
     status: string;
     isGift: boolean;
+    isPos?: boolean | null;
     items: Array<{
         eventProductId: Types.ObjectId;
         productId: Types.ObjectId;
@@ -82,6 +83,7 @@ function toOrderResponse(order: {
         customerName: order.customerName ?? null,
         status: order.status,
         isGift: order.isGift,
+        isPos: order.isPos ?? false,
         items: order.items.map((item) => ({
             eventProductId: item.eventProductId.toString(),
             productId: item.productId.toString(),
@@ -540,6 +542,8 @@ export async function createOrder(req: Request, res: Response) {
 
     const { eventId, standId, customerId, customerName, items, paymentOnCreate, notes } = req.body;
     const isGift = req.body.isGift === true;
+    // Incasso della parte reale (total − creditAmountUsed) sul terminale POS invece che in contanti.
+    const isPos = req.body.isPos === true;
 
     if (!eventId || !isValidObjectId(eventId)) {
         return res.status(400).json({ message: 'Invalid or missing eventId' });
@@ -741,6 +745,7 @@ export async function createOrder(req: Request, res: Response) {
                     customerName: effectiveCustomerName,
                     status: isPaidOnCreate ? 'confirmed' : 'pending',
                     isGift,
+                    isPos: isPos && !isGift,
                     items: orderItems,
                     total: isGift ? 0 : total,
                     creditAmountUsed: isGift ? 0 : creditAmount,
@@ -1086,6 +1091,7 @@ export async function payOrder(req: Request, res: Response) {
         order.paymentStatus = 'paid';
         order.paidAt = new Date();
         order.creditAmountUsed = creditAmount;
+        order.isPos = req.body.isPos === true;
         order.paymentTransactionId = paymentTransactionId;
         order.performedByUserId = new Types.ObjectId(req.user.id);
 
@@ -1583,6 +1589,24 @@ export async function getEventReport(req: Request, res: Response) {
                         $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$creditAmountUsed', 0]
                     }
                 },
+                posRevenue: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $ne: ['$isGift', true] }, { $eq: ['$isPos', true] }] },
+                            { $subtract: ['$total', { $ifNull: ['$creditAmountUsed', 0] }] },
+                            0
+                        ]
+                    }
+                },
+                posOrders: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $ne: ['$isGift', true] }, { $eq: ['$isPos', true] }] },
+                            1,
+                            0
+                        ]
+                    }
+                },
                 discountAmount: {
                     $sum: {
                         $cond: [
@@ -1653,12 +1677,15 @@ export async function getEventReport(req: Request, res: Response) {
         paidOrders: row.paidOrders,
         giftOrders: row.giftOrders,
         totalRevenue: row.totalRevenue,
-        cashRevenue: row.totalRevenue - row.creditRevenue,
+        // Gli incassi reali si dividono: contanti + POS (i crediti restano creditRevenue).
+        posRevenue: row.posRevenue,
+        cashRevenue: row.totalRevenue - row.creditRevenue - row.posRevenue,
         creditRevenue: row.creditRevenue,
         discountAmount: row.discountAmount,
         pendingOrders: row.pendingOrders,
         pendingAmount: row.pendingAmount,
         refundedAmount: row.refundedAmount,
+        posOrders: row.posOrders,
         paymentMethods: {
             cash: row.cashPaymentOrders,
             credits: row.creditPaymentOrders,
@@ -1671,23 +1698,27 @@ export async function getEventReport(req: Request, res: Response) {
         paidOrders: acc.paidOrders + s.paidOrders,
         giftOrders: acc.giftOrders + s.giftOrders,
         totalRevenue: acc.totalRevenue + s.totalRevenue,
+        posRevenue: acc.posRevenue + s.posRevenue,
         cashRevenue: acc.cashRevenue + s.cashRevenue,
         creditRevenue: acc.creditRevenue + s.creditRevenue,
         discountAmount: acc.discountAmount + s.discountAmount,
         pendingOrders: acc.pendingOrders + s.pendingOrders,
         pendingAmount: acc.pendingAmount + s.pendingAmount,
-        refundedAmount: acc.refundedAmount + s.refundedAmount
+        refundedAmount: acc.refundedAmount + s.refundedAmount,
+        posOrders: acc.posOrders + s.posOrders
     }), {
         totalOrders: 0,
         paidOrders: 0,
         giftOrders: 0,
         totalRevenue: 0,
+        posRevenue: 0,
         cashRevenue: 0,
         creditRevenue: 0,
         discountAmount: 0,
         pendingOrders: 0,
         pendingAmount: 0,
-        refundedAmount: 0
+        refundedAmount: 0,
+        posOrders: 0
     });
 
     const couponOrderAgg = await OrderModel.aggregate([
@@ -1847,6 +1878,24 @@ export async function getStandReport(req: Request, res: Response) {
                         ]
                     }
                 },
+                posRevenue: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $ne: ['$isGift', true] }, { $eq: ['$isPos', true] }] },
+                            { $subtract: ['$total', { $ifNull: ['$creditAmountUsed', 0] }] },
+                            0
+                        ]
+                    }
+                },
+                posOrders: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $ne: ['$isGift', true] }, { $eq: ['$isPos', true] }] },
+                            1,
+                            0
+                        ]
+                    }
+                },
                 discountAmount: {
                     $sum: {
                         $cond: [
@@ -1961,8 +2010,13 @@ export async function getStandReport(req: Request, res: Response) {
             giftProducts: giftItemsAgg?.giftProducts ?? 0,
             totalRevenue: summary?.totalRevenue ?? 0,
             totalCreditRevenue: summary?.totalCreditRevenue ?? 0,
-            cashRevenue: (summary?.totalRevenue ?? 0) - (summary?.totalCreditRevenue ?? 0),
-            totalExternalRevenue: (summary?.totalRevenue ?? 0) - (summary?.totalCreditRevenue ?? 0),
+            // Incassi reali separati: solo contanti nel cassettone, POS sul terminale.
+            posRevenue: summary?.posRevenue ?? 0,
+            posOrders: summary?.posOrders ?? 0,
+            cashRevenue:
+                (summary?.totalRevenue ?? 0) - (summary?.totalCreditRevenue ?? 0) - (summary?.posRevenue ?? 0),
+            totalExternalRevenue:
+                (summary?.totalRevenue ?? 0) - (summary?.totalCreditRevenue ?? 0),
             totalRefunded: summary?.totalRefunded ?? 0,
             discountAmount: summary?.discountAmount ?? 0
         },
