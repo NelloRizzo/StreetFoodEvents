@@ -99,7 +99,17 @@ function fmtDateTime(iso: string | null): string {
   })
 }
 
-function CassaRow({ item, isTotal, onClose }: { item: ReportItem; isTotal?: boolean; onClose?: (item: ReportItem) => void }) {
+function CassaRow({
+  item,
+  isTotal,
+  onClose,
+  onResetFloat
+}: {
+  item: ReportItem;
+  isTotal?: boolean;
+  onClose?: (item: ReportItem) => void;
+  onResetFloat?: (item: ReportItem) => void;
+}) {
   return (
     <tr className={isTotal ? reportStyles.tableTotals : undefined}>
       <td className={styles.cassaName}>
@@ -125,10 +135,19 @@ function CassaRow({ item, isTotal, onClose }: { item: ReportItem; isTotal?: bool
         <span className={styles.sub}>{item.sinceTopUpCount} carichi / {item.sinceRefundCount} rimborsi</span>
       </td>
       <td className={styles.printHide}>
-        {!isTotal && item.status === 'open' && onClose ? (
-          <button className={styles.closeBtn} onClick={() => onClose(item)}>
-            Chiudi
-          </button>
+        {!isTotal && item.status === 'open' ? (
+          <div className={styles.cassaActions}>
+            {onResetFloat && (
+              <button className={styles.resetFloatBtn} onClick={() => onResetFloat(item)}>
+                Azzera
+              </button>
+            )}
+            {onClose && (
+              <button className={styles.closeBtn} onClick={() => onClose(item)}>
+                Chiudi
+              </button>
+            )}
+          </div>
         ) : (
           '—'
         )}
@@ -150,6 +169,11 @@ export function CashRegistersPage() {
 
   const [closeTarget, setCloseTarget] = useState<ReportItem | null>(null)
   const [closing, setClosing] = useState(false)
+  /* Azzeramento del FONDO di una singola cassa: porta a 0 la dotazione iniziale,
+   * senza toccare movimenti ne' transazioni (quindi il "contenuto" torna a
+   * valere solo quanto e' documentato da incassi, rimborsi e movimenti). */
+  const [resetFloatTarget, setResetFloatTarget] = useState<ReportItem | null>(null)
+  const [resettingFloat, setResettingFloat] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   /* Richieste dalle postazioni: la master le prende in carico e le consegna. */
@@ -257,6 +281,25 @@ export function CashRegistersPage() {
   }
 
   const { totals } = report
+
+  const handleResetFloat = async () => {
+    if (!eventId || !resetFloatTarget || resettingFloat) return
+    setResettingFloat(true)
+    try {
+      await apiRequest(`/exchange/${eventId}/cash-float`, {
+        method: 'POST',
+        bodyJson: { cashRegisterId: resetFloatTarget.id, euro: 0, credits: 0 }
+      })
+      setResetFloatTarget(null)
+      setErrorMsg(null)
+      await load(true)
+    } catch (err) {
+      setResetFloatTarget(null)
+      setErrorMsg((err as { message?: string }).message || 'Errore durante l’azzeramento del fondo cassa')
+    } finally {
+      setResettingFloat(false)
+    }
+  }
 
   const handleAckRequest = async (request: CashRequestItem) => {
     if (!eventId || busyRequest) return
@@ -531,7 +574,7 @@ export function CashRegistersPage() {
                   </thead>
                   <tbody>
                     {report.items.map((item) => (
-                      <CassaRow key={item.id} item={item} onClose={setCloseTarget} />
+                      <CassaRow key={item.id} item={item} onClose={setCloseTarget} onResetFloat={setResetFloatTarget} />
                     ))}
                     <CassaRow
                       isTotal
@@ -631,16 +674,34 @@ export function CashRegistersPage() {
       />
 
       <ConfirmModal
+        open={resetFloatTarget !== null}
+        variant="confirm"
+        danger
+        title="Azzera fondo cassa"
+        message={
+          resetFloatTarget
+            ? `Portare a zero il fondo della cassa "${resetFloatTarget.name}" (era ${fmtEur(resetFloatTarget.cashFloat.euro)} e ${resetFloatTarget.cashFloat.credits.toFixed(2)} ${report.currencyName})? `
+              + `Vengono azzerati solo i valori di fondo: movimenti di cassa, carichi e rimborsi restano intatti, `
+              + `quindi il «Contenuto» della cassa tornerà a valere solo quanto risulta da incassi, rimborsi e movimenti.`
+            : ''
+        }
+        confirmLabel="Azzera fondo"
+        onConfirm={() => void handleResetFloat()}
+        onCancel={() => setResetFloatTarget(null)}
+      />
+
+      <ConfirmModal
         open={resetAllOpen}
         variant="confirm"
         danger
         title="Azzera tutto il banco cambio"
         message={`Cosa verrà fatto, senza possibilità di annullare:
-- chiuse TUTTE le casse dell'evento (anche quelle aperte) e azzera i loro fondi;
+- elimina TUTTE le casse dell'evento, sia quelle aperte sia quelle già chiuse (con i loro fondi e il loro storico);
 - cancella fisicamente tutte le transazioni di cambio (carichi e rimborsi);
 - cancella i movimenti di cassa e le richieste delle postazioni;
 - azzera a zero tutti i portafogli clienti dell'evento.
 
+Dopo l'azzeramento le postazioni dovranno riaprire una cassa per poter operare.
 Restano invece invariati ordini e liquidazioni stand.`}
         confirmLabel="Azzera tutto"
         onConfirm={() => void handleResetAll()}

@@ -85,11 +85,14 @@
 }
 
 .field {
-  input {
+  input,
+  select {
     width: 100%;
     padding: 0.5rem;
     font-size: 1rem;
-    margin-top: 0.25rem;
+    /* Spazio tra l'etichetta e il controllo: senza, le select ("Incasso con",
+     * "Restituisci con") restavano attaccate al testo della label. */
+    margin-top: 0.35rem;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-sm);
     background: #fff;
@@ -470,6 +473,25 @@
   h3 {
     margin-top: 0;
     color: #f6fbf8;
+  }
+}
+
+/* Nome cassa e bottone "Apri cassa" sulla stessa riga. */
+.cassaOpenRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+  }
+
+  button {
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
 }
 

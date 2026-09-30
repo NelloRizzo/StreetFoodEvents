@@ -11,6 +11,7 @@ vi.mock('@/services/email.service', () => ({
 
 import { CashRegisterModel } from '../../models/cash-register.model';
 import { CashRegisterMovementModel } from '../../models/cash-register-movement.model';
+import { CashRequestModel } from '../../models/cash-request.model';
 import { EventModel } from '../../models/event.model';
 import { EventUserModel } from '../../models/event-user.model';
 import { EventUserTransactionModel } from '../../models/event-user-transaction.model';
@@ -410,15 +411,10 @@ describe('Integration: cash registers (multi-cassa)', () => {
         const reloadedWallet = await EventUserModel.findById(wallet._id);
         expect(reloadedWallet!.balance).toBe(0);
 
-        /* Tutte le casse chiuse con fondo azzerato. */
-        const registers = await CashRegisterModel.find({ eventId: event._id });
-        expect(registers).toHaveLength(2);
-        for (const reg of registers) {
-            expect(reg.status).toBe('closed');
-            expect(reg.closedAt).not.toBeNull();
-            expect(reg.cashFloat?.euro ?? 0).toBe(0);
-            expect(reg.cashFloat?.credits ?? 0).toBe(0);
-        }
+        /* Le casse spariscono del tutto: aperte e chiuse, con i loro fondi. */
+        expect(reset.body.deletedRegisters).toBe(2);
+        expect(await CashRegisterModel.countDocuments({ eventId: event._id })).toBe(0);
+        expect(await CashRequestModel.countDocuments({ eventId: event._id })).toBe(0);
 
         /* Un altro evento non viene toccato. */
         const otherEvent = await createEvent();

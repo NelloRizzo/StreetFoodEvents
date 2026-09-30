@@ -143,6 +143,29 @@
   background: #f6dcd8;
 }
 
+/* Azioni per cassa: azzera il fondo + chiudi, affiancate. */
+.cassaActions {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.resetFloatBtn {
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid #b58105;
+  background: #fdf6e3;
+  color: #8a6103;
+  font-weight: 600;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.resetFloatBtn:hover {
+  background: #f8e9c4;
+}
+
 .error {
   margin: 0 0 1rem;
   padding: 0.6rem 1rem;

@@ -1435,20 +1435,11 @@ async function resetAllCashRegisters(req: Request, res: Response) {
     const eventIdObj = new Types.ObjectId(eventCtx.eventId);
     const now = new Date();
 
-    const closedRegisters = await CashRegisterModel.updateMany(
-        { eventId: eventIdObj },
-        {
-            $set: {
-                status: 'closed',
-                closedAt: now,
-                /* Il subdocumento puo' essere null: si imposta per intero,
-                 * un dotted path su { cashFloat: null } fallirebbe. */
-                cashFloat: { euro: 0, credits: 0, setAt: now }
-            }
-        }
-    );
-
-    const [transactions, movements, requests, usages, wallets] = await Promise.all([
+    /* Le casse NON vengono solo chiuse: l'azzeramento elimina anche il loro
+     * storico, quindi la lista di un evento azzerato riparte vuota e non
+     * resta una fila di casse "chiuse" con fondi a zero. */
+    const [registers, transactions, movements, requests, usages, wallets] = await Promise.all([
+        CashRegisterModel.deleteMany({ eventId: eventIdObj }),
         EventUserTransactionModel.deleteMany({ eventId: eventIdObj }),
         CashRegisterMovementModel.deleteMany({ eventId: eventIdObj }),
         CashRequestModel.deleteMany({ eventId: eventIdObj }),
@@ -1457,7 +1448,7 @@ async function resetAllCashRegisters(req: Request, res: Response) {
     ]);
 
     return res.status(200).json({
-        closedRegisters: closedRegisters.modifiedCount ?? 0,
+        deletedRegisters: registers.deletedCount ?? 0,
         deletedTransactions: transactions.deletedCount ?? 0,
         deletedMovements: movements.deletedCount ?? 0,
         deletedRequests: requests.deletedCount ?? 0,

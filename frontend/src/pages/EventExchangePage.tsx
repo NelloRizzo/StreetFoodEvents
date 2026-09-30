@@ -841,17 +841,19 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 </p>
                 <label className={cambioStyles.field}>
                   Nome cassa
-                  <input
-                    type="text"
-                    value={cassaName}
-                    onChange={(e) => setCassaName(e.target.value)}
-                    placeholder={`Cassa ${cashRegisters.length + 1} (automatico)`}
-                    disabled={openingCassa}
-                  />
+                  <div className={cambioStyles.cassaOpenRow}>
+                    <input
+                      type="text"
+                      value={cassaName}
+                      onChange={(e) => setCassaName(e.target.value)}
+                      placeholder={`Cassa ${cashRegisters.length + 1} (automatico)`}
+                      disabled={openingCassa}
+                    />
+                    <button className={cambioStyles.btnTopUp} onClick={handleOpenCassa} disabled={openingCassa}>
+                      {openingCassa ? 'Apertura...' : 'Apri cassa'}
+                    </button>
+                  </div>
                 </label>
-                <button className={cambioStyles.btnTopUp} onClick={handleOpenCassa} disabled={openingCassa}>
-                  {openingCassa ? 'Apertura...' : 'Apri cassa'}
-                </button>
                 {cassaNotice && <p className={cambioStyles.cassaNotice}>{cassaNotice}</p>}
               </div>
             )}
@@ -1098,6 +1100,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
             )}
           </section>
 
+          {activeCassa && (
           <section className={cambioStyles.section}>
             <h2 className={cambioStyles.exSectionTitle}>Operazioni verso i clienti</h2>
             <div className={cambioStyles.userRow}>
@@ -1142,12 +1145,12 @@ const [showCashSetup, setShowCashSetup] = useState(false)
             )}
 
             {!activeCassa && (
-            <p className={cambioStyles.cassaLocked}>
-              Nessuna cassa aperta: apri una cassa per eseguire carichi, rimborsi e movimenti.
-            </p>
-          )}
+              <p className={cambioStyles.cassaLocked}>
+                Nessuna cassa aperta: apri una cassa per eseguire carichi, rimborsi e movimenti.
+              </p>
+            )}
 
-          <div className={cambioStyles.formGrid}>
+            <div className={cambioStyles.formGrid}>
             <section>
               <h2 className={cambioStyles.exSectionTitle}>Carica (Reale &rarr; Virtuale)</h2>
               <div className={cambioStyles.formCard}>
@@ -1251,60 +1254,57 @@ const [showCashSetup, setShowCashSetup] = useState(false)
             </section>
           </div>
           </section>
+          )}
 
           <section className={cambioStyles.section}>
             <h2 className={cambioStyles.exSectionTitle}>Movimenti di cassa</h2>
-            {activeCassa && cassaBalance ? (
-              cashMovements.length === 0 ? (
-                <p className={cambioStyles.exEmpty}>Nessun movimento di cassa registrato.</p>
-              ) : (
-                <>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                          <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
-                          <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
-                          <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo</th>
-                          <th style={{ textAlign: 'left', padding: '0.5rem' }}>Note</th>
-                          <th style={{ textAlign: 'left', padding: '0.5rem' }}>Operatore</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cashMovements.map((cm) => (
-                          <tr key={cm.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                            <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
-                              {new Date(cm.occurredAt).toLocaleString('it-IT')}
-                            </td>
-                            <td style={{ padding: '0.5rem' }}>
-                              {cm.direction === 'in' ? 'Carico' : 'Prelievo'} {cm.currency === 'euro' ? '€' : currencyName}
-                            </td>
-                            <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: cm.direction === 'in' ? 'var(--color-green)' : 'var(--color-red)' }}>
-                              {cm.direction === 'in' ? '+' : '-'}{cm.currency === 'euro' ? fmtEur(cm.amount) : fmt(cm.amount)}
-                            </td>
-                            <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden' }}>{cm.description || '-'}</td>
-                            <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>{cm.performedByName || '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {cmTotalPages > 1 && (
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
-                      <button className={cambioStyles.exTextBtn} disabled={cmPage <= 1} onClick={() => setCmPage((p) => Math.max(1, p - 1))}>
-                        Precedente
-                      </button>
-                      <span style={{ padding: '0.25rem 0.5rem' }}>{cmPage} / {cmTotalPages}</span>
-                      <button className={cambioStyles.exTextBtn} disabled={cmPage >= cmTotalPages} onClick={() => setCmPage((p) => p + 1)}>
-                        Successivo
-                      </button>
-                    </div>
-                  )}
-                </>
-              )
+            {cashMovements.length === 0 ? (
+              <p className={cambioStyles.exEmpty}>Nessun movimento di cassa registrato.</p>
             ) : (
-              <p className={cambioStyles.exEmpty}>Apri una cassa per visualizzare i movimenti.</p>
+              <>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Data</th>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Tipo</th>
+                        <th style={{ textAlign: 'right', padding: '0.5rem' }}>Importo</th>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Note</th>
+                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Operatore</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cashMovements.map((cm) => (
+                        <tr key={cm.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                          <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
+                            {new Date(cm.occurredAt).toLocaleString('it-IT')}
+                          </td>
+                          <td style={{ padding: '0.5rem' }}>
+                            {cm.direction === 'in' ? 'Carico' : 'Prelievo'} {cm.currency === 'euro' ? '€' : currencyName}
+                          </td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600, color: cm.direction === 'in' ? 'var(--color-green)' : 'var(--color-red)' }}>
+                            {cm.direction === 'in' ? '+' : '-'}{cm.currency === 'euro' ? fmtEur(cm.amount) : fmt(cm.amount)}
+                          </td>
+                          <td style={{ padding: '0.5rem', maxWidth: '200px', overflow: 'hidden' }}>{cm.description || '-'}</td>
+                          <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>{cm.performedByName || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {cmTotalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                    <button className={cambioStyles.exTextBtn} disabled={cmPage <= 1} onClick={() => setCmPage((p) => Math.max(1, p - 1))}>
+                      Precedente
+                    </button>
+                    <span style={{ padding: '0.25rem 0.5rem' }}>{cmPage} / {cmTotalPages}</span>
+                    <button className={cambioStyles.exTextBtn} disabled={cmPage >= cmTotalPages} onClick={() => setCmPage((p) => p + 1)}>
+                      Successivo
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </section>
 
