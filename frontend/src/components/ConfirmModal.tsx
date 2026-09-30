@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import styles from './ConfirmModal.module.scss'
 
 type Props = {
@@ -13,6 +13,10 @@ type Props = {
   danger?: boolean
   showConsent?: boolean
   consentLabel?: string
+  /** Contenuto extra sopra i pulsanti (es. campi di input della consegna). */
+  children?: ReactNode
+  /** Disabilita il pulsante di conferma (input obbligatori non ancora valorizzati). */
+  confirmDisabled?: boolean
 }
 
 export function ConfirmModal({
@@ -27,6 +31,8 @@ export function ConfirmModal({
   danger = false,
   showConsent = false,
   consentLabel = '',
+  children,
+  confirmDisabled = false,
 }: Props) {
   const [promptValue, setPromptValue] = useState('')
   const [consentGiven, setConsentGiven] = useState(false)
@@ -71,6 +77,7 @@ export function ConfirmModal({
             {consentLabel}
           </label>
         )}
+        {children}
         <div className={styles.actions}>
           {variant !== 'alert' && (
             <button className={styles.cancelBtn} onClick={onCancel}>
@@ -81,6 +88,7 @@ export function ConfirmModal({
             className={`${styles.confirmBtn} ${danger ? styles.dangerBtn : ''}`}
             onClick={() => onConfirm?.(variant === 'prompt' ? promptValue : undefined, variant === 'prompt' ? consentGiven : undefined)}
             autoFocus={variant !== 'prompt'}
+            disabled={confirmDisabled}
           >
             {confirmLabel}
           </button>

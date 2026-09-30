@@ -4,7 +4,7 @@
 Nessun fix
 
 ## Prossime Implementazioni
-- Da una cassa può essere inviato un messaggio verso la cassa master dell'evento per la richiesta di contanti (euro) o di token (o di entrambi) attraverso la pressione di un pulsante adeguato (no panic button). Lo stesso messaggio può essere automatico nel caso in cui i contanti o i token sono sotto una determinata soglia di sicurezza.
+- ~~Da una cassa può essere inviato un messaggio verso la cassa master dell'evento per la richiesta di contanti (euro) o di token (o di entrambi)~~ — **FATTO (Sett 2026)**: modello `CashRequest` + API `/api/exchange/:eventId/cash-requests` (preso in carico → consegna, che registra il movimento in ingresso nella cassa ricevente), soglie `CashRegister.lowThreshold` con invio automatico sotto soglia, pulsante manuale nella pagina Cambio e sezione richieste nel Master Cambio. Vedi CHANGELOG Settembre 2026.
 - Registrazione dei pagamenti con POS e rendicontazione degli stessi. Sia nelle casse di cambio che nelle casse di stand deve essere possibile registrare i pagamenti con POS oltre che in contanti / token, quindi nelle casse di stand al pulsante "Crea ordine" aggiungiamo una flag se si tratta di POS, mentre nelle cassi di cambio aggiungiamo la stessa possibilità. I rendiconti andranno a registrare il totale dei pagamenti in contante e quello del pagamento in POS.
 
 ## Adesione Stand a Manifestazione

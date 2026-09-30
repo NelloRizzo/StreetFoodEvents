@@ -87,6 +87,7 @@ type CashRegister = {
   openedAt: string
   closedAt: string | null
   cashFloat: { euro: number; credits: number; setAt: string | null }
+  lowThreshold: { euro: number | null; credits: number | null }
 }
 
 type CashRegisterBalance = {
@@ -106,6 +107,37 @@ type CashRegisterBalance = {
   euroContent: number
   creditsContent: number
   cashMovements: { euroIn: number; euroOut: number; creditsIn: number; creditsOut: number }
+  lowThreshold: { euro: number | null; credits: number | null }
+}
+
+type CashRequestKind = 'euro' | 'credits' | 'both'
+
+type CashRequestItem = {
+  id: string
+  eventId: string
+  cashRegisterId: string
+  cashRegisterName: string | null
+  kind: CashRequestKind
+  amountEuro: number | null
+  amountCredits: number | null
+  note: string | null
+  isAutomatic: boolean
+  contentEuro: number | null
+  contentCredits: number | null
+  status: 'pending' | 'acknowledged' | 'delivered' | 'cancelled'
+  requestedByName: string | null
+  requestedAt: string
+  acknowledgedAt: string | null
+  deliveredAt: string | null
+  deliveredEuro: number | null
+  deliveredCredits: number | null
+  cancelledAt: string | null
+}
+
+function kindLabel(kind: CashRequestKind): string {
+  if (kind === 'euro') return 'Euro'
+  if (kind === 'credits') return 'Token'
+  return 'Euro + token'
 }
 
 function CurrencySymbol({ name }: { name: string }) {
@@ -256,6 +288,167 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   }, [eventId, activeCassa, cassaStorageKey])
 
   useEffect(() => { fetchCassaBalance() }, [fetchCassaBalance])
+
+  /* Richieste aperte della postazione attiva: servono al bottone "Richiedi"
+   * (per non spingere duplicati) e al controllo automatico sotto soglia. */
+  const [myRequests, setMyRequests] = useState<CashRequestItem[]>([])
+  const [reqKind, setReqKind] = useState<CashRequestKind>('both')
+  const [reqEuro, setReqEuro] = useState('')
+  const [reqCredits, setReqCredits] = useState('')
+  const [reqNote, setReqNote] = useState('')
+  const [sendingRequest, setSendingRequest] = useState(false)
+  const [requestNotice, setRequestNotice] = useState<string | null>(null)
+  const [threshEuro, setThreshEuro] = useState('')
+  const [threshCredits, setThreshCredits] = useState('')
+  const [savingThresh, setSavingThresh] = useState(false)
+  const autoSentRef = useRef<Set<string>>(new Set())
+
+  const fetchMyRequests = useCallback(async () => {
+    if (!eventId || !activeCassa) {
+      setMyRequests([])
+      return
+    }
+    try {
+      const res = await apiRequest<{ items: CashRequestItem[] }>(
+        `/exchange/${eventId}/cash-requests?cashRegisterId=${activeCassa.id}&limit=20`
+      )
+      setMyRequests(res.items)
+    } catch {
+      setMyRequests([])
+    }
+  }, [eventId, activeCassa])
+
+  useEffect(() => { fetchMyRequests() }, [fetchMyRequests])
+
+  /* Allinea i campi soglia alla cassa attiva (e li azzera cambiando cassa). */
+  useEffect(() => {
+    const th = activeCassa?.lowThreshold
+    setThreshEuro(th?.euro === null || th?.euro === undefined ? '' : String(th.euro))
+    setThreshCredits(th?.credits === null || th?.credits === undefined ? '' : String(th.credits))
+    autoSentRef.current = new Set()
+  }, [activeCassa])
+
+  const sendRequest = useCallback(
+    async (kind: CashRequestKind, automatic: boolean) => {
+      if (!eventId || !activeCassa) return
+      setSendingRequest(true)
+      try {
+        const res = await apiRequest<{ item: CashRequestItem; duplicate: boolean }>(
+          `/exchange/${eventId}/cash-requests`,
+          {
+            method: 'POST',
+            bodyJson: {
+              cashRegisterId: activeCassa.id,
+              kind,
+              /* L'invio automatico non porta con se' gli importi del form
+               * manuale: la master decide quanto servire. */
+              ...(!automatic && reqEuro !== '' && (kind === 'euro' || kind === 'both')
+                ? { amountEuro: parseFloat(reqEuro) }
+                : {}),
+              ...(!automatic && reqCredits !== '' && (kind === 'credits' || kind === 'both')
+                ? { amountCredits: parseFloat(reqCredits) }
+                : {}),
+              ...(!automatic && reqNote.trim() ? { note: reqNote.trim() } : {}),
+              isAutomatic: automatic,
+              contentEuro: cassaBalance?.euroContent ?? null,
+              contentCredits: cassaBalance?.creditsContent ?? null
+            }
+          }
+        )
+        if (res.duplicate) {
+          setRequestNotice('C\'è già una richiesta aperta di questo tipo: non ne ho creata un\'altra.')
+        } else {
+          setRequestNotice(
+            automatic
+              ? 'Richiesta inviata automaticamente alla cassa master (sotto soglia).'
+              : 'Richiesta inviata alla cassa master.'
+          )
+        }
+        setReqNote('')
+        await fetchMyRequests()
+      } catch (err) {
+        setRequestNotice(err instanceof Error ? err.message : 'Invio richiesta non riuscito')
+      } finally {
+        setSendingRequest(false)
+      }
+    },
+    [eventId, activeCassa, reqEuro, reqCredits, reqNote, cassaBalance, fetchMyRequests]
+  )
+
+  const handleSendRequest = () => { void sendRequest(reqKind, false) }
+
+  const handleSaveThresholds = async () => {
+    if (!eventId || !activeCassa) return
+    setSavingThresh(true)
+    try {
+      const res = await apiRequest<{ item: CashRegister }>(
+        `/exchange/${eventId}/cash-registers/${activeCassa.id}`,
+        {
+          method: 'PATCH',
+          bodyJson: {
+            lowThreshold: {
+              euro: threshEuro === '' ? null : parseFloat(threshEuro),
+              credits: threshCredits === '' ? null : parseFloat(threshCredits)
+            }
+          }
+        }
+      )
+      setActiveCassa(res.item)
+      setCassaBalance((prev) => (prev ? { ...prev, lowThreshold: res.item.lowThreshold } : prev))
+      setRequestNotice('Soglie di sicurezza salvate.')
+    } catch (err) {
+      setRequestNotice(err instanceof Error ? err.message : 'Salvataggio soglie non riuscito')
+    } finally {
+      setSavingThresh(false)
+    }
+  }
+
+  const handleCancelRequest = async (requestId: string) => {
+    if (!eventId) return
+    try {
+      await apiRequest(`/exchange/${eventId}/cash-requests/${requestId}`, {
+        method: 'PATCH',
+        bodyJson: { status: 'cancelled' }
+      })
+      setRequestNotice('Richiesta annullata.')
+      autoSentRef.current.delete(requestId)
+      await fetchMyRequests()
+    } catch (err) {
+      setRequestNotice(err instanceof Error ? err.message : 'Annullamento non riuscito')
+    }
+  }
+
+  /* --- Invio automatico sotto soglia ---------------------------------------
+   * Ad ogni refresh del balance, se il contenuto e' sceso sotto la soglia e
+   * non esiste gia' una richiesta aperta di quel tipo, si manda da soli.
+   * autoSentRef blocca i POST ripetuti a ogni poll; la soglia si ri-arma quando
+   * il contenuto torna sopra, cosi' un eventuale shortfall si richiede al
+   * prossimo ricrossamento senza loop. */
+  useEffect(() => {
+    if (!activeCassa || !cassaBalance) return
+    const openKinds = new Set(
+      myRequests.filter((r) => r.status === 'pending' || r.status === 'acknowledged').map((r) => r.kind)
+    )
+    const th = cassaBalance.lowThreshold
+    const below: CashRequestKind[] = []
+    const above: CashRequestKind[] = []
+    if (th?.euro !== null && th?.euro !== undefined) {
+      if (cassaBalance.euroContent < th.euro) below.push('euro')
+      else above.push('euro')
+    }
+    if (th?.credits !== null && th?.credits !== undefined) {
+      if (cassaBalance.creditsContent < th.credits) below.push('credits')
+      else above.push('credits')
+    }
+    for (const kind of above) autoSentRef.current.delete(kind)
+    for (const kind of below) {
+      if (openKinds.has(kind) || autoSentRef.current.has(kind)) continue
+      autoSentRef.current.add(kind)
+      void sendRequest(kind, true)
+    }
+  }, [activeCassa, cassaBalance, myRequests, sendRequest])
+
+  const openRequests = myRequests.filter((r) => r.status === 'pending' || r.status === 'acknowledged')
 
   const activateCassa = (cassa: CashRegister) => {
     if (cassaStorageKey) localStorage.setItem(cassaStorageKey, cassa.id)
@@ -568,6 +761,154 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 >
                   {showCashSetup ? '\u25BE Nascondi impostazioni cassa' : '\u25B8 Fondo cassa e movimenti'}
                 </button>
+
+                <div className={cambioStyles.cassaRequest}>
+                  <h3>Richiesta alla cassa master</h3>
+                  <p className={cambioStyles.statSub}>
+                    Serve contante o token? Invia la richiesta: la cassa master la prende in carico e la consegna
+                    versandola in questa cassa. Se il contenuto scende sotto la soglia di sicurezza la richiesta
+                    parte da sola.
+                  </p>
+
+                  {openRequests.length > 0 && (
+                    <ul className={cambioStyles.reqList}>
+                      {openRequests.map((r) => (
+                        <li key={r.id} className={cambioStyles.reqItem}>
+                          <span>
+                            <strong>{kindLabel(r.kind)}</strong>
+                            {r.amountEuro !== null && ` · ${fmtEur(r.amountEuro)}`}
+                            {r.amountCredits !== null && ` · ${fmt(r.amountCredits)} ${currencyName}`}
+                            {' · '}
+                            {r.status === 'acknowledged' ? 'presa in carico' : 'in attesa'}
+                            {r.isAutomatic && ' · automatica'}
+                            {' · '}
+                            {new Date(r.requestedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <button
+                            type="button"
+                            className={cambioStyles.exTextBtn}
+                            onClick={() => void handleCancelRequest(r.id)}
+                          >
+                            Annulla
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className={cambioStyles.formGrid}>
+                    <div className={cambioStyles.formCard}>
+                      <h3 style={{ marginTop: 0 }}>Richiedi</h3>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <label className={cambioStyles.field} style={{ flex: 1 }}>
+                          Cosa serve
+                          <select
+                            className={cambioStyles.userSelect}
+                            value={reqKind}
+                            onChange={(e) => setReqKind(e.target.value as CashRequestKind)}
+                          >
+                            <option value="both">Euro e token</option>
+                            <option value="euro">Solo euro</option>
+                            <option value="credits">Solo token</option>
+                          </select>
+                        </label>
+                        {reqKind !== 'credits' && (
+                          <label className={cambioStyles.field} style={{ flex: 1 }}>
+                            Importo euro (opz.)
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={reqEuro}
+                              onChange={(e) => setReqEuro(e.target.value)}
+                              placeholder="decidi la master"
+                            />
+                          </label>
+                        )}
+                        {reqKind !== 'euro' && (
+                          <label className={cambioStyles.field} style={{ flex: 1 }}>
+                            Importo {currencyName} (opz.)
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={reqCredits}
+                              onChange={(e) => setReqCredits(e.target.value)}
+                              placeholder="decidi la master"
+                            />
+                          </label>
+                        )}
+                      </div>
+                      <label className={cambioStyles.field}>
+                        Note (opzionale)
+                        <input
+                          type="text"
+                          value={reqNote}
+                          onChange={(e) => setReqNote(e.target.value)}
+                          placeholder="es. banco affollato"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className={cambioStyles.btnTopUp}
+                        onClick={handleSendRequest}
+                        disabled={sendingRequest || openRequests.some((r) => r.kind === reqKind)}
+                      >
+                        {sendingRequest
+                          ? 'Invio...'
+                          : openRequests.some((r) => r.kind === reqKind)
+                            ? 'Richiesta già aperta'
+                            : 'Richiedi alla master'}
+                      </button>
+                      {requestNotice && <p className={cambioStyles.statSub}>{requestNotice}</p>}
+                    </div>
+
+                    <div className={cambioStyles.formCard}>
+                      <h3 style={{ marginTop: 0 }}>Soglie di sicurezza</h3>
+                      <p className={cambioStyles.statSub}>
+                        Quando il contenuto scende sotto questi valori la richiesta parte automaticamente.
+                        Lascia vuoto per disattivare l&apos;invio automatico.
+                      </p>
+                      <label className={cambioStyles.field}>
+                        Soglia euro
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={threshEuro}
+                          onChange={(e) => setThreshEuro(e.target.value)}
+                          placeholder="nessuna"
+                        />
+                      </label>
+                      <label className={cambioStyles.field}>
+                        Soglia {currencyName}
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={threshCredits}
+                          onChange={(e) => setThreshCredits(e.target.value)}
+                          placeholder="nessuna"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className={cambioStyles.btnTopUp}
+                        onClick={() => void handleSaveThresholds()}
+                        disabled={savingThresh}
+                      >
+                        {savingThresh ? 'Salvataggio...' : 'Salva soglie'}
+                      </button>
+                      <p className={cambioStyles.statSub}>
+                        {cassaBalance.lowThreshold?.euro === null && cassaBalance.lowThreshold?.credits === null
+                          ? 'Invio automatico disattivato.'
+                          : `Richiesta automatica sotto ${cassaBalance.lowThreshold?.euro !== null ? fmtEur(cassaBalance.lowThreshold?.euro ?? 0) : ''}` +
+                            `${cassaBalance.lowThreshold?.euro !== null && cassaBalance.lowThreshold?.credits !== null ? ' / ' : ''}` +
+                            `${cassaBalance.lowThreshold?.credits !== null ? fmt(cassaBalance.lowThreshold?.credits ?? 0) : ''}`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 {showCashSetup && (
                   <div className={cambioStyles.formGrid}>

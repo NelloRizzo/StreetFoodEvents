@@ -31,6 +31,11 @@ exchangeRouter.post('/:eventId/cash-movements', asyncHandler(hasRole(['exchange-
 exchangeRouter.get('/:eventId/cash-registers', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.listCashRegisters));
 exchangeRouter.post('/:eventId/cash-registers', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.createCashRegister));
 exchangeRouter.get('/:eventId/cash-registers/report', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.getCashRegistersReport));
-exchangeRouter.patch('/:eventId/cash-registers/:cashRegisterId', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.renameCashRegister));
+exchangeRouter.patch('/:eventId/cash-registers/:cashRegisterId', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.updateCashRegister));
 exchangeRouter.post('/:eventId/cash-registers/:cashRegisterId/close', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.closeCashRegister));
 exchangeRouter.get('/:eventId/cash-registers/:cashRegisterId/balance', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.getCashRegisterBalance));
+
+/* Richieste contanti/token dalle postazioni alla cassa master */
+exchangeRouter.get('/:eventId/cash-requests', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.listCashRequests));
+exchangeRouter.post('/:eventId/cash-requests', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.createCashRequest));
+exchangeRouter.patch('/:eventId/cash-requests/:requestId', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.updateCashRequest));

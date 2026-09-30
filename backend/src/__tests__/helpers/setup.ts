@@ -24,6 +24,7 @@ const collectionsToClear = [
     'standsettlements',
     'cashregistermovements',
     'cashregisters',
+    'cashrequests',
     'pois',
     'usagecontracts',
     'contestpois',

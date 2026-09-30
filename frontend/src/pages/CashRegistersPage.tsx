@@ -55,6 +55,35 @@ type CashRegistersReport = {
   }
 }
 
+type CashRequestKind = 'euro' | 'credits' | 'both'
+
+type CashRequestItem = {
+  id: string
+  cashRegisterId: string
+  cashRegisterName: string | null
+  kind: CashRequestKind
+  amountEuro: number | null
+  amountCredits: number | null
+  note: string | null
+  isAutomatic: boolean
+  contentEuro: number | null
+  contentCredits: number | null
+  status: 'pending' | 'acknowledged' | 'delivered' | 'cancelled'
+  requestedByName: string | null
+  requestedAt: string
+  acknowledgedAt: string | null
+  deliveredAt: string | null
+  deliveredEuro: number | null
+  deliveredCredits: number | null
+  cancelledAt: string | null
+}
+
+function kindLabel(kind: CashRequestKind): string {
+  if (kind === 'euro') return 'Euro'
+  if (kind === 'credits') return 'Token'
+  return 'Euro + token'
+}
+
 function fmtEur(n: number) {
   return `€${n.toFixed(2)}`
 }
@@ -123,6 +152,25 @@ export function CashRegistersPage() {
   const [closing, setClosing] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  /* Richieste dalle postazioni: la master le prende in carico e le consegna. */
+  const [requests, setRequests] = useState<CashRequestItem[]>([])
+  const [busyRequest, setBusyRequest] = useState<string | null>(null)
+  const [deliverTarget, setDeliverTarget] = useState<CashRequestItem | null>(null)
+  const [deliverEuro, setDeliverEuro] = useState('')
+  const [deliverCredits, setDeliverCredits] = useState('')
+
+  const loadRequests = useCallback(async () => {
+    if (!eventId || !isAuthenticated) return
+    try {
+      const res = await apiRequest<{ items: CashRequestItem[] }>(
+        `/exchange/${eventId}/cash-requests?status=pending,acknowledged&limit=50`
+      )
+      setRequests(res.items)
+    } catch {
+      setRequests([])
+    }
+  }, [eventId, isAuthenticated])
+
   const load = useCallback(async (silent = false) => {
     if (!eventId || !isAuthenticated) return
     if (!silent) setIsLoading(true)
@@ -145,10 +193,18 @@ export function CashRegistersPage() {
 
   useEffect(() => { void load() }, [load])
 
+  useEffect(() => { void loadRequests() }, [loadRequests])
+
   useEffect(() => {
     const id = setInterval(() => { void load(true) }, 5000)
     return () => clearInterval(id)
   }, [load])
+
+  /* Polling 5s anche sulle richieste: sono l'urgenza operativa della master. */
+  useEffect(() => {
+    const id = setInterval(() => { void loadRequests() }, 5000)
+    return () => clearInterval(id)
+  }, [loadRequests])
 
   if (isLoading) return null
   if (forbidden) {
@@ -179,6 +235,68 @@ export function CashRegistersPage() {
   }
 
   const { totals } = report
+
+  const handleAckRequest = async (request: CashRequestItem) => {
+    if (!eventId || busyRequest) return
+    setBusyRequest(request.id)
+    setErrorMsg(null)
+    try {
+      await apiRequest(`/exchange/${eventId}/cash-requests/${request.id}`, {
+        method: 'PATCH',
+        bodyJson: { status: 'acknowledged' }
+      })
+      await loadRequests()
+    } catch (err) {
+      setErrorMsg((err as { message?: string }).message || 'Presa in carico non riuscita')
+    } finally {
+      setBusyRequest(null)
+    }
+  }
+
+  const openDeliver = (request: CashRequestItem) => {
+    setDeliverTarget(request)
+    setDeliverEuro(request.amountEuro !== null ? String(request.amountEuro) : '')
+    setDeliverCredits(request.amountCredits !== null ? String(request.amountCredits) : '')
+  }
+
+  const handleDeliverRequest = async () => {
+    if (!eventId || !deliverTarget || busyRequest) return
+    setBusyRequest(deliverTarget.id)
+    setErrorMsg(null)
+    try {
+      await apiRequest(`/exchange/${eventId}/cash-requests/${deliverTarget.id}`, {
+        method: 'PATCH',
+        bodyJson: {
+          status: 'delivered',
+          ...(deliverEuro !== '' ? { deliveredEuro: parseFloat(deliverEuro) } : {}),
+          ...(deliverCredits !== '' ? { deliveredCredits: parseFloat(deliverCredits) } : {})
+        }
+      })
+      setDeliverTarget(null)
+      await Promise.all([loadRequests(), load(true)])
+    } catch (err) {
+      setErrorMsg((err as { message?: string }).message || 'Consegna non riuscita')
+    } finally {
+      setBusyRequest(null)
+    }
+  }
+
+  const handleCancelRequest = async (request: CashRequestItem) => {
+    if (!eventId || busyRequest) return
+    setBusyRequest(request.id)
+    setErrorMsg(null)
+    try {
+      await apiRequest(`/exchange/${eventId}/cash-requests/${request.id}`, {
+        method: 'PATCH',
+        bodyJson: { status: 'cancelled' }
+      })
+      await loadRequests()
+    } catch (err) {
+      setErrorMsg((err as { message?: string }).message || 'Annullamento non riuscito')
+    } finally {
+      setBusyRequest(null)
+    }
+  }
 
   return (
     <div className={reportStyles.page}>
@@ -222,6 +340,97 @@ export function CashRegistersPage() {
             <button className={reportStyles.secondaryBtn} onClick={() => window.print()}>
               Stampa
             </button>
+          </div>
+        </div>
+
+        <div className={reportStyles.reportGrid}>
+          <div className={reportStyles.card}>
+            <div className={reportStyles.cardTitle}>
+              Richieste dalle postazioni
+              {requests.length > 0 && <span className={styles.reqBadge}>{requests.length}</span>}
+            </div>
+            {requests.length === 0 ? (
+              <p className={styles.empty}>Nessuna richiesta aperta dalle postazioni.</p>
+            ) : (
+              <div className={reportStyles.tableWrap}>
+                <table className={reportStyles.table}>
+                  <thead>
+                    <tr>
+                      <th>Postazione</th>
+                      <th>Serva</th>
+                      <th className={reportStyles.num}>Proposta</th>
+                      <th>Contenuto ora</th>
+                      <th>Stato</th>
+                      <th>Chiedente</th>
+                      <th className={styles.printHide}>Azioni</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {requests.map((r) => (
+                      <tr key={r.id}>
+                        <td>
+                          {r.cashRegisterName ?? '—'}
+                          {r.note && <span className={styles.sub}>{r.note}</span>}
+                        </td>
+                        <td>
+                          {kindLabel(r.kind)}
+                          {r.isAutomatic && <span className={styles.sub}>sotto soglia</span>}
+                        </td>
+                        <td className={reportStyles.num}>
+                          {r.amountEuro !== null ? fmtEur(r.amountEuro) : '—'}
+                          {r.amountCredits !== null ? ` / ${r.amountCredits.toFixed(0)} ${report.currencyName}` : ''}
+                        </td>
+                        <td className={reportStyles.num}>
+                          {r.contentEuro !== null ? fmtEur(r.contentEuro) : '—'}
+                          {r.contentCredits !== null ? ` / ${r.contentCredits.toFixed(0)}` : ''}
+                        </td>
+                        <td>
+                          <span className={`${styles.statusBadge} ${r.status === 'pending' ? styles.statusPending : styles.statusAck}`}>
+                            {r.status === 'pending' ? 'In attesa' : 'Presa in carico'}
+                          </span>
+                        </td>
+                        <td className={styles.openerName}>
+                          {r.requestedByName ?? '—'}
+                          <span className={styles.sub}>{new Date(r.requestedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </td>
+                        <td className={styles.printHide}>
+                          <div className={styles.reqActions}>
+                            {r.status === 'pending' && (
+                              <button
+                                className={styles.reqBtn}
+                                disabled={busyRequest === r.id}
+                                onClick={() => void handleAckRequest(r)}
+                              >
+                                Prendi in carico
+                              </button>
+                            )}
+                            <button
+                              className={styles.reqBtnPrimary}
+                              disabled={busyRequest === r.id}
+                              onClick={() => openDeliver(r)}
+                            >
+                              Consegna
+                            </button>
+                            <button
+                              className={styles.closeBtn}
+                              disabled={busyRequest === r.id}
+                              onClick={() => void handleCancelRequest(r)}
+                            >
+                              Rifiuta
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className={styles.note}>
+              Le richieste partono dalle postazioni del banco cambio, manualmente o da sole quando il contenuto
+              scende sotto la soglia di sicurezza. La «Consegna» versa il contante/token nella cassa richiedente e
+              registra il movimento in ingresso, quindi il contenuto della cassa si aggiorna da solo.
+            </p>
           </div>
         </div>
 
@@ -317,6 +526,54 @@ export function CashRegistersPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={deliverTarget !== null}
+        variant="confirm"
+        title="Consegna alla postazione"
+        message={
+          deliverTarget
+            ? `Indicare quanto consegnare alla cassa "${deliverTarget.cashRegisterName ?? ''}". Il contante/token entra nella cassa come movimento in carico.`
+            : ''
+        }
+        confirmLabel="Consegna"
+        confirmDisabled={
+          busyRequest !== null ||
+          (deliverTarget?.kind !== 'credits' && deliverEuro === '') ||
+          (deliverTarget?.kind !== 'euro' && deliverTarget?.kind !== 'both' && deliverCredits === '')
+        }
+        onConfirm={() => void handleDeliverRequest()}
+        onCancel={() => setDeliverTarget(null)}
+      >
+        <div className={styles.deliverGrid}>
+          {deliverTarget?.kind !== 'credits' && (
+            <label className={styles.deliverField}>
+              Euro consegnati
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={deliverEuro}
+                onChange={(e) => setDeliverEuro(e.target.value)}
+                placeholder="0.00"
+              />
+            </label>
+          )}
+          {deliverTarget?.kind !== 'euro' && (
+            <label className={styles.deliverField}>
+              {report.currencyName} consegnati
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={deliverCredits}
+                onChange={(e) => setDeliverCredits(e.target.value)}
+                placeholder="0"
+              />
+            </label>
+          )}
+        </div>
+      </ConfirmModal>
 
       <ConfirmModal
         open={closeTarget !== null}

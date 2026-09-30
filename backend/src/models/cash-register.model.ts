@@ -46,6 +46,19 @@ const cashRegisterSchema = new Schema(
                 { _id: false }
             ),
             default: null
+        },
+        /* Soglia di sicurezza: se il contenuto della cassa scende sotto questi
+         * valori la postazione invia in automatico una richiesta alla cassa
+         * master. null = soglia non impostata (nessun invio automatico). */
+        lowThreshold: {
+            type: new Schema(
+                {
+                    euro: { type: Number, default: null, min: 0 },
+                    credits: { type: Number, default: null, min: 0 }
+                },
+                { _id: false }
+            ),
+            default: null
         }
     },
     {
