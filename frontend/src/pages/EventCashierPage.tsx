@@ -415,7 +415,7 @@ ${qrHtml}
   return (
     <div className={styles.page}>
       <div className={styles.topBar}>
-        <Link to="/admin/dashboard" className={styles.backBtn}>&larr;</Link>
+        <Link to="/admin/dashboard" className="back-link back-link--bare back-link--onDark back-link--inline">&larr;</Link>
         <div className={styles.topInfo}>
           <span className={styles.topEvent}>{eventName}</span>
           {standName && <span className={styles.topStand}>{standName}</span>}

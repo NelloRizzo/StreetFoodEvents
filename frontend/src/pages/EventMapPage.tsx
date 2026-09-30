@@ -247,7 +247,7 @@ export function EventMapPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
-        <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
+        <Link to={`/events/${eventId}`} className="back-link">&larr; Torna all'evento</Link>
         <h1 className={styles.title}>{event?.name ?? 'Caricamento...'} — Mappa</h1>
       </div>
 

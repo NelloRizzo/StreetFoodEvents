@@ -2,14 +2,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /* padding-top: senza, il link "indietro" finiva a filo sotto la navbar
+     (page-shell ha solo padding-inline). */
+  padding-top: 1.5rem;
   margin-bottom: 1.5rem;
-}
-
-.backLink {
-  color: var(--color-brand);
-  font-weight: 700;
-  font-size: 0.9rem;
-  text-decoration: none;
 }
 
 .printBtn {

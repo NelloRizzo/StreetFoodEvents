@@ -236,7 +236,7 @@ export function EventDetailPage() {
         )}
         <div className={styles.heroOverlay}>
           <div className={`page-shell ${styles.heroContent}`}>
-            <Link to="/" className={styles.heroBack}>&larr; Tutti gli eventi</Link>
+            <Link to="/" className="back-link back-link--onDark back-link--inline">&larr; Tutti gli eventi</Link>
             <div className={styles.heroText}>
               {event.logo?.url && (
                 <img src={event.logo.url} alt={`${event.name} logo`} className={styles.heroLogo} />

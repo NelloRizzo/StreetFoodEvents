@@ -60,6 +60,21 @@ const standSettlementSchema = new Schema(
             min: 0,
             max: 100
         },
+        /* Quota fissa di commissione (Event.feeBands[].feeFlat o
+         * Stand.numbers[].feeFlat): si SOMMA alla percentuale. Entrambe le
+         * fonti sono derivate dal server se il client non le invia. */
+        feeFlat: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+        /* Da dove e' stata ricavata la commissione: 'stand' (override per
+         * evento), 'band' (fasce dell'evento), 'none' (o non applicabile). */
+        feeSource: {
+            type: String,
+            enum: ['stand', 'band', 'none'],
+            default: 'none'
+        },
         grossEuro: {
             type: Number,
             required: true,

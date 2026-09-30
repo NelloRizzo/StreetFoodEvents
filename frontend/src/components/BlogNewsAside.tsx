@@ -47,7 +47,12 @@ export function BlogNewsAside() {
         {posts.map((post) => (
           <Link key={post.id} to={`/blog/${post.slug}`} className={styles.item}>
             {post.isPinned && <span className={styles.pin}>In evidenza</span>}
-            <span className={styles.itemTitle}>{post.title}</span>
+            <div className={styles.itemHead}>
+              {post.coverImage?.url && (
+                <img className={styles.itemThumb} src={post.coverImage.url} alt="" loading="lazy" />
+              )}
+              <span className={styles.itemTitle}>{post.title}</span>
+            </div>
             <span className={styles.itemMeta}>
               {post.publishedAt && <span>{dateFmt.format(new Date(post.publishedAt))}</span>}
               {post.category && <span>{post.category.name}</span>}

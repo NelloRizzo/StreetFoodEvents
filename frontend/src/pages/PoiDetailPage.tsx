@@ -45,8 +45,8 @@ export function PoiDetailPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
-        <Link to={`/events/${eventId}/mappa`} className={styles.backLink}>&larr; Torna alla mappa</Link>
-        <Link to={`/events/${eventId}`} className={styles.backLink} style={{ marginLeft: '1rem' }}>
+        <Link to={`/events/${eventId}/mappa`} className="back-link">&larr; Torna alla mappa</Link>
+        <Link to={`/events/${eventId}`} className="back-link" style={{ marginLeft: '1rem' }}>
           &larr; Torna all'evento
         </Link>
       </div>

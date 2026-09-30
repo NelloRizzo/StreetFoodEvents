@@ -191,6 +191,140 @@ describe('Integration — Stand Settlements', () => {
         expect(res.body.item.description).toBe('fine serata');
     });
 
+    it('applies the event fee band when the client does not send a fee percentage', async () => {
+        const env = await setupSettlementEnvironment();
+        /* Fasce: fino a 40 EUR lordi 5%, fino a 100 EUR 10%, oltre (senza tetto) 20% */
+        await EventModel.updateOne(
+            { _id: env.event._id },
+            {
+                $set: {
+                    feeBands: [
+                        { maxAmount: 40, feePercent: 5, feeFlat: 0 },
+                        { maxAmount: 100, feePercent: 10, feeFlat: 0 },
+                        { maxAmount: 0, feePercent: 20, feeFlat: 0 }
+                    ]
+                }
+            }
+        );
+
+        /* 100 crediti / rate 2 = 50 EUR lordi -> fascia "fino a 100" = 10% */
+        const mid = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 100 });
+        expect(mid.status).toBe(201);
+        expect(mid.body.item.feePercent).toBe(10);
+        expect(mid.body.item.feeSource).toBe('band');
+        expect(mid.body.item.grossEuro).toBe(50);
+        expect(mid.body.item.feeEuro).toBe(5);
+        expect(mid.body.item.payoutEuro).toBe(45);
+
+        /* 400 crediti / rate 2 = 200 EUR lordi -> oltre l'ultimo tetto = 20% */
+        const over = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 400 });
+        expect(over.status).toBe(201);
+        expect(over.body.item.feePercent).toBe(20);
+        expect(over.body.item.grossEuro).toBe(200);
+        expect(over.body.item.feeEuro).toBe(40);
+
+        /* Un valore inviato dal client vince sempre sulla fascia (eccezione one-off). */
+        const forced = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 100, feePercent: 0 });
+        expect(forced.status).toBe(201);
+        expect(forced.body.item.feePercent).toBe(0);
+        expect(forced.body.item.feeEuro).toBe(0);
+    });
+
+    it('the stand fee override wins over the event bands and adds the flat quota', async () => {
+        const env = await setupSettlementEnvironment();
+        await EventModel.updateOne(
+            { _id: env.event._id },
+            { $set: { feeBands: [{ maxAmount: 0, feePercent: 20, feeFlat: 0 }] } }
+        );
+        /* Override dello stand per l'evento: 5% + 3 EUR fissi */
+        await StandModel.updateOne(
+            { _id: env.stand1._id },
+            {
+                $set: {
+                    numbers: [{ eventId: env.event._id, number: 1, showOnMap: true, feePercent: 5, feeFlat: 3 }]
+                }
+            }
+        );
+
+        const res = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 100 });
+        expect(res.status).toBe(201);
+        expect(res.body.item.feeSource).toBe('stand');
+        expect(res.body.item.feePercent).toBe(5);
+        expect(res.body.item.feeFlat).toBe(3);
+        /* lordo 50: 50*5% = 2.50 + 3 fissi = 5.50 */
+        expect(res.body.item.feeEuro).toBe(5.5);
+        expect(res.body.item.payoutEuro).toBe(44.5);
+
+        /* La quota fissa non puo' azzerare il payout: la trattenuta e' limitata al lordo. */
+        await StandModel.updateOne(
+            { _id: env.stand1._id },
+            {
+                $set: {
+                    numbers: [{ eventId: env.event._id, number: 1, showOnMap: true, feePercent: 0, feeFlat: 500 }]
+                }
+            }
+        );
+        const capped = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 100 });
+        expect(capped.status).toBe(201);
+        expect(capped.body.item.feeEuro).toBe(50);
+        expect(capped.body.item.payoutEuro).toBe(0);
+    });
+
+    it('no fee configured means no deduction', async () => {
+        const plain = await setupSettlementEnvironment();
+        const none = await request(app)
+            .post(`/api/exchange/${plain.event._id}/settlements`)
+            .set('Cookie', `sid=${plain.sessionToken}`)
+            .send({ standId: plain.stand1._id.toString(), amount: 100 });
+        expect(none.status).toBe(201);
+        expect(none.body.item.feeSource).toBe('none');
+        expect(none.body.item.feePercent).toBe(0);
+        expect(none.body.item.feeFlat).toBe(0);
+        expect(none.body.item.feeEuro).toBe(0);
+    });
+
+    it('no fee is applied to debits or to settlements already in euro', async () => {
+        const env = await setupSettlementEnvironment();
+        await EventModel.updateOne(
+            { _id: env.event._id },
+            { $set: { feeBands: [{ maxAmount: 0, feePercent: 20, feeFlat: 10 }] } }
+        );
+
+        const debit = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 100, direction: 'debit' });
+        expect(debit.status).toBe(201);
+        expect(debit.body.item.feePercent).toBe(0);
+        expect(debit.body.item.feeFlat).toBe(0);
+        expect(debit.body.item.feeSource).toBe('none');
+        expect(debit.body.item.feeEuro).toBe(0);
+
+        const inEuro = await request(app)
+            .post(`/api/exchange/${env.event._id}/settlements`)
+            .set('Cookie', `sid=${env.sessionToken}`)
+            .send({ standId: env.stand1._id.toString(), amount: 50, unit: 'euro' });
+        expect(inEuro.status).toBe(201);
+        expect(inEuro.body.item.feePercent).toBe(0);
+        expect(inEuro.body.item.feeEuro).toBe(0);
+        expect(inEuro.body.item.payoutEuro).toBe(50);
+    });
+
     it('accepts amount even when not matching earned credits (informational report)', async () => {
         const env = await setupSettlementEnvironment();
 

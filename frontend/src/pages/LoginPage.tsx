@@ -115,7 +115,7 @@ export function LoginPage() {
             Non hai un account?{' '}
             <Link to="/register">Registrati</Link>
           </p>
-          <Link className={styles.backLink} to="/">
+          <Link className="back-link" to="/">
             Torna alla presentazione
           </Link>
         </section>

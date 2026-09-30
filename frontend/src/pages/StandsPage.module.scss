@@ -17,6 +17,13 @@
   margin-top: 0.5rem;
 }
 
+/* Nota che chiarisce il filtro applicato alla lista (evento attivo). */
+.filterNote {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: var(--color-ink-soft);
+}
+
 .primaryBtn {
   display: inline-flex;
   align-items: center;

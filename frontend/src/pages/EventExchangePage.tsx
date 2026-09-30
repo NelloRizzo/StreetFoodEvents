@@ -797,14 +797,14 @@ const [showCashSetup, setShowCashSetup] = useState(false)
       <div className={cambioStyles.fullPage}>
         <h1 className={cambioStyles.exTitle}>Accesso negato</h1>
         <p>Non hai i permessi per accedere a questa pagina.</p>
-        <Link to="/admin/dashboard" className={cambioStyles.exBackLink}>&larr; Torna ad admin</Link>
+        <Link to="/admin/dashboard" className="back-link back-link--onDark">&larr; Torna ad admin</Link>
       </div>
     )
   }
 
   return (
     <div className={cambioStyles.fullPage}>
-      <Link to="/admin/dashboard" className={cambioStyles.exBackLink}>&larr; Torna ad admin</Link>
+      <Link to="/admin/dashboard" className="back-link back-link--onDark">&larr; Torna ad admin</Link>
       <h1 className={cambioStyles.exTitle}>
         <CurrencySymbol name={currencyName} /> Cambio - {eventName || 'Caricamento...'}
       </h1>

@@ -185,6 +185,8 @@ function toSettlementResponse(s: {
     denominations?: Array<{ label: string; value: number; count: number; euroAmount: number }>;
     exchangeRate: number;
     feePercent: number;
+    feeFlat?: number;
+    feeSource?: string;
     grossEuro: number;
     feeEuro: number;
     payoutEuro: number;
@@ -204,6 +206,8 @@ function toSettlementResponse(s: {
         denominations: s.denominations ?? [],
         exchangeRate: s.exchangeRate,
         feePercent: s.feePercent,
+        feeFlat: s.feeFlat ?? 0,
+        feeSource: s.feeSource ?? 'none',
         grossEuro: s.grossEuro,
         feeEuro: s.feeEuro,
         payoutEuro: s.payoutEuro,
@@ -1117,11 +1121,60 @@ async function listSettlements(req: Request, res: Response) {
     });
 }
 
+type ResolvedFee = { feePercent: number; feeFlat: number; source: 'stand' | 'band' | 'none' };
+
+/* Commissione da applicare a una liquidazione, risolta lato server.
+ *
+ * Priorita': la fee impostata sullo STAND per quell'evento
+ * (`Stand.numbers[].feePercent` / `feeFlat`, non null) vince su tutto; altrimenti
+ * valgono le fasce dell'EVENTO, scelte sugli euro LORDI di questa liquidazione:
+ * la prima fascia col tetto che copre il lordo, altrimenti la fascia residuale
+ * "senza tetto" (`maxAmount <= 0` = incassi oltre l'ultimo tetto).
+ *
+ * Prima questa logica esisteva SOLO nel frontend (`StandSettlementsPage`), che
+ * pero' pre-compilava l'input solo in rari casi (servivano i tagli) e solo come
+ * suggerimento: chi chiamava l'API senza feePercent non tratteneva nulla. */
+export function resolveSettlementFee(params: {
+    feeBands?: Array<{ maxAmount?: number | null; feePercent?: number | null; feeFlat?: number | null }> | null;
+    standFee?: { feePercent?: number | null | undefined; feeFlat?: number | null | undefined } | null;
+    grossEuro: number;
+}): ResolvedFee {
+    const { feeBands, standFee, grossEuro } = params;
+
+    const pct = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const flat = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+
+    /* Override dello stand per quell'evento: se impostato, vale da solo. */
+    if (standFee && (standFee.feePercent != null || standFee.feeFlat != null)) {
+        return {
+            feePercent: pct(standFee.feePercent),
+            feeFlat: flat(standFee.feeFlat),
+            source: 'stand'
+        };
+    }
+
+    const bands = Array.isArray(feeBands) ? feeBands : [];
+    if (bands.length === 0) return { feePercent: 0, feeFlat: 0, source: 'none' };
+
+    const capped = bands
+        .filter((b) => (b.maxAmount ?? 0) > 0)
+        .sort((a, b) => (a.maxAmount ?? 0) - (b.maxAmount ?? 0));
+    const residual = bands.find((b) => (b.maxAmount ?? 0) <= 0);
+    const matching = capped.find((b) => grossEuro <= (b.maxAmount ?? 0)) ?? residual;
+
+    if (!matching) return { feePercent: 0, feeFlat: 0, source: 'none' };
+    return {
+        feePercent: pct(matching.feePercent),
+        feeFlat: flat(matching.feeFlat),
+        source: 'band'
+    };
+}
+
 async function createSettlement(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
 
-    const { standId, amount, feePercent, description, denominations: inputDenoms } = req.body;
+    const { standId, amount, feePercent, feeFlat, description, denominations: inputDenoms } = req.body;
     const direction = req.body.direction === 'debit' ? 'debit' : 'credit';
 
     if (!standId || !isValidObjectId(standId)) {
@@ -1202,19 +1255,47 @@ async function createSettlement(req: Request, res: Response) {
         }
     }
 
-    const feeNum = direction === 'credit' && unit === 'credits' ? Number(feePercent ?? 0) : 0;
-    if (!Number.isFinite(feeNum) || feeNum < 0 || feeNum > 100) {
-        return res.status(400).json({ message: 'Fee percentage must be between 0 and 100' });
-    }
-
     /* In euro: AVERE = pagamento diretto (gross=payout=importo), DARE = credito da esigere (nessun movimento ora) */
     const grossEuro = direction === 'debit'
         ? 0
         : unit === 'euro'
             ? Math.round(amountNum * 100) / 100
             : Math.round(amountNum / exchangeRate * 100) / 100;
-    const feeEuro = direction === 'credit' && unit === 'credits'
-        ? Math.round(grossEuro * (feeNum / 100) * 100) / 100
+
+    /* La trattenuta si applica solo alle liquidazioni AVERE in crediti (e' l'unica
+     * casella che registra un pagamento in euro con commissione). */
+    const feeApplies = direction === 'credit' && unit === 'credits';
+
+    /* Se il client non manda la percentuale (o la quota fissa) le deriviamo da
+     * stand/evento: prima senza questo la commissione configurata non entrava
+     * nella liquidazione, il default silenzioso era 0. Un valore inviato dal
+     * client vince sempre (permette una trattenuta diversa per quella voce). */
+    const standEventFee = stand.numbers?.find((n) => n.eventId.toString() === eventCtx.eventId);
+    const resolved = feeApplies
+        ? resolveSettlementFee({
+            feeBands: eventCtx.event.feeBands,
+            standFee: standEventFee ? { feePercent: standEventFee.feePercent, feeFlat: standEventFee.feeFlat } : null,
+            grossEuro
+        })
+        : { feePercent: 0, feeFlat: 0, source: 'none' as const };
+
+    const feeNum = feeApplies
+        ? (feePercent === undefined || feePercent === null || feePercent === '' ? resolved.feePercent : Number(feePercent))
+        : 0;
+    if (!Number.isFinite(feeNum) || feeNum < 0 || feeNum > 100) {
+        return res.status(400).json({ message: 'Fee percentage must be between 0 and 100' });
+    }
+
+    const feeFlatNum = feeApplies
+        ? (feeFlat === undefined || feeFlat === null || feeFlat === '' ? resolved.feeFlat : Number(feeFlat))
+        : 0;
+    if (!Number.isFinite(feeFlatNum) || feeFlatNum < 0) {
+        return res.status(400).json({ message: 'Fee flat must be a positive number' });
+    }
+
+    /* Percentuale + quota fissa, mai oltre il lordo (il payout non può essere negativo). */
+    const feeEuro = feeApplies
+        ? Math.min(grossEuro, Math.round((grossEuro * (feeNum / 100) + feeFlatNum) * 100) / 100)
         : 0;
     const payoutEuro = direction === 'debit' ? 0 : Math.round((grossEuro - feeEuro) * 100) / 100;
 
@@ -1229,6 +1310,8 @@ async function createSettlement(req: Request, res: Response) {
             denominations: processedDenoms,
             exchangeRate,
             feePercent: feeNum,
+            feeFlat: feeFlatNum,
+            feeSource: feeApplies ? resolved.source : 'none',
             grossEuro,
             feeEuro,
             payoutEuro,

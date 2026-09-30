@@ -45,6 +45,10 @@ type Settlement = {
   amount: number
   exchangeRate: number
   feePercent: number
+  /** Quota fissa di commissione applicata (Event.feeBands / Stand.numbers). */
+  feeFlat?: number
+  /** 'stand' = override per evento, 'band' = fascia evento, 'none' = nessuna. */
+  feeSource?: 'stand' | 'band' | 'none'
   grossEuro: number
   feeEuro: number
   payoutEuro: number
@@ -84,6 +88,10 @@ export function StandSettlementsPage() {
   const [unit, setUnit] = useState<SettlementUnit>('credits')
   const [amount, setAmount] = useState('')
   const [feePercent, setFeePercent] = useState('')
+  const [feeFlat, setFeeFlat] = useState('')
+  /* true quando l'operatore ha toccato i campi commissione: da quel momento la
+   * risoluzione automatica non deve piu' sovrascriverli. */
+  const [feeTouched, setFeeTouched] = useState(false)
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -156,41 +164,78 @@ export function StandSettlementsPage() {
     ? (isEuro ? Math.round(creditsNum * 100) / 100 : Math.round(creditsNum / rate * 100) / 100)
     : 0
 
-  const resolveFee = (ge: number): string => {
-    if (standFeeOverride?.feePercent != null) return String(standFeeOverride.feePercent)
+  /* La commissione configurata (override dello stand per l'evento, altrimenti
+   fasce dell'evento) e' risolta anche dal server: qui la mostriamo all'operatore
+   come default, lasciandogli la facolta' di modificarla per quella voce. */
+  type ResolvedFee = { percent: number; flat: number; source: 'stand' | 'band' | 'none'; label: string }
+
+  const resolveFee = (ge: number): ResolvedFee => {
     const capped = eventFeeBands.filter((b) => b.maxAmount > 0).sort((a, b) => a.maxAmount - b.maxAmount)
     const residual = eventFeeBands.find((b) => b.maxAmount <= 0)
-    const matchingBand = capped.find((b) => ge <= b.maxAmount)
-    if (matchingBand) return String(matchingBand.feePercent)
-    if (residual) return String(residual.feePercent)
-    return ''
+    if (standFeeOverride?.feePercent != null || standFeeOverride?.feeFlat != null) {
+      const p = standFeeOverride?.feePercent ?? 0
+      const f = standFeeOverride?.feeFlat ?? 0
+      const parts = [`${p}%`]
+      if (f > 0) parts.push(`+ ${f.toFixed(2)} € fissi`)
+      return { percent: p, flat: f, source: 'stand', label: `impostata sullo stand per questo evento (${parts.join(' ')})` }
+    }
+    const matchingBand = capped.find((b) => ge <= b.maxAmount) ?? residual
+    if (!matchingBand) return { percent: 0, flat: 0, source: 'none', label: '' }
+    const f = matchingBand.feeFlat ?? 0
+    const parts = [`${matchingBand.feePercent}%`]
+    if (f > 0) parts.push(`+ ${f.toFixed(2)} € fissi`)
+    const range = matchingBand.maxAmount > 0
+      ? `fascia fino a ${matchingBand.maxAmount} € lordi`
+      : 'fascia oltre l\'ultimo tetto'
+    return {
+      percent: matchingBand.feePercent,
+      flat: f,
+      source: 'band',
+      label: `${range} (${parts.join(' ')})`
+    }
   }
 
+  /* Lordo su cui si risolve la fascia: i tagli se presenti, altrimenti
+   * l'importo digitato a mano. Prima servivano i tagli, quindi senza tagli la
+   * commissione configurata non compariva mai. */
+  const feeBaseCredits = hasDenoms && denomTotalCredits > 0 ? denomTotalCredits : creditsNum
+  const resolvedFee = isCredit && !isEuro && feeBaseCredits > 0
+    ? resolveFee(Math.round(feeBaseCredits / rate * 100) / 100)
+    : { percent: 0, flat: 0, source: 'none' as const, label: '' }
+
   const feeNum = isCredit && !isEuro && Number.isFinite(parseFloat(feePercent)) ? parseFloat(feePercent) : 0
-  const feeEuro = isCredit && !isEuro && validAmount ? Math.round(grossEuro * (feeNum / 100) * 100) / 100 : 0
+  const feeFlatNum = isCredit && !isEuro && Number.isFinite(parseFloat(feeFlat)) ? parseFloat(feeFlat) : 0
+  /* Stessa formula del server (percentuale + quota fissa, limitata al lordo). */
+  const feeEuro = isCredit && !isEuro && validAmount
+    ? Math.min(grossEuro, Math.round((grossEuro * (feeNum / 100) + feeFlatNum) * 100) / 100)
+    : 0
   const payoutEuro = isCredit && validAmount ? Math.round((grossEuro - feeEuro) * 100) / 100 : 0
 
   useEffect(() => {
-    if (isEuro || !hasDenoms || !isCredit || denomTotalCredits <= 0) return
-    const ge = Math.round(denomTotalCredits / rate * 100) / 100
-    const resolved = resolveFee(ge)
-    if (resolved !== feePercent) {
-      setFeePercent(resolved)
-      setFeePrefilled(resolved !== '')
-    }
-  }, [denomCounts, hasDenoms, isCredit, denomTotalCredits, rate])
+    /* Non sovrascrivere una percentuale impostata a mano. */
+    if (isEuro || !isCredit || feeTouched) return
+    if (feeBaseCredits <= 0) return
+    const percent = String(resolvedFee.percent)
+    const flat = String(resolvedFee.flat)
+    if (percent !== feePercent) setFeePercent(percent)
+    if (flat !== feeFlat) setFeeFlat(flat)
+    setFeePrefilled(resolvedFee.source !== 'none')
+  }, [feeBaseCredits, isCredit, isEuro, feeTouched, resolvedFee.source, resolvedFee.percent, resolvedFee.flat, feePercent, feeFlat])
 
   const switchUnit = (next: SettlementUnit) => {
     if (next === unit) return
     setUnit(next)
     setAmount('')
     setDenomCounts({})
+    setFeeTouched(false)
   }
 
   const handleSelectStand = async (standId: string) => {
     setSelectedStandId(standId)
     setDenomCounts({})
     setFeePrefilled(false)
+    /* Cambiando stand la commissione va risolta da capo. */
+    setFeeTouched(false)
     const stand = summary?.stands.find((s) => s.standId === standId)
     if (stand) {
       setAmount(!isEuro && isCredit && stand.earnedCredits > 0 ? String(stand.earnedCredits) : '')
@@ -233,6 +278,7 @@ export function StandSettlementsPage() {
           direction,
           unit,
           feePercent: feeNum,
+          feeFlat: isCredit && !isEuro ? feeFlatNum : 0,
           description: description.trim() || undefined,
           denominations: denominationsPayload,
         }
@@ -418,7 +464,6 @@ export function StandSettlementsPage() {
                       })}
                       <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
                         Totale: <strong>{denomTotalCredits.toFixed(2)} {currencyName}</strong> = €{grossEuro.toFixed(2)} lordo
-                        {feePrefilled && <span> — Fee pre-compilata dal sistema ({feePercent}%)</span>}
                       </p>
                     </div>
                   ) : (
@@ -432,13 +477,27 @@ export function StandSettlementsPage() {
                     </label>
                   )}
                   {isCredit && !isEuro && (
-                    <label className={cambioStyles.field}>
-                      Percentuale trattenuta dal gestore (%) — default 0
-                      <input type="number" min="0" max="100" step="0.1" value={feePercent}
-                        onChange={(e) => setFeePercent(e.target.value)}
-                        placeholder="0"
-                        disabled={submitting} />
-                    </label>
+                    <>
+                      <label className={cambioStyles.field}>
+                        Percentuale trattenuta dal gestore (%) — default 0
+                        <input type="number" min="0" max="100" step="0.1" value={feePercent}
+                          onChange={(e) => { setFeePercent(e.target.value); setFeeTouched(true) }}
+                          placeholder="0"
+                          disabled={submitting} />
+                      </label>
+                      <label className={cambioStyles.field}>
+                        Quota fissa di commissione (€)
+                        <input type="number" min="0" step="0.01" value={feeFlat}
+                          onChange={(e) => { setFeeFlat(e.target.value); setFeeTouched(true) }}
+                          placeholder="0"
+                          disabled={submitting} />
+                      </label>
+                      {feePrefilled && !feeTouched && resolvedFee.label && (
+                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '-0.25rem' }}>
+                          Commissione configurata: {resolvedFee.label}
+                        </p>
+                      )}
+                    </>
                   )}
                   <label className={cambioStyles.field}>
                     Note (opzionale)
@@ -592,7 +651,11 @@ export function StandSettlementsPage() {
                             {s.unit === 'euro' ? '—' : `1 € = ${s.exchangeRate} ${currencyName}`}
                           </td>
                           <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.direction === 'debit' ? '—' : `€${s.grossEuro.toFixed(2)}`}</td>
-                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.direction === 'debit' || s.unit === 'euro' ? '—' : `${s.feePercent.toFixed(1)}%`}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>
+                            {s.direction === 'debit' || s.unit === 'euro'
+                              ? '—'
+                              : `${s.feePercent.toFixed(1)}%${(s.feeFlat ?? 0) > 0 ? ` + ${(s.feeFlat ?? 0).toFixed(2)} €` : ''}`}
+                          </td>
                           <td style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--color-red)' }}>{s.direction === 'debit' || s.unit === 'euro' ? '—' : `- €${s.feeEuro.toFixed(2)}`}</td>
                           <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: 'var(--color-green)' }}>{s.direction === 'debit' ? '—' : `€${s.payoutEuro.toFixed(2)}`}</td>
                           <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>{s.performedByName || '-'}</td>

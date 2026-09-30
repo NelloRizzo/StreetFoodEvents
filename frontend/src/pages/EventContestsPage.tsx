@@ -42,7 +42,7 @@ export function EventContestsPage() {
 
   return (
     <div className={`page-shell ${styles.page}`}>
-      <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; {eventName}</Link>
+      <Link to={`/events/${eventId}`} className="back-link">&larr; {eventName}</Link>
       <h1 className={styles.title}>Contest</h1>
 
       {contests.length === 0 && (

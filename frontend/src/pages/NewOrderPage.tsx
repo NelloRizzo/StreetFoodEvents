@@ -207,7 +207,7 @@ export function NewOrderPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
-        <Link to="/orders" className={styles.backLink}>&larr; Torna agli ordini</Link>
+        <Link to="/orders" className="back-link">&larr; Torna agli ordini</Link>
         <div className={styles.header}>
           <span className="eyebrow">Ordini</span>
           <h1 className={styles.title}>Nuovo ordine</h1>

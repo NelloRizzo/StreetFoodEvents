@@ -89,6 +89,68 @@ p {
   text-transform: uppercase;
 }
 
+/* Pulsante/link "torna indietro" — UNICO stile per tutta l'app.
+ * Prima ogni pagina ridefiniva la propria `.backLink` (16 definizioni in 14
+ * file, di cui 6 mai usate) con colori e margini diversi: alcuni mancavano del
+ * margine e restavano attaccati a cio' che segue. Usare SEMPRE questa classe
+ * globale invece di crearne una nuova nel module.scss della pagina.
+ * Il margin-bottom garantisce la separazione dal contenuto successivo. */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface, #fff);
+  color: var(--color-brand-deep);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+  }
+}
+
+/* Variante senza pillola: per le toolbar affiancate ad altri controlli, dove
+ * il bottone deve stare sulla stessa riga (Stampa, filtri, ...). */
+.back-link--bare {
+  padding: 0.35rem 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+/* Variante per le toolbar/topbar: niente margine verticale, il genitore
+ * gestisce la spaziatura (inserirlo aggiungerebbe altezza alla riga). */
+.back-link--inline {
+  margin-bottom: 0;
+}
+
+/* Variante per un link a FINE pagina (es. "torna alla home"): il margine va
+ * sopra, non sotto, altrimenti resterebbe attaccato al testo sopra. */
+.back-link--bottom {
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+
+/* Variante su fondi scuri (casse, tema evento, pagina track). */
+.back-link--onDark {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    color: #fff;
+  }
+}
+
 .section-title {
   font-family: var(--font-display);
   font-size: clamp(2rem, 4vw, 3.75rem);
@@ -168,6 +230,12 @@ p {
   }
 
   header, footer, .cookie-consent-banner {
+    display: none !important;
+  }
+
+  /* Il "torna indietro" non ha senso su carta (i documenti stampabili lo
+   * duplicavano in ogni pagina). */
+  .back-link {
     display: none !important;
   }
 

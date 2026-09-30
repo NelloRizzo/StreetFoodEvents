@@ -7,17 +7,6 @@
   margin-inline: auto;
 }
 
-.backLink {
-  display: inline-block;
-  margin-bottom: 1.25rem;
-  color: var(--color-text-muted, #666);
-  text-decoration: none;
-  font-size: 0.9rem;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
 
 .category {
   display: inline-block;
@@ -64,10 +53,34 @@
   }
 }
 
+/* Copertina: un terzo della larghezza, fluttuante a sinistra, con la notizia
+ * (sommario + corpo) che le scorre attorno a destra. */
 .cover {
-  width: 100%;
-  border-radius: 12px;
-  margin-bottom: 1.5rem;
+  float: left;
+  width: 33.3333%;
+  max-width: 33.3333%;
+  height: auto;
+  margin: 0.3rem 1.5rem 0.8rem 0;
+  border-radius: 10px;
+  /* Il testo segue il bordo esterno dell'immagine, non il rettangolo. */
+  shape-outside: margin-box;
+}
+
+/* Chiude il float dopo il corpo: commenti e form non devono scorrere accanto. */
+.content::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+/* Su schermi stretti la copertina torna a tutta larghezza sopra il testo. */
+@media (max-width: 40rem) {
+  .cover {
+    float: none;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 1rem;
+  }
 }
 
 .excerpt {

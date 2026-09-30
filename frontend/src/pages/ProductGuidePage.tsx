@@ -85,7 +85,7 @@ export function ProductGuidePage() {
   return (
     <div className={styles.page}>
       <div className={styles.printActions}>
-        <Link to="/admin/documents" className={styles.backLink}>&larr; Documenti</Link>
+        <Link to="/admin/documents" className="back-link">&larr; Documenti</Link>
         <button className={styles.printBtn} onClick={() => window.print()}>Stampa scheda</button>
       </div>
 

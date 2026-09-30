@@ -1,10 +1,10 @@
 # TODO — Street Food Events
 
 ## Fix riscontrati in questa sessione (Scrivere "Nessun fix" se risolti tutti)
-- se un evento prevede un fee, o uno stand prevede un fee custom per un evento, il fee non viene considerato in liquidazione.
+Nessun fix
 
 ## Prossime Implementazioni
-- **GOTCHA da rifare**: `hasRole` (`backend/src/middlewares/role.middleware.ts`) applica lo scope evento e quello stand con due chiavi `$or` nello stesso oggetto → su una route che ha **entrambi** i parametri la seconda sovrascrive la prima e lo scope evento NON viene verificato. Va rifatto con `$and` (o con un unico `$or` che enumi le combinazioni evento/stand valide) e va coperto da un test cross-event.
+- _(sezione vuota: nessuna attività pianificata)_
 
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).

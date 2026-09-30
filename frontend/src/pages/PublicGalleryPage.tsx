@@ -40,7 +40,7 @@ export function PublicGalleryPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
-        <Link to={`/events/${eventId}`} className={styles.backLink}>&larr; Torna all'evento</Link>
+        <Link to={`/events/${eventId}`} className="back-link">&larr; Torna all'evento</Link>
 
         <h1 className={styles.title}>Galleria media</h1>
         <p className={styles.subtitle}>{eventName}</p>

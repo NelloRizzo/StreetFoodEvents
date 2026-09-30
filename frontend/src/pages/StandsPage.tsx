@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../features/auth/auth-context'
+import { useAdminEvent } from '../layouts/AdminEventContext'
 import { apiRequest } from '../lib/api'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { type UploadedImage } from '../lib/upload'
@@ -58,6 +59,7 @@ const emptyForm: StandFormData = { type: 'food', name: '', slogan: '', descripti
 
 export function StandsPage() {
   const { user } = useAuth()
+  const { selectedEventId, selectedEvent } = useAdminEvent()
   const [stands, setStands] = useState<Stand[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -67,8 +69,12 @@ export function StandsPage() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
   const [favMap, setFavMap] = useState<Map<string, string>>(new Map())
 
-  const fetchStands = async () => {
-    const data = await apiRequest<{ items: Stand[] }>('/stands')
+  /* Solo gli stand collegati all'evento attivo: il filtro lo fa il server
+   * (`GET /stands?eventId=`), non serve scaricare tutto e filtrare qui. */
+  const fetchStands = useCallback(async () => {
+    const data = await apiRequest<{ items: Stand[] }>(
+      selectedEventId ? `/stands?eventId=${selectedEventId}` : '/stands'
+    )
     let items = data.items
     if (user?.isPlatformAdmin === false && user?.adminEventIds && user.adminEventIds.length > 0) {
       const adminSet = new Set(user.adminEventIds)
@@ -76,7 +82,7 @@ export function StandsPage() {
     }
     setStands(items)
     setIsLoading(false)
-  }
+  }, [selectedEventId, user])
 
   const fetchEvents = async () => {
     try {
@@ -105,7 +111,8 @@ export function StandsPage() {
     fetchStands()
     fetchEvents()
     fetchFavs()
-  }, [])
+    /* Ricarica quando cambia l'evento attivo nella sidebar. */
+  }, [fetchStands])
 
   const toggleFavorite = async (standId: string) => {
     if (favoriteIds.has(standId)) {
@@ -227,6 +234,11 @@ export function StandsPage() {
           <div>
             <span className="eyebrow">Gestione</span>
             <h1 className={styles.title}>Stand</h1>
+            <p className={styles.filterNote}>
+              {selectedEvent
+                ? `Stand collegati a «${selectedEvent.name}»`
+                : 'Nessun evento selezionato: elenco completo degli stand'}
+            </p>
           </div>
           <button className={styles.primaryBtn} onClick={openCreate}>
             Nuovo stand
@@ -435,7 +447,11 @@ export function StandsPage() {
           ))}
 
           {stands.length === 0 && (
-            <p className={styles.empty}>Nessuno stand. Creane uno nuovo.</p>
+            <p className={styles.empty}>
+              {selectedEvent
+                ? `Nessuno stand collegato a «${selectedEvent.name}»: creane uno nuovo o collegane uno esistente.`
+                : 'Nessuno stand. Creane uno nuovo.'}
+            </p>
           )}
         </div>
       </div>

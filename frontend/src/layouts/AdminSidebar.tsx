@@ -17,8 +17,6 @@ type AdminSidebarProps = {
   isMobileOpen: boolean
   onMobileClose: () => void
   onSelectEvent: (eventId: string) => void
-  trackingEnabled: boolean
-  onToggleTracking: () => void
 }
 
 type SidebarSection = {
@@ -26,7 +24,7 @@ type SidebarSection = {
   items: SidebarItem[]
 }
 
-export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent, trackingEnabled, onToggleTracking }: AdminSidebarProps) {
+export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: AdminSidebarProps) {
   const { user, logout } = useAuth()
   const location = useLocation()
   const { selectedEventId, selectedEvent, events } = useAdminEvent()
@@ -247,22 +245,6 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent, track
             <span className={styles.navIcon}>{'\u{1F4CA}'}</span>
             {!isCollapsed && <span className={styles.navLabel}>Dashboard</span>}
           </NavLink>
-
-          {selectedEventId && (
-            <button
-              type="button"
-              className={`${styles.navItem} ${styles.navItemBtn} ${trackingEnabled ? styles.navItemActive : ''}`}
-              onClick={onToggleTracking}
-              title={trackingEnabled ? 'Disabilita tracking' : 'Abilita tracking'}
-            >
-              <span className={styles.navIcon}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="3.5" />
-                  <path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22" />
-                </svg>
-              </span>
-            </button>
-          )}
 
           {!isCollapsed && (
             <div className={styles.eventPicker}>

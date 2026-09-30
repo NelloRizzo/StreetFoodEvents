@@ -58,7 +58,7 @@ export function EventReviewPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
-        <Link className={styles.backLink} to={`/events/${eventId}`}>
+        <Link className="back-link" to={`/events/${eventId}`}>
           &larr; Torna all'evento
         </Link>
 

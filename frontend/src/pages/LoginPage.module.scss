@@ -143,7 +143,6 @@
   box-shadow: none;
 }
 
-.backLink,
 .switchLink {
   color: var(--color-ink-soft);
   font-weight: 600;
@@ -154,14 +153,12 @@
   margin-top: 0.5rem;
 }
 
-.switchLink a,
-.backLink {
+.switchLink a {
   color: var(--color-brand);
   transition: color var(--ease-standard);
 }
 
-.switchLink a:hover,
-.backLink:hover {
+.switchLink a:hover {
   color: var(--color-brand-deep);
   text-decoration: underline;
 }

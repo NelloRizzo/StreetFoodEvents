@@ -38,7 +38,7 @@ export function AdhesionFormPublicPage() {
       <div className={styles.standalone}>
         <div className={styles.notFound}>
           <p>Il modulo di adesione non è ancora disponibile per questo evento.</p>
-          <Link className={styles.backLink} to={`/events/${eventId}`}>
+          <Link className="back-link" to={`/events/${eventId}`}>
             Torna all'evento
           </Link>
         </div>
@@ -49,7 +49,7 @@ export function AdhesionFormPublicPage() {
   return (
     <div className={styles.standalone}>
       <div className={`page-shell ${styles.toolbar}`}>
-        <Link className={styles.backLink} to={`/events/${eventId}`}>
+        <Link className="back-link" to={`/events/${eventId}`}>
           ← Torna all'evento
         </Link>
         <button type="button" className={styles.printBtn} onClick={() => window.print()}>

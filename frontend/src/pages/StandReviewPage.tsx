@@ -68,7 +68,7 @@ export function StandReviewPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
-        <Link className={styles.backLink} to={`/events/${eventId}/stands/${standId}`}>
+        <Link className="back-link" to={`/events/${eventId}/stands/${standId}`}>
           &larr; Torna al menu di {stand.name}
         </Link>
 

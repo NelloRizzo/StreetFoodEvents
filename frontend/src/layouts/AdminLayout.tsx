@@ -122,8 +122,6 @@ export function AdminLayout() {
             isMobileOpen={isMobileMenuOpen}
             onMobileClose={() => setIsMobileMenuOpen(false)}
             onSelectEvent={handleSelectEvent}
-            trackingEnabled={trackingEnabled}
-            onToggleTracking={onToggleTracking}
           />
         )}
 

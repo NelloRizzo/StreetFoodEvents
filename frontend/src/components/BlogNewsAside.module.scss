@@ -67,6 +67,23 @@
   line-height: 1.35;
 }
 
+/* Riga con miniatura di copertina + titolo. */
+.itemHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.itemThumb {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f4f4f4;
+}
+
 .itemMeta {
   display: flex;
   flex-wrap: wrap;

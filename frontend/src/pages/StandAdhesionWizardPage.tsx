@@ -443,7 +443,7 @@ export function StandAdhesionWizardPage() {
               )}
             </div>
             <div className={styles.headerActions}>
-              <Link className={styles.backBtn} to={`/events/${eventId}`}>
+              <Link className="back-link back-link--inline" to={`/events/${eventId}`}>
                 <span aria-hidden="true">&larr;</span> Torna all&apos;evento
               </Link>
             </div>
@@ -479,7 +479,7 @@ export function StandAdhesionWizardPage() {
               )}
             </div>
             <div className={styles.headerActions}>
-              <Link className={styles.backBtn} to={`/events/${eventId}`}>
+              <Link className="back-link back-link--inline" to={`/events/${eventId}`}>
                 <span aria-hidden="true">&larr;</span> Torna all&apos;evento
               </Link>
             </div>
@@ -519,7 +519,7 @@ export function StandAdhesionWizardPage() {
                tornare alla scheda dell'evento senza usare la navbar (non
                presente nella variante sotto AdminLayout). Punta sempre alla
                pagina pubblica dell'evento. */}
-            <Link className={styles.backBtn} to={`/events/${eventId}`}>
+            <Link className="back-link back-link--inline" to={`/events/${eventId}`}>
               <span aria-hidden="true">&larr;</span> Torna all&apos;evento
             </Link>
           </div>

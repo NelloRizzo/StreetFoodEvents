@@ -97,7 +97,7 @@ export function TrackOrderPage() {
           <div className={styles.sadIcon}>&#128533;</div>
           <h1 className={styles.bigTitle}>Ordine non trovato</h1>
           <p className={styles.hint}>Controlla il QR code o torna al banco dello stand.</p>
-          <Link to="/" className={styles.homeLink}>Torna alla home</Link>
+          <Link to="/" className="back-link back-link--onDark back-link--bottom">Torna alla home</Link>
         </div>
       </div>
     )

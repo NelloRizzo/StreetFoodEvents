@@ -73,7 +73,7 @@ export function ReviewsQrCodesPage() {
     <div className={styles.page}>
       <div className="page-shell">
         <div className={`${styles.toolbar} no-print`}>
-          <Link className={styles.backLink} to={`/admin/events/${eventId}/reviews`}>
+          <Link className="back-link" to={`/admin/events/${eventId}/reviews`}>
             &larr; Torna alle recensioni
           </Link>
           <button

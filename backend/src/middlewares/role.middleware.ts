@@ -44,11 +44,27 @@ export function hasRole(
             ? [...requiredRoles, 'event-admin']
             : requiredRoles;
 
+        /* Ogni scope va in un $or DIVERSO, raccolto in un $and.
+         * GOTCHA: due chiavi $or nello STESSO oggetto si sovrascrivono a
+         * runtime (la seconda vince) e il primo scope verrebbe ignorato: su una
+         * route con eventParam E standParam non si controllava piu' l'evento.
+         * In $and le condizioni valgono sullo stesso documento, quindi un
+         * ruolo "solo stand" passa lo scope stand ma deve passare anche quello
+         * evento (e viceversa). */
+        const scopeClauses: Record<string, unknown>[] = [];
+
+        if (eventId) {
+            scopeClauses.push({ $or: [{ eventId }, { eventId: { $exists: false } }, { eventId: null }] });
+        }
+
+        if (standId) {
+            scopeClauses.push({ $or: [{ standId }, { standId: { $exists: false } }, { standId: null }] });
+        }
+
         const userRole = await UserRoleModel.findOne({
             userId: req.user.id,
             isActive: true,
-            ...(eventId ? { $or: [{ eventId }, { eventId: { $exists: false } }, { eventId: null }] } : {}),
-            ...(standId ? { $or: [{ standId }, { standId: { $exists: false } }, { standId: null }] } : {})
+            ...(scopeClauses.length > 0 ? { $and: scopeClauses } : {})
         }).populate({
             path: 'roleId',
             match: {

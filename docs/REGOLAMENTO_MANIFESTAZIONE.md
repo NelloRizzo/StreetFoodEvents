@@ -18,7 +18,7 @@ Il presente regolamento disciplina la partecipazione degli **stand** (di seguito
 ## Art. 2 — Adesione e caparra
 1. L'adesione segue le modalità del modulo ufficiale (Sezioni A–H di `ADESIONE_STAND.md`).
 2. Il **prezzo di partecipazione** e il suo termine di saldo sono indicati dall'Organizzatore.
-3. La **caparra non rimborsabile** è dovuta per la prenotazione del posto; non è restituita in caso di recesso dell'espositore o di rifiuto dell'adesione per dati non conformi, ed è stornabile da quanto dovuto secondo le eventuali trattenute sulle vendite.
+3. La **caparra** è dovuta per la prenotazione del posto; non è restituita (*salvo esplicita dichiarazione compresa nel contratto di adesione dell'espositore accettata dall'organizzatore*) in caso di recesso dell'espositore o di rifiuto dell'adesione per dati non conformi, ed è stornabile da quanto dovuto secondo le eventuali trattenute sulle vendite.
 
 ## Art. 3 — Montaggio e smontaggio
 1. L'accesso all'area è consentito **esclusivamente** nei giorni e orari indicati dall'Organizzatore con apposito programma (montaggio/smontaggio).
@@ -26,7 +26,7 @@ Il presente regolamento disciplina la partecipazione degli **stand** (di seguito
 3. Lo smontaggio si effettua solo a manifestazione conclusa e comunque entro i termini comunicati.
 4. Ogni stand deve mantenersi **autonomo** per energia/acqua nella misura stabilita dall'Organizzatore (nessun allaccio non autorizzato).
 
-## Art. 4 — spazio assegnato e divieti
+## Art. 4 — Spazio assegnato e divieti
 1. L'espositore opera **esclusivamente nel posto assegnato** (numero stand, mappa); è vietata ogni occupazione di spazi extra senza autorizzazione.
 2. Vietato: lavorare **fuori dal posto assegnato**, spostare/danneggiare attrezzature comuni, impianti o delimitazioni, esporre merce o insegne al di fuori dell'area consentita.
 3. Il posto assegnato deve essere raggiungibile e non ostruire vie di fuga, percorsi di emergenza o accessi di altri espositori.

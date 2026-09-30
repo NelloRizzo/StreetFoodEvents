@@ -73,7 +73,7 @@ export function BlogPostPage() {
       <main className={styles.page}>
         <div className="page-shell">
           <p className={styles.empty}>{error ?? 'Notizia non trovata.'}</p>
-          <Link to="/blog" className={styles.backLink}>Torna al blog</Link>
+          <Link to="/blog" className="back-link">Torna al blog</Link>
         </div>
       </main>
     )
@@ -83,7 +83,7 @@ export function BlogPostPage() {
     <main className={styles.page}>
       <div className="page-shell">
         <article className={styles.article}>
-          <Link to="/blog" className={styles.backLink}>← Tutte le notizie</Link>
+          <Link to="/blog" className="back-link">← Tutte le notizie</Link>
 
           {post.category && (
             <span className={styles.category}>{post.category.name}</span>
@@ -106,7 +106,7 @@ export function BlogPostPage() {
           </div>
 
           {post.coverImage?.url && (
-            <img className={styles.cover} src={post.coverImage.url} alt="" />
+            <img className={styles.cover} src={post.coverImage.url} alt={post.title} />
           )}
 
           {post.excerpt && <p className={styles.excerpt}>{post.excerpt}</p>}
