@@ -157,7 +157,7 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Descrizione**: achievement e livelli per partecipazione
 - **Modello**: `Badge { userId, type, earnedAt, eventId }`
 - **Tipi**: "Primo Ordine", "Cacciatore POI", "Fotografo", "Top Spender"
-- **API**: assegnazione badge, classifica, statistiche utente
+- **API**: assegnazione badge, classifica, statistiche utente, primo ordine, numero ordine specifico (impostabile da admin), numero di eventi diversi (da 2)
 - **Frontend**: profilo utente con badge, leaderboard
 - **Motivazione**: engagement, fidelizzazione
 
