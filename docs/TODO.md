@@ -2,11 +2,8 @@
 
 ## Fix riscontrati in questa sessione (Scrivere "Nessun fix" se risolti tutti)
 - se un evento prevede un fee, o uno stand prevede un fee custom per un evento, il fee non viene considerato in liquidazione.
-- Verificato se le soglie di sicurezza (`CashRegister.lowThreshold`) sopravvivono alla chiusura/riapertura della cassa: ora vengono ereditate dalla cassa sostituita o dall'ultima cassa chiusa dell'evento.
 
 ## Prossime Implementazioni
-- ~~Da una cassa può essere inviato un messaggio verso la cassa master dell'evento per la richiesta di contanti (euro) o di token (o di entrambi)~~ — **FATTO (Sett 2026)**: modello `CashRequest` + API `/api/exchange/:eventId/cash-requests` (preso in carico → consegna, che registra il movimento in ingresso nella cassa ricevente), soglie `CashRegister.lowThreshold` con invio automatico sotto soglia, pulsante manuale nella pagina Cambio e sezione richieste nel Master Cambio. Vedi CHANGELOG Settembre 2026.
-- ~~Registrazione dei pagamenti con POS e rendicontazione degli stessi. Sia nelle casse di cambio che nelle casse di stand deve essere possibile registrare i pagamenti con POS oltre che in contanti / token, quindi nelle casse di stand al pulsante "Crea ordine" aggiungiamo una flag se si tratta di POS, mentre nelle cassi di cambio aggiungiamo la stessa possibilità. I rendiconti andranno a registrare il totale dei pagamenti in contante e quello del pagamento in POS.~~ — **FATTO (Sett 2026)**: `EventUserTransaction.paymentMethod` e `Order.isPos`; checkbox "Incassa col POS (carta)" nelle due casse ordini e nel Cambio; il contenuto fisico della cassa conta solo i flussi `cash`, i POS alimentano solo i report (`posRevenue`/`posOrders`, `cashRevenue = totalRevenue - creditRevenue - posRevenue`) con colonna POS nei report stand ed evento. Vedi CHANGELOG Settembre 2026.
 - **GOTCHA da rifare**: `hasRole` (`backend/src/middlewares/role.middleware.ts`) applica lo scope evento e quello stand con due chiavi `$or` nello stesso oggetto → su una route che ha **entrambi** i parametri la seconda sovrascrive la prima e lo scope evento NON viene verificato. Va rifatto con `$and` (o con un unico `$or` che enumi le combinazioni evento/stand valide) e va coperto da un test cross-event.
 
 ## Adesione Stand a Manifestazione
