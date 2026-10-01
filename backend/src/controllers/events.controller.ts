@@ -13,6 +13,46 @@ function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
 }
 
+/**
+ * Normalizza le voci sponsor in scrittura.
+ *
+ * Il logo e il nome sono gestiti dal model (enum `tier`, required). Qui si
+ * FILTRA l'url: finisce in un `href` sul volantino pubblico, quindi un
+ * `javascript:` inserito da un amministratore diventerebbe uno stored-XSS
+ * eseguito nel nostro origin al click del visitatore. Sono ammessi solo
+ * http/https (il frontend usa comunque `safeExternalUrl` in difesa profonda).
+ */
+function normalizeSponsors(value: unknown): unknown[] {
+    if (!Array.isArray(value)) return [];
+
+    return value
+        .filter((s): s is Record<string, unknown> => !!s && typeof s === 'object')
+        .map((s) => {
+            const rawUrl = typeof s.url === 'string' ? s.url.trim() : '';
+            let url: string | null = null;
+            if (rawUrl) {
+                try {
+                    const parsed = new URL(rawUrl);
+                    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                        url = parsed.toString();
+                    }
+                } catch {
+                    url = null;
+                }
+            }
+
+            const tier = s.tier === 'main' || s.tier === 'partner' ? s.tier : 'sponsor';
+
+            return {
+                ...s,
+                url,
+                tier,
+                enabled: s.enabled !== false,
+                sortOrder: typeof s.sortOrder === 'number' && Number.isFinite(s.sortOrder) ? s.sortOrder : 0
+            };
+        });
+}
+
 function generateGoogleMapsUrl(location: {
     addressLine1?: string | null;
     coordinates?: { coordinates?: number[] } | null;
@@ -62,6 +102,7 @@ function toEventResponse(event: {
     logo?: unknown | null;
     regulationDocument?: unknown | null;
     gallery?: unknown[];
+    sponsors?: unknown[];
     cashPaymentsEnabled?: boolean | null;
     unifiedCashierEnabled?: boolean | null;
     slideshowTitle?: string | null;
@@ -99,6 +140,7 @@ function toEventResponse(event: {
         logo: event.logo ?? null,
         regulationDocument: event.regulationDocument ?? null,
         gallery: event.gallery ?? [],
+        sponsors: event.sponsors ?? [],
         cashPaymentsEnabled: event.cashPaymentsEnabled ?? true,
         unifiedCashierEnabled: event.unifiedCashierEnabled ?? false,
         slideshowTitle: event.slideshowTitle ?? null,
@@ -252,7 +294,8 @@ export async function createEvent(req: Request, res: Response) {
         isPublic,
         feeBands,
         denominations,
-        categories
+        categories,
+        sponsors
     } = req.body;
 
     if (location && !location.googleMapsUrl) {
@@ -290,7 +333,8 @@ export async function createEvent(req: Request, res: Response) {
         isPublic: isPublic ?? true,
         feeBands: Array.isArray(feeBands) ? feeBands : [],
         denominations: Array.isArray(denominations) ? denominations : [],
-        categories: Array.isArray(categories) ? categories : []
+        categories: Array.isArray(categories) ? categories : [],
+        sponsors: normalizeSponsors(sponsors)
     });
 
     return res.status(201).json({
@@ -347,7 +391,8 @@ export async function updateEvent(req: Request, res: Response) {
         isPublic,
         feeBands,
         denominations,
-        categories
+        categories,
+        sponsors
     } = req.body;
 
     if (name !== undefined) {
@@ -483,6 +528,10 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (categories !== undefined) {
         event.set('categories', Array.isArray(categories) ? categories : []);
+    }
+
+    if (sponsors !== undefined) {
+        event.set('sponsors', normalizeSponsors(sponsors));
     }
 
     await event.save();
@@ -683,7 +732,10 @@ export async function duplicateEvent(req: Request, res: Response) {
         isPublic: typeof isPublic === 'boolean' ? isPublic : (source.isPublic ?? true),
         feeBands: source.feeBands ?? [],
         denominations: source.denominations ?? [],
-        categories: source.categories ?? []
+        categories: source.categories ?? [],
+        /* Gli sponsor sono configurazione dell'evento: vengono copiate anche
+         * nella nuova edizione, come feeBands e denominazioni. */
+        sponsors: normalizeSponsors(source.sponsors)
     });
 
     const { StandModel } = await import('../models/stand.model');

@@ -103,6 +103,106 @@ describe('Events API', () => {
         expect(res.body.item.name).toBe('New Event');
     });
 
+    describe('sponsor dell\'evento', () => {
+        const logo = { url: 'https://cdn.example.com/logo.png', publicId: 'logo-1', width: 200, height: 80, format: 'png', bytes: 1000 };
+
+        async function createEventWithSponsors(sponsors: unknown[]) {
+            app = createTestApp();
+            const user = await UserModel.create({
+                firstName: 'Admin',
+                lastName: 'Sponsors',
+                email: `admin-sponsor-${Date.now()}@test.com`,
+                passwordHash: await argon2.hash('Password123!'),
+                isActive: true
+            });
+            await assignPlatformAdmin(user._id);
+            const sessionToken = generateSessionToken();
+            await SessionModel.create({
+                userId: user._id,
+                tokenHash: hashSessionToken(sessionToken),
+                expiresAt: getSessionExpiryDate(),
+                lastActivityAt: new Date()
+            });
+
+            const res = await request(app)
+                .post('/api/events')
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({
+                    name: 'Event con sponsor',
+                    location: { label: 'Piazza', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+                    startDate: '2026-07-01',
+                    endDate: '2026-07-05',
+                    currencyName: 'Coin',
+                    sponsors
+                });
+            return { res, sessionToken };
+        }
+
+        it('crea e rilegge gli sponsor con livello e stato', async () => {
+            const { res } = await createEventWithSponsors([
+                { name: 'Main Partner', logo, url: 'https://main.example.com', tier: 'main', sortOrder: 0 },
+                { name: 'Sponsor Uno', logo, url: 'http://uno.example.com', tier: 'sponsor', enabled: true, sortOrder: 1 },
+                { name: 'Partner', logo, url: null, tier: 'partner', enabled: false, sortOrder: 2 }
+            ]);
+
+            expect(res.status).toBe(201);
+            expect(res.body.item.sponsors).toHaveLength(3);
+            expect(res.body.item.sponsors[0]).toMatchObject({
+                name: 'Main Partner',
+                tier: 'main',
+                enabled: true,
+                sortOrder: 0
+            });
+            expect(res.body.item.sponsors[1].tier).toBe('sponsor');
+            /* enabled=false esplicitamente richiesto resta false. */
+            expect(res.body.item.sponsors[2].enabled).toBe(false);
+        });
+
+        /* L'url finisce in un href sul volantino pubblico: un javascript:
+         * inserito da un amministratore sarebbe uno stored-XSS. */
+        it('scarta gli url non http(s) e forza i default del livello', async () => {
+            const { res } = await createEventWithSponsors([
+                { name: 'XSS', logo, url: 'javascript:alert(document.cookie)' },
+                { name: 'Data', logo, url: 'data:text/html,<script>alert(1)</script>' },
+                { name: 'Senza schema', logo, url: 'example.com' },
+                { name: 'Livello strano', logo, url: 'https://ok.example.com', tier: 'pippo' }
+            ]);
+
+            expect(res.status).toBe(201);
+            const sponsors = res.body.item.sponsors as Array<{ name: string; url: string | null; tier: string }>;
+            const byName = new Map(sponsors.map((s) => [s.name, s]));
+            expect(byName.get('XSS')?.url).toBeNull();
+            expect(byName.get('Data')?.url).toBeNull();
+            /* Senza schema non e' un URL assoluto valido: scartato. */
+            expect(byName.get('Senza schema')?.url).toBeNull();
+            expect(byName.get('Livello strano')?.tier).toBe('sponsor');
+        });
+
+        it('aggiorna gli sponsor con PATCH e li copia nella duplicazione evento', async () => {
+            const { res, sessionToken } = await createEventWithSponsors([
+                { name: 'Originale', logo, url: 'https://a.example.com', tier: 'sponsor' }
+            ]);
+            const eventId = res.body.item.id;
+
+            const patch = await request(app)
+                .patch(`/api/events/${eventId}`)
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({ sponsors: [{ name: 'Aggiornato', logo, url: 'https://b.example.com', tier: 'main', sortOrder: 5 }] });
+            expect(patch.status).toBe(200);
+            expect(patch.body.item.sponsors).toHaveLength(1);
+            expect(patch.body.item.sponsors[0]).toMatchObject({ name: 'Aggiornato', tier: 'main', sortOrder: 5 });
+
+            /* Gli sponsor sono configurazione: la nuova edizione li eredita. */
+            const dup = await request(app)
+                .post(`/api/events/${eventId}/duplicate`)
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({ name: 'Edizione duplicata' });
+            expect(dup.status).toBe(201);
+            expect(dup.body.item.sponsors).toHaveLength(1);
+            expect(dup.body.item.sponsors[0].name).toBe('Aggiornato');
+        });
+    });
+
     it('returns 401 for create without auth', async () => {
         app = createTestApp();
         const res = await request(app)

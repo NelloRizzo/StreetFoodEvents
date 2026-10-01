@@ -139,6 +139,46 @@
   accent-color: var(--color-brand);
 }
 
+.hint {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Riga di editing di uno sponsor: logo a sinistra, campi al centro, rimozione a destra. */
+.sponsorRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.sponsorLogoBox {
+  flex: 0 0 9rem;
+}
+
+.sponsorFields {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  align-content: start;
+}
+
+@media (max-width: 40rem) {
+  .sponsorRow {
+    flex-direction: column;
+  }
+
+  .sponsorLogoBox {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
 .field textarea {
   min-height: 5rem;
   resize: vertical;

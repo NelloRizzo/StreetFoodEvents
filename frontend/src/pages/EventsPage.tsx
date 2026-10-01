@@ -57,8 +57,19 @@ type EventItem = {
   feeBands: Array<{ maxAmount: number; feePercent: number; feeFlat: number }>
   denominations: Array<{ label: string; value: number; quantity: number }>
   categories: Array<{ label: string; sortOrder: number }>
+  sponsors: EventSponsor[]
   createdAt: string
   updatedAt: string
+}
+
+/** Voce sponsor dell'evento: identica a `Event.sponsors` lato API. */
+export type EventSponsor = {
+  name: string
+  logo: UploadedImage
+  url: string | null
+  tier: 'main' | 'sponsor' | 'partner'
+  enabled: boolean
+  sortOrder: number
 }
 
 type EventFormData = {
@@ -101,6 +112,7 @@ type EventFormData = {
   currencySymbol: UploadedImage | null
   feeBands: Array<{ maxAmount: string; feePercent: string; feeFlat: string }>
   denominations: Array<{ label: string; value: string; quantity: string }>
+  sponsors: EventSponsor[]
 }
 
 const emptyForm: EventFormData = {
@@ -143,6 +155,7 @@ const emptyForm: EventFormData = {
   currencySymbol: null,
   feeBands: [],
   denominations: [],
+  sponsors: [],
 }
 
 type StandItem = {
@@ -453,6 +466,14 @@ export function EventsPage() {
         value: String(d.value),
         quantity: String(d.quantity),
       })),
+      sponsors: (ev.sponsors ?? []).map((s) => ({
+        name: s.name,
+        logo: s.logo,
+        url: s.url ?? null,
+        tier: s.tier ?? 'sponsor',
+        enabled: s.enabled !== false,
+        sortOrder: s.sortOrder ?? 0,
+      })),
     })
     setEditingId(ev.id)
     setShowForm(true)
@@ -531,6 +552,8 @@ export function EventsPage() {
         value: d.value ? Number(d.value) : 0,
         quantity: d.quantity ? Number(d.quantity) : 0,
       })),
+      // Senza logo la voce non ha senso: il backend la rifiuterebbe.
+      sponsors: form.sponsors.filter((s) => s.name.trim() && s.logo),
     }
 
     if (editingId) {
@@ -970,6 +993,123 @@ export function EventsPage() {
                 onChange={(data) => setForm({ ...form, regulationDocument: data })}
                 label="Regolamento della manifestazione (PDF, opzionale)"
               />
+            </fieldset>
+
+            <fieldset className={styles.fieldset}>
+              <legend className={styles.legend}>Sponsor e partner</legend>
+              <p className={styles.hint}>
+                Gli sponsor compaiono sul <strong>volantino stampabile</strong> dell&apos;evento
+                (<code>/events/{form.name ? 'ID-EVENTO' : ''}/flyer</code>), non sulle pagine web. Il livello
+                decide il peso visivo: <strong>Main partner</strong> logo grande in testa, <strong>Sponsor</strong>{' '}
+                a griglia, <strong>Partner</strong> in riga piccola. Puoi caricarli prima dell&apos;accordo e
+                accenderli poi con la casella &quot;Mostra&quot;.
+              </p>
+
+              {form.sponsors.length === 0 && (
+                <p className={styles.hint}>Nessuno sponsor configurato.</p>
+              )}
+
+              {form.sponsors.map((s, idx) => (
+                <div key={idx} className={styles.sponsorRow}>
+                  <div className={styles.sponsorLogoBox}>
+                    <ImageUploader
+                      mode="single"
+                      type="event"
+                      value={s.logo}
+                      onChange={(data) => {
+                        const next = [...form.sponsors]
+                        next[idx] = { ...next[idx], logo: data as UploadedImage }
+                        setForm({ ...form, sponsors: next })
+                      }}
+                      label="Logo"
+                    />
+                  </div>
+                  <div className={styles.sponsorFields}>
+                    <div className={styles.field}>
+                      <label htmlFor={`sp-name-${idx}`}>Nome</label>
+                      <input
+                        id={`sp-name-${idx}`}
+                        type="text"
+                        value={s.name}
+                        onChange={(e) => {
+                          const next = [...form.sponsors]
+                          next[idx] = { ...next[idx], name: e.target.value }
+                          setForm({ ...form, sponsors: next })
+                        }}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor={`sp-url-${idx}`}>Sito (http/https)</label>
+                      <input
+                        id={`sp-url-${idx}`}
+                        type="url"
+                        placeholder="https://"
+                        value={s.url ?? ''}
+                        onChange={(e) => {
+                          const next = [...form.sponsors]
+                          next[idx] = { ...next[idx], url: e.target.value || null }
+                          setForm({ ...form, sponsors: next })
+                        }}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor={`sp-tier-${idx}`}>Livello</label>
+                      <select
+                        id={`sp-tier-${idx}`}
+                        value={s.tier}
+                        onChange={(e) => {
+                          const next = [...form.sponsors]
+                          next[idx] = { ...next[idx], tier: e.target.value as EventSponsor['tier'] }
+                          setForm({ ...form, sponsors: next })
+                        }}
+                      >
+                        <option value="main">Main partner</option>
+                        <option value="sponsor">Sponsor</option>
+                        <option value="partner">Partner</option>
+                      </select>
+                    </div>
+                    <label className={styles.checkLabel}>
+                      <input
+                        type="checkbox"
+                        checked={s.enabled}
+                        onChange={(e) => {
+                          const next = [...form.sponsors]
+                          next[idx] = { ...next[idx], enabled: e.target.checked }
+                          setForm({ ...form, sponsors: next })
+                        }}
+                      />
+                      <span>Mostra sul volantino</span>
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.dangerBtn}
+                    onClick={() => setForm({ ...form, sponsors: form.sponsors.filter((_, i) => i !== idx) })}
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                className={styles.secondaryBtn}
+                onClick={() =>
+                  setForm({
+                    ...form,
+                    sponsors: [...form.sponsors, {
+                      name: '',
+                      logo: { url: '', publicId: '' } as UploadedImage,
+                      url: null,
+                      tier: 'sponsor',
+                      enabled: true,
+                      sortOrder: form.sponsors.length,
+                    }]
+                  })
+                }
+              >
+                + Aggiungi sponsor
+              </button>
             </fieldset>
 
             <fieldset className={styles.fieldset}>

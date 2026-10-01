@@ -1,0 +1,264 @@
+.page {
+  padding: 1.5rem 0 3rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.printBtn {
+  padding: 0.5rem 1.2rem;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.printBtn:hover {
+  opacity: 0.9;
+}
+
+.notFound {
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.empty {
+  padding: 3rem 0;
+  color: var(--color-ink-soft);
+}
+
+/* --- Il foglio stampato --- */
+
+.sheet {
+  max-width: 46rem;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 2.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.header {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  padding-bottom: 1.25rem;
+  border-bottom: 2px solid var(--color-brand);
+}
+
+.cover {
+  flex: 0 0 13rem;
+  width: 13rem;
+  height: 10rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.logo {
+  max-height: 3.5rem;
+  max-width: 12rem;
+  object-fit: contain;
+  object-position: left top;
+  margin-bottom: 0.5rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.1;
+  color: var(--color-ink-strong);
+}
+
+.dates {
+  margin: 0.35rem 0 0;
+  font-weight: 700;
+  color: var(--color-brand-deep);
+}
+
+.place {
+  margin: 0.15rem 0 0;
+  color: var(--color-ink-soft);
+  font-size: 0.95rem;
+}
+
+.desc {
+  margin: 0.6rem 0 0;
+  color: var(--color-ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.site {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+
+  a {
+    color: var(--color-brand-deep);
+    word-break: break-all;
+  }
+}
+
+/* --- Sponsor --- */
+
+.sponsors {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.tierLabel {
+  margin: 0 0 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+/* Main partner: logo grande, in evidenza. */
+.mainRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.mainItem {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+  color: inherit;
+
+  img {
+    max-width: 15rem;
+    max-height: 6.5rem;
+    object-fit: contain;
+  }
+
+  span {
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+}
+
+/* Sponsor: griglia a 4 colonne. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem 1rem;
+}
+
+.gridItem {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+
+  img {
+    max-width: 100%;
+    max-height: 3.5rem;
+    object-fit: contain;
+  }
+
+  span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  &:hover span {
+    text-decoration: underline;
+  }
+}
+
+/* Partner: riga discreta, solo nome. */
+.partnerRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.partnerItem {
+  text-decoration: none;
+  color: var(--color-ink-soft);
+}
+
+.partnerName {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.partnerItem:hover .partnerName {
+  color: var(--color-brand-deep);
+  text-decoration: underline;
+}
+
+@media (max-width: 40rem) {
+  .header {
+    flex-direction: column;
+  }
+
+  .cover {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 12rem;
+  }
+
+  .sheet {
+    padding: 1.25rem;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mainItem img {
+    max-width: 9rem;
+    max-height: 4rem;
+  }
+}
+
+/* --- Stampa: il foglio deve uscire pulito, senza navigazione --- */
+
+@media print {
+  .page {
+    padding: 0;
+  }
+
+  .toolbar {
+    display: none !important;
+  }
+
+  .sheet {
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .mainItem,
+  .gridItem,
+  .partnerItem {
+    break-inside: avoid;
+  }
+}

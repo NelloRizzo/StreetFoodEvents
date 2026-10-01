@@ -298,6 +298,10 @@ export function EventDetailPage() {
             <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
               Galleria
             </Link>
+            {/* Volantino stampabile: e' la pagina dove gli sponsor hanno risalto. */}
+            <Link to={`/events/${eventId}/flyer`} className={styles.actionBtnOutline}>
+              Volantino
+            </Link>
             <Link to={`/events/${eventId}/review`} className={styles.actionBtnOutline}>
               Recensioni{reviewsSummary?.event.count ? ` (${reviewsSummary.event.count})` : ''}
             </Link>

@@ -37,6 +37,7 @@ import { EventOrdersPage } from './pages/EventOrdersPage'
 import { EventReportPage } from './pages/EventReportPage'
 import { VisitorsEstimatePage } from './pages/VisitorsEstimatePage'
 import { EventGalleryPage } from './pages/EventGalleryPage'
+import { EventFlyerPage } from './pages/EventFlyerPage'
 import { PublicGalleryPage } from './pages/PublicGalleryPage'
 import { PoiDetailPage } from './pages/PoiDetailPage'
 import { ReceiptPage } from './pages/ReceiptPage'
@@ -105,6 +106,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/stand-adhesion', element: <StandAdhesionWizardPage /> },
       { path: 'events/:eventId/contests', element: <EventContestsPage /> },
       { path: 'events/:eventId/galleria', element: <PublicGalleryPage /> },
+      { path: 'events/:eventId/flyer', element: <EventFlyerPage /> },
       { path: 'events/:eventId/slideshow', element: <SlideshowPage /> },
       { path: 'contest/:contestId', element: <ContestPage /> },
       { path: 'contest/:contestId/play', element: <ContestPlayPage /> },

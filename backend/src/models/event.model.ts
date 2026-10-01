@@ -64,6 +64,50 @@ const categorySchema = new Schema(
     { _id: false }
 );
 
+/**
+ * Sponsor/partner dell'evento. Array embedded su Event (nessun model
+ * dedicato): sono una configurazione dell'evento, come fasce e tagli, e una
+ * manifestazione ne conta una decina. Il `tier` governa il peso visivo sul
+ * volantino stampabile: 'main' = main partner (logo grande), 'sponsor' = fascia
+ * a griglia, 'partner' = riga piccola dei fornitori/tecnici.
+ * `enabled` permette di caricare gli sponsor prima dell'accordo e accenderli
+ * solo quando scatta, senza toccare il frontend.
+ */
+const sponsorSchema = new Schema(
+    {
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 160
+        },
+        logo: {
+            type: imageSchema,
+            required: true
+        },
+        url: {
+            type: String,
+            trim: true,
+            maxlength: 2048,
+            default: null
+        },
+        tier: {
+            type: String,
+            enum: ['main', 'sponsor', 'partner'],
+            default: 'sponsor'
+        },
+        enabled: {
+            type: Boolean,
+            default: true
+        },
+        sortOrder: {
+            type: Number,
+            default: 0
+        }
+    },
+    { _id: false }
+);
+
 const eventSchema = new Schema(
     {
         name: {
@@ -192,6 +236,11 @@ const eventSchema = new Schema(
         },
         gallery: {
             type: [imageSchema],
+            default: []
+        },
+        /* Sponsor e partner: esposti sul volantino stampabile dell'evento. */
+        sponsors: {
+            type: [sponsorSchema],
             default: []
         },
         cashPaymentsEnabled: {

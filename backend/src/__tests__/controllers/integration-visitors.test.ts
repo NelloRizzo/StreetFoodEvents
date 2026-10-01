@@ -86,11 +86,16 @@ async function setupEnvironment() {
     const plainUser = await createUser('visitors-plain', 'Plain');
     const plainSession = await createSession(plainUser._id);
 
+    /* Finestra evento RELATIVA a oggi: l'endpoint filtra gli ordini sul
+     * periodo dell'evento di default, e gli ordini del fixture hanno
+     * createdAt = now. Con date fisse il test scaderebbe nel giorno successivo
+     * alla fine evento (e' successo il 2026-10-01 con la finestra 01/09-30/09). */
+    const dayMs = 24 * 60 * 60 * 1000;
     const event = await EventModel.create({
         name: 'Visitors Event',
         location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
-        startDate: new Date('2026-09-01'),
-        endDate: new Date('2026-09-30'),
+        startDate: new Date(Date.now() - 5 * dayMs),
+        endDate: new Date(Date.now() + 5 * dayMs),
         currencyName: 'TC',
         cashPaymentsEnabled: true
     });

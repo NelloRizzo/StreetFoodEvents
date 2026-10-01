@@ -84,7 +84,7 @@ Login: utente inattivo o senza password → 403 con messaggio distinto ("non anc
 |---|---|---|---|
 | GET | `/api/events?public=true` | optional | Lista eventi pubblici e non terminati (`endDate >= now`). Senza `public=true`: tutti gli eventi (solo gestori/platform). |
 | GET | `/api/events/:eventId/menu-qrcode` | no | QR code (data URL) che linka al menu del primo stand visibile (`showOnMap !== false`) dell'evento. 404 se nessuno stand visibile. |
-| POST | `/api/events/:eventId/duplicate` | auth | Duplica l'evento come base operativa per la prossima edizione: copia configurazione (moneta, tema, fasce, tagli, categorie), collega gli stand con rinumerazione progressiva, copia EventProduct e POI. NON copia wallet/ordini/transazioni/foto/contest, né le scadenze `participationFeeDeadline`/`depositDeadline`/`adhesionDeadline` (nuova edizione → null). Body opzionale `{ name, startDate, endDate, isPublic }` (default: nome+" (copia)", date +1 anno). |
+| POST | `/api/events/:eventId/duplicate` | auth | Duplica l'evento come base operativa per la prossima edizione: copia configurazione (moneta, tema, fasce, tagli, categorie, **sponsor**), collega gli stand con rinumerazione progressiva, copia EventProduct e POI. NON copia wallet/ordini/transazioni/foto/contest, né le scadenze `participationFeeDeadline`/`depositDeadline`/`adhesionDeadline` (nuova edizione → null). Body opzionale `{ name, startDate, endDate, isPublic }` (default: nome+" (copia)", date +1 anno). |
 
 ### API routes — Alias
 | Method | Route | Auth | Description |
@@ -198,6 +198,7 @@ Nota: la sidebar admin (`AdminSidebar`) mostra la sezione «Contenuti» → «No
 | `/events/:eventId/galleria` | EventGalleryPage | Galleria foto con stampa, selezione, invio email e pubblicazione social |
 | `/events/:eventId/slideshow` | SlideshowPage | Slideshow automatico con rotazione e cornici |
 | `/events/:eventId/menu` | EventMenuPage | Menù pubblico dell'evento: vista per stand o per categorie, ordine alfabetico |
+| `/events/:eventId/flyer` | EventFlyerPage | **Volantino stampabile** dell'evento: logo/copertina, date, luogo, descrizione, sito e fascia sponsor (main → griglia → partner). È l'unica pagina dove compaiono gli sponsor, per scelta |
 
 ### Frontend — Stand display route
 | Route | Element | Description |
@@ -384,6 +385,14 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - **Modulo stampabile**: sezione statica `slug: 'food-waste'` (4 gruppi + "Nessuna pratica" + punteggio); `buildSectionsFromEvent` inietta `fees` dopo `food-waste` (ordine wizard = documento) e **`TEMPLATE_VERSION` 2 → 3** → i moduli già generati risultano `stale` e vanno rigenerati.
 - **Wizard**: fieldset ③ter tra ③bis e ④, badge "facoltativa", box punteggio; `AdhesionsManagePage` mostra "Riduzione sprechi (N punti)".
 - Verifica: backend typecheck ✓, suite completa **537 test ✓** (51 file), lint 0 errori; frontend typecheck ✓, **96 test vitest ✓** (15 file), lint 0 errori (11 warning pre-esistenti), build ✓. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+
+## Session state (Ott 2026 — sponsor evento: Event.sponsors[] + volantino stampabile)
+### Completed
+- **Sponsor dell'evento**: array embedded **`Event.sponsors[]`** (`{ name, logo (req), url, tier 'main'|'sponsor'|'partner' default 'sponsor', enabled default true, sortOrder }`) — nessun model/route/ruolo nuovo, è configurazione dell'evento come `feeBands`/`denominations` e viene copiata da `duplicateEvent`. `tier` = peso visivo sul volantino, `enabled` = caricarli prima dell'accordo e accenderli dopo senza toccare il frontend. Gestiti in un fieldset di `EventsPage` (le voci senza logo non vengono inviate, il backend le rifiuterebbe).
+- **Nuovo volantino stampabile** `EventFlyerPage` (`/events/:eventId/flyer`, pubblico, con `@media print`), raggiungibile dal bottone "Volantino" in `EventDetailPage`. Mostra logo/copertina, date, luogo, descrizione, sito e in fondo la fascia sponsor (main → griglia 4 colonne → riga partner). **Gli sponsor compaiono solo sul volantino**, non sulle pagine web: scelta esplicita.
+- **Sicurezza URL**: `normalizeSponsors()` in `events.controller.ts` **filtra in scrittura** gli schemi non http(s) (l'url finisce in un `href` pubblico → un `javascript:` da form admin sarebbe stored-XSS); il frontend usa comunque `safeExternalUrl()`. Test verificato **non verde a vuoto**: rimuovendo il filtro i test di XSS falliscono.
+- **Fix test che scadeva con la data**: `integration-visitors.test.ts` aveva l'evento fixture 01/09→30/09 con ordini a `createdAt: now`, e l'endpoint filtra sul periodo evento di default → dal **2026-10-01** fallivano 5 test. Finestra resa relativa (`now ± 5 giorni`). **GOTCHA**: i test che esercitano endpoint con finestra temporale **non** devono usare date fisse.
+- Verifica: backend typecheck ✓, suite completa **540 test ✓** (51 file), lint 0 errori; frontend typecheck ✓, **96 test vitest ✓** (15 file), lint 0 errori (11 warning pre-esistenti), build ✓. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 
 ## Session state (Set 2026 — liquidazione: fee solo da Event.feeBands + sovrascrittura)
 ### Completed
