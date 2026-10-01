@@ -18,6 +18,14 @@ describe('isCustomersPwa', () => {
     expect(isCustomersPwa()).toBe(true)
   })
 
+  it('detects the customers home without trailing slash', () => {
+    /* customersHome() restituisce '/customers': senza questo caso la PWA su
+       quell'URL si credeva il sito operatore (tab profilo = menu web app,
+       dopo il login si atterrava su /dashboard -> dashboard admin). */
+    setPath('/customers')
+    expect(isCustomersPwa()).toBe(true)
+  })
+
   it('returns false on the operator app', () => {
     setPath('/')
     expect(isCustomersPwa()).toBe(false)

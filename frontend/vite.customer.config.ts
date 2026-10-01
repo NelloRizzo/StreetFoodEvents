@@ -15,6 +15,16 @@ export default defineConfig(({ command }) => {
   const isBuild = command === 'build'
   return {
     base: isBuild ? '/customers/' : '/',
+    /* La PWA si riconosce anche da un flag di build, non solo dal path: con il
+       solo path, `/customers` (senza slash finale) non era riconosciuto e la
+       PWA si credeva il sito operatore — comparivano i link "Operatore",
+       il tab profilo apriva il menu della web app e dopo il login si
+       atterrava su /dashboard, che a stessa origine risolve nella dashboard
+       admin dell'altra build. `define` sostituisce il token nel bundle, quindi
+       nel sito operatore il codice morto viene eliminato dal tree-shaking. */
+    define: {
+      'import.meta.env.VITE_CUSTOMERS_BUILD': JSON.stringify('true'),
+    },
     plugins: [
       react(),
       VitePWA({

@@ -6,8 +6,9 @@
  * qui viene rilevato il contesto per nasconderli o sostituirli col profilo
  * utente classico.
  *
- * Si basa sul path invece che su un flag di build: cosi' funziona anche in
- * dev, dove la PWA e' servita su '/' con lo stesso router.
+ * Il riconoscimento usa prima un flag di build e, in dev, il path: cosi'
+ * funziona anche senza flag, quando la PWA e' servita su '/' con lo stesso
+ * router.
  */
 export const CUSTOMERS_BASE_PATH = '/customers/'
 
@@ -20,7 +21,17 @@ function currentPathname(): string {
 
 /** true quando l'app sta girando come PWA clienti (/customers/...). */
 export function isCustomersPwa(): boolean {
-  return currentPathname().startsWith(CUSTOMERS_BASE_PATH)
+  /* Flag di build (impostato solo da vite.customer.config.ts): e' l'unico
+     segnale che non dipende da come e' scritto l'URL. */
+  if (import.meta.env.VITE_CUSTOMERS_BUILD === 'true') return true
+
+  const path = currentPathname()
+  /* Anche `/customers` senza slash finale: e' la home che restituisce
+     `customersHome()`, e su quell'URL un confronto con il solo prefisso
+     con slash darebbe false — la PWA si credeva il sito operatore e
+     rimandava a /dashboard, che risolve nella dashboard admin dell'altra
+     build (stesso origine, basi diverse). */
+  return path === CUSTOMERS_BASE_PATH.slice(0, -1) || path.startsWith(CUSTOMERS_BASE_PATH)
 }
 
 /**

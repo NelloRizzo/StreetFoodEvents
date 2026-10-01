@@ -15,12 +15,13 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  /* Destinazione dopo il login: nella PWA clienti la dashboard operatore
-     (/dashboard -> /admin/dashboard) non esiste, quindi si atterra sul
-     profilo utente classico. */
-  const fallbackPath = isCustomersPwa() ? '/profilo' : '/dashboard'
-
-  const nextPath =
+  /* Destinazione dopo il login. Nella PWA clienti la dashboard operatore
+     (/dashboard -> /admin/dashboard) non esiste: a stessa origine quel path
+     viene servito dall'altra build e porta alla dashboard admin, quindi in
+     PWA si atterra sempre sul profilo utente classico — anche quando `from`
+     (Remember del RequireAuth) punta a una rotta operatore. */
+  const isOperatorPath = (path: string) => path === '/dashboard' || path.startsWith('/admin')
+  const fromPath =
     typeof location.state === 'object' &&
     location.state !== null &&
     'from' in location.state &&
@@ -29,7 +30,13 @@ export function LoginPage() {
     'pathname' in location.state.from &&
     typeof location.state.from.pathname === 'string'
       ? location.state.from.pathname
-      : fallbackPath
+      : null
+
+  const nextPath = isCustomersPwa()
+    ? fromPath && !isOperatorPath(fromPath)
+      ? fromPath
+      : '/profilo'
+    : (fromPath ?? '/dashboard')
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

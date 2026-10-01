@@ -31,7 +31,7 @@ export function PublicBottomBar() {
 
   useEffect(() => {
     setIsUserMenuOpen(false)
-  }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location.pathname])
 
   const mapPath = lastEventId ? `/events/${lastEventId}/mappa` : '/'
 
@@ -110,9 +110,11 @@ export function PublicBottomBar() {
                     {user?.firstName} {user?.lastName}
                   </span>
                   <span className={styles.userDropdownEmail}>{user?.email}</span>
-                  <Link className={styles.userDropdownAction} to="/admin/dashboard">
-                    Modalità operatore
-                  </Link>
+                  {!isPwa && (
+                    <Link className={styles.userDropdownAction} to="/admin/dashboard">
+                      Modalità operatore
+                    </Link>
+                  )}
                   <Link className={styles.userDropdownAction} to="/favorites">
                     Preferiti
                   </Link>
