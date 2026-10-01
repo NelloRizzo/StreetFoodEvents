@@ -36,13 +36,24 @@ function fmtNumber(n: number): string {
    con i banchi disposti. Con 18 si vedeva un solo banco. */
 const SALES_MAP_ZOOM = 16
 
-/* Due provider per i tile. Leaflet non ha fallback: se quello primario non
+/* Zoom nativo dei provider verificato scaricando i tile: Esri street e imagery
+   restituiscono tile veri fino a z19, a z20 restituiscono tutti e due lo stesso
+   segnaposto grigio da 2.521 byte ("Map data not yet available"). OSM regge fino
+   a 19. Per questo il tetto e' 19 e non 20. */
+const NATIVE_ZOOM = 19
+
+/* Tre provider per i tile. Leaflet non ha fallback: se quello attivo non
    risponde (bloccato da un ad-blocker, rete che lo filtra, servizio Esri
    irraggiungibile) la mappa resta grigia ma i cerchi SVG disegnati sopra si
-   vedono lo stesso, e sembra un bug invece di un problema di rete. Con il
-   fallback, al primo errore si passa all'altro e si avvisa l'utente. */
-const TILE_ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
+   vedono lo stesso, e sembra un bug invece di un problema di rete. */
+const TILE_ESRI_STREET =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
+const TILE_ESRI_SAT =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 const TILE_OSM = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+
+const ESRI_ATTR = '&copy; <a href="https://www.esri.com/">Esri</a>'
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 
 function SalesMap({ stands, currencyName }: { stands: AnalyticsStandRow[]; currencyName: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -64,34 +75,52 @@ function SalesMap({ stands, currencyName }: { stands: AnalyticsStandRow[]; curre
          attiva al primo click e si disattiva uscendo. I pulsanti +/- ci sono
          sempre. */
       scrollWheelZoom: false,
-      /* Tetto = zoom nativo dei tile: oltre si vedono tile allungati o il
-         riquadro grigio. Esri regge fino a 20, OSM fino a 19. */
-      maxZoom: 20,
+      maxZoom: NATIVE_ZOOM,
     })
 
-    const esri = L.tileLayer(TILE_ESRI, {
-      attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
-      maxZoom: 20,
-      maxNativeZoom: 19,
+    const streetLayer = L.tileLayer(TILE_ESRI_STREET, {
+      attribution: ESRI_ATTR,
+      maxZoom: NATIVE_ZOOM,
+      maxNativeZoom: NATIVE_ZOOM,
     }).addTo(map)
 
-    const osm = L.tileLayer(TILE_OSM, {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19,
-      maxNativeZoom: 19,
+    const satelliteLayer = L.tileLayer(TILE_ESRI_SAT, {
+      attribution: ESRI_ATTR,
+      maxZoom: NATIVE_ZOOM,
+      maxNativeZoom: NATIVE_ZOOM,
     })
+
+    const osmLayer = L.tileLayer(TILE_OSM, {
+      attribution: OSM_ATTR,
+      maxZoom: NATIVE_ZOOM,
+      maxNativeZoom: NATIVE_ZOOM,
+    })
+
+    /* Scelta del layer, come nella mappa dell'evento: dal disegno del piazzale
+       si vede subito quale banco ha la fila lunga. OSM non finisce qui: entra
+       nel controllo solo se serve davvero (fallback), cosi' l'elenco non
+       promette un provider che non e' ancora stato provato. */
+    const layersControl = L.control.layers(
+      { Satellite: satelliteLayer, Mappa: streetLayer },
+      undefined,
+      { position: 'bottomleft' },
+    ).addTo(map)
 
     /* Alcuni errori prima di cambiare provider: uno sparso può essere un singolo
        tile lento, non un servizio irraggiungibile. */
     let esriErrors = 0
     let usingFallback = false
-    esri.on('tileerror', () => {
+    streetLayer.on('tileerror', () => {
       esriErrors += 1
       if (usingFallback || esriErrors < 4) return
+      /* Se l'operatore ha gia' scelto Satellite non gli si cambia sotto gli
+         occhi il layer attivo. */
+      if (!map.hasLayer(streetLayer)) return
       usingFallback = true
-      map.removeLayer(esri)
-      osm.addTo(map)
-      osm.on('tileerror', () => {
+      map.removeLayer(streetLayer)
+      layersControl.addBaseLayer(osmLayer, 'OpenStreetMap')
+      osmLayer.addTo(map)
+      osmLayer.on('tileerror', () => {
         setTileError(
           'Impossibile caricare la mappa: i dati restano disponibili nella tabella qui sotto.',
         )
