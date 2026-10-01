@@ -1,11 +1,14 @@
 # TODO — Street Food Events
 
 ## Fix riscontrati in questa sessione 
-- _(sezione vuota: nessun bug riscontrato)_
+- _(nessun bug aperto)_
 
 ## Prossime Implementazioni
+- **Interfaccia — icone e ordine dei pulsanti nella pagina evento** (richiesto, da fare): le etichette testuali delle azioni dell'hero diventano **icone**, con l'etichetta lasciata come `hint` (`title` + `aria-label`) e **ri-mostrata in chiaro solo su desktop** ( breakpoint, le icone restano sole sotto). Le icone riusano i glifi Unicode già usati nella sidebar admin (`🍽` Menù, `🗺` Mappa, `🖼` Galleria, `📷` Scatta foto, `⭐` Recensioni, 🖨 Volantino) invece di introdurre una libreria di icone. **Il cuore (preferito) deve essere la prima icona** in ogni pagina che lo espone. Il menu "**Altro**" resta con le voci testuali: in un menu le icone aiutano poco e le etichette lunghe sono piu` leggibili. Nota: `StandDetailPage` ha gia' il cuore per primo in `headerActions`, va solo riallineato se si tocca.
+- **Interfaccia — link di ritorno alla pagina evento dal menu** (richiesto, da fare): `EventMenuPage` (`/events/:eventId/menu`) non ha nessun rimando all'evento, quindi da li non si torna indietro. `EventStandMenuPage` ha gia' il `.back-link` "← Torna all'evento": replicare lo stesso pattern (classe globale `.back-link`, non una `.backLink` nel module.scss) e aggiungere il `padding-top` che manca nella pagina.
+- **Badge e gamification (TODO 12)** — prossimo progetto di dimensione: modello `Badge` + assegnazione automatica + profilo utente; leaderboard rimandata.
 - **PWA — completamento (TODO 10, fatto in parte)**: la PWA clienti è già installabile e ha l'app-shell offline (`frontend/vite.customer.config.ts`, `vite-plugin-pwa` con `registerType: 'prompt'`, `display: 'standalone'`, workbox + `navigateFallback: '/customers/index.html'`). **Da fare**: push notifications (oggi nessuna `web-push`/VAPID né lato backend), ottimizzazione touch e gesture, verifica del layout responsive su schermi piccoli. Nota: le route admin restano fuori dal bundle customer e non vengono cacheate.
-- _(interfaccia: pulsanti pagina evento e posizione del form → risolti Ott 2026, vedi CHANGELOG)_
+- _(interfaccia: pulsanti pagina evento raggruppati in tre fasce, form in drawer/modale, galleria unificata → risolti Ott 2026, vedi CHANGELOG)_
 
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
@@ -151,7 +154,8 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Frontend**: calendar view, swap turni, notifiche assegnazioni
 - **Motivazione**: organizzazione lavoro, riduzione conflitti
 
-### 12. Sistema Badge e Gamification
+### 12. Sistema Badge e Gamification — prossimo progetto
+- **Piano concordato (Ott 2026)**: partire da **modello `Badge` + assegnazione automatica** al verificarsi dell'evento (es. "Primo Ordine" quando `OrderModel` registra il primo ordine dell'utente) e **profilo utente con i badge**. **Leaderboard rimandata**: è la parte con più rischi — classifiche e privacy, e un badge "Top Spender" premia chi spende di più, che è un messaggio sbagliato per un evento dove si consumano token.
 - **Descrizione**: achievement e livelli per partecipazione
 - **Modello**: `Badge { userId, type, earnedAt, eventId }`
 - **Tipi**: "Primo Ordine", "Cacciatore POI", "Fotografo", "Top Spender", "Seguace" (usa l'app per eventi diversi)
