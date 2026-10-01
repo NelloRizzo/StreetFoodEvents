@@ -10,6 +10,7 @@ import { CurrencyDisplay, isBareCurrencySymbol } from '../components/CurrencyDis
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { fetchReviewsSummary, type ReviewsSummary } from '../lib/reviews'
 import { safeExternalUrl } from '../lib/externalUrl'
+import { isCustomersPwa } from '../lib/app-mode'
 import { trackStandClick } from '../lib/analytics'
 import { PhotoBoothModal } from './PhotoBoothModal'
 import styles from './EventDetailPage.module.scss'
@@ -79,6 +80,10 @@ const STAND_TYPE_EMOJIS = {
 
 export function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>()
+  /* Nella PWA clienti alcune rotte della build operatore non sono montate nel
+     customer-router: i link che le puntano cadrebbero nel catch-all e
+     rimanderebbero alla home, quindi qui vengono nascosti. */
+  const isPwa = isCustomersPwa()
   const [event, setEvent] = useState<Event | null>(null)
   const [stands, setStands] = useState<Stand[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -298,10 +303,17 @@ export function EventDetailPage() {
             <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
               Galleria
             </Link>
-            {/* Volantino stampabile: e' la pagina dove gli sponsor hanno risalto. */}
-            <Link to={`/events/${eventId}/flyer`} className={styles.actionBtnOutline}>
-              Volantino
-            </Link>
+            {/* Volantino stampabile: e' la pagina dove gli sponsor hanno risalto.
+                Nascosto nella PWA clienti: stampa e PDF sono un'attesa da
+                operatore, non da visitatore, e soprattutto la rotta
+                events/:eventId/flyer non esiste nel customer-router (l'unica
+                "flyer" li e' flyer/:eventId = pagina di presentazione del
+                prodotto), quindi il link finirebbe nel catch-all. */}
+            {!isPwa && (
+              <Link to={`/events/${eventId}/flyer`} className={styles.actionBtnOutline}>
+                Volantino
+              </Link>
+            )}
             <Link to={`/events/${eventId}/review`} className={styles.actionBtnOutline}>
               Recensioni{reviewsSummary?.event.count ? ` (${reviewsSummary.event.count})` : ''}
             </Link>
