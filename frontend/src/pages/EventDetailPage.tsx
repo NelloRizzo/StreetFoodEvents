@@ -226,6 +226,11 @@ export function EventDetailPage() {
   /* Sito ufficiale dell'evento: null se assente o se lo schema non è http(s). */
   const officialSite = safeExternalUrl(event?.url)
 
+  /* Etichetta recensioni con il conteggio: serve sia per il testo visibile
+     sia per aria-label/title (l'icona da sola non bastava). */
+  const reviewsCount = reviewsSummary?.event.count ?? 0
+  const reviewsLabel = reviewsCount > 0 ? `Recensioni (${reviewsCount})` : 'Recensioni'
+
   const sortedStands = [...stands].sort((a, b) => {
     const na = standNumber(a)
     const nb = standNumber(b)
@@ -282,25 +287,50 @@ export function EventDetailPage() {
                 GOTCHA: nel menu "Altro" niente link verso rotte della sola
                 build operatore — nella PWA cadrebbero nel catch-all. */}
             <div className={styles.actionTier}>
-              <Link to={`/events/${eventId}/menu`} className={styles.actionBtn}>
-                Menù
-              </Link>
-              <Link to={`/events/${eventId}/mappa`} className={styles.actionBtn}>
-                Mappa
-              </Link>
+              {/* Il cuore e' SEMPRE la prima azione: e' l'unico stato che
+                  l'utente porta con se fra un evento e l'altro. */}
               <button
                 className={`${styles.favBtn} ${isFavorite ? styles.favBtnActive : ''}`}
                 onClick={toggleFavorite}
                 aria-label={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+                title={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
               >
-                {isFavorite ? '\u2764' : '\u2661'}
-                <span>{isFavorite ? 'Preferito' : 'Aggiungi'}</span>
+                <span className={styles.actionIcon} aria-hidden="true">
+                  {isFavorite ? '\u2764' : '\u2661'}
+                </span>
+                <span className={styles.actionText}>
+                  {isFavorite ? 'Preferito' : 'Aggiungi'}
+                </span>
               </button>
+              <Link
+                to={`/events/${eventId}/menu`}
+                className={styles.actionBtn}
+                aria-label="Menù"
+                title="Menù"
+              >
+                <span className={styles.actionIcon} aria-hidden="true">🍽</span>
+                <span className={styles.actionText}>Menù</span>
+              </Link>
+              <Link
+                to={`/events/${eventId}/mappa`}
+                className={styles.actionBtn}
+                aria-label="Mappa"
+                title="Mappa"
+              >
+                <span className={styles.actionIcon} aria-hidden="true">🗺</span>
+                <span className={styles.actionText}>Mappa</span>
+              </Link>
             </div>
 
             <div className={styles.actionTier}>
-              <Link to={`/events/${eventId}/gallery`} className={styles.actionBtnOutline}>
-                Galleria
+              <Link
+                to={`/events/${eventId}/gallery`}
+                className={styles.actionBtnOutline}
+                aria-label="Galleria"
+                title="Galleria"
+              >
+                <span className={styles.actionIcon} aria-hidden="true">🖼</span>
+                <span className={styles.actionText}>Galleria</span>
               </Link>
               {/* Volantino stampabile: e' la pagina dove gli sponsor hanno risalto.
                   Nascosto nella PWA clienti: stampa e PDF sono un'attesa da
@@ -309,16 +339,35 @@ export function EventDetailPage() {
                   "flyer" li e' flyer/:eventId = pagina di presentazione del
                   prodotto), quindi il link finirebbe nel catch-all. */}
               {!isPwa && (
-                <Link to={`/events/${eventId}/flyer`} className={styles.actionBtnOutline}>
-                  Volantino
+                <Link
+                  to={`/events/${eventId}/flyer`}
+                  className={styles.actionBtnOutline}
+                  aria-label="Volantino stampabile"
+                  title="Volantino stampabile"
+                >
+                  <span className={styles.actionIcon} aria-hidden="true">🖨</span>
+                  <span className={styles.actionText}>Volantino</span>
                 </Link>
               )}
-              <Link to={`/events/${eventId}/review`} className={styles.actionBtnOutline}>
-                Recensioni{reviewsSummary?.event.count ? ` (${reviewsSummary.event.count})` : ''}
+              <Link
+                to={`/events/${eventId}/review`}
+                className={styles.actionBtnOutline}
+                aria-label={reviewsLabel}
+                title={reviewsLabel}
+              >
+                <span className={styles.actionIcon} aria-hidden="true">⭐</span>
+                <span className={styles.actionText}>{reviewsLabel}</span>
               </Link>
               {!isEventFinished && (
-                <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
-                  Scatta foto
+                <button
+                  type="button"
+                  className={styles.actionBtnOutline}
+                  onClick={() => setShowPhotoBooth(true)}
+                  aria-label="Scatta foto"
+                  title="Scatta foto"
+                >
+                  <span className={styles.actionIcon} aria-hidden="true">📷</span>
+                  <span className={styles.actionText}>Scatta foto</span>
                 </button>
               )}
             </div>

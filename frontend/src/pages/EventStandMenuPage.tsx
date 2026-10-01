@@ -376,14 +376,19 @@ export function EventStandMenuPage() {
                   />
                 )}
                 <div>
-                  <span className="eyebrow">Menu — {event.name}</span>
+                  <span className="eyebrow">Menu</span>
+                  {/* Il nome evento era dentro la pillola .eyebrow: con un
+                      nome lungo la pillola diventava illeggibile. Ora e' una
+                      riga a se' stante, e la pillola dice solo "Menu". */}
+                  <p className={styles.eventTitle}>{event.name}</p>
                   <h1 className={styles.title}>{stand.name}</h1>
                   {stand.slogan && <p className={styles.slogan}>{stand.slogan}</p>}
                 </div>
               </>
             ) : (
               <div>
-                <span className="eyebrow">Menu — {event.name}</span>
+                <span className="eyebrow">Menu</span>
+                <p className={styles.eventTitle}>{event.name}</p>
                 <h1 className={styles.title}>Tutti i prodotti per categoria</h1>
               </div>
             )}

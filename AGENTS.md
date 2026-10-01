@@ -400,6 +400,14 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - **Wizard**: fieldset ③ter tra ③bis e ④, badge "facoltativa", box punteggio; `AdhesionsManagePage` mostra "Riduzione sprechi (N punti)".
 - Verifica: backend typecheck ✓, suite completa **537 test ✓** (51 file), lint 0 errori; frontend typecheck ✓, **96 test vitest ✓** (15 file), lint 0 errori (11 warning pre-esistenti), build ✓. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 
+## Session state (Ott 2026 — icone nell'hero, cuore primo, link di ritorno nei menu)
+### Completed
+- **Le azioni dell'hero sono icone** (`🍽` Menù, `🗺` Mappa, `🖼` Galleria, `🖨` Volantino, `⭐` Recensioni, `📷` Scatta foto, ♥/♡ preferito: stessi glifi Unicode della sidebar, **nessuna libreria di icone**). L'etichetta **resta nel DOM** e si vede da `48rem` in su (`.actionText`); sotto l'icona "piena" da sola si legge meglio di una pillola stretta col testo. **GOTCHA a11y**: il nome accessibile non può dipendere dal CSS, quindi ogni azione porta `aria-label` + `title` e l'icona è `aria-hidden` — se il testo è nascosto con `display:none` il nome si spezzerebbe. Il menu "Altro" resta testuale.
+- **Il cuore è la prima azione** ovunque compaia (in `EventDetailPage` era terzo, dopo Menù e Mappa): è l'unico stato che l'utente porta fra un evento e l'altro. `StandDetailPage` era già corretto. Test con `compareDocumentPosition`: l'ordine si verifica sul DOM, non su una classe CSS.
+- **`EventMenuPage` non aveva rimando all'evento**: aggiunto `.back-link` "← Torna all'evento" (classe globale, non una `.backLink` nel module.scss).
+- **Nome evento nel menu dello stand**: era dentro la pillola `.eyebrow` (`border-radius: pill`), che con un nome lungo diventava illeggibile. Ora la pillola dice solo "Menu" e il nome è un titolo a se stante `.eventTitle` sopra il nome stand, con `overflow-wrap: anywhere` (i nomi evento sono liberi e possono essere parole lunghe senza spazi).
+- Verifica: frontend build ✓, **110 test vitest ✓** (17 file, +3), lint 0 errori (11 warning pre-esistenti). Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+
 ## Session state (Ott 2026 — dashboard analitica: sezione Statistiche)
 ### Completed
 - **"Analisi vendite"** (`/admin/events/:eventId/analytics`) + endpoint `GET /api/events/:eventId/analytics` (stessi guard di `/visitors`): vendite per ora, prodotti più venduti, tempo medio di preparazione, vendite per stand. Le quattro metriche usano **dati che esistevano già** negli aggregati dei report ordini: non è stato creato nessun modello nuovo. Grafici in CSS, non librerie.

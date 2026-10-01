@@ -130,6 +130,17 @@
   margin-top: 0.5rem;
 }
 
+/* Nome dell'evento: riga a se' stante sopra il titolo dello stand.
+   `overflow-wrap: anywhere` perche' i nomi degli eventi sono liberi e possono
+   essere una sequenza di parole lunghe senza spazi. */
+.eventTitle {
+  margin: 0.4rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  overflow-wrap: anywhere;
+}
+
 .slogan {
   color: var(--color-ink-soft);
   margin-top: 0.5rem;

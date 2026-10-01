@@ -125,6 +125,11 @@ export function EventMenuPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
+        {/* Rimando all'evento: dal menu dell'evento non c'era via per tornare
+            indietro. Stesso pattern di EventStandMenuPage (classe globale
+            `.back-link`, non una `.backLink` nel module.scss). */}
+        <Link to={`/events/${eventId}`} className="back-link">&larr; Torna all'evento</Link>
+
         <header className={styles.header}>
           <div className={styles.headerLeft}>
             <div>

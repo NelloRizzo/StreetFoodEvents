@@ -110,3 +110,47 @@ describe('pagina evento — link al sito ufficiale', () => {
     expect(siteLink()).toBeNull()
   })
 })
+
+describe('pagina evento — icone e ordine delle azioni', () => {
+  beforeEach(() => {
+    apiRequest.mockClear()
+    eventBase.url = null
+  })
+
+  it('il cuore dei preferiti è la PRIMA azione, prima di Menù e Mappa', async () => {
+    renderEventPage()
+    await screen.findByRole('heading', { name: 'Festa di prova', level: 1 })
+
+    const fav = screen.getByRole('button', { name: /Aggiungi ai preferiti/i })
+    const menu = screen.getByRole('link', { name: 'Menù' })
+    const mappa = screen.getByRole('link', { name: 'Mappa' })
+
+    /* DOCUMENT_POSITION_FOLLOWING = 4: sta prima nell'ordine del documento. */
+    expect(fav.compareDocumentPosition(menu) & 4).toBe(4)
+    expect(fav.compareDocumentPosition(mappa) & 4).toBe(4)
+  })
+
+  it('le azioni sono icone con l\'etichetta come hint (title)', async () => {
+    renderEventPage()
+    await screen.findByRole('heading', { name: 'Festa di prova', level: 1 })
+
+    const menu = screen.getByRole('link', { name: 'Menù' })
+    expect(menu.getAttribute('title')).toBe('Menù')
+    expect(screen.getByRole('link', { name: 'Mappa' }).getAttribute('title')).toBe('Mappa')
+    expect(screen.getByRole('link', { name: 'Galleria' }).getAttribute('title')).toBe('Galleria')
+    /* "Scatta foto" non e' presente: l'evento fixture e' gia' terminato e il
+       bottone viene nascosto di proposito. */
+    expect(screen.queryByRole('button', { name: 'Scatta foto' })).toBeNull()
+  })
+
+  it('l\'icona è decorativa e il testo resta nel DOM per il desktop', async () => {
+    renderEventPage()
+    await screen.findByRole('heading', { name: 'Festa di prova', level: 1 })
+
+    /* L'icona ha aria-hidden per non finire nel nome accessibile, ma il testo
+       esiste: sotto il breakpoint e' nascosto solo via CSS. */
+    const menu = screen.getByRole('link', { name: 'Menù' })
+    expect(menu.querySelector('[aria-hidden="true"]')).not.toBeNull()
+    expect(menu.textContent).toContain('Menù')
+  })
+})
