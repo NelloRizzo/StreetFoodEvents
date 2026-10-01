@@ -61,6 +61,83 @@
   gap: 0.75rem;
 }
 
+/* --- Badge --- */
+
+.badges {
+  margin-bottom: 1.5rem;
+}
+
+.badgesTitle {
+  font-size: 1.05rem;
+  color: var(--color-ink-strong);
+  margin: 0 0 0.75rem;
+}
+
+.badgeList {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 0.75rem;
+}
+
+.badgeCard,
+.badgeCardLocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-strong);
+}
+
+.badgeCardLocked {
+  background: none;
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+.badgeIcon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Su un badge non ottenuto l'icona resta in chiaro ma spentita: grezzola
+   desaturare l'emojis, qui si toglie solo la vivacita' con un velo. */
+.badgeCardLocked .badgeIcon {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+
+.badgeBody {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.badgeLabel {
+  font-weight: 700;
+  color: var(--color-ink-strong);
+}
+
+.badgeText {
+  font-size: 0.85rem;
+  color: var(--color-ink-soft);
+  line-height: 1.4;
+}
+
+.badgeDate,
+.badgeProgress {
+  font-size: 0.78rem;
+  color: var(--color-brand-deep);
+  font-weight: 600;
+}
+
+.badgeProgress {
+  color: var(--color-ink-soft);
+}
+
 .item {
   display: flex;
   align-items: center;

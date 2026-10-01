@@ -13,6 +13,7 @@ const collectionsToClear = [
     'orders',
     'counters',
     'favorites',
+    'badges',
     'roles',
     'userroles',
     'userstations',

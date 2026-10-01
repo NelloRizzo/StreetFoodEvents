@@ -5,7 +5,6 @@
 - _(nessun bug aperto: i cinque bug di questa sessione sono stati risolti, vedi CHANGELOG)_
 
 ## Prossime Implementazioni
-- **Badge e gamification (TODO 12)** — prossimo progetto di dimensione: modello `Badge` + assegnazione automatica + profilo utente; leaderboard rimandata.
 - _(nessuna altra implementazione immediata è stata programmata)_
 
 ## Idee e implementazioni future
@@ -161,14 +160,14 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Frontend**: calendar view, swap turni, notifiche assegnazioni
 - **Motivazione**: organizzazione lavoro, riduzione conflitti
 
-### 12. Sistema Badge e Gamification — prossimo progetto
-- **Piano concordato (Ott 2026)**: partire da **modello `Badge` + assegnazione automatica** al verificarsi dell'evento (es. "Primo Ordine" quando `OrderModel` registra il primo ordine dell'utente) e **profilo utente con i badge**. **Leaderboard rimandata**: è la parte con più rischi — classifiche e privacy, e un badge "Top Spender" premia chi spende di più, che è un messaggio sbagliato per un evento dove si consumano token.
-- **Descrizione**: achievement e livelli per partecipazione
-- **Modello**: `Badge { userId, type, earnedAt, eventId }`
-- **Tipi**: "Primo Ordine", "Cacciatore POI", "Fotografo", "Top Spender", "Seguace" (usa l'app per eventi diversi)
-- **API**: assegnazione badge, classifica, statistiche utente, primo ordine, numero ordine specifico (impostabile da admin), numero di eventi diversi (da 2)
-- **Frontend**: profilo utente con badge, leaderboard
-- **Motivazione**: engagement, fidelizzazione
+### 12. Sistema Badge e Gamification — **fatto (1° blocco)**
+- **Stato**: modello, assegnazione automatica e profilo utente **implementati e testati** (Ott 2026: 13 test backend + 6 frontend). Nessun nuovo ruolo, nessuna classifica, nessuna assegnazione manuale.
+- **Fatto**: `Badge { userId, type, earnedAt, eventId|null }` con indice unico `{ userId, type }`; `syncBadges(userId)` come **unico** punto di attacco (retroattivo e auto-guarente, niente script di backfill); `GET /api/badges/me` con solo `authMiddleware` (i dati sono del chiamante, nessun `userId` in query); sezione "I tuoi badge" in `ProfilePage` con **progresso** sui bloccati; `detachEventFromBadges()` alla cancellazione evento (il badge resta, perde solo il contesto).
+- **Tipi reali**: "Primo ordine" 🧾, "Esploratore" 🧭 (3 stand distinti), "Nottefondista" 🌙 (dopo le 22 **locali**, da qui `Event.timezone`), "Fotografo" 📷 (3 foto), "Seguace" 💛 (2 eventi preferiti). Catalogo unico in `services/badge-catalog.ts` (label + icone viaggiano nella risposta).
+- **Escluso di proposito**: "**Top Spender**" — premiare chi spende di più è il messaggio sbagliato in un evento dove si consumano token.
+- **Rimandato — "Cacciatore POI"**: `ContestParticipation` **non ha `userId`** (partecipante anonimo con UUID in `localStorage`). Per farlo serve legare la partecipazione all'utente quando esiste: è una modifica al flusso contest, non un badge.
+- **Leaderboard**: sempre rimandata, per privacy e per il messaggio che manderebbe.
+- **Residuo (valutare)**: badge a "numero di ordine specifico impostabile da admin" — un traguardo arbitrario deciso da chi gestisce; da valutare solo se ha un uso concreto (es. "ordine n. 100 dell'evento").
 
 ### 13. Chat in Tempo Reale
 - **Descrizione**: chat tra utenti e stand per ordini/assistenza

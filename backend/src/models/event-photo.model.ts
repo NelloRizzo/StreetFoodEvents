@@ -91,6 +91,10 @@ const eventPhotoSchema = new Schema(
 );
 
 eventPhotoSchema.index({ eventId: 1, sequenceNumber: -1 });
+/* `createdBy` identifica chi ha scattato ed e' gia' interrogato da
+   GET /photos/mine e dai badge "Fotografo", ma era privo di indice: ogni
+   query faceva una scansione dell'intera collezione. */
+eventPhotoSchema.index({ createdBy: 1, createdAt: -1 });
 
 export type EventPhoto = InferSchemaType<typeof eventPhotoSchema>;
 

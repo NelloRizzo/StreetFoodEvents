@@ -1,8 +1,31 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../features/auth/auth-context'
 import { Avatar } from '../components/Avatar'
+import { fetchMyBadges, formatEarnedAt, progressLabel, type MyBadge } from '../lib/badges'
 import styles from './ProfilePage.module.scss'
+
+function BadgeCard({ badge }: { badge: MyBadge }) {
+  const progress = progressLabel(badge)
+  return (
+    <li className={badge.earned ? styles.badgeCard : styles.badgeCardLocked}>
+      <span className={styles.badgeIcon} aria-hidden="true">{badge.icon}</span>
+      <div className={styles.badgeBody}>
+        <span className={styles.badgeLabel}>{badge.label}</span>
+        <span className={styles.badgeText}>
+          {badge.earned ? badge.description : badge.lockedHint}
+        </span>
+        {badge.earned && badge.earnedAt && (
+          <span className={styles.badgeDate}>ottenuto il {formatEarnedAt(badge.earnedAt)}</span>
+        )}
+        {!badge.earned && progress && (
+          <span className={styles.badgeProgress}>{progress}</span>
+        )}
+      </div>
+    </li>
+  )
+}
 
 /**
  * Profilo utente "classico" dell'app pubblica: dati utente + le voci del
@@ -24,6 +47,26 @@ import styles from './ProfilePage.module.scss'
 export function ProfilePage() {
   const { isAuthenticated, user, logout } = useAuth()
   const navigate = useNavigate()
+  const [badges, setBadges] = useState<MyBadge[]>([])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    /* I badge sono assegnati in automatico dal backend a ogni lettura: non
+       c'e' nessun endpoint di assegnazione, quindi qui si legge e basta. */
+    let cancelled = false
+    fetchMyBadges()
+      .then((res) => {
+        if (!cancelled) setBadges(res.badges)
+      })
+      .catch(() => {
+        /* I badge non sono essenziali al profilo: se falliscono, il profilo
+           resta comunque utilizzabile. */
+        if (!cancelled) setBadges([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated])
 
   if (!isAuthenticated || !user) {
     return (
@@ -76,6 +119,17 @@ export function ProfilePage() {
             {isAdmin && <span className={styles.roleBadge}>Amministratore</span>}
           </div>
         </div>
+
+        {badges.length > 0 && (
+          <section className={styles.badges}>
+            <h2 className={styles.badgesTitle}>I tuoi badge</h2>
+            <ul className={styles.badgeList}>
+              {badges.map((badge) => (
+                <BadgeCard key={badge.type} badge={badge} />
+              ))}
+            </ul>
+          </section>
+        )}
 
         <div className={styles.list}>
           <Link className={styles.item} to="/favorites">

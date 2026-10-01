@@ -155,6 +155,25 @@ const eventSchema = new Schema(
             default: 1,
             min: 0.01
         },
+        /**
+         * Fuso orario IANA dell'evento (es. 'Europe/Rome').
+         *
+         * Serve per ogni dato che dipende dall'ORA LOCALE e non solo dalla
+         * data: senza, "l'ordine delle 22" finirebbe valutato in UTC e su un
+         * evento italiano scatterebbe due ore fuori tempo. E' usato dal badge
+         * "Nottefondista", che assegna i badge in UTC e deve però dire "dopo
+         * le 22 di sera, ora dell'evento".
+         *
+         * Il default e' Europe/Rome perche' il prodotto nasce per eventi di
+         * street food italiani; il controller lo valida contro l'elenco IANA e
+         * ricade sul default se non valido.
+         */
+        timezone: {
+            type: String,
+            default: 'Europe/Rome',
+            trim: true,
+            maxlength: 80
+        },
         participationFee: {
             type: Number,
             min: 0,

@@ -3,11 +3,17 @@
 Guida di prodotto: **a chi serve l'app, come funziona e perché è fatta così**.
 Questo documento descrive il punto di vista dell'utente; per le API e i dettagli tecnici vedi `AGENTS.md`.
 
+| Documento | Versione | Ultimo aggiornamento |
+|---|---|---|
+| GUIDA — Street Food Events | **1.1** | 1 ottobre 2026 |
+
+La 1.1 introduce i **badge** del visitatore e il **fuso orario dell'evento**. La storia delle modifiche è in `docs/CHANGELOG.md`: questo documento si aggiorna solo quando cambia il *perché* di un flusso, non a ogni novità.
+
 ---
 
 ## 1. La filosofia
 
-L'app nasce da un problema concreto: **un evento di street food è una macchina che si accende per tre giorni e si spegne.** Non c'è tempo per configurare nulla, non c'è un ufficio, e ognuno fa un pezzo diverso. Tutto il resto discende da otto convinzioni.
+L'app nasce da un problema concreto: **un evento di street food è una macchina che si accende per tre giorni e si spegne.** Non c'è tempo per configurare nulla, non c'è un ufficio, e ognuno fa un pezzo diverso. Tutto il resto discende da nove convinzioni.
 
 ### 1.1 L'evento è usa e getta, non un evergreen
 Un evento è un **contenitore temporaneo**. Tutta la configurazione (moneta, tema, fasce di commissione, tagli, categorie, sponsor) si duplica con un click in "Duplica evento" per l'edizione dell'anno dopo. I dati operativi — wallet, ordini, transazioni, foto, contest — **non** vengono copiati: sono la storia di quell'evento, non la sua configurazione. Neppure le scadenze si copiano, perché un nuovo evento riparte da zero su quelle.
@@ -19,7 +25,7 @@ L'obiettivo è che tra la piazza e la bocca passino **meno di trenta secondi**: 
 L'ospite non paga con il POS e non riceve scontrino: **cambia in token al banco cambio** e spende i token. Questo semplifica l'esperienza del visitatore, ti fa risparmiare i costi di commissione per transazione e — soprattutto — rende l'organizzatore **indipendente dal proprio POS**. Il credito esiste solo per quell'evento e non vale nulla fuori.
 
 ### 1.4 Si delega per ruolo, non condividendo un account
-In un evento working, il gestore del cambio non è il gestore delle foto, non è il cassiere e non è il gestore stand. L'app ha **14 ruoli** su tre ambiti (piattaforma, evento, stand) perché ognuno riceve solo la sua fetta di comandi. Nessuno deve mai "loggarsi con l'account di un altro" per aiutare: è così che i problemi diventano impossibili da attribuire.
+In un evento working, il gestore del cambio non è il gestore delle foto, non è il cassiere e non è il gestore stand. L'app ha **13 ruoli** su tre ambiti (piattaforma, evento, stand) perché ognuno riceve solo la sua fetta di comandi. Nessuno deve mai "loggarsi con l'account di un altro" per aiutare: è così che i problemi diventano impossibili da attribuire.
 
 ### 1.5 Ogni postazione risponde di sé
 Ogni cassa ha un **nome, un fondo iniziale e un contenuto proprio**. Chiude quando finisce il turno e riporta il conto. Questo vale sia per le casse stand (ordini) sia per i banchi cambio (crediti), ed è la ragione per cui il Master Cambio mostra tutte le casse affiancate: nessuno risponde per un altro.
@@ -32,6 +38,9 @@ Nella coda ordini, nel display pubblico e nel tracking del visitatore **non comp
 
 ### 1.8 Ogni stand è un'azienda indipendente
 Chi possiede uno stand ha i **propri ordini, il proprio menu, il proprio resoconto**. Può lavorare senza mai rivolgersi all'organizzatore, e l'organizzatore non può impedirglielo. È la garanzia che chi compra uno spazio possa continuare a gestirlo anche se l'evento finisce male.
+
+### 1.9 Si premia la presenza, non la spesa
+I badge riconoscono quello che un visitatore **fa** — ordina per la prima volta, si muove fra più stand, resta la sera, scatta foto, segue l'evento — e mai **quanto spende**. Il premio è la soddisfazione di essere riconosciuto, non un premio materiale: per questo sono cinque, banali da ottenere, e visibili solo a chi li ha. Un badge che premiasse chi ha speso di più sarebbe il messaggio sbagliato in un evento dove si consumano token, e su un evento di tre giorni l'ultima cosa che l'organizzatore vuole è incentivare a spendere.
 
 ---
 
@@ -80,10 +89,13 @@ Il visitatore è l'ospite dell'evento. Non ha ruoli e non vede l'area admin.
 | Valutare un evento o uno stand | sì, oppure come ospite con nome + email |
 | Partecipare ai contest scansionando i POI | no |
 | Aggiungere eventi ai preferiti | sì |
+| Vedere i propri badge e il progresso di quelli ancora bloccati | sì |
 
 **Il momento critico è l'ordine.** Il menu è una vetrina aperta a tutti; l'ordine richiede l'accesso perché è ciò che lega la persona al biglietto dell'ordine e al tracking. Chi non ha un account può comunque recensire: gli si rilascia un token ospite.
 
 **Il tracking** (`/track/:orderId`) mostra solo l'ordine: cosa contiene e in che stato è. Nessun prezzo, nessun dato del cliente. Quando l'ordine diventa pronto la schermata diventa verde — e su richiesta esplicita dell'utente può suonare e mandare una notifica.
+
+**I badge** sono nella pagina del profilo: si vincono **da soli**, senza che nessuno li assegni, e chi li ha vede la data in cui sono arrivati; chi non li ha ancora vede **a che punto è** ("2 su 3"), perché un obiettivo quasi raggiunto è più motivante di uno lontano. Chi si registra dopo che la feature è esistita li riceve lo stesso, perché il riconoscimento guarda alla **storia** e non al momento in cui è stato scritto il codice. I cinque badge sono globali sull'account e non hanno a che fare con un evento in particolare: sono un curriculum del visitatore, non un premio dell'evento. Nessuno può vedere i badge di un altro, e non esiste una classifica: l'app non mette le persone l'una contro l'altra.
 
 ---
 
@@ -115,6 +127,7 @@ Identità e descrizione, immagini, date, luogo, sito ufficiale. Poi le impostazi
 - **Tagli di valuta**: le denominazioni accettate dal banco cambio.
 - **Fasce di commissione**: percentuali e quote fisse applicate sulle liquidazioni. Una fascia senza tetto copre gli incassi eccedenti le altre.
 - **Tema colore**: si applica alle pagine e alle postazioni dell'app locale.
+- **Fuso orario**: da cui dipende tutto ciò che ragiona sull'ora locale dell'evento. Per un evento italiano non serve quasi mai cambiarlo, ma per un evento serale all'estero sì.
 - **Adesione stand**: apertura, scadenza e regolamento. Se manca il regolamento, l'adesione non si può inviare.
 - **Sponsor e partner**: si caricano in anticipo con `enabled` spento e si accendono quando l'accordo è firmato.
 
@@ -211,3 +224,5 @@ Due conseguenze pratiche che vale la pena ricordare:
 | **Cornice** | Bordo grafico applicato alle foto del photobooth |
 | **Omaggio** | Ordine senza pagamento: conta nei prodotti, non nel fatturato |
 | **Adesione** | Domanda di partecipazione di uno stand, con i propri stati |
+| **Badge** | Riconoscimento che il visitatore si assegna da solo; nessuno lo concede e nessuno può premiare in base alla spesa |
+| **Fuso orario dell'evento** | Da quale ora locale si misura l'evento; gli orari sono salvati in UTC e convertiti con questo |

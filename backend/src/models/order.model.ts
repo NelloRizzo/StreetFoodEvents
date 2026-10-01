@@ -228,6 +228,10 @@ const orderSchema = new Schema(
 orderSchema.index({ eventId: 1, standId: 1, createdAt: -1 });
 orderSchema.index({ standId: 1, status: 1 });
 orderSchema.index({ userId: 1, createdAt: -1 });
+/* `customerId` e' il cliente (NON `userId`, che e' il cassiere) ed e' interrogato
+   dai badge e dai report per visitatore. Senza questo indice ogni conteggio
+   faceva una scansione. */
+orderSchema.index({ customerId: 1, createdAt: -1 });
 
 export type Order = InferSchemaType<typeof orderSchema>;
 export type OrderStatus = (typeof orderStatusValues)[number];

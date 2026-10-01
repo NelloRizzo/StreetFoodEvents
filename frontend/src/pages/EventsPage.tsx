@@ -8,6 +8,7 @@ import { type UploadedDocument, type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { DocumentUploader } from '../components/DocumentUploader'
 import { OverlayPanel } from '../components/OverlayPanel'
+import { EVENT_TIMEZONES } from '../lib/timezones'
 import { RichEditor } from '../components/RichEditor'
 import { useItalianComuni, searchComuni, getProvinces, getProvinceName, getProvinceSigla } from '../lib/italian-comuni'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -34,6 +35,7 @@ type EventItem = {
   endDate: string
   currencyName: string
   exchangeRate: number
+  timezone?: string
   participationFee: number | null
   deposit: number | null
   participationFeeDeadline: string | null
@@ -90,6 +92,7 @@ type EventFormData = {
   endDate: string
   currencyName: string
   exchangeRate: string
+  timezone: string
   participationFee: string
   deposit: string
   participationFeeDeadline: string
@@ -133,6 +136,7 @@ const emptyForm: EventFormData = {
   endDate: '',
   currencyName: '',
   exchangeRate: '1',
+  timezone: 'Europe/Rome',
   participationFee: '',
   deposit: '',
   participationFeeDeadline: '',
@@ -436,6 +440,7 @@ export function EventsPage() {
       endDate: ev.endDate.slice(0, 10),
       currencyName: ev.currencyName,
       exchangeRate: String(ev.exchangeRate ?? 1),
+    timezone: ev.timezone ?? 'Europe/Rome',
       participationFee: ev.participationFee != null ? String(ev.participationFee) : '',
       deposit: ev.deposit != null ? String(ev.deposit) : '',
       participationFeeDeadline: ev.participationFeeDeadline ? ev.participationFeeDeadline.slice(0, 10) : '',
@@ -522,6 +527,7 @@ export function EventsPage() {
       endDate: form.endDate,
       currencyName: form.currencyName,
       exchangeRate: form.exchangeRate ? Number(form.exchangeRate) : 1,
+    timezone: form.timezone,
       participationFee: form.participationFee ? Number(form.participationFee) : null,
       deposit: form.deposit ? Number(form.deposit) : null,
       participationFeeDeadline: form.participationFeeDeadline ? new Date(form.participationFeeDeadline).toISOString() : null,
@@ -751,8 +757,26 @@ export function EventsPage() {
                   <input id="ev-rate" type="number" min="0.01" step="0.01" value={form.exchangeRate} onChange={(e) => setForm({ ...form, exchangeRate: e.target.value })} placeholder="1" />
                 </div>
               </div>
-              <div className={styles.field}>
-                <label htmlFor="ev-url">Sito ufficiale</label>
+<div className={styles.field}>
+                  <label htmlFor="ev-timezone">Fuso orario</label>
+                  <select
+                    id="ev-timezone"
+                    value={form.timezone}
+                    onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+                  >
+                    {EVENT_TIMEZONES.map((tz) => (
+                      <option key={tz} value={tz}>{tz}</option>
+                    ))}
+                  </select>
+                  <span className={styles.fieldHint}>
+                    Serve a tutto cio&apos; che dipende dall&apos;ora locale: per esempio il
+                    badge &laquo;Nottefondista&raquo;, che viene assegnato quando si ordina
+                    dopo le 22. Qui compaiono i fusi europei e nord-americani piu&apos; usati;
+                    il backend accetta comunque qualunque fuso IANA valido.
+                  </span>
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="ev-url">Sito ufficiale</label>
                 <input id="ev-url" type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." />
               </div>
               <div className={styles.checkField}>

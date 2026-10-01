@@ -8,9 +8,33 @@ import { FavoriteModel } from '../models/favorite.model';
 import { sanitizeHtmlContent } from '../utils/html-sanitizer';
 import { computeEventFingerprint, markAdhesionFormStaleIfChanged } from '../services/adhesion-form.service';
 import { getEventAccess } from '../services/event-access.service';
+import { detachEventFromBadges } from '../services/badge.service';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
+}
+
+/**
+ * Fuso orario IANA ammesso per un evento. Il default e' Europe/Rome perche'
+ * il prodotto nasce per street food italiani.
+ *
+ * Il valore finisce in `$dateToString { timezone }` nel calcolo dei badge: un
+ * fuso inesistente farebbe fallire l'aggregazione al momento della lettura,
+ * quindi qui si valida in scrittura e si ricade sul default. `Intl` e' la
+ * stessa lista che usa Node per le conversioni, quindi non puo' accettare un
+ * fuso che poi il motore non conosce.
+ */
+const DEFAULT_TIMEZONE = 'Europe/Rome';
+
+function normalizeTimezone(value: unknown): string {
+    if (typeof value !== 'string' || !value.trim()) return DEFAULT_TIMEZONE;
+    const candidate = value.trim();
+    try {
+        if (Intl.supportedValuesOf('timeZone').includes(candidate)) return candidate;
+    } catch {
+        // Runtime senza supportedValuesOf: si accetta, il default resta il ripiego.
+    }
+    return DEFAULT_TIMEZONE;
 }
 
 /**
@@ -271,6 +295,7 @@ export async function createEvent(req: Request, res: Response) {
         currencyName,
         currencySymbol,
         exchangeRate,
+        timezone,
         participationFee,
         deposit,
         participationFeeDeadline,
@@ -310,6 +335,7 @@ export async function createEvent(req: Request, res: Response) {
         currencyName: currencyName?.trim() || '€',
         currencySymbol: currencySymbol ?? null,
         exchangeRate: exchangeRate ?? 1,
+        timezone: normalizeTimezone(timezone),
         participationFee: participationFee ?? null,
         deposit: deposit ?? null,
         participationFeeDeadline: participationFeeDeadline ? new Date(participationFeeDeadline) : null,
@@ -367,6 +393,7 @@ export async function updateEvent(req: Request, res: Response) {
         currencyName,
         currencySymbol,
         exchangeRate,
+        timezone,
         participationFee,
         deposit,
         participationFeeDeadline,
@@ -424,6 +451,10 @@ export async function updateEvent(req: Request, res: Response) {
 
     if (exchangeRate !== undefined) {
         event.exchangeRate = exchangeRate;
+    }
+
+    if (timezone !== undefined) {
+        event.timezone = normalizeTimezone(timezone);
     }
 
     if (participationFee !== undefined) {
@@ -666,6 +697,10 @@ export async function deleteEvent(req: Request, res: Response) {
         });
     }
 
+    /* I badge sono un risultato dell'utente, quindi restano; perde solo il
+       riferimento all'evento, che non esiste piu'. */
+    await detachEventFromBadges(new Types.ObjectId(eventId));
+
     return res.status(204).send();
 }
 
@@ -713,6 +748,7 @@ export async function duplicateEvent(req: Request, res: Response) {
         currencyName: source.currencyName,
         currencySymbol: source.currencySymbol ?? null,
         exchangeRate: source.exchangeRate ?? 1,
+        timezone: source.timezone ?? DEFAULT_TIMEZONE,
         participationFee: source.participationFee ?? null,
         deposit: source.deposit ?? null,
         themeBrand: source.themeBrand ?? null,
@@ -912,7 +948,7 @@ export async function eventMenu(req: Request, res: Response) {
             name: event.name,
             currencyName: event.currencyName,
             currencySymbol: event.currencySymbol ?? null,
-            exchangeRate: event.exchangeRate ?? 1,
+            exchangeRate: event.exchangeRate ?? 1
         },
         categories: categoryLabels,
         items: standItems,
