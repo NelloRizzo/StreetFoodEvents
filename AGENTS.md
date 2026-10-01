@@ -193,6 +193,12 @@ Nota: la sidebar admin (`AdminSidebar`) mostra la sezione «Contenuti» → «No
 | `/admin/events/:eventId/reviews` | ReviewsManagePage | Moderazione recensioni (filtro stand/stato, paginazione, QR evento e stand) |
 | `/admin/events/:eventId/reviews/qrcodes` | ReviewsQrCodesPage | QR recensioni di TUTTI gli stand in un'unica pagina stampabile (`window.print`, `@media print` = griglia 3 colonne, toolbar nascosta) |
 
+### Frontend — Statistiche
+| Route | Element | Description |
+|---|---|---|
+| `/admin/events/:eventId/analytics` | EventAnalyticsPage | **Analisi vendite** dell'evento: vendite per ora (barre CSS, etichette in ora locale), tempo medio di preparazione con bucket a confini fissi, prodotti più venduti, vendite per stand su mappa Leaflet (cerchi proporzionali al fatturato, popup costruite con nodi DOM per non iniettare il nome stand) e tabella per stand con contanti/POS/crediti. Grafici in CSS **non** librerie: in stampa un canvas uscirebbe nero. `@media print` nasconde toolbar e mappa |
+| `/admin/events/:eventId/visitors` | VisitorsEstimatePage | Stima visitatori (per stand e per evento) |
+
 ### Frontend — Gallery route
 | Route | Element | Description |
 |---|---|---|
@@ -248,6 +254,11 @@ Nota: la sidebar admin (`AdminSidebar`) mostra la sezione «Contenuti» → «No
 | Method | Route | Auth | Description |
 |---|---|---|---|
 | GET | `/api/events/:eventId/visitors` | event-admin / event-cashier / platform-admin | Stima visitatori: per stand = quantità vendute × coefficiente per categoria di prodotto (tabella fissa in codice, default 1); per evento = token netti venduti (top-up − refund) ÷ spesa media per ordine osservata (fallback 10). Query: `from`/`to` (default finestra evento; `to` date-only → fine giornata), `standId`, `stationId`. Omaggi (`isGift`) e ordini cancellati esclusi dalle quantità. |
+
+### API routes — Analisi vendite
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/events/:eventId/analytics` | event-admin / event-cashier / platform-admin | Dashboard analitica: `hourly` (bucket allineati all'ora **UTC**, `bucketStart` ISO → l'etichetta è in ora locale **frontend**), `topProducts`, `prepBuckets` (confini fissi, sempre tutti presenti anche vuoti), `byStand` (con `location` `{lat,lng}` per la mappa), `totals` (revenue/creditRevenue/posRevenue/cashRevenue, avgOrderValue, distinctCustomers, giftOrders, prepOrders, avgPrepSeconds). Query: `from`/`to`/`standId`. Omaggi esclusi dal fatturato, cancellati esclusi ovunque. **GOTCHA `$bucket`**: `_id` è il limite **inferiore** e l'ultimo boundary diventa il `default`. **GOTCHA fusi**: NON raggruppare per `$hour` (è UTC) senza riallineare l'etichetta lato frontend.
 
 ### API routes — Cambio valuta
 | Method | Route | Auth | Description |
@@ -388,6 +399,16 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - **Modulo stampabile**: sezione statica `slug: 'food-waste'` (4 gruppi + "Nessuna pratica" + punteggio); `buildSectionsFromEvent` inietta `fees` dopo `food-waste` (ordine wizard = documento) e **`TEMPLATE_VERSION` 2 → 3** → i moduli già generati risultano `stale` e vanno rigenerati.
 - **Wizard**: fieldset ③ter tra ③bis e ④, badge "facoltativa", box punteggio; `AdhesionsManagePage` mostra "Riduzione sprechi (N punti)".
 - Verifica: backend typecheck ✓, suite completa **537 test ✓** (51 file), lint 0 errori; frontend typecheck ✓, **96 test vitest ✓** (15 file), lint 0 errori (11 warning pre-esistenti), build ✓. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+
+## Session state (Ott 2026 — dashboard analitica: sezione Statistiche)
+### Completed
+- **"Analisi vendite"** (`/admin/events/:eventId/analytics`) + endpoint `GET /api/events/:eventId/analytics` (stessi guard di `/visitors`): vendite per ora, prodotti più venduti, tempo medio di preparazione, vendite per stand. Le quattro metriche usano **dati che esistevano già** negli aggregati dei report ordini: non è stato creato nessun modello nuovo. Grafici in CSS, non librerie.
+- **Fusi orari**: i bucket sono allineati sull'ora **UTC** e restituiscono `bucketStart` ISO; l'etichetta è in ora locale (`formatHourLabel` frontend). Raggruppare per `$hour` in Mongo avrebbe spostato la distribuzione di due ore su un evento italiano; allineare in UTC e convertire solo l'etichetta evita anche doppioni alle transizioni DST. Test dimostrato **non verde a vuoto**: forzando `timeZone:'UTC'` (macchina in Europe/Rome) falliscono 2 test.
+- **La mappa non è una heatmap di presenze**: dei visitatori non c'è il GPS, quindi è cerchi Leaflet proporzionali al fatturato per stand, con raggio in radice quadrata. Popup costruite con nodi DOM + `textContent` (mai `innerHTML`: il nome stand arriva da un form admin).
+- **Conteggi**: omaggi esclusi dal fatturato ma conteggiati in `giftOrders`, cancellati esclusi ovunque, `cashRevenue = revenue − creditRevenue − posRevenue`. Tempo di preparazione solo su ordini `ready`/`completed` con `readyAt`, bucket a **confini fissi** (stessi per tutti gli eventi, altrimenti i report non sono confrontabili).
+- **`resolveDateWindow` estratto** in `utils/date-window.ts`, riusato da `getVisitorEstimate`: due copie divergono e i due report devono concordare sullo stesso periodo.
+- **Fix pre-esistente in `hasRole`**: un `eventId` malformato finiva grezzo nella query dei ruoli → `CastError` → **500** invece di 400, su ogni route con `eventParam`/`standParam`. Ora 400 a monte (fallisce chiuso). Per evento inesistente **non accessibile** la risposta è **403, non 404**: non si rivela l'esistenza a chi non ha accesso.
+- Verifica: backend typecheck ✓, **552 test ✓** (52 file), lint 0 errori; frontend build ✓, **107 test ✓** (17 file), lint 0 errori (11 warning pre-esistenti). Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 
 ## Session state (Ott 2026 — galleria unificata, tre fasce azioni, form in drawer/modale)
 ### Completed

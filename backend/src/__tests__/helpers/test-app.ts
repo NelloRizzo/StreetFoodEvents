@@ -33,6 +33,7 @@ import { advertisementsRouter } from '../../routes/advertisements.routes';
 import { blogRouter } from '../../routes/blog.routes';
 import { reviewsRouter } from '../../routes/reviews.routes';
 import { visitorsRouter } from '../../routes/visitors.routes';
+import { analyticsRouter } from '../../routes/analytics.routes';
 
 export function createTestApp() {
     const app = express();
@@ -77,6 +78,7 @@ export function createTestApp() {
     app.use('/api/sync', syncRouter);
     app.use('/api/events/:eventId/reviews', reviewsRouter);
     app.use('/api/events/:eventId/visitors', visitorsRouter);
+app.use('/api/events/:eventId/analytics', analyticsRouter);
 
     app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
         if (error instanceof MongooseError.ValidationError) {

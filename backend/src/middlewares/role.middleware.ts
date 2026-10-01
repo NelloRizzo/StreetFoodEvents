@@ -1,4 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
+import { Types } from 'mongoose';
+
 import { UserRoleModel } from '@/models/user-role.model';
 
 type RoleInput = string | string[];
@@ -32,6 +34,18 @@ export function hasRole(
         const standId = options.standParam
             ? req.params[options.standParam]
             : null;
+
+        /* Un parametro di scope malformato non puo' autorizzare nessuno, quindi
+         * si risponde 400 e si esce: senza questo controllo il valore grezzo
+         * finirebbe nella query e Mongoose solleverebbe una CastError, con un
+         * 500 invece di un 400. Vale per ogni route con eventParam/standParam. */
+        if (eventId && !Types.ObjectId.isValid(eventId)) {
+            return res.status(400).json({ message: 'Invalid event id' });
+        }
+
+        if (standId && !Types.ObjectId.isValid(standId)) {
+            return res.status(400).json({ message: 'Invalid stand id' });
+        }
 
         /* Un event-admin puo' fare TUTTO sul proprio evento: e' il ruolo di
          * gestione dell'evento, quindi soddisfa anche i guard dei ruoli piu'

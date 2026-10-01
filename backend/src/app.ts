@@ -43,6 +43,7 @@ import { advertisementsRouter } from './routes/advertisements.routes';
 import { blogRouter } from './routes/blog.routes';
 import { reviewsRouter } from './routes/reviews.routes';
 import { visitorsRouter } from './routes/visitors.routes';
+import { analyticsRouter } from './routes/analytics.routes';
 
 export const app = express();
 
@@ -120,6 +121,7 @@ app.use('/api/advertisements', advertisementsRouter);
 app.use('/api/blog', blogRouter);
 app.use('/api/events/:eventId/reviews', reviewsRouter);
 app.use('/api/events/:eventId/visitors', visitorsRouter);
+app.use('/api/events/:eventId/analytics', analyticsRouter);
 
 app.use((req, res) => {
     return res.status(404).json({

@@ -66,11 +66,9 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Frontend**: calendar picker, lista prenotazioni, QR code check-in
 - **Motivazione**: ridurre code, migliorare gestione flussi visitatori
 
-### 3. Statistiche Avanzate Evento
-- **Descrizione**: dashboard analitica con metriche dettagliate
-- **Metriche**: vendite per ora, prodotti più venduti, mappa calore presenze, tempo medio preparazione
-- **API**: `/api/events/:eventId/analytics` con aggregazioni MongoDB
-- **Frontend**: grafici (Chart.js/Recharts), export CSV/PDF
+### 3. Statistiche Avanzate Evento — **IMPLEMENTATA** (Ott 2026)
+- **Fatto**: pagina `Analisi vendite` (`/admin/events/:eventId/analytics`) + endpoint `GET /api/events/:eventId/analytics` con vendite per ora, prodotti più venduti, tempo medio di preparazione (bucket a confini fissi) e vendite per stand. Grafici in CSS, non librerie. Vedi CHANGELOG Ottobre 2026.
+- **Scostamento dal piano originale**: la `mappa calore presenze` è diventata una **mappa delle vendite per stand** (cerchi Leaflet proporzionali al fatturato): dei visitatori non c'è il GPS, quindi non esiste un dato di posizione aggregabile. Export CSV/PDF non fatto (la pagina è già stampabile con `window.print`).
 - **Motivazione**: supporto decisionale per organizzatori
 
 ### 6. Multi-lingua (i18n) — Piano dettagliato (Ago 2026)

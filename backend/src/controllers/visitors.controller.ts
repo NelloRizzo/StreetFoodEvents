@@ -6,6 +6,7 @@ import { EventProductModel } from '../models/event-product.model';
 import { EventUserTransactionModel } from '../models/event-user-transaction.model';
 import { OrderModel } from '../models/order.model';
 import { StandModel } from '../models/stand.model';
+import { resolveDateWindow } from '../utils/date-window';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -44,8 +45,6 @@ const DEFAULT_TOKENS_PER_VISITOR = 10;
 
 const NO_CATEGORY_LABEL = 'Senza categoria';
 
-const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
-
 function round1(value: number): number {
     return Math.round(value * 10) / 10;
 }
@@ -60,10 +59,6 @@ function pickCategoryLabel(categories: string[]): string {
     return [...categories].sort(
         (a, b) => coefficientFor(b) - coefficientFor(a) || a.localeCompare(b)
     )[0] as string;
-}
-
-function isDateOnly(raw: string | undefined): boolean {
-    return raw !== undefined && DATE_ONLY_RE.test(raw);
 }
 
 /**
@@ -89,17 +84,7 @@ export async function getVisitorEstimate(req: Request, res: Response) {
     const fromRaw = req.query.from as string | undefined;
     const toRaw = req.query.to as string | undefined;
 
-    const parsedFrom = fromRaw && !Number.isNaN(new Date(fromRaw).getTime()) ? new Date(fromRaw) : null;
-    const parsedTo = toRaw && !Number.isNaN(new Date(toRaw).getTime()) ? new Date(toRaw) : null;
-
-    const from: Date = parsedFrom
-        ?? (event.startDate ? new Date(event.startDate) : new Date(0));
-    const to: Date = parsedTo
-        ?? new Date(event.endDate.getTime());
-
-    if (!parsedTo || isDateOnly(toRaw)) {
-        to.setHours(23, 59, 59, 999);
-    }
+    const { from, to } = resolveDateWindow(event, fromRaw, toRaw);
 
     const matchFilter: Record<string, unknown> = {
         eventId: eventIdObj,
