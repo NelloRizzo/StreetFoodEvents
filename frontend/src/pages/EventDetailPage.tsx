@@ -293,12 +293,12 @@ export function EventDetailPage() {
                 GOTCHA: nel menu "Altro" niente link verso rotte della sola
                 build operatore — nella PWA cadrebbero nel catch-all. */}
             <div className={styles.actionTier}>
-              /* Il cuore e' SEMPRE la prima azione: e' l'unico stato che l'utente porta con
-                   se fra un evento e l'altro.
-                   NOTA: si usa il cuore PIENO (U+2665) anche da non preferito.
-                   Il cuore vuoto (U+2661) e' un glifo outline sottile: a 1rem
-                   in bianco su cover chiara spariva del tutto. Lo stato lo
-                   comunica `.favBtnActive` (fondo e bordo rossi, cuore rosa). */
+              {/* Il cuore e' SEMPRE la prima azione: e' l'unico stato che l'utente porta con
+                  se fra un evento e l'altro.
+                  NOTA: si usa il cuore PIENO (U+2665) anche da non preferito.
+                  Il cuore vuoto (U+2661) e' un glifo outline sottile: a 1rem
+                  in bianco su cover chiara spariva del tutto. Lo stato lo
+                  comunica `.favBtnActive` (fondo e bordo rossi, cuore rosa). */}
               <button
                 className={`${styles.favBtn} ${isFavorite ? styles.favBtnActive : ''}`}
                 onClick={toggleFavorite}
@@ -319,15 +319,19 @@ export function EventDetailPage() {
                 <span className={styles.actionIcon} aria-hidden="true">🍽</span>
                 <span className={styles.actionText}>Menù</span>
               </Link>
-              <Link
-                to={`/events/${eventId}/mappa`}
-                className={styles.actionBtnOutline}
-                aria-label="Mappa"
-                title="Mappa"
-              >
-                <span className={styles.actionIcon} aria-hidden="true">🗺</span>
-                <span className={styles.actionText}>Mappa</span>
-              </Link>
+              {/* Mappa: in PWA la bottom bar ha gia' la scheda, quindi qui
+                  sarebbe un secondo ingresso allo stesso posto. */}
+              {!isPwa && (
+                <Link
+                  to={`/events/${eventId}/mappa`}
+                  className={styles.actionBtnOutline}
+                  aria-label="Mappa"
+                  title="Mappa"
+                >
+                  <span className={styles.actionIcon} aria-hidden="true">🗺</span>
+                  <span className={styles.actionText}>Mappa</span>
+                </Link>
+              )}
             </div>
 
             <div className={styles.actionTier}>

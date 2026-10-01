@@ -460,7 +460,7 @@
 .favBtn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   padding: 0.4rem 0.85rem;
   border-radius: var(--radius-pill);
   border: 1px solid rgba(255,255,255,0.3);
@@ -475,12 +475,6 @@
   &:hover {
     background: rgba(255,255,255,0.22);
     border-color: rgba(255,255,255,0.5);
-  }
-
-  span {
-    @media (max-width: 40rem) {
-      display: none;
-    }
   }
 }
 
@@ -498,6 +492,7 @@
 .actionBtnOutline {
   display: inline-flex;
   align-items: center;
+  gap: 0.4rem;
   padding: 0.4rem 0.85rem;
   border-radius: var(--radius-pill);
   border: 1px solid rgba(255,255,255,0.5);
@@ -596,8 +591,9 @@
 
 /* --- Tre fasce di azioni sull'hero ---
    Le azioni sono raggruppate per uso: quello che il visitatore usa davvero,
-   il contenuto dell'evento, e il menu "Altro" per l'organizzazione. Ogni fascia
-   scende su una riga propria quando lo schermo si stringe.
+   il contenuto dell'evento, e il menu "Altro" per l'organizzazione. Le fasce
+   stanno in linea e vanno a capo quando lo schermo si stringe (flex-wrap
+   sia su .heroActions sia su .actionTier).
    Le azioni sono icone: l'etichetta resta come hint (title/aria-label) e
    ricompare in chiaro solo quando c'e' spazio (>= 48rem). Sotto, l'icona
    "piena" da sola e' piu' leggibile di una pillola stretta con il testo. */

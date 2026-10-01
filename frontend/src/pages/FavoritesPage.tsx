@@ -26,6 +26,7 @@ export function FavoritesPage() {
   return (
     <div className={styles.page}>
       <div className="page-shell">
+        <Link className="back-link" to="/profilo">← Torna al profilo</Link>
         <div className={styles.header}>
           <span className="eyebrow">Preferiti</span>
           <h1 className={styles.title}>I tuoi preferiti</h1>

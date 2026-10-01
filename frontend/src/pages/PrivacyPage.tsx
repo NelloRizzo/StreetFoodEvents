@@ -1,9 +1,12 @@
+import { Link } from 'react-router-dom'
+
 import { config } from '../lib/config'
 import styles from './PrivacyPage.module.scss'
 
 export function PrivacyPage() {
   return (
     <div className={`page-shell ${styles.page}`}>
+      <Link className="back-link" to="/profilo">← Torna al profilo</Link>
       <h1 className={styles.title}>Informativa Privacy</h1>
       <p className={styles.date}><em>Ultimo aggiornamento: maggio 2026</em></p>
 
