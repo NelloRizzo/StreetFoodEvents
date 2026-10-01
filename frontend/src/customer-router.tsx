@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, useParams } from 'react-router-dom'
 import { PublicLayout } from './layouts/PublicLayout'
 import { HomePage } from './pages/HomePage'
 import { PlatformPage } from './pages/PlatformPage'
@@ -21,7 +21,6 @@ import { ContestPage } from './pages/ContestPage'
 import { ContestPlayPage } from './pages/ContestPlayPage'
 import { ContestVerifyPage } from './pages/ContestVerifyPage'
 import { ContestDeliveryPage } from './pages/ContestDeliveryPage'
-import { EventGalleryPage } from './pages/EventGalleryPage'
 import { PublicGalleryPage } from './pages/PublicGalleryPage'
 import { SlideshowPage } from './pages/SlideshowPage'
 import { FramesPage } from './pages/FramesPage'
@@ -40,6 +39,14 @@ import { AdhesionFormPublicPage } from './pages/AdhesionFormPublicPage'
 /* Customers PWA — public-facing routes only (no admin / cashier / station).
    Same origin (same origin repo), served at /customers/, installable + offline
    app-shell via vite-plugin-pwa. Reuses the shared public pages and layouts. */
+
+/* Redirect che deve risolvere il parametro dell'evento: <Navigate to="...">
+   non interpola :param, quindi serve un componente che lo legga. */
+function LegacyGalleryRedirect() {
+  const { eventId } = useParams<{ eventId: string }>()
+  return <Navigate to={`/events/${eventId}/gallery`} replace />
+}
+
 export const customerRouter = createBrowserRouter(
   [
     /* Public routes (PublicLayout: top bar + bottom bar) */
@@ -68,8 +75,14 @@ export const customerRouter = createBrowserRouter(
         { path: 'contest/:contestId/play', element: <ContestPlayPage /> },
         { path: 'contest/:contestId/verify/:participantId', element: <ContestVerifyPage /> },
         { path: 'contest/:contestId/delivery', element: <ContestDeliveryPage /> },
-        { path: 'events/:eventId/gallery', element: <EventGalleryPage /> },
-        { path: 'gallery/:eventId', element: <PublicGalleryPage /> },
+        /* Un solo path per la galleria, identico a quello del sito operatore:
+           events/:eventId/gallery -> PublicGalleryPage (quella per i visitatori).
+           Nella PWA la pagina di gestione (EventGalleryPage: selezione, email,
+           social) non e' montata perche' non e' raggiungibile da nessun link e
+           appartiene al mondo operatore. */
+        { path: 'events/:eventId/gallery', element: <PublicGalleryPage /> },
+        { path: 'events/:eventId/galleria', element: <Navigate to="gallery" replace /> },
+        { path: 'gallery/:eventId', element: <LegacyGalleryRedirect /> },
         { path: 'events/:eventId/slideshow', element: <SlideshowPage /> },
         { path: 'frames', element: <FramesPage /> },
         { path: 'flyer/:eventId', element: <FlyerPage /> },

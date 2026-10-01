@@ -213,7 +213,7 @@ export function DashboardPage() {
                     {hiddenCount > 0 && (
                       <span className={styles.moreCount}>+{hiddenCount} in galleria</span>
                     )}
-                    <Link className={styles.eventLink} to={`/admin/events/${group.eventId}/galleria`}>
+                    <Link className={styles.eventLink} to={`/admin/events/${group.eventId}/gallery`}>
                       Apri galleria
                     </Link>
                   </div>

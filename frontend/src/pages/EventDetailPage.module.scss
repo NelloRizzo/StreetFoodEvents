@@ -553,6 +553,7 @@
   display: grid;
   gap: 0.25rem;
   min-width: 14rem;
+  max-width: calc(100vw - 1.5rem);
   padding: 0.4rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
@@ -575,6 +576,53 @@
   text-decoration: none;
   width: 100%;
   cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--color-brand-soft);
+    color: var(--color-brand-deep);
+  }
+}
+
+/* --- Tre fasce di azioni sull'hero ---
+   Le azioni sono raggruppate per uso: quello che il visitatore usa davvero,
+   il contenuto dell'evento, e il menu "Altro" per l'organizzazione. Ogni fascia
+   scende su una riga propria quando lo schermo si stringe. */
+.actionTier {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Intestazione di gruppo dentro il menu "Altro" (Adesione Stand, QR code). */
+.actionDropdownGroup {
+  margin: 0.35rem 0 0.15rem;
+  padding: 0 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+/* I QR code nel menu "Altro" sono componenti che portano un proprio bottone a
+   pillola: dentro il menu devono leggersi come voci, non come azioni hero. */
+.actionDropdownMenu button {
+  width: 100%;
+  min-height: 0;
+  justify-content: flex-start;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-ink);
+  font-weight: 600;
+  text-align: left;
   white-space: nowrap;
 
   &:hover {
@@ -901,5 +949,14 @@
 @media (min-width: 48rem) {
   .standGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Su schermo stretto il trigger "Altro" finisce in fondo alla riga: allineare
+   il pannello a destra evita che il menu esca dal viewport. */
+@media (max-width: 30rem) {
+  .actionDropdownMenu {
+    left: auto;
+    right: 0;
   }
 }

@@ -8,6 +8,7 @@ import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { MapPicker } from '../components/MapPicker'
+import { OverlayPanel } from '../components/OverlayPanel'
 import styles from './StandsPage.module.scss'
 
 type StandType = 'food' | 'artigianato' | 'divertimento'
@@ -223,7 +224,26 @@ export function StandsPage() {
         </div>
 
         {showForm && (
-          <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
+          /* Modale: il form stand e' piccolo (tipologia, nome, immagini,
+             posizione) e starebbe in un drawer laterale con un'enorme area
+             vuota. Stessa logica del drawer: pulsanti nel footer, invio col
+             form= per mantenere valido anche l'invio con Invio. */
+          <OverlayPanel
+            open
+            title={editingId ? `Modifica: ${form.name || 'stand'}` : 'Nuovo stand'}
+            onClose={() => setShowForm(false)}
+            footer={
+              <div className={styles.formActions}>
+                <button type="submit" form="stand-form" className={styles.primaryBtn}>
+                  {editingId ? 'Salva modifiche' : 'Crea stand'}
+                </button>
+                <button type="button" className={styles.secondaryBtn} onClick={() => setShowForm(false)}>
+                  Annulla
+                </button>
+              </div>
+            }
+          >
+          <form id="stand-form" className={`${styles.form} ${styles.formFlush}`} onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
             <div className={styles.field}>
               <label htmlFor="stand-type">Tipologia</label>
               <select
@@ -323,15 +343,8 @@ export function StandsPage() {
               />
 
 
-            <div className={styles.formActions}>
-              <button type="submit" className={styles.primaryBtn}>
-                {editingId ? 'Salva modifiche' : 'Crea stand'}
-              </button>
-              <button type="button" className={styles.secondaryBtn} onClick={() => setShowForm(false)}>
-                Annulla
-              </button>
-            </div>
-          </form>
+            </form>
+          </OverlayPanel>
         )}
 
         <div className={styles.list}>

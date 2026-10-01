@@ -85,6 +85,15 @@
   gap: 0.75rem;
 }
 
+/* Dentro OverlayPanel il form non ha piu' bisogno del proprio riquadro: il
+   pannello fa da contenitore e aggiunge gia' il padding. */
+.formFlush {
+  padding: 0;
+  margin-bottom: 0;
+  border: 0;
+  background: none;
+}
+
 .legend {
   font-weight: 700;
   color: var(--color-ink-strong);

@@ -81,6 +81,14 @@
   background: rgba(255, 250, 242, 0.84);
 }
 
+/* Dentro OverlayPanel il pannello fa da contenitore: niente riquadro proprio. */
+.formFlush {
+  padding: 0;
+  margin-bottom: 0;
+  border: 0;
+  background: none;
+}
+
 .field {
   display: grid;
   gap: 0.35rem;

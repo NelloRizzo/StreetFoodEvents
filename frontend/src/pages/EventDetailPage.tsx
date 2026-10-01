@@ -94,9 +94,9 @@ export function EventDetailPage() {
   const [showPhotoBooth, setShowPhotoBooth] = useState(false)
   const [now] = useState(() => Date.now())
   const [userBalance, setUserBalance] = useState<number | null>(null)
-  const [adesioneMenuOpen, setAdesioneMenuOpen] = useState(false)
+  const [altroMenuOpen, setAltroMenuOpen] = useState(false)
   const [reviewsSummary, setReviewsSummary] = useState<ReviewsSummary | null>(null)
-  const adesioneMenuRef = useRef<HTMLDivElement>(null)
+  const altroMenuRef = useRef<HTMLDivElement>(null)
   const isEventFinished = (() => {
     if (!event) return false
     const endOfDay = new Date(event.endDate)
@@ -157,12 +157,19 @@ export function EventDetailPage() {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (adesioneMenuRef.current && !adesioneMenuRef.current.contains(e.target as Node)) {
-        setAdesioneMenuOpen(false)
+      if (altroMenuRef.current && !altroMenuRef.current.contains(e.target as Node)) {
+        setAltroMenuOpen(false)
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setAltroMenuOpen(false)
+    }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [])
 
   const toggleFavorite = async () => {
@@ -233,7 +240,7 @@ export function EventDetailPage() {
   return (
     <div className={styles.page}>
       {/* Hero */}
-      <section className={`${styles.hero} ${adesioneMenuOpen ? styles.heroMenuOpen : ''}`}>
+      <section className={`${styles.hero} ${altroMenuOpen ? styles.heroMenuOpen : ''}`}>
         {event.coverImage?.url ? (
           <img src={event.coverImage.url} alt="" className={styles.heroCover} />
         ) : (
@@ -267,110 +274,143 @@ export function EventDetailPage() {
         </div>
         <div className={styles.heroActionsWrapper}>
           <div className={`page-shell ${styles.heroActions}`}>
-            <button
-              className={`${styles.favBtn} ${isFavorite ? styles.favBtnActive : ''}`}
-              onClick={toggleFavorite}
-              aria-label={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
-            >
-              {isFavorite ? '\u2764' : '\u2661'}
-              <span>{isFavorite ? 'Preferito' : 'Aggiungi'}</span>
-            </button>
-            <Link to={`/events/${eventId}/mappa`} className={styles.actionBtn}>
-              Mappa
-            </Link>
-            {event.location.googleMapsUrl && (
-              <a href={event.location.googleMapsUrl} target="_blank" rel="noopener noreferrer" className={styles.actionBtnOutline}>
-                Google Maps
-              </a>
-            )}
-            {/* "Sito ufficiale" dell'evento: apertura in nuova scheda. Il valore
-                arriva da un form admin, quindi passa da safeExternalUrl(), che
-                forza https e scarta schemi non http(s) (evita stored-XSS). */}
-            {officialSite && (
-              <a
-                href={officialSite}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.actionBtnOutline}
-                title={officialSite}
-              >
-                Sito ufficiale
-              </a>
-            )}
-            <Link to={`/events/${eventId}/menu`} className={styles.actionBtnOutline}>
-              Menù
-            </Link>
-            <Link to={`/events/${eventId}/galleria`} className={styles.actionBtnOutline}>
-              Galleria
-            </Link>
-            {/* Volantino stampabile: e' la pagina dove gli sponsor hanno risalto.
-                Nascosto nella PWA clienti: stampa e PDF sono un'attesa da
-                operatore, non da visitatore, e soprattutto la rotta
-                events/:eventId/flyer non esiste nel customer-router (l'unica
-                "flyer" li e' flyer/:eventId = pagina di presentazione del
-                prodotto), quindi il link finirebbe nel catch-all. */}
-            {!isPwa && (
-              <Link to={`/events/${eventId}/flyer`} className={styles.actionBtnOutline}>
-                Volantino
+            {/* Tre fasce: la riga era un'unica accozaglia di 12 azioni che su
+                schermi piccoli copriva 3-4 righe sopra l'hero, nascondendo il
+                contenuto. Ora: ① le azioni che il visitatore usa davvero,
+                ② il contenuto dell'evento, ③ il menu "Altro" per
+                l'organizzazione (link esterni, adesione, QR).
+                GOTCHA: nel menu "Altro" niente link verso rotte della sola
+                build operatore — nella PWA cadrebbero nel catch-all. */}
+            <div className={styles.actionTier}>
+              <Link to={`/events/${eventId}/menu`} className={styles.actionBtn}>
+                Menù
               </Link>
-            )}
-            <Link to={`/events/${eventId}/review`} className={styles.actionBtnOutline}>
-              Recensioni{reviewsSummary?.event.count ? ` (${reviewsSummary.event.count})` : ''}
-            </Link>
-            {!isEventFinished && (
-              <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
-                Scatta foto
+              <Link to={`/events/${eventId}/mappa`} className={styles.actionBtn}>
+                Mappa
+              </Link>
+              <button
+                className={`${styles.favBtn} ${isFavorite ? styles.favBtnActive : ''}`}
+                onClick={toggleFavorite}
+                aria-label={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+              >
+                {isFavorite ? '\u2764' : '\u2661'}
+                <span>{isFavorite ? 'Preferito' : 'Aggiungi'}</span>
               </button>
-            )}
-            {event.adhesionEnabled && (
-              <div className={styles.actionDropdown} ref={adesioneMenuRef}>
-                <button
-                  type="button"
-                  className={styles.actionDropdownTrigger}
-                  onClick={() => setAdesioneMenuOpen((v) => !v)}
-                  aria-haspopup="menu"
-                  aria-expanded={adesioneMenuOpen}
-                >
-                  Adesione Stand
-                  <span className={styles.actionDropdownCaret} aria-hidden="true">▾</span>
+            </div>
+
+            <div className={styles.actionTier}>
+              <Link to={`/events/${eventId}/gallery`} className={styles.actionBtnOutline}>
+                Galleria
+              </Link>
+              {/* Volantino stampabile: e' la pagina dove gli sponsor hanno risalto.
+                  Nascosto nella PWA clienti: stampa e PDF sono un'attesa da
+                  operatore, non da visitatore, e soprattutto la rotta
+                  events/:eventId/flyer non esiste nel customer-router (l'unica
+                  "flyer" li e' flyer/:eventId = pagina di presentazione del
+                  prodotto), quindi il link finirebbe nel catch-all. */}
+              {!isPwa && (
+                <Link to={`/events/${eventId}/flyer`} className={styles.actionBtnOutline}>
+                  Volantino
+                </Link>
+              )}
+              <Link to={`/events/${eventId}/review`} className={styles.actionBtnOutline}>
+                Recensioni{reviewsSummary?.event.count ? ` (${reviewsSummary.event.count})` : ''}
+              </Link>
+              {!isEventFinished && (
+                <button type="button" className={styles.actionBtnOutline} onClick={() => setShowPhotoBooth(true)}>
+                  Scatta foto
                 </button>
-                {adesioneMenuOpen && (
-                  <div className={styles.actionDropdownMenu} role="menu">
-                    {event.regulationDocument && (
-                      <button
-                        type="button"
+              )}
+            </div>
+
+            <div className={styles.actionDropdown} ref={altroMenuRef}>
+              <button
+                type="button"
+                className={styles.actionDropdownTrigger}
+                onClick={() => setAltroMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={altroMenuOpen}
+              >
+                Altro
+                <span className={styles.actionDropdownCaret} aria-hidden="true">▾</span>
+              </button>
+              {altroMenuOpen && (
+                <div className={styles.actionDropdownMenu} role="menu">
+                  {/* Link esterni: "Sito ufficiale" arriva da un form admin e
+                      passa da safeExternalUrl(), che forza https e scarta
+                      schemi non http(s) (stored-XSS). Stessa protezione per
+                      "Google Maps", che arriva dal campo location. */}
+                  {officialSite && (
+                    <a
+                      role="menuitem"
+                      className={styles.actionDropdownItem}
+                      href={officialSite}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={officialSite}
+                    >
+                      Sito ufficiale
+                    </a>
+                  )}
+                  {event.location.googleMapsUrl && (
+                    <a
+                      role="menuitem"
+                      className={styles.actionDropdownItem}
+                      href={event.location.googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Google Maps
+                    </a>
+                  )}
+
+                  {event.adhesionEnabled && (
+                    <>
+                      <p className={styles.actionDropdownGroup}>Adesione Stand</p>
+                      {event.regulationDocument && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.actionDropdownItem}
+                          onClick={() => {
+                            setAltroMenuOpen(false)
+                            void downloadRegulation()
+                          }}
+                        >
+                          Scarica Regolamento
+                        </button>
+                      )}
+                      <Link
                         role="menuitem"
                         className={styles.actionDropdownItem}
-                        onClick={() => {
-                          setAdesioneMenuOpen(false)
-                          void downloadRegulation()
-                        }}
+                        to={`/events/${eventId}/adhesion-form`}
+                        onClick={() => setAltroMenuOpen(false)}
                       >
-                        Scarica Regolamento
-                      </button>
-                    )}
-                    <Link
-                      role="menuitem"
-                      className={styles.actionDropdownItem}
-                      to={`/events/${eventId}/adhesion-form`}
-                      onClick={() => setAdesioneMenuOpen(false)}
-                    >
-                      Scarica modulo di adesione
-                    </Link>
-                    <Link
-                      role="menuitem"
-                      className={styles.actionDropdownItem}
-                      to={`/events/${eventId}/stand-adhesion`}
-                      onClick={() => setAdesioneMenuOpen(false)}
-                    >
-                      Compila modulo di adesione
-                    </Link>
+                        Scarica modulo di adesione
+                      </Link>
+                      <Link
+                        role="menuitem"
+                        className={styles.actionDropdownItem}
+                        to={`/events/${eventId}/stand-adhesion`}
+                        onClick={() => setAltroMenuOpen(false)}
+                      >
+                        Compila modulo di adesione
+                      </Link>
+                    </>
+                  )}
+
+                  <p className={styles.actionDropdownGroup}>QR code</p>
+                  {/* QRCodeDownload apre una modale in portal: il wrapper chiude
+                      il menu al click, altrimenti resterebbe aperto sotto. */}
+                  <div role="none" onClick={() => setAltroMenuOpen(false)}>
+                    <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} label="QR Evento" />
                   </div>
-                )}
-              </div>
-            )}
-            <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} label="QR Evento" />
-            <QRCodeDownload apiPath={`/events/${eventId}/menu-qrcode`} fileName={`menu-${event.name}`} label="QR Menu" />
+                  <div role="none" onClick={() => setAltroMenuOpen(false)}>
+                    <QRCodeDownload apiPath={`/events/${eventId}/menu-qrcode`} fileName={`menu-${event.name}`} label="QR Menu" />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>

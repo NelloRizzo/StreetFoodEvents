@@ -40,7 +40,7 @@ vi.mock('../../lib/favorites', () => ({
   deleteFavorite: async () => {},
 }))
 
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '../../features/theme/ThemeProvider'
 import { EventDetailPage } from '../../pages/EventDetailPage'
@@ -56,9 +56,16 @@ const renderEventPage = () =>
     </ThemeProvider>,
   )
 
-/* Il link è <a href>: l'attributo va letto via getAttribute, perché
-   jsdom non espone la normalizzazione dell'href assoluta. */
-const siteLink = () => screen.queryByRole('link', { name: /Sito ufficiale/i })
+/* Le azioni dell'hero sono in tre fasce: i link esterni (sito ufficiale,
+   Google Maps), l'adesione stand e i QR sono dentro il menu "Altro", quindi
+   vanno aperti prima di cercarli.
+   Le voci del menu portano role="menuitem" esplicito, quindi si cercano con
+   quel ruolo e non con "link". */
+const openAltro = async () => {
+  fireEvent.click(await screen.findByRole('button', { name: /Altro/i }))
+}
+
+const siteLink = () => screen.queryByRole('menuitem', { name: /Sito ufficiale/i })
 
 describe('pagina evento — link al sito ufficiale', () => {
   beforeEach(() => {
@@ -69,6 +76,7 @@ describe('pagina evento — link al sito ufficiale', () => {
   it('non mostra nulla quando l\'evento non ha un sito', async () => {
     renderEventPage()
     await screen.findByRole('heading', { name: 'Festa di prova', level: 1 })
+    await openAltro()
     expect(siteLink()).toBeNull()
   })
 
@@ -76,6 +84,7 @@ describe('pagina evento — link al sito ufficiale', () => {
     eventBase.url = 'https://www.festadiprova.it'
     renderEventPage()
     await screen.findByRole('heading', { name: 'Festa di prova', level: 1 })
+    await openAltro()
 
     const link = siteLink()
     expect(link).not.toBeNull()
@@ -89,6 +98,7 @@ describe('pagina evento — link al sito ufficiale', () => {
     eventBase.url = 'festadiprova.it'
     renderEventPage()
     await screen.findByRole('heading', { name: 'Festa di prova', level: 1 })
+    await openAltro()
     expect(siteLink()?.getAttribute('href')).toBe('https://festadiprova.it/')
   })
 
@@ -96,6 +106,7 @@ describe('pagina evento — link al sito ufficiale', () => {
     eventBase.url = 'javascript:alert(document.cookie)'
     renderEventPage()
     await screen.findByRole('heading', { name: 'Festa di prova', level: 1 })
+    await openAltro()
     expect(siteLink()).toBeNull()
   })
 })

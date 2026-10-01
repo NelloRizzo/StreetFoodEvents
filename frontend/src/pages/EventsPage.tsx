@@ -7,6 +7,7 @@ import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites
 import { type UploadedDocument, type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { DocumentUploader } from '../components/DocumentUploader'
+import { OverlayPanel } from '../components/OverlayPanel'
 import { RichEditor } from '../components/RichEditor'
 import { useItalianComuni, searchComuni, getProvinces, getProvinceName, getProvinceSigla } from '../lib/italian-comuni'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -700,7 +701,29 @@ export function EventsPage() {
         </div>
 
         {showForm && (
-          <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
+          /* Drawer laterale: il form ha 11 fieldset e incolonnato in testa alla
+             pagina spingeva la lista eventi fuori dallo schermo. Qui il
+             contenuto scorre e i pulsanti restano fissi in fondo. I pulsanti
+             sono nel footer, fuori dal <form>: per inviarli si usa
+             l'attributo HTML form=, che mantiene valido anche l'invio con
+             Invio dentro un campo. */
+          <OverlayPanel
+            open
+            placement="right"
+            title={editingId ? `Modifica: ${form.name || 'evento'}` : 'Nuovo evento'}
+            onClose={() => setShowForm(false)}
+            footer={
+              <div className={styles.formActions}>
+                <button type="submit" form="event-form" className={styles.primaryBtn}>
+                  {editingId ? 'Salva modifiche' : 'Crea evento'}
+                </button>
+                <button type="button" className={styles.secondaryBtn} onClick={() => setShowForm(false)}>
+                  Annulla
+                </button>
+              </div>
+            }
+          >
+          <form id="event-form" className={`${styles.form} ${styles.formFlush}`} onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
             <fieldset className={styles.fieldset}>
               <legend className={styles.legend}>Informazioni base</legend>
               <div className={styles.field}>
@@ -1330,16 +1353,8 @@ export function EventsPage() {
                 </div>
               </div>
             </fieldset>
-
-            <div className={styles.formActions}>
-              <button type="submit" className={styles.primaryBtn}>
-                {editingId ? 'Salva modifiche' : 'Crea evento'}
-              </button>
-              <button type="button" className={styles.secondaryBtn} onClick={() => setShowForm(false)}>
-                Annulla
-              </button>
-            </div>
           </form>
+          </OverlayPanel>
         )}
 
         {duplicateSource && (

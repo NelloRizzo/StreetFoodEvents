@@ -105,7 +105,11 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/review', element: <EventReviewPage /> },
       { path: 'events/:eventId/stand-adhesion', element: <StandAdhesionWizardPage /> },
       { path: 'events/:eventId/contests', element: <EventContestsPage /> },
-      { path: 'events/:eventId/galleria', element: <PublicGalleryPage /> },
+      { path: 'events/:eventId/gallery', element: <PublicGalleryPage /> },
+      /* Alias storico: la galleria pubblica si chiama "gallery" come nella PWA
+         clienti (un solo path per le due build). Redirect, non drop: i QR
+         gia' stampati e i bookmark con "galleria" continuano a funzionare. */
+      { path: 'events/:eventId/galleria', element: <Navigate to="gallery" replace /> },
       { path: 'events/:eventId/flyer', element: <EventFlyerPage /> },
       { path: 'events/:eventId/slideshow', element: <SlideshowPage /> },
       { path: 'contest/:contestId', element: <ContestPage /> },
@@ -155,7 +159,8 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/cash-registers', element: <CashRegistersPage /> },
       { path: 'events/:eventId/settlements', element: <StandSettlementsPage /> },
       { path: 'events/:eventId/settlements/report', element: <SettlementsReportPage /> },
-      { path: 'events/:eventId/galleria', element: <EventGalleryPage /> },
+      { path: 'events/:eventId/gallery', element: <EventGalleryPage /> },
+      { path: 'events/:eventId/galleria', element: <Navigate to="gallery" replace /> },
       { path: 'events/:eventId/contest-manage', element: <EventContestManagePage /> },
       { path: 'events/:eventId/stands-manage', element: <StandNumberingPage /> },
       { path: 'events/:eventId/frames', element: <EventFramesPage /> },
