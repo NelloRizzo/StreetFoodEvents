@@ -132,6 +132,21 @@ p {
   margin-bottom: 0;
 }
 
+/* Variante "solo glifo" con area cliccabile da dito: per le topbar strette
+ * (casse) dove la label non c'è spazio. Non è un `--bare`: quello azzera il
+ * padding e resta ~16px, troppo piccolo per un tocco. Qui il bersaglio è
+ * quadrato e almeno 44px, con il glifo ingrandito e un bordo discreto che
+ * lo rende riconoscibile come bottone. Il nome accessibile vaSEMPRE messo
+ * dal markup (`aria-label` + `title`): non può dipendere dal CSS. */
+.back-link--icon {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  justify-content: center;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
 /* Variante per un link a FINE pagina (es. "torna alla home"): il margine va
  * sopra, non sotto, altrimenti resterebbe attaccato al testo sopra. */
 .back-link--bottom {
