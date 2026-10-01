@@ -1,12 +1,20 @@
 # TODO — Street Food Events
 
 ## Fix riscontrati in questa sessione 
-- _(nessun bug aperto)_
+- _(tutti i bug risolti)_
 
 ## Prossime Implementazioni
 - **Badge e gamification (TODO 12)** — prossimo progetto di dimensione: modello `Badge` + assegnazione automatica + profilo utente; leaderboard rimandata.
-- **PWA — completamento (TODO 10, fatto in parte)**: la PWA clienti è già installabile e ha l'app-shell offline (`frontend/vite.customer.config.ts`, `vite-plugin-pwa` con `registerType: 'prompt'`, `display: 'standalone'`, workbox + `navigateFallback: '/customers/index.html'`). **Da fare**: push notifications (oggi nessuna `web-push`/VAPID né lato backend), ottimizzazione touch e gesture, verifica del layout responsive su schermi piccoli. Nota: le route admin restano fuori dal bundle customer e non vengono cacheate.
-- _(interfaccia: pulsanti pagina evento a icone con cuore primo, tre fasce di azioni, form in drawer/modale, galleria unificata, link di ritorno nelle pagine menu, nome evento come titolo nel menu stand → risolti Ott 2026, vedi CHANGELOG)_
+- _(nessuna altra implementazione immediata è stata programmata)_
+
+## Idee e implementazioni future
+Qui stanno le voci **non urgenti**: analizzate e rimandate di proposito, non dimenticate. Ogni voce porta con sé la valutazione, così non va rifatta da capo.
+
+- **PWA clienti — ottimizzazione touch** (valutata Ott 2026, **non fatta per scelta**): è l'unica delle quattro voci sotto che merita davvero il lavoro, e costerebbe poco. Due difetti misurati: ① il pulsante più toccato dell'app (`.addBtn` nel menu stand, `EventStandMenuPage.module.scss:345`) ha `padding: 0.4rem 0.9rem` e **nessun `min-height`** → alta ≈29px: passa il minimo WCAG AA (24px) ma è sotto i 44px raccomandati da Apple e i 48dp di Material; sulle pagine pubbliche ci sono 316 blocchi di stile e sole 13 dichiarazioni `min-height`. ② **100+ regole `:hover` in ~60 file e zero `@media (hover: hover)`**: su telefono lo stile hover resta applicato dopo il tocco finché non si tocca altro. Intervento proposto, tutto CSS e senza toccare l'architettura: `touch-action: manipulation` in `global.scss`, hover sotto `@media (hover: hover)` e `min-height` con token condiviso. **Ambito consigliato: solo pagine pubbliche** — l'admin è desktop e lì il problema touch non esiste.
+- **PWA clienti — push notifications** (valutata Ott 2026, **consigliata rimandare**): il caso d'uso ovvio ("il tuo ordine è pronto") è già coperto dalla pagina di tracking e dal display pubblico, che in un evento restano accese. Servirebbero davvero alla postazione di cucina, ma l'ostacolo è serio: `vite.customer.config.ts` usa la strategia predefinita `generateSW`, e **Workbox in quella modalità non supporta gli handler `push`** → serve passare a `injectManifest` con un `sw.ts` proprio, riscrivendo l'app-shell offline che oggi funziona. Servono inoltre VAPID, `web-push` lato backend, modello `PushSubscription`, gestione delle subscription morte (410) e il vincolo di Render free (un solo processo). **Decisivo: sull'app locale non è possibile**, perché `.local/docker-compose.yml:16` serve su `http://<host>:4000` e service worker e push richiedono un contesto sicuro: per usarle in piazza servirebbe TLS con certificato autofirmato da installare a mano su ogni telefono. Su iOS funzionano solo con la PWA installata nella home screen.
+- **PWA clienti — gesture** (valutata Ott 2026, **consigliata cancellare**): non c'è nessuna interazione che le richieda (niente carousel da scorrere, niente drag-and-drop lato cliente; Leaflet gestisce già pan e zoom al tocco). Implementare gesture senza un caso d'uso porta a navigazioni accidentali proprio mentre un visitatore sta ordinando.
+- **PWA clienti — verifica del layout responsive** (valutata Ott 2026): è QA, non una feature. Non esiste tooling di test visivo (solo vitest unitari), quindi sarebbe un giro manuale sulle pagine pubbliche; l'unico controllo automatico sensato coprirebbe la regola "bersagli di tocco", non l'aspetto reale.
+- **PWA clienti — stato**: installabile (manifest, `standalone`, icone maskable e apple-touch), con prompt di installazione (`CustomerPwaPrompt.tsx`: `beforeinstallprompt`, riconoscimento standalone, dismissal persistito), app-shell offline (workbox precache + `navigateFallback: '/customers/index.html'` con denylist delle API), viewport touch-ready (`width=device-width, viewport-fit=cover`) e 59 media query. Le route admin restano fuori dal bundle customer e non vengono cacheate.
 
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
@@ -141,7 +149,7 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 
 ### 10. App Mobile (PWA) — **IMPLEMENTATA IN PARTE** (Set 2026)
 - **Fatto**: PWA clienti installabile con app-shell offline (`vite-plugin-pwa` su `vite.customer.config.ts`: `display: standalone`, workbox con precache degli asset, `navigateFallback: '/customers/index.html'`, `navigateFallbackDenylist: [/^\/api\//]`, `registerType: 'prompt'` per non forzare l'aggiornamento). Le route admin sono in un bundle separato e non vengono cacheate.
-- **Da fare**: vedi "Prossime Implementazioni".
+- **Da fare**: vedi "Idee e implementazioni future" (touch, push, gesture, verifica responsive), con la valutazione di merito.
 - **Descrizione originale**: esperienza mobile nativa, installazione home screen, push notifications
 - **Motivazione**: esperienza mobile, accessibilità
 
