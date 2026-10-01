@@ -375,7 +375,7 @@ export function EventStandMenuPage() {
                     className={styles.logo}
                   />
                 )}
-                <div>
+                <div className={styles.headerText}>
                   <span className="eyebrow">Menu</span>
                   {/* Il nome evento era dentro la pillola .eyebrow: con un
                       nome lungo la pillola diventava illeggibile. Ora e' una
@@ -386,7 +386,7 @@ export function EventStandMenuPage() {
                 </div>
               </>
             ) : (
-              <div>
+              <div className={styles.headerText}>
                 <span className="eyebrow">Menu</span>
                 <p className={styles.eventTitle}>{event.name}</p>
                 <h1 className={styles.title}>Tutti i prodotti per categoria</h1>
@@ -395,7 +395,13 @@ export function EventStandMenuPage() {
           </div>
           {viewMode === 'stand' && (
             <div className={styles.headerActions}>
-              <Link className={styles.reviewLink} to={`/events/${eventId}/stands/${standId}/review`}>
+              <Link
+                className={styles.reviewLink}
+                to={`/events/${eventId}/stands/${standId}/review`}
+                {...(!reviewAvg
+                  ? { 'aria-label': 'Lascia una recensione', title: 'Lascia una recensione' }
+                  : {})}
+              >
                 {reviewAvg ? (
                   <>
                     <span className={styles.reviewStars}>{'★'.repeat(Math.round(reviewAvg.avg))}</span>
@@ -404,7 +410,9 @@ export function EventStandMenuPage() {
                     </span>
                   </>
                 ) : (
-                  <span className={styles.reviewValue}>Lascia una recensione</span>
+                  /* Senza recensioni mostriamo l'icona, come nella pagina
+                     evento: il nome accessibile e l'hint restano sul link. */
+                  <span className={styles.reviewIcon} aria-hidden="true">⭐</span>
                 )}
               </Link>
               {canExportSocial && user && (

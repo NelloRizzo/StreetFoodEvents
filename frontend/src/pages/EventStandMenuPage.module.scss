@@ -114,6 +114,15 @@
   min-width: 0;
 }
 
+/* Il blocco dei nomi occupa TUTTA la larghezza disponibile: senza `flex: 1`
+   si restringeva al contenuto e restava una colonna stretta a sinistra, con il
+   nome evento che andava a capo molto prima del bordo destro. `min-width: 0`
+   lascia stringere i nomi lunghi invece di sfondare la riga. */
+.headerText {
+  flex: 1;
+  min-width: 0;
+}
+
 .logo {
   width: 4.5rem;
   height: 4.5rem;
@@ -203,6 +212,13 @@
 
 .reviewValue {
   font-size: 0.85rem;
+}
+
+/* Icona al posto della scritta "Lascia una recensione" quando non ce ne sono
+   ancora: stessa scelta della pagina evento. */
+.reviewIcon {
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .layout {

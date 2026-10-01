@@ -18,6 +18,27 @@
   overflow: visible;
 }
 
+/* Barra del rimando "Tutti gli eventi": absolute rispetto all'hero, quindi
+   sta in cima alla cover senza occupare il flusso del contenuto. z-index sopra
+   l'overlay (1) per non finire sotto il gradiente. */
+.heroTopBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 0.9rem 0 1.8rem;
+  pointer-events: none;
+  /* Il gradiente dell'hero e' scuro IN BASSO: spostando il rimando in alto
+     il testo bianco finiva su una copertina chiara e spariva. Questo scrim
+     garantisce il contrasto su qualunque immagine. */
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent);
+}
+
+.heroTopBar > * {
+  pointer-events: auto;
+}
+
 .heroCover {
   position: absolute;
   inset: 0;
@@ -469,21 +490,10 @@
   color: #ff8a9e;
 }
 
-.actionBtn {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.4rem 0.85rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-brand);
-  color: #fffaf2;
-  font-weight: 700;
-  font-size: 0.85rem;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: opacity var(--ease-standard);
-
-  &:hover { opacity: 0.85; }
-}
+/* Non esiste piu' un pulsante "primario" con sfondo pieno: Menù e Mappa
+   avevano il fondo brand pieno mentre tutte le altre azioni erano traslucide,
+   e sullo stesso hero sembravano un'altra famiglia di pulsanti. Ora tutte le
+   azioni in vista condividono `.actionBtnOutline`. */
 
 .actionBtnOutline {
   display: inline-flex;

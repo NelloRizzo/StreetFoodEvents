@@ -251,9 +251,15 @@ export function EventDetailPage() {
         ) : (
           <div className={styles.heroPlaceholder} />
         )}
+        {/* Rimando in ALTO sulla cover: dentro `.heroOverlay` finiva a metà
+            dell'immagine, perché l'overlay è allineato al fondo dell'hero. */}
+        <div className={styles.heroTopBar}>
+          <div className="page-shell">
+            <Link to="/" className="back-link back-link--onDark back-link--inline">&larr; Tutti gli eventi</Link>
+          </div>
+        </div>
         <div className={styles.heroOverlay}>
           <div className={`page-shell ${styles.heroContent}`}>
-            <Link to="/" className="back-link back-link--onDark back-link--inline">&larr; Tutti gli eventi</Link>
             <div className={styles.heroText}>
               {event.logo?.url && (
                 <img src={event.logo.url} alt={`${event.name} logo`} className={styles.heroLogo} />
@@ -287,24 +293,26 @@ export function EventDetailPage() {
                 GOTCHA: nel menu "Altro" niente link verso rotte della sola
                 build operatore — nella PWA cadrebbero nel catch-all. */}
             <div className={styles.actionTier}>
-              {/* Il cuore e' SEMPRE la prima azione: e' l'unico stato che
-                  l'utente porta con se fra un evento e l'altro. */}
+              /* Il cuore e' SEMPRE la prima azione: e' l'unico stato che l'utente porta con
+                   se fra un evento e l'altro.
+                   NOTA: si usa il cuore PIENO (U+2665) anche da non preferito.
+                   Il cuore vuoto (U+2661) e' un glifo outline sottile: a 1rem
+                   in bianco su cover chiara spariva del tutto. Lo stato lo
+                   comunica `.favBtnActive` (fondo e bordo rossi, cuore rosa). */
               <button
                 className={`${styles.favBtn} ${isFavorite ? styles.favBtnActive : ''}`}
                 onClick={toggleFavorite}
                 aria-label={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
                 title={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
               >
-                <span className={styles.actionIcon} aria-hidden="true">
-                  {isFavorite ? '\u2764' : '\u2661'}
-                </span>
+                <span className={styles.actionIcon} aria-hidden="true">♥</span>
                 <span className={styles.actionText}>
                   {isFavorite ? 'Preferito' : 'Aggiungi'}
                 </span>
               </button>
               <Link
                 to={`/events/${eventId}/menu`}
-                className={styles.actionBtn}
+                className={styles.actionBtnOutline}
                 aria-label="Menù"
                 title="Menù"
               >
@@ -313,7 +321,7 @@ export function EventDetailPage() {
               </Link>
               <Link
                 to={`/events/${eventId}/mappa`}
-                className={styles.actionBtn}
+                className={styles.actionBtnOutline}
                 aria-label="Mappa"
                 title="Mappa"
               >
