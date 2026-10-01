@@ -4,7 +4,10 @@
 - _(sezione vuota: nessun bug riscontrato)_
 
 ## Prossime Implementazioni
-- _(sezione vuota: nessuna attività pianificata)_
+- **PWA — completamento (TODO 10, fatto in parte)**: la PWA clienti è già installabile e ha l'app-shell offline (`frontend/vite.customer.config.ts`, `vite-plugin-pwa` con `registerType: 'prompt'`, `display: 'standalone'`, workbox + `navigateFallback: '/customers/index.html'`). **Da fare**: push notifications (oggi nessuna `web-push`/VAPID né lato backend), ottimizzazione touch e gesture, verifica del layout responsive su schermi piccoli. Nota: le route admin restano fuori dal bundle customer e non vengono cacheate.
+- **Interfaccia — riduzione dei pulsanti nella pagina evento** (in corso di valutazione): `EventDetailPage` oggi espone ~12 azioni tutte in un'unica riga pillola sopra l'hero (Preferito, Mappa, Google Maps, Sito ufficiale, Menù, Galleria, Volantino, Recensioni, Scatta foto, Adesione Stand, QR Evento, QR Menu) → su schermi piccoli copre più righe e nasconde il contenuto. Ipotesi da scegliere: 3 fasce (primari / contenuto / organizzazione) oppure dropdown unico "Altro".
+- **Interfaccia — posizione del form di creazione/modifica**: `EventsPage` e `StandsPage` rendono il form in testa alla pagina, quindi aprirlo sposta la lista fuori dallo schermo. Da scegliere fra drawer laterale, modale o pagina dedicata (`/admin/events/new`, `/admin/events/:id/edit`). Il form evento è molto grande (11 fieldset), lo stand molto meno: le due scelte non devono per forza coincidere.
+- _(niente altro pianificato al momento)_
 
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
@@ -139,11 +142,10 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - **Frontend**: form pagamento sicuro, storico transazioni
 - **Motivazione**: vendita online, pre-vendita
 
-### 10. App Mobile (PWA)
-- **Descrizione**: Progressive Web App per esperienza mobile nativa
-- **Features**: offline mode, installazione home screen, push notifications
-- **Tecnologia**: Service Worker + manifest.json
-- **Frontend**: ottimizzazione touch, gesture, layout responsive
+### 10. App Mobile (PWA) — **IMPLEMENTATA IN PARTE** (Set 2026)
+- **Fatto**: PWA clienti installabile con app-shell offline (`vite-plugin-pwa` su `vite.customer.config.ts`: `display: standalone`, workbox con precache degli asset, `navigateFallback: '/customers/index.html'`, `navigateFallbackDenylist: [/^\/api\//]`, `registerType: 'prompt'` per non forzare l'aggiornamento). Le route admin sono in un bundle separato e non vengono cacheate.
+- **Da fare**: vedi "Prossime Implementazioni".
+- **Descrizione originale**: esperienza mobile nativa, installazione home screen, push notifications
 - **Motivazione**: esperienza mobile, accessibilità
 
 ### 11. Gestione Staff Avanzata

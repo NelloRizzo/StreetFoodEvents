@@ -150,6 +150,10 @@
   display: flex;
   align-items: flex-start;
   gap: 1rem;
+  /* Senza wrap il bottone "Rimuovi" e le tracce della griglia non hanno dove
+     andare quando la finestra si stringe: il contenuto esce dal box e i
+     controlli risultano sovrapposti. */
+  flex-wrap: wrap;
   padding: 0.85rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
@@ -158,14 +162,26 @@
 
 .sponsorLogoBox {
   flex: 0 0 9rem;
+  max-width: 100%;
 }
 
 .sponsorFields {
-  flex: 1;
+  /* basis + min-width: 0 = la griglia puo' restringersi sotto il suo
+     min-content, altrimenti le tracce da 8rem non scendono mai e la riga
+     sfonda il contenitore. */
+  flex: 1 1 16rem;
+  min-width: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: 0.75rem;
   align-content: start;
+}
+
+.sponsorToggle {
+  /* Occupa tutta la riga: da sola in una colonna stretta finiva per
+     schiacciarsi contro la select "Livello" sopra. */
+  grid-column: 1 / -1;
+  align-self: center;
 }
 
 @media (max-width: 40rem) {

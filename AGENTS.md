@@ -10,6 +10,7 @@ I file di documentazione sono in `docs/`. Modifiche a questi file NON attivano u
 | File | Destinazione | Cosa scriverci |
 |---|---|---|
 | `docs/CHANGELOG.md` | **Cronologia feature — ULTIMO MESE** | Changelog rolling: contiene SOLO le voci del mese corrente (ultimo mese). Ogni volta che una feature viene completata, aggiungere una entry in cima alla sezione `## <Mese> <Anno>` corrente. Quando il mese corrente finisce (o la sezione cresce troppo), spostare le voci più vecchie in `docs/CHANGELOG_ANNUALE.md` così `CHANGELOG.md` resta sempre l'"ultimo mese". |
+| `docs/GUIDA.md` | **Guida di prodotto** | Filosofia dell'app, i 14 ruoli su 3 scope, e il comportamento atteso per visitatore / admin piattaforma / admin evento / gestore stand / operatore, più i tre conti distinti (ordini, banco cambio, liquidazione) e un glossario. È la risposta a "perché è fatta così": quando si tocca un flusso, va tenuta allineata. |
 | `docs/CHANGELOG_ANNUALE.md` | **Cronologia storica (annuale)** | Archivio delle voci uscite dal mese corrente. NON si aggiorna con nuove feature: le nuove entry vanno SOLO in `docs/CHANGELOG.md`. |
 | `docs/ARCHITECTURE.md` | **Decisioni progettuali** | Pattern architetturali, motivazioni delle scelte, "cose da non fare", gotchas che un agente AI deve conoscere per non ripetere errori. Aggiornare quando si introduce un nuovo pattern o si impara una lezione. |
 | `docs/TODO.md` | **Task in sospeso** | Feature non ancora implementate, bug aperti, attività pianificate per il futuro. Spostare qui le entry da `docs/CHANGELOG.md` solo quando diventano obsolete, non quando sono completate. |
@@ -385,6 +386,14 @@ Modifiche ai file in `docs/` non attivano un deploy. Imposta su Render dashboard
 - **Modulo stampabile**: sezione statica `slug: 'food-waste'` (4 gruppi + "Nessuna pratica" + punteggio); `buildSectionsFromEvent` inietta `fees` dopo `food-waste` (ordine wizard = documento) e **`TEMPLATE_VERSION` 2 → 3** → i moduli già generati risultano `stale` e vanno rigenerati.
 - **Wizard**: fieldset ③ter tra ③bis e ④, badge "facoltativa", box punteggio; `AdhesionsManagePage` mostra "Riduzione sprechi (N punti)".
 - Verifica: backend typecheck ✓, suite completa **537 test ✓** (51 file), lint 0 errori; frontend typecheck ✓, **96 test vitest ✓** (15 file), lint 0 errori (11 warning pre-esistenti), build ✓. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+
+## Session state (Ott 2026 — fix difetti sponsor + GUIDA.md)
+### Completed
+- **Volantino: i tag HTML finivano nel testo** (`EventFlyerPage`): `shortDescription` è HTML prodotto dal RichEditor e **già sanitizzato dal server** (`sanitizeHtmlContent`, in scrittura in create e update) → reso con `dangerouslySetInnerHTML` come fa `EventDetailPage`, più stili `.desc` che azzerano i margin di `p`/`ul`/`ol`. **GOTCHA**: un campo che arriva come HTML va reso come markup, mai come testo.
+- **Riga sponsor: i controlli si sovrapponevano** (`EventsPage.module.scss`): `.sponsorFields` era `repeat(auto-fit, minmax(11rem, 1fr))` dentro una flex row **senza `flex-wrap`** e **senza `min-width: 0`** → le tracce non scendono sotto il min-content, il contenuto esce dal box e la checkbox si schiaccia contro la select. Fix: `flex-wrap: wrap`, `flex: 1 1 16rem` + `min-width: 0`, tracce a `minmax(8rem, 1fr)`, nuova `.sponsorToggle { grid-column: 1 / -1 }`. **GOTCHA**: in una flex row, ogni griglia figlia ha bisogno di `min-width: 0` (o di un `flex-basis` esplicito) per potersi restringere.
+- **`docs/GUIDA.md`** (nuovo): guida di prodotto — filosofia, tabella dei 14 ruoli su 3 scope, comportamento per visitatore / admin piattaforma / admin evento / gestore stand / operatore, i tre conti distinti e glossario.
+- **`TODO.md`**: punto 10 (PWA) marcato come **implementato in parte** (PWA clienti installabile con app-shell offline via `vite-plugin-pwa` su `vite.customer.config.ts`; mancano push notifications/touch/gesture) e residuo spostato in "Prossime Implementazioni", dove sono finite anche le due questioni UI aperte (pulsanti pagina evento, posizione del form).
+- Verifica: frontend build (tsc+vite) ✓, **96 test vitest ✓** (15 file), lint 0 errori (1 warning pre-esistente). Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 
 ## Session state (Ott 2026 — sponsor evento: Event.sponsors[] + volantino stampabile)
 ### Completed

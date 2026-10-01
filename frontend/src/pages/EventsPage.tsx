@@ -1068,7 +1068,7 @@ export function EventsPage() {
                         <option value="partner">Partner</option>
                       </select>
                     </div>
-                    <label className={styles.checkLabel}>
+<label className={`${styles.checkLabel} ${styles.sponsorToggle}`}>
                       <input
                         type="checkbox"
                         checked={s.enabled}

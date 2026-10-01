@@ -99,6 +99,16 @@
   color: var(--color-ink-soft);
   font-size: 0.95rem;
   line-height: 1.5;
+
+  /* shortDescription arriva come HTML sanitizzato dal RichEditor: azzeriamo i
+     margin dei blocchi perche' nel volantino gli spazi extra fanno "spoppolare"
+     l'impaginazione. */
+  p, ul, ol, blockquote { margin: 0 0 0.35rem; }
+  p:last-child, ul:last-child, ol:last-child { margin-bottom: 0; }
+  ul, ol { padding-left: 1.1rem; }
+  li { margin-bottom: 0.15rem; }
+  strong { color: var(--color-ink-strong); }
+  a { color: var(--color-brand); }
 }
 
 .site {

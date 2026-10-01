@@ -126,7 +126,12 @@ export function EventFlyerPage() {
                 {event.location.label}
                 {event.location.city ? `, ${event.location.city}` : ''}
               </p>
-              {event.shortDescription && <p className={styles.desc}>{event.shortDescription}</p>}
+              {/* shortDescription e' HTML gia' sanitizzato dal server
+                  (sanitizeHtmlContent in events.controller.ts): va reso come
+                  markup, altrimenti i tag finiscono visibili nel testo. */}
+              {event.shortDescription && (
+                <div className={styles.desc} dangerouslySetInnerHTML={{ __html: event.shortDescription }} />
+              )}
               {safeExternalUrl(event.url) && (
                 <p className={styles.site}>
                   <a href={safeExternalUrl(event.url)!} target="_blank" rel="noopener noreferrer">
