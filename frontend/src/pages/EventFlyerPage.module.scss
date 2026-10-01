@@ -222,6 +222,42 @@
   text-decoration: underline;
 }
 
+/* --- QR verso la pagina dell'evento --- */
+
+.qrBlock {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-line);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.qrImage {
+  flex: 0 0 auto;
+  width: 6.5rem;
+  height: 6.5rem;
+  object-fit: contain;
+  display: block;
+}
+
+.qrText {
+  min-width: 0;
+}
+
+.qrTitle {
+  margin: 0 0 0.25rem;
+  font-weight: 700;
+  color: var(--color-ink-strong);
+}
+
+.qrHint {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
 @media (max-width: 40rem) {
   .header {
     flex-direction: column;
@@ -244,6 +280,12 @@
   .mainItem img {
     max-width: 9rem;
     max-height: 4rem;
+  }
+
+  .qrBlock {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
   }
 }
 
@@ -268,7 +310,8 @@
 
   .mainItem,
   .gridItem,
-  .partnerItem {
+  .partnerItem,
+  .qrBlock {
     break-inside: avoid;
   }
 }

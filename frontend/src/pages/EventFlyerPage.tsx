@@ -52,6 +52,7 @@ export function EventFlyerPage() {
   const [event, setEvent] = useState<FlyerEvent | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [qrCode, setQrCode] = useState<string | null>(null)
 
   useEffect(() => {
     if (!eventId) return
@@ -68,6 +69,30 @@ export function EventFlyerPage() {
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [eventId])
+
+  /* QR verso la pagina dell'evento sulla piattaforma.
+   *
+   * Riusa `GET /api/events/:eventId/qrcode` (public, gia' usato dal bottone
+   * "QR Evento" in EventDetailPage): restituisce un data URL con l'URL
+   * costruito dal backend dall'origin della richiesta.
+   *
+   * Effetto separato dal caricamento dell'evento di proposito: il QR e' un
+   * extra, se la generazione fallisce il volantino resta stampabile e senza
+   * QR, mentre un errore qui non deve far rimbalzare la pagina. */
+  useEffect(() => {
+    if (!eventId) return
+    let cancelled = false
+    apiRequest<{ qrCode: string }>(`/events/${eventId}/qrcode`)
+      .then((res) => {
+        if (!cancelled) setQrCode(res.qrCode)
+      })
+      .catch(() => {
+        if (!cancelled) setQrCode(null)
       })
     return () => {
       cancelled = true
@@ -210,6 +235,22 @@ export function EventFlyerPage() {
                   </div>
                 </div>
               )}
+            </section>
+          )}
+
+          {qrCode && (
+            <section className={styles.qrBlock} aria-label="QR code dell'evento">
+              <img
+                src={qrCode}
+                alt={`QR code per aprire la pagina di ${event.name}`}
+                className={styles.qrImage}
+              />
+              <div className={styles.qrText}>
+                <p className={styles.qrTitle}>Inquadra e apri l&apos;evento</p>
+                <p className={styles.qrHint}>
+                  Menu dei stand, mappa, galleria e ordine diretto dal telefono.
+                </p>
+              </div>
             </section>
           )}
         </article>

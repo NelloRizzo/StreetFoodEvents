@@ -199,7 +199,7 @@ Nota: la sidebar admin (`AdminSidebar`) mostra la sezione «Contenuti» → «No
 | `/events/:eventId/galleria` | EventGalleryPage | Galleria foto con stampa, selezione, invio email e pubblicazione social |
 | `/events/:eventId/slideshow` | SlideshowPage | Slideshow automatico con rotazione e cornici |
 | `/events/:eventId/menu` | EventMenuPage | Menù pubblico dell'evento: vista per stand o per categorie, ordine alfabetico |
-| `/events/:eventId/flyer` | EventFlyerPage | **Volantino stampabile** dell'evento: logo/copertina, date, luogo, descrizione, sito e fascia sponsor (main → griglia → partner). È l'unica pagina dove compaiono gli sponsor, per scelta |
+| `/events/:eventId/flyer` | EventFlyerPage | **Volantino stampabile** dell'evento: logo/copertina, date, luogo, descrizione, sito, **QR verso la pagina dell'evento** (riusa `GET /api/events/:eventId/qrcode`, in coda con `break-inside: avoid`) e fascia sponsor (main → griglia → partner). È l'unica pagina dove compaiono gli sponsor, per scelta |
 
 ### Frontend — Stand display route
 | Route | Element | Description |
