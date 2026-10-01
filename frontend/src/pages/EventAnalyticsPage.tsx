@@ -37,7 +37,12 @@ function SalesMap({ stands, currencyName }: { stands: AnalyticsStandRow[]; curre
   useEffect(() => {
     if (!containerRef.current || positioned.length === 0) return
 
-    const map = L.map(containerRef.current, { zoomControl: false, scrollWheelZoom: false })
+    const map = L.map(containerRef.current, {
+      zoomControl: true,
+      scrollWheelZoom: false,
+      maxZoom: 22,
+    })
+
     L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
       { attribution: '&copy; <a href="https://www.esri.com/">Esri</a>', maxZoom: 20, maxNativeZoom: 20 },
@@ -67,7 +72,17 @@ function SalesMap({ stands, currencyName }: { stands: AnalyticsStandRow[]; curre
       bounds.extend([stand.location!.lat, stand.location!.lng])
     }
 
-    if (bounds.isValid()) map.fitBounds(bounds, { padding: [32, 32] })
+    /* GOTCHA mappa: `fitBounds` senza `maxZoom` su stand ravvicinati (o su un
+       solo stand, dove i bounds sono degeneri) spinge lo zoom al massimo
+       consentito: i tile a quei livelli non esistono e la mappa resta grigia
+       con "Map data not yet available". Per questo il zoom e' limitato a 18,
+       come in EventMapPage, e con un solo stand si centra a mano. */
+    if (positioned.length > 1 && bounds.isValid()) {
+      map.fitBounds(bounds.pad(0.15), { maxZoom: 18 })
+    } else {
+      const only = positioned[0]!.location!
+      map.setView([only.lat, only.lng], 18)
+    }
 
     return () => {
       map.remove()
