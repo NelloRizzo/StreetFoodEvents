@@ -25,9 +25,28 @@ function fmtNumber(n: number): string {
  *
  * La popup e' costruita con nodi DOM e `textContent`: il nome dello stand
  * arriva da un form admin e non deve mai finire in un innerHTML.
+ *
+ * GOTCHA: i cerchi sono `circleMarker`, NON `circle`. `L.circle` accetta il
+ * raggio in METRI, quindi il cerchio si rimpicciolisce da solo quando si
+ * zooma indietro e a una vista d'insieme sparisce. `circleMarker` ragiona in
+ * PIXEL e resta leggibile a qualunque zoom.
  */
+
+/* Zoom di inquadratura: 16 copre ~840 m in verticale, la scala di una piazza
+   con i banchi disposti. Con 18 si vedeva un solo banco. */
+const SALES_MAP_ZOOM = 16
+
+/* Due provider per i tile. Leaflet non ha fallback: se quello primario non
+   risponde (bloccato da un ad-blocker, rete che lo filtra, servizio Esri
+   irraggiungibile) la mappa resta grigia ma i cerchi SVG disegnati sopra si
+   vedono lo stesso, e sembra un bug invece di un problema di rete. Con il
+   fallback, al primo errore si passa all'altro e si avvisa l'utente. */
+const TILE_ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
+const TILE_OSM = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+
 function SalesMap({ stands, currencyName }: { stands: AnalyticsStandRow[]; currencyName: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [tileError, setTileError] = useState<string | null>(null)
   const positioned = useMemo(() => stands.filter((s) => s.location), [stands])
   const maxRevenue = useMemo(
     () => Math.max(1, ...positioned.map((s) => s.revenue)),
@@ -35,18 +54,49 @@ function SalesMap({ stands, currencyName }: { stands: AnalyticsStandRow[]; curre
   )
 
   useEffect(() => {
-    if (!containerRef.current || positioned.length === 0) return
+    const container = containerRef.current
+    if (!container || positioned.length === 0) return
 
-    const map = L.map(containerRef.current, {
+    const map = L.map(container, {
       zoomControl: true,
+      /* La rotella parte disattivata: se rubasse lo scroll, scorrendo la
+         pagina col dito sopra la mappa si zoomerebbe invece di scorrere. Si
+         attiva al primo click e si disattiva uscendo. I pulsanti +/- ci sono
+         sempre. */
       scrollWheelZoom: false,
-      maxZoom: 22,
+      /* Tetto = zoom nativo dei tile: oltre si vedono tile allungati o il
+         riquadro grigio. Esri regge fino a 20, OSM fino a 19. */
+      maxZoom: 20,
     })
 
-    L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-      { attribution: '&copy; <a href="https://www.esri.com/">Esri</a>', maxZoom: 20, maxNativeZoom: 20 },
-    ).addTo(map)
+    const esri = L.tileLayer(TILE_ESRI, {
+      attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+      maxZoom: 20,
+      maxNativeZoom: 19,
+    }).addTo(map)
+
+    const osm = L.tileLayer(TILE_OSM, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+      maxNativeZoom: 19,
+    })
+
+    /* Alcuni errori prima di cambiare provider: uno sparso può essere un singolo
+       tile lento, non un servizio irraggiungibile. */
+    let esriErrors = 0
+    let usingFallback = false
+    esri.on('tileerror', () => {
+      esriErrors += 1
+      if (usingFallback || esriErrors < 4) return
+      usingFallback = true
+      map.removeLayer(esri)
+      osm.addTo(map)
+      osm.on('tileerror', () => {
+        setTileError(
+          'Impossibile caricare la mappa: i dati restano disponibili nella tabella qui sotto.',
+        )
+      })
+    })
 
     const bounds = L.latLngBounds([])
     for (const stand of positioned) {
@@ -57,10 +107,10 @@ function SalesMap({ stands, currencyName }: { stands: AnalyticsStandRow[]; curre
       detail.textContent = `${stand.orders} ordini · ${fmtNumber(stand.revenue)} ${currencyName}`
       popup.append(title, detail)
 
-      L.circle([stand.location!.lat, stand.location!.lng], {
-        /* Raggio in metri: radice del fatturato, altrimenti il fatturato
-           100x maggiore farebbe un cerchio 10x piu' grande di quanto serve. */
-        radius: 8 + 45 * Math.sqrt(stand.revenue / maxRevenue),
+      L.circleMarker([stand.location!.lat, stand.location!.lng], {
+        /* Raggio in PIXEL, radice del fatturato: altrimenti un fatturato 100x
+           maggiore darebbe un cerchio 10x piu' grande di quanto serve. */
+        radius: 9 + 17 * Math.sqrt(stand.revenue / maxRevenue),
         color: '#bf5a2a',
         weight: 2,
         fillColor: '#e08b4c',
@@ -72,24 +122,54 @@ function SalesMap({ stands, currencyName }: { stands: AnalyticsStandRow[]; curre
       bounds.extend([stand.location!.lat, stand.location!.lng])
     }
 
-    /* GOTCHA mappa: `fitBounds` senza `maxZoom` su stand ravvicinati (o su un
-       solo stand, dove i bounds sono degeneri) spinge lo zoom al massimo
-       consentito: i tile a quei livelli non esistono e la mappa resta grigia
-       con "Map data not yet available". Per questo il zoom e' limitato a 18,
-       come in EventMapPage, e con un solo stand si centra a mano. */
-    if (positioned.length > 1 && bounds.isValid()) {
-      map.fitBounds(bounds.pad(0.15), { maxZoom: 18 })
-    } else {
-      const only = positioned[0]!.location!
-      map.setView([only.lat, only.lng], 18)
+    /* `fitBounds` va sempre con `maxZoom`: senza, su stand ravvicinati (o su
+       un solo stand, dove i bounds sono degeneri ma `isValid()` dice vero)
+       lo zoom viene spinto al massimo e i tile a quei livelli non esistono. */
+    const fitAll = () => {
+      if (positioned.length > 1 && bounds.isValid()) {
+        map.fitBounds(bounds.pad(0.15), { maxZoom: SALES_MAP_ZOOM })
+      } else {
+        const only = positioned[0]!.location!
+        map.setView([only.lat, only.lng], SALES_MAP_ZOOM)
+      }
     }
+    fitAll()
+
+    /* Dopo che l'operatore ha girato la mappa a mano serve tornare alla vista
+       d'insieme: Leaflet non ha un pulsante "fit", quindi lo aggiungiamo. */
+    const fitControl = new L.Control({ position: 'topright' })
+    fitControl.onAdd = () => {
+      const btn = L.DomUtil.create('button', styles.mapBtn, container) as HTMLButtonElement
+      btn.type = 'button'
+      btn.title = 'Riquadra tutti gli stand'
+      btn.setAttribute('aria-label', 'Riquadra tutti gli stand')
+      btn.textContent = '⤢'
+      btn.onclick = (e) => {
+        L.DomEvent.stop(e)
+        fitAll()
+      }
+      return btn
+    }
+    fitControl.addTo(map)
+
+    const enableWheel = () => map.scrollWheelZoom.enable()
+    const disableWheel = () => map.scrollWheelZoom.disable()
+    container.addEventListener('click', enableWheel)
+    container.addEventListener('mouseout', disableWheel)
 
     return () => {
+      container.removeEventListener('click', enableWheel)
+      container.removeEventListener('mouseout', disableWheel)
       map.remove()
     }
   }, [positioned, maxRevenue, currencyName])
 
-  return <div ref={containerRef} className={styles.map} />
+  return (
+    <>
+      <div ref={containerRef} className={styles.map} />
+      {tileError && <p className={styles.mapWarning}>{tileError}</p>}
+    </>
+  )
 }
 
 export function EventAnalyticsPage() {

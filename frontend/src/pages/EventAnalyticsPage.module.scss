@@ -246,6 +246,41 @@
   border-radius: var(--radius-card);
 }
 
+/* Pulsante "Riquadra" del controllo Leaflet. Leaflet costruisce il DOM fuori
+   da React, quindi la classe arriva da L.DomUtil.create: il bottone globale
+   (`button { border: 0; background: none }`) lo renderebbe invisibile, quindi
+   qui serve uno stile esplicito. */
+.mapBtn {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.mapBtn:hover {
+  background: var(--color-brand-soft);
+  color: var(--color-brand-deep);
+}
+
+.mapWarning {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: #8f1d1d;
+  background: #fdecec;
+  border: 1px solid #e8b4b4;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.6rem;
+}
+
 .note {
   font-size: 0.85rem;
   color: var(--color-ink-soft);

@@ -1,7 +1,12 @@
 # TODO — Street Food Events
 
 ## Fix riscontrati in questa sessione 
-- _(tutti i bug risolti)_
+- nel menu di uno stand il nome dell'evento e il nome dello stand vengono visualizzati in una colonna a sinistra anziché occupare tutta l'area orizzontale a disposizione
+- nel menu di uno stand l'etichetta "Lascia una recensione" può essere sostituita da un'icona come per l'evento
+- nella pagina di un evento il pulsante "Aggiungi a preferiti" non presenta l'icona a cuore
+- nella pagina di un evento i pulsanti menu e mappa hanno uno sfondo diverso dagli altri: togliamo il background
+- nella pagina di un evento il pulsante tutti gli eventi appare al centro della copertina dell'evento: spostiamolo in alto ma sempre sulla cover
+- _(tutti gli altri bug risolti)_
 
 ## Prossime Implementazioni
 - **Badge e gamification (TODO 12)** — prossimo progetto di dimensione: modello `Badge` + assegnazione automatica + profilo utente; leaderboard rimandata.
