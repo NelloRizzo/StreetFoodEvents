@@ -10,6 +10,11 @@ export type VisitorCategoryEstimate = {
   settledCredits: number
 }
 
+/** Da dove arriva il mix di categorie con cui sono ripartiti i crediti
+ *  liquidati: `stand` = fatturato di quel banco, `event` = percentuale globale
+ *  dell'evento (stand senza ordini nella finestra). */
+export type VisitorsMixSource = 'stand' | 'event'
+
 export type VisitorStandEstimate = {
   standId: string
   standName: string
@@ -18,6 +23,18 @@ export type VisitorStandEstimate = {
   ordersCount: number
   distinctCustomers: number
   categories: VisitorCategoryEstimate[]
+  /** Da quale mix sono ripartiti i crediti liquidati nelle categorie. */
+  categoriesMix: VisitorsMixSource | null
+  /** Base del numero in `estimatedVisitorsTotal`: `orders` = quantità per
+   *  categoria, `settlements` = dedotto dal fatturato liquidato, `null` = nessuna
+   *  delle due (stand fermo). */
+  estimationBasis: 'orders' | 'settlements' | null
+  /** Fatturato della finestra. Con ordini è la somma delle righe; senza ordini
+   *  è il dato liquidato, che è l'unico fatturato attestato per quel banco. */
+  revenue: number
+  revenueSource: 'orders' | 'settlements' | null
+  /** Visitatori dedotti dal fatturato liquidato (solo stand senza ordini). */
+  estimatedVisitorsFromSettlements: number | null
   estimatedVisitorsTotal: number
   /** Crediti guadagnati su tutto l'evento (non filtrato dalla finestra). */
   earnedCredits: number
@@ -75,9 +92,17 @@ export type VisitorsEstimate = {
     netTokensSold: number
     settledCredits: number
     /** Crediti liquidati da stand che non hanno vendite nella finestra: senza
-     *  il loro mix di vendita non sono attribuibili ad alcuna categoria. */
+     *  il loro mix di vendita proprio sono ripartiti sulle percentuali
+     *  globali dell'evento, e restano non attribuibili solo se l'evento non ha
+     *  vendite da cui prendere quelle percentuali. */
     unattributedSettledCredits: number
     earnedCredits: number
+    /** Stand senza ordini nella finestra, con fatturato liquidato. */
+    settlementOnlyStands: number
+    /** Fatturato dei soli stand senza ordini (è il dato liquidato). */
+    settlementOnlyRevenue: number
+    /** Visitatori dedotti per quegli stand. */
+    settlementOnlyEstimatedVisitors: number
   }
   categories: VisitorCategoryPool[]
   stands: VisitorStandEstimate[]

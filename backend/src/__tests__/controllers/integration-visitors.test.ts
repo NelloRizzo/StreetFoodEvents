@@ -657,13 +657,14 @@ describe('Integration — Visitor estimation, terza base sulle liquidazioni', ()
         expect(stand1.earnedCredits).toBe(20);
     });
 
-    it('riporta i crediti non attribuibili se lo stand non ha vendite', async () => {
+    it('riporta i crediti non attribuibili solo se l\'evento non ha vendite', async () => {
         const env = await setupEnvironment();
         await createSettlement(env, { standId: env.stand2._id, standName: 'Stand Two', amount: 30 });
 
         const res = await getVisitors(env.adminSession, env.event._id.toString());
 
-        /* Il mix di vendita dello stand non esiste: spalmare sarebbe inventare. */
+        /* Non esiste un mix proprio dello stand NE un mix globale (l'evento non ha
+         * vendite): qui i crediti sono davvero non attribuibili. */
         expect(res.body.totals.settledCredits).toBe(30);
         expect(res.body.totals.unattributedSettledCredits).toBe(30);
     });
@@ -738,5 +739,89 @@ describe('Integration — Visitor estimation, terza base sulle liquidazioni', ()
         expect(totals.productEstimated).not.toBe(
             totals.tokenBasedEstimated + totals.settlementBasedEstimated
         );
+    });
+
+    describe('stand liquidati senza ordini nella finestra', () => {
+        it('usa il mix globale dell\'evento e deduce i visitatori dal fatturato', async () => {
+            const env = await setupEnvironment();
+            /* Stand One vende per 27: 24 panini + 3 bevande. */
+            await createOrderDoc(env, {
+                standId: env.stand1._id, epId: env.epBurger._id, stationId: env.station1._id,
+                quantity: 3, unitPrice: 8
+            });
+            await createOrderDoc(env, {
+                standId: env.stand1._id, epId: env.epDrink._id, stationId: env.station1._id,
+                quantity: 1, unitPrice: 3
+            });
+            /* Stand Two non ha ordini ma e' stato liquidato: il suo fatturato
+             * coincide con i crediti liquidati. */
+            await createSettlement(env, { standId: env.stand2._id, standName: 'Stand Two', amount: 40 });
+
+            const res = await getVisitors(env.adminSession, env.event._id.toString());
+
+            const stand2 = res.body.stands.find((s: { standName: string }) => s.standName === 'Stand Two');
+            expect(stand2.ordersCount).toBe(0);
+            expect(stand2.hasOrders).toBe(false);
+            expect(stand2.revenueSource).toBe('settlements');
+            expect(stand2.revenue).toBe(40);
+            /* tokensPerVisitor = 10 di default (nessun ordine in crediti). */
+            expect(stand2.estimationBasis).toBe('settlements');
+            expect(stand2.estimatedVisitorsFromSettlements).toBe(4);
+            expect(stand2.estimatedVisitorsTotal).toBe(4);
+
+            /* Le categorie sono quelle del mix GLOBALE (88.9% panini), non del
+             * nulla del suo stand, ma con quantita' zero: non ha venduto nulla.
+             * I crediti per categoria sono arrotondati a un decimale, quindi la
+             * ripartizione torna al totale solo sommandole. */
+            expect(stand2.categoriesMix).toBe('event');
+            const panini = stand2.categories.find((c: { label: string }) => c.label === 'Panini');
+            const bevande = stand2.categories.find((c: { label: string }) => c.label === 'Bevande');
+            expect(panini.settledCredits).toBe(35.6);
+            expect(bevande.settledCredits).toBe(4.4);
+            expect(panini.quantity).toBe(0);
+            expect(panini.estimatedVisitors).toBe(0);
+            expect(stand2.categories.reduce((s: number, c: { settledCredits: number }) => s + c.settledCredits, 0))
+                .toBe(40);
+        });
+
+        it('riporta i stand senza ordini nei totali senza sommarli alla stima prodotti', async () => {
+            const env = await setupEnvironment();
+            await createOrderDoc(env, {
+                standId: env.stand1._id, epId: env.epBurger._id, stationId: env.station1._id,
+                quantity: 2, unitPrice: 10
+            });
+            await createSettlement(env, { standId: env.stand2._id, standName: 'Stand Two', amount: 40 });
+
+            const res = await getVisitors(env.adminSession, env.event._id.toString());
+            const { totals } = res.body;
+
+            expect(totals.settlementOnlyStands).toBe(1);
+            expect(totals.settlementOnlyRevenue).toBe(40);
+            expect(totals.settlementOnlyEstimatedVisitors).toBe(4);
+            /* La stima prodotti resta quella ricavata dalle quantita': i 4
+             * visitatori dedotti non entrano nel totale "corretto", perche'
+             * provengono da una base diversa. */
+            expect(totals.productEstimated).toBe(2);
+            expect(totals.unattributedSettledCredits).toBe(0);
+        });
+
+        it('non inventa categorie quando l\'evento non ha vendite', async () => {
+            const env = await setupEnvironment();
+            await createSettlement(env, { standId: env.stand2._id, standName: 'Stand Two', amount: 40 });
+
+            const res = await getVisitors(env.adminSession, env.event._id.toString());
+            const stand2 = res.body.stands.find((s: { standName: string }) => s.standName === 'Stand Two');
+
+            expect(stand2.revenue).toBe(40);
+            /* Nessuna percentuale globale da cui ripartire: meglio nessuna
+             * categoria che una ripartizione inventata. */
+            expect(stand2.categories).toEqual([]);
+            expect(res.body.totals.unattributedSettledCredits).toBe(40);
+            /* Attribuzione e stima sono due cose diverse: i 40 crediti non si
+             * possono suddividere fra categorie, ma sono pur sempre fatturato
+             * del banco, quindi i visitatori si deducono lo stesso (40/10). */
+            expect(stand2.estimatedVisitorsFromSettlements).toBe(4);
+            expect(res.body.totals.settlementOnlyEstimatedVisitors).toBe(4);
+        });
     });
 });

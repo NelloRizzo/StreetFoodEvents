@@ -8,6 +8,18 @@
   z-index: 200;
 }
 
+/* L'overlay del tracking e' `position: fixed` a tutto schermo e resta montato
+   su OGNI pagina admin finche' il toggle e' attivo (toggle in sessionStorage,
+   vedi `useTrackingEnabled`). Chrome ridisegna un elemento fisso su ogni foglio
+   stampato, quindi il backdrop finisce sopra l'intero report: il foglio
+   stampato risulta coperto e il contenuto della pagina illeggibile. Va
+   nascosto nel modulo che possiede la classe, non in global.scss. */
+@media print {
+  .overlay {
+    display: none !important;
+  }
+}
+
 .card {
   display: flex;
   flex-direction: column;

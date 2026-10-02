@@ -50,8 +50,9 @@ function StandRow({ stand, isTotal }: { stand: VisitorStandEstimate; isTotal?: b
               ))}
               {stand.settledCredits > 0 && (
                 <div className={styles.catNote}>
-                  {fmtTokens(stand.settledCredits)} liquidati, ripartiti sulle categorie in base al
-                  fatturato di questo stand.
+                  {fmtTokens(stand.settledCredits)} liquidati, ripartiti sulle categorie in base al{' '}
+                  {stand.categoriesMix === 'event' ? 'mix di fatturato dell\'evento (percentuali globali)' : 'fatturato di questo stand'}
+                  {stand.categoriesMix === 'event' && ': questo stand non ha ordini nella finestra, quindi non ha un mix proprio.'}
                 </div>
               )}
             </div>
@@ -60,7 +61,18 @@ function StandRow({ stand, isTotal }: { stand: VisitorStandEstimate; isTotal?: b
       </td>
       <td className={styles.num}>{fmtTokens(stand.earnedCredits)}</td>
       <td className={styles.num}>{fmtTokens(stand.settledCredits)}</td>
-      <td className={`${styles.num} ${styles.estimate}`}>{fmtVisitors(stand.estimatedVisitorsTotal)}</td>
+      <td className={styles.num}>
+        {fmtVisitors(stand.revenue)}
+        {stand.revenueSource === 'settlements' && (
+          <span className={styles.noDataBadge}>da liquidazione</span>
+        )}
+      </td>
+      <td className={`${styles.num} ${styles.estimate}`}>
+        {fmtVisitors(stand.estimatedVisitorsTotal)}
+        {stand.estimationBasis === 'settlements' && (
+          <span className={styles.noDataBadge}>stima dedotta</span>
+        )}
+      </td>
     </tr>
   )
 }
@@ -100,6 +112,9 @@ export function VisitorsEstimatePage() {
      * correzione delle sovrapposizioni toglie, non e' il totale evento. */
   const rowsSum = Math.round(
     data.stands.reduce((sum, s) => sum + s.estimatedVisitorsTotal, 0) * 10,
+  ) / 10
+  const rowsRevenue = Math.round(
+    data.stands.reduce((sum, s) => sum + s.revenue, 0) * 10,
   ) / 10
 
   const customCoefficients = Object.entries(data.coefficientMap)
@@ -262,6 +277,7 @@ export function VisitorsEstimatePage() {
                       <th>Quantit&agrave; per categoria</th>
                       <th className={styles.num}>Guadagnati</th>
                       <th className={styles.num}>Liquidati</th>
+                      <th className={styles.num}>Fatturato</th>
                       <th className={styles.num}>Stima visitatori</th>
                     </tr>
                   </thead>
@@ -277,6 +293,7 @@ export function VisitorsEstimatePage() {
                       <td />
                       <td className={styles.num}>{fmtTokens(data.totals.earnedCredits)}</td>
                       <td className={styles.num}>{fmtTokens(data.totals.settledCredits)}</td>
+                      <td className={styles.num}>{fmtVisitors(rowsRevenue)}</td>
                       <td className={`${styles.num} ${styles.estimate}`}>{fmtVisitors(rowsSum)}</td>
                     </tr>
                     <tr className={styles.tableTotals}>
@@ -285,6 +302,7 @@ export function VisitorsEstimatePage() {
                       <td className={styles.num} />
                       <td className={styles.num} />
                       <td />
+                      <td className={styles.num} />
                       <td className={styles.num} />
                       <td className={styles.num} />
                       <td className={`${styles.num} ${styles.estimate}`}>
@@ -306,6 +324,24 @@ export function VisitorsEstimatePage() {
             categorie nello stesso carrello viene contato una volta sola.
             {data.tokensPerVisitor === 10 && data.totals.nonCancelledOrders === 0 && (
               <span>Nessun ordine osservabile: usato il valore predefinito di 10 unit&agrave; per visitatore.</span>
+            )}
+            {data.totals.settlementOnlyStands > 0 && (
+              <span>
+                {data.totals.settlementOnlyStands}{' '}
+                {data.totals.settlementOnlyStands === 1 ? 'stand ha' : 'stand hanno'} fatturato
+                solo per liquidazione nel periodo ({fmtVisitors(data.totals.settlementOnlyRevenue)}{' '}
+                {data.currencyName}): non ci sono ordini da cui contare le quantit&agrave;, quindi i
+                visitatori ({fmtVisitors(data.totals.settlementOnlyEstimatedVisitors)}) sono dedotti
+                dal fatturato liquidato con le percentuali di categoria dell&rsquo;evento. Non
+                vanno aggiunti alla stima prodotti.
+              </span>
+            )}
+            {data.totals.unattributedSettledCredits > 0 && (
+              <span>
+                {fmtVisitors(data.totals.unattributedSettledCredits)} {data.currencyName} liquidati
+                non sono attribuibili a nessuna categoria: l&rsquo;evento non ha vendite da cui
+                prendere le percentuali.
+              </span>
             )}
             <div className={styles.coeffNote}>
               Coefficienti applicati:{' '}

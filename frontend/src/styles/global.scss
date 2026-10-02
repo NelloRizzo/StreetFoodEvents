@@ -239,13 +239,54 @@ p {
 }
 
 @media print {
+  /* I FONDI in stampa vanno stampati per forza. Di default il browser NON
+     stampa gli sfondi (la casella "Grafica di sfondo" e' spuntata solo
+     all'occorrenza): ogni testo in chiaro su un fondo colorato - badge,
+     intestazioni di tabella, barre dei grafici - sparisce e il foglio risulta
+     bianco. Con `exact` il foglio esce come lo schermo. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* `min-height` va azzerato ESPLICITAMENTE: `height: auto` da solo non basta,
+     perche body e #root hanno `min-height: 100vh`. In stampa l'area utile e'
+     piu' piccola del foglio (margini di stampa), quindi un 100vh residuo
+     spinge il contenuto oltre il margine e Chrome sforna pagine bianche. */
   html, body, #root {
     height: auto !important;
+    min-height: 0 !important;
     overflow: visible !important;
+    /* Chromepuo' produrre fogli vuoti se si stampa mentre lo scroll e' "smooth":
+       in stampa lo scroll e' sempre istantaneo. */
+    scroll-behavior: auto !important;
   }
 
   header, footer, .cookie-consent-banner {
     display: none !important;
+  }
+
+  /* L'INCHIOSTRO in stampa non puo' dipendere dal tema evento. Il tema evento
+     (`[data-event-theme]`, applicato da ThemeProvider su <html>) puo' avere un
+     `theme-text` chiaro e superfici scure: su schermo regge, ma in stampa il
+     browser NON stampa gli sfondi (casella "Grafica di sfondo" disattivata di
+     default), quindi testo chiaro su carta bianca = foglio vuoto. In stampa la
+     carta e' bianca e l'inchiostro scuro, e tutta la palette viene bloccata:
+     un foglio stampato non deve cambiare aspetto a seconda del tema dell'evento. */
+  [data-event-theme] {
+    --color-ink-strong: #14261f;
+    --color-ink: #264137;
+    --color-ink-soft: #46584f;
+    --color-surface: #fff;
+    --color-surface-raised: #fff;
+    --color-surface-strong: #fff;
+    --color-brand: #bf5a2a;
+    --color-brand-deep: #8d3f17;
+    --color-brand-soft: rgba(191, 90, 42, 0.12);
+    --color-line: rgba(38, 65, 55, 0.35);
+    --color-line-strong: rgba(38, 65, 55, 0.55);
+    --color-olive: #6c7a35;
+    --color-highlight: #f4c978;
   }
 
   /* Il "torna indietro" non ha senso su carta (i documenti stampabili lo

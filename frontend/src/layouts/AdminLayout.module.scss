@@ -39,8 +39,18 @@
 }
 
 @media print {
+  /* In stampa niente flex: `.content` sta in una colonna e i `flex: 1` su
+     contenitori senza altezza definita possono valere 0 nel layout di
+     stampa, restituendo un foglio vuoto. `display: block` mette il
+     contenuto nel flusso normale della pagina. */
+  .admin {
+    display: block;
+  }
+
   .main {
+    display: block;
     margin-left: 0;
+    overflow: visible;
   }
 
   /* `min-height: 100vh` obbliga il contenitore a valere una pagina intera:
@@ -52,5 +62,6 @@
 
   .content {
     padding: 0;
+    overflow: visible;
   }
 }

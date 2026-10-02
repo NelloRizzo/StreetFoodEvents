@@ -99,10 +99,12 @@ function pickCategoryLabel(categories: string[]): string {
  * LIQUIDAZIONI PER CATEGORIA: non hanno prodotti, solo un totale per stand, e i
  * crediti sono in valore non in pezzi — non si possono moltiplicare per un
  * coefficiente "visitatori per unità". Vengono quindi ripartiti sulle categorie
- * in proporzione al mix di vendita reale del loro stand (`subtotal`), e la
- * ripartizione è informativa: il totale della terza base resta
- * `crediti liquidati ÷ token per visitatore`. I crediti di uno stand senza
- * vendite non sono attribuibili e finiscono in `unattributedSettledCredits`.
+ * in proporzione al mix di vendita reale del loro stand (`subtotal`). Uno stand
+ * SENZA ordini nella finestra non ha un mix proprio: si ripartisce sul MIX
+ * GLOBALE dell'evento (stesse percentuali, denominatore diverso) e i suoi
+ * visitatori sono dedotti dai crediti liquidati con lo stesso rapporto globale
+ * token-per-visatore degli altri stand. Restano non attribuibili solo i crediti
+ * di un evento senza alcuna vendita, dove il mix non esiste nemmeno globalmente.
  */
 export async function getVisitorEstimate(req: Request, res: Response) {
     const eventId = req.params.eventId;
@@ -365,9 +367,21 @@ export async function getVisitorEstimate(req: Request, res: Response) {
     /* LIQUIDAZIONI ripartite sul mix di vendita del loro stand: i crediti sono in
      * valore (euro), i coefficienti sono "visitatori per unità" (pezzi), quindi
      * non si moltiplicano: si attribuisce a ogni categoria la quota dei crediti
-     * liquidati pari al suo peso nel fatturato di quel singolo stand. La
-     * ripartizione è informativa; il totale della terza base resta crediti
-     * liquidati ÷ token per visitatore. */
+     * liquidati pari al suo peso nel fatturato di quel singolo stand. */
+    /* Mix GLOBALE per categoria (percentuali di fatturato sull'intero evento): è
+     * il fallback degli stand liquidati che nella finestra non hanno ordini e
+     * quindi nessun mix proprio. Stesse percentuali, denominatore diverso: è
+     * un'assunzione dichiarata, non un dato di quello stand. */
+    const globalRevenueByCategory = new Map<string, number>();
+    let globalRevenueTotal = 0;
+    for (const catMap of quantityByStandCategory.values()) {
+        for (const [label, entry] of catMap) {
+            if (entry.revenue <= 0) continue;
+            globalRevenueByCategory.set(label, (globalRevenueByCategory.get(label) ?? 0) + entry.revenue);
+            globalRevenueTotal += entry.revenue;
+        }
+    }
+
     let settledCreditsTotal = 0;
     let unattributedSettledCredits = 0;
     const settledCreditsByStand = new Map<string, number>();
@@ -385,16 +399,23 @@ export async function getVisitorEstimate(req: Request, res: Response) {
         if (catMap) {
             for (const entry of catMap.values()) standRevenue += entry.revenue;
         }
-        if (!catMap || standRevenue <= 0) {
-            /* Stand liquidato ma senza vendite nel periodo: il mix con cui
-             * ripartire non esiste, quindi i crediti restano non attribuibili e si
-             * segnalano invece di essere spalmati a caso. */
+        const perCategory = new Map<string, number>();
+        if (catMap && standRevenue > 0) {
+            for (const [label, entry] of catMap) {
+                perCategory.set(label, standSettled * (entry.revenue / standRevenue));
+            }
+        } else if (globalRevenueTotal > 0) {
+            /* Stand liquidato senza vendite nel periodo: si assume che venda come
+             * l'evento nel suo complesso. Meglio una stima dichiarata che crediti
+             * non attribuibili a nulla. */
+            for (const [label, revenue] of globalRevenueByCategory) {
+                perCategory.set(label, standSettled * (revenue / globalRevenueTotal));
+            }
+        } else {
+            /* Nessuna vendita nell'evento, quindi nemmeno un mix globale: qui i
+             * crediti restano davvero non attribuibili. */
             unattributedSettledCredits += standSettled;
             continue;
-        }
-        const perCategory = new Map<string, number>();
-        for (const [label, entry] of catMap) {
-            perCategory.set(label, standSettled * (entry.revenue / standRevenue));
         }
         settledCreditsByStandCategory.set(standKey, perCategory);
     }
@@ -439,14 +460,44 @@ export async function getVisitorEstimate(req: Request, res: Response) {
          * carrelli attraversano più stand). Per questo le righe NON sono
          * addizionabili fra loro e il totale eventi va letto in `totals`. */
         const perStandSettled = settledCreditsByStandCategory.get(standId) ?? new Map<string, number>();
-        const categories = [...catMap.entries()]
-            .map(([label, entry]) => {
+        const settledCredits = round1(settledCreditsByStand.get(standId) ?? 0);
+
+        /* FATTURATO DELLO STAND. Con ordini è la somma dei `subtotal` delle sue
+         * righe (omaggi esclusi: non generano fatturato). SENZA ordini non c'è
+         * nulla da sommare, e il fatturato è per definizione quello liquidato:
+         * i crediti che ha convertito in euro sono la prova di quanto ha
+         * incassato. Quindi `revenue` è sempre un numero reale di quel banco. */
+        let orderRevenue = 0;
+        for (const entry of catMap.values()) orderRevenue += entry.revenue;
+        const revenueSource = orderRevenue > 0 ? 'orders' : (settledCredits > 0 ? 'settlements' : null);
+        const revenue = revenueSource === 'orders' ? round1(orderRevenue) : round1(settledCredits);
+
+        /* Uno stand SENZA fatturato dagli ordini non ha quantità, quindi non
+         * esiste una stima "visitatori per unità": i suoi visitatori sono DEDOTTI
+         * dal fatturato liquidato con lo stesso rapporto globale
+         * token-per-visatore calcolato sugli ordini degli altri stand. È la
+         * stessa formula della terza base di stima, applicata a un solo stand. */
+        const estimatedFromSettlements = settledCredits > 0
+            ? round1(settledCredits / tokensPerVisitor)
+            : null;
+        /* Le categorie mostrate sono quelle del mix ripartito: per uno stand senza
+         * ordini è il mix GLOBALE dell'evento, con quantità 0 perché non ha
+         * vendite nella finestra. `categoriesMix` dice al frontend quale dei due è. */
+        const catSource = orderRevenue > 0 ? catMap : null;
+        const categoriesMix = catSource ? 'stand' : (perStandSettled.size > 0 ? 'event' : null);
+        const mixLabels = catSource
+            ? [...catMap.keys()]
+            : [...perStandSettled.keys()];
+        const categories = mixLabels
+            .map((label) => {
+                const entry = catMap.get(label);
+                const quantity = catSource ? (entry?.quantity ?? 0) : 0;
                 const coefficient = coefficientFor(label);
                 return {
                     label,
-                    quantity: entry.quantity,
+                    quantity,
                     coefficient,
-                    estimatedVisitors: round1(entry.quantity * coefficient),
+                    estimatedVisitors: round1(quantity * coefficient),
                     /* Quota dei crediti liquidati di QUESTO stand attribuita a
                      * questa categoria in base al suo peso nel fatturato. */
                     settledCredits: round1(perStandSettled.get(label) ?? 0)
@@ -459,6 +510,12 @@ export async function getVisitorEstimate(req: Request, res: Response) {
             standEstimated += category.quantity * category.coefficient;
         }
 
+        /* Dichiarazione esplicita della base: due numeri di origine diversa nella
+         * stessa colonna senza etichetta sono un bug di lettura. */
+        const estimationBasis = revenueSource === 'orders'
+            ? 'orders'
+            : (estimatedFromSettlements !== null ? 'settlements' : null);
+
         return {
             standId,
             standName: info.name,
@@ -467,12 +524,31 @@ export async function getVisitorEstimate(req: Request, res: Response) {
             ordersCount: agg?.ordersCount ?? 0,
             distinctCustomers: agg?.distinctCustomers ?? 0,
             categories,
-            estimatedVisitorsTotal: round1(standEstimated),
+            /* 'stand' = mix del banco, 'event' = mix globale (stand senza ordini). */
+            categoriesMix,
+            estimationBasis,
+            revenue,
+            revenueSource,
+            estimatedVisitorsFromSettlements: estimatedFromSettlements,
+            /* Con fatturato dagli ordini la riga resta la somma "di quel banco"
+             * dalle quantità; senza, non può esserlo, e il numero onesto è quello
+             * dedotto dal fatturato liquidato invece di uno zero che sembra un
+             * buco di dati. */
+            estimatedVisitorsTotal: round1(
+                revenueSource === 'orders' ? standEstimated : (estimatedFromSettlements ?? standEstimated)
+            ),
             earnedCredits: round1(earnedByStand.get(standId) ?? 0),
-            settledCredits: round1(settledCreditsByStand.get(standId) ?? 0)
+            settledCredits
         };
-    }).sort(
+    })
+        .sort(
         (a, b) => (a.number ?? Infinity) - (b.number ?? Infinity) || a.standName.localeCompare(b.standName)
+    );
+
+    /* Stand senza fatturato dagli ordini ma con crediti liquidati: il loro
+     * fatturato è il liquidato e i visitatori sono un numero dedotto. */
+    const settlementOnly = standsResponse.filter(
+        (s) => s.revenueSource === 'settlements' && s.estimatedVisitorsFromSettlements !== null
     );
 
     return res.status(200).json({
@@ -504,7 +580,18 @@ export async function getVisitorEstimate(req: Request, res: Response) {
             netTokensSold,
             settledCredits: round1(settledCreditsTotal),
             unattributedSettledCredits: round1(unattributedSettledCredits),
-            earnedCredits: round1([...earnedByStand.values()].reduce((sum, value) => sum + value, 0))
+            earnedCredits: round1([...earnedByStand.values()].reduce((sum, value) => sum + value, 0)),
+            /* Stand che nella finestra non hanno ordini: il loro fatturato è il
+             * liquidato e i visitatori sono dedotti dal rapporto globale. Sono
+             * ESPOSTI A PARTE e non sommati a `productEstimated` (che nasce dalle
+             * quantità): i loro crediti possono essere un carico DARE, cioè
+             * addebitato al banco e mai incassato da un cliente, e sommergerli
+             * gonfierebbe la stima. `settlementBasedEstimated` li include già. */
+            settlementOnlyStands: settlementOnly.length,
+            settlementOnlyRevenue: round1(settlementOnly.reduce((sum, s) => sum + s.settledCredits, 0)),
+            settlementOnlyEstimatedVisitors: round1(
+                settlementOnly.reduce((sum, s) => sum + (s.estimatedVisitorsFromSettlements ?? 0), 0)
+            )
         },
         categories: categoriesResponse,
         stands: standsResponse
