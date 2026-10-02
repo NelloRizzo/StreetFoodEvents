@@ -5,9 +5,13 @@ import 'leaflet/dist/leaflet.css'
 
 import { apiRequest } from '../lib/api'
 import {
+  aggregateHourlyByHour,
   fetchEventAnalytics,
-  formatHourLabel,
+  filterBucketsByDay,
+  formatDayKey,
+  formatHourKey,
   formatSeconds,
+  listBucketDays,
   type AnalyticsStandRow,
   type EventAnalytics,
 } from '../lib/eventAnalytics'
@@ -243,6 +247,10 @@ export function EventAnalyticsPage() {
   const [to, setTo] = useState('')
   const [stands, setStands] = useState<StandOption[]>([])
   const [standId, setStandId] = useState('')
+  /* Filtro giorno del solo grafico orario: il backend manda un bucket per
+     ogni ora di ogni giorno, quindi senza questo filtro le stesse fasce
+     orarie si ripetono una volta al giorno. */
+  const [hourDayKey, setHourDayKey] = useState('')
 
   // L'elenco stand serve solo alla select: non va ripollato con i dati.
   useEffect(() => {
@@ -294,9 +302,18 @@ export function EventAnalyticsPage() {
 
   useEffect(() => { void load() }, [load])
 
+  /* I bucket arrivano uno per ogni ora di ogni giorno: per il grafico si
+     accorpano per ora locale (somma dei giorni) oppure si isolano sul giorno
+     scelto, così la stessa fascia non compare più volte. */
+  const hourlyBuckets = useMemo(() => {
+    const buckets = data?.hourly ?? []
+    return aggregateHourlyByHour(filterBucketsByDay(buckets, hourDayKey || null))
+  }, [data, hourDayKey])
+  const bucketDays = useMemo(() => listBucketDays(data?.hourly ?? []), [data])
+
   const maxHourOrders = useMemo(
-    () => Math.max(1, ...(data?.hourly ?? []).map((h) => h.orders)),
-    [data],
+    () => Math.max(1, ...hourlyBuckets.map((h) => h.orders)),
+    [hourlyBuckets],
   )
   const maxBucketCount = useMemo(
     () => Math.max(1, ...(data?.prepBuckets ?? []).map((b) => b.count)),
@@ -320,6 +337,9 @@ export function EventAnalyticsPage() {
       ? `Periodo: ${data.window.from || 'inizio evento'} - ${data.window.to || 'fine evento'}`
       : null,
     selectedStandName ? `Stand: ${selectedStandName}` : 'Stand: tutti',
+    /* Il giorno filtra il solo grafico orario: senza scriverlo qui il foglio
+       stampato mostrerebbe un profilo orario senza dire a quale giorno è. */
+    hourDayKey ? `Giorno del grafico orario: ${formatDayKey(hourDayKey)}` : null,
   ].filter(Boolean).join(' \u00b7 ')
 
   return (
@@ -559,24 +579,46 @@ export function EventAnalyticsPage() {
         </div>
 
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Vendite per ora</div>
+          <div className={styles.cardTitleRow}>
+            <div className={styles.cardTitle}>Vendite per ora</div>
+            <div className={styles.dayGroup}>
+              <label className={styles.dateLabel} htmlFor="analytics-hour-day">Giorno</label>
+              <select
+                id="analytics-hour-day"
+                value={hourDayKey}
+                onChange={(e) => setHourDayKey(e.target.value)}
+                className={styles.dateInput}
+                aria-label="Filtra le vendite per ora per giorno"
+              >
+                <option value="">Tutti i giorni (accorpati)</option>
+                {bucketDays.map((day) => (
+                  <option key={day} value={day}>{formatDayKey(day)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
           <p className={styles.cardNote}>
             Ore in ora locale del browser. Serve per decidere quando aprire le postazioni e come
             dimensionarle.
+            {bucketDays.length > 1 && !hourDayKey && (
+              <> Il periodo copre {bucketDays.length} giorni: ogni barra è la somma delle ore uguali
+                di tutti i giorni, scegli un giorno per vedere il suo profilo.</>
+            )}
+            {hourDayKey && <> Solo il {formatDayKey(hourDayKey)}.</>}
           </p>
-          {data.hourly.length === 0 ? (
+          {hourlyBuckets.length === 0 ? (
             <p className={styles.empty}>Nessun ordine nel periodo.</p>
           ) : (
             <div className={styles.chart}>
-              {data.hourly.map((bucket) => (
-                <div key={bucket.bucketStart} className={styles.chartCol}>
+              {hourlyBuckets.map((bucket) => (
+                <div key={bucket.hour} className={styles.chartCol}>
                   <span className={styles.chartValue}>{bucket.orders}</span>
                   <div
                     className={styles.chartBar}
                     style={{ height: `${Math.round((bucket.orders / maxHourOrders) * 100)}%` }}
-                    title={`${formatHourLabel(bucket.bucketStart)} — ${bucket.orders} ordini, ${bucket.quantity} prodotti, ${fmtNumber(bucket.revenue)} ${data.currencyName}`}
+                    title={`${formatHourKey(bucket.hour)} — ${bucket.orders} ordini, ${bucket.quantity} prodotti, ${fmtNumber(bucket.revenue)} ${data.currencyName}`}
                   />
-                  <span className={styles.chartLabel}>{formatHourLabel(bucket.bucketStart)}</span>
+                  <span className={styles.chartLabel}>{formatHourKey(bucket.hour)}</span>
                 </div>
               ))}
             </div>

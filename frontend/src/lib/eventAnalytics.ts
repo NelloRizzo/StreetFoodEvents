@@ -182,6 +182,87 @@ export function formatHourLabel(bucketStart: string): string {
     .format(new Date(bucketStart))
 }
 
+/** Etichetta dell'ora in forma compatta ("18:00"), per le barre accorpate. */
+export function hourKeyOf(bucketStart: string): number {
+  return new Date(bucketStart).getHours()
+}
+
+export function formatHourKey(hour: number): string {
+  return `${String(hour).padStart(2, '0')}:00`
+}
+
+/**
+ * Giorno locale del bucket in chiave `YYYY-MM-DD`.
+ *
+ * I bucket arrivano dal backend allineati sull'ora **UTC** e sono uno per
+ * ogni ora di ogni giorno: su una finestra di tre giorni arrivano tre bucket
+ * con la stessa etichetta "18:00". Per poterli accorpare o separare serve
+ * sapere a quale giorno appartiene ciascuno, e il riferimento è l'ora locale
+ * del browser (la stessa usata da `formatHourLabel`).
+ */
+export function localDayKey(bucketStart: string): string {
+  const d = new Date(bucketStart)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Etichetta leggibile del giorno ("1 ott"). */
+export function formatDayKey(dayKey: string): string {
+  const [y, m, d] = dayKey.split('-').map(Number)
+  return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' })
+    .format(new Date(y, m - 1, d))
+}
+
+/**
+ * Accorpa i bucket orari per **ora del giorno**, sommando i giorni.
+ *
+ * Serve a non stampare N barre con la stessa etichetta: su un evento di tre
+ * giorni l'ora 18:00 compare tre volte e senza accorpamento il grafico
+ * ripete la stessa fascia. Sommando, l'operatore legge il profilo orario
+ * dell'evento ("a che ora si vende di più"), che è la domanda che il
+ * grafico deve rispondere; per il dettaglio di un singono giorno si filtra
+ * prima con `dayKey`.
+ *
+ * L'ordine è quello delle ore presenti (0-23), quindi le fasce vuote non
+ * vengono inventate: si vede solo ciò che è stato effettivamente venduto.
+ */
+export function aggregateHourlyByHour(buckets: AnalyticsHourBucket[]): (AnalyticsHourBucket & { hour: number })[] {
+  const byHour = new Map<number, AnalyticsHourBucket & { hour: number }>()
+  for (const bucket of buckets) {
+    const hour = hourKeyOf(bucket.bucketStart)
+    const current = byHour.get(hour)
+    if (!current) {
+      byHour.set(hour, { ...bucket, hour })
+      continue
+    }
+    current.orders += bucket.orders
+    current.quantity += bucket.quantity
+    current.revenue += bucket.revenue
+  }
+  return [...byHour.values()].sort((a, b) => a.hour - b.hour)
+}
+
+/** Tiene solo i bucket di un giorno locale (`dayKey`), o tutti se `null`. */
+export function filterBucketsByDay(buckets: AnalyticsHourBucket[], dayKey: string | null): AnalyticsHourBucket[] {
+  if (!dayKey) return buckets
+  return buckets.filter((bucket) => localDayKey(bucket.bucketStart) === dayKey)
+}
+
+/**
+ * Giorni presenti nei bucket, in ordine.
+ *
+ * Vengono ricavati dai bucket e non dalla finestra `from`/`to`: un giorno
+ * senza ordini non produce alcun bucket, quindi elencarlo sarebbe
+ * promettere dati che il backend non ha. La barra "Nessun ordine nel
+ * periodo" copre già il caso di un filtro su un giorno vuoto.
+ */
+export function listBucketDays(buckets: AnalyticsHourBucket[]): string[] {
+  const days = new Set(buckets.map((bucket) => localDayKey(bucket.bucketStart)))
+  return [...days].sort()
+}
+
 export function formatSeconds(seconds: number | null): string {
   if (seconds === null) return '—'
   if (seconds < 60) return `${Math.round(seconds)} s`

@@ -198,6 +198,26 @@
   text-align: right;
 }
 
+/* Titolo e filtro giorno sulla stessa riga: il filtro sta nella card, non
+   nella toolbar in alto, per non confonderlo con i filtri di periodo/stand. */
+.cardTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.dayGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cardTitleRow .cardTitle {
+  margin-bottom: 0;
+}
+
 /* --- Tabelle --- */
 
 .tableWrap {
@@ -373,6 +393,7 @@
 
 @media print {
   .headerActions,
+  .dayGroup,
   .note {
     display: none;
   }
@@ -412,6 +433,44 @@
      senza azzerare l'overflow le colonne fuori schermo spariscono. */
   .tableWrap {
     overflow: visible;
+  }
+
+  /* Il troncamento della tabella per stand: a schermo le celle sono in
+     `white-space: nowrap` per tenere le colonne allineate, ma in stampa il
+     foglio è più stretto dello schermo e la tabella esce dal margine → le
+     colonne di destra vengono tagliate. In stampa si lascia il testo andare
+     a capo e si stringe la cella. */
+  .table th,
+  .table td {
+    white-space: normal;
+    word-break: break-word;
+    padding: 0.35rem 0.4rem;
+    font-size: 0.78rem;
+  }
+
+  /* Lo sfondo colorato: senza "Grafica di sfondo" spuntata nel browser gli
+     sfondi non vengono stampati, ma quelli chiari del tema evento possono
+     anche rendere il testo illeggibile. In stampa il foglio resta bianco e
+     solo il contenuto è inchiostro. */
+  .card,
+  .table th,
+  .table td,
+  .pill {
+    background: #fff !important;
+  }
+
+  .cardTitle,
+  .table th {
+    color: #000 !important;
+  }
+
+  .table th,
+  .table td {
+    border-bottom: 1px solid #bbb;
+  }
+
+  .tableTotals td {
+    border-top: 2px solid #666;
   }
 
   /* Leaflet nel foglio stampato aggiunge solo rumore: la tabella per stand
