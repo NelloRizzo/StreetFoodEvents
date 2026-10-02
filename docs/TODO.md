@@ -1,8 +1,8 @@
 # TODO — Street Food Events
 
-## Fix riscontrati in questa sessione 
+## Bug riscontrati in questa sessione
 
-- _(nessun bug aperto: i cinque bug di questa sessione sono stati risolti, vedi CHANGELOG)_
+- _(nessun bug aperto)_
 
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_

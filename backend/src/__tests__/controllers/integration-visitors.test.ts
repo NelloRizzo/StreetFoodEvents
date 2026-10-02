@@ -27,6 +27,7 @@ import { ProductModel } from '../../models/product.model';
 import { RoleModel } from '../../models/role.model';
 import { SessionModel } from '../../models/session.model';
 import { StandModel } from '../../models/stand.model';
+import { StandSettlementModel } from '../../models/stand-settlement.model';
 import { StationModel } from '../../models/station.model';
 import { UserModel } from '../../models/user.model';
 import { UserRoleModel } from '../../models/user-role.model';
@@ -152,6 +153,7 @@ async function setupEnvironment() {
         stand2,
         standNoData,
         station1,
+        station2,
         epDrink,
         epBurger,
         epPlain
@@ -233,6 +235,63 @@ function getVisitors(sessionToken: string, eventId: string, query = '') {
     return request(app)
         .get(`/api/events/${eventId}/visitors${query}`)
         .set('Cookie', `sid=${sessionToken}`);
+}
+
+/** Ordine con piu' righe: serve a misurare i carrelli che mescolano le
+ *  categorie, cosa che `createOrderDoc` (mono-riga) non puo' rappresentare. */
+async function createBasketDoc(env: Awaited<ReturnType<typeof setupEnvironment>>, params: {
+    standId: Types.ObjectId;
+    lines: { epId: Types.ObjectId; stationId: Types.ObjectId; quantity: number; unitPrice: number }[];
+    creditAmountUsed?: number;
+    createdAt?: Date;
+}) {
+    orderSeq += 1;
+    const items = params.lines.map((line) => ({
+        eventProductId: line.epId,
+        productId: new Types.ObjectId(),
+        productName: 'Item',
+        stationId: line.stationId,
+        stationName: 'Station',
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        subtotal: line.unitPrice * line.quantity
+    }));
+    const total = items.reduce((sum, item) => sum + item.subtotal, 0);
+    return OrderModel.create({
+        eventId: env.event._id,
+        standId: params.standId,
+        orderNumber: orderSeq,
+        userId: new Types.ObjectId(),
+        customerName: null,
+        status: 'completed',
+        items,
+        total,
+        creditAmountUsed: params.creditAmountUsed ?? 0,
+        paymentStatus: 'paid',
+        createdAt: params.createdAt ?? new Date()
+    });
+}
+
+async function createSettlement(env: Awaited<ReturnType<typeof setupEnvironment>>, params: {
+    standId: Types.ObjectId;
+    standName: string;
+    amount: number;
+    occurredAt?: Date;
+}) {
+    return StandSettlementModel.create({
+        eventId: env.event._id,
+        standId: params.standId,
+        standName: params.standName,
+        direction: 'credit',
+        unit: 'credits',
+        amount: params.amount,
+        exchangeRate: 1,
+        feePercent: 0,
+        grossEuro: params.amount,
+        feeEuro: 0,
+        payoutEuro: params.amount,
+        occurredAt: params.occurredAt ?? new Date()
+    });
 }
 
 describe('Integration — Visitor estimation', () => {
@@ -445,5 +504,239 @@ describe('Integration — Visitor estimation', () => {
         ]);
         expect(stand1.estimatedVisitorsTotal).toBe(4);
         expect(res.body.totals.productEstimated).toBe(4);
+    });
+});
+
+describe('Integration — Visitor estimation, sovrapposizione fra categorie', () => {
+    it('non conta due volte i visitatori che hanno comprato in piu\' categorie', async () => {
+        const env = await setupEnvironment();
+
+        /* Tre carrelli MISTI: chi beve ha anche mangiato, quindi quelle persone
+         * sono gia' contate fra i panini. Senza correzione la somma direbbe
+         * 3.99 visitatori per 3 carrelli. */
+        for (let i = 0; i < 3; i++) {
+            await createBasketDoc(env, {
+                standId: env.stand1._id,
+                lines: [
+                    { epId: env.epBurger._id, stationId: env.station1._id, quantity: 1, unitPrice: 8 },
+                    { epId: env.epDrink._id, stationId: env.station1._id, quantity: 1, unitPrice: 3 }
+                ]
+            });
+        }
+
+        const res = await getVisitors(env.adminSession, env.event._id.toString());
+        expect(res.status).toBe(200);
+
+        expect(res.body.overlap.totalBaskets).toBe(3);
+        expect(res.body.overlap.mixedBaskets).toBe(3);
+        expect(res.body.overlap.multiCategoryBasketShare).toBe(1);
+
+        /* Nessun carrello contiene una sola categoria: la quota "solo" e' 0 e la
+         * categoria secondaria non aggiunge visitatori. */
+        const panini = res.body.categories.find((c: { label: string }) => c.label === 'Panini');
+        const bevande = res.body.categories.find((c: { label: string }) => c.label === 'Bevande');
+        expect(panini).toMatchObject({ weight: 1, weightedVisitors: 3 });
+        expect(bevande).toMatchObject({ soloQuota: 0, weight: 0, weightedVisitors: 0 });
+
+        expect(res.body.totals.productEstimated).toBe(3);
+        /* 3.99 grezzo, arrotondato a un decimale come tutti i totali. */
+        expect(res.body.totals.productEstimatedUnweighted).toBe(4);
+    });
+
+    it('applica un peso parziale quando solo una parte dei carrelli e\' mista', async () => {
+        const env = await setupEnvironment();
+
+        /* 2 panini (carrello solo), 1 bevanda (solo), 1 panino + 1 bevanda (misto),
+         * 1 bevanda (solo): i panini compaiono in 2 carrelli di cui 1 solo => quota
+         * 0.5; le bevande in 3 di cui 2 solo => 2/3. */
+        await createBasketDoc(env, {
+            standId: env.stand1._id,
+            lines: [{ epId: env.epBurger._id, stationId: env.station1._id, quantity: 2, unitPrice: 8 }]
+        });
+        await createBasketDoc(env, {
+            standId: env.stand1._id,
+            lines: [{ epId: env.epDrink._id, stationId: env.station1._id, quantity: 1, unitPrice: 3 }]
+        });
+        await createBasketDoc(env, {
+            standId: env.stand1._id,
+            lines: [
+                { epId: env.epBurger._id, stationId: env.station1._id, quantity: 1, unitPrice: 8 },
+                { epId: env.epDrink._id, stationId: env.station1._id, quantity: 1, unitPrice: 3 }
+            ]
+        });
+        await createBasketDoc(env, {
+            standId: env.stand1._id,
+            lines: [{ epId: env.epDrink._id, stationId: env.station1._id, quantity: 1, unitPrice: 3 }]
+        });
+
+        const res = await getVisitors(env.adminSession, env.event._id.toString());
+
+        expect(res.body.overlap.totalBaskets).toBe(4);
+        expect(res.body.overlap.multiCategoryBasketShare).toBe(0.25);
+
+        const bevande = res.body.categories.find((c: { label: string }) => c.label === 'Bevande');
+        expect(bevande.soloQuota).toBe(0.667);
+        expect(bevande.weight).toBe(0.667);
+        /* 3 bevande x 0.33 = 0.99, pesato 2/3 = 0.66, sopra i 3 panini (3.66
+         * grezzo, reso 3.7 dal rounding a un decimale). */
+        expect(res.body.totals.productEstimated).toBe(3.7);
+        expect(res.body.totals.productEstimatedUnweighted).toBe(4);
+    });
+
+    it('non corregge nulla se nessun carrello mescola le categorie', async () => {
+        const env = await setupEnvironment();
+        await createOrderDoc(env, {
+            standId: env.stand1._id, epId: env.epBurger._id, stationId: env.station1._id, quantity: 2
+        });
+        await createOrderDoc(env, {
+            standId: env.stand1._id, epId: env.epDrink._id, stationId: env.station1._id, quantity: 2
+        });
+
+        const res = await getVisitors(env.adminSession, env.event._id.toString());
+
+        expect(res.body.overlap.multiCategoryBasketShare).toBe(0);
+        expect(res.body.categories.every((c: { weight: number }) => c.weight === 1)).toBe(true);
+        expect(res.body.totals.productEstimated).toBe(res.body.totals.productEstimatedUnweighted);
+    });
+
+    it('le stime per stand restano senza pesi e non sono addizionabili', async () => {
+        const env = await setupEnvironment();
+        for (let i = 0; i < 2; i++) {
+            await createBasketDoc(env, {
+                standId: env.stand1._id,
+                lines: [
+                    { epId: env.epBurger._id, stationId: env.station1._id, quantity: 1, unitPrice: 8 },
+                    { epId: env.epDrink._id, stationId: env.station1._id, quantity: 1, unitPrice: 3 }
+                ]
+            });
+        }
+
+        const res = await getVisitors(env.adminSession, env.event._id.toString());
+        const stand1 = res.body.stands.find((s: { standName: string }) => s.standName === 'Stand One');
+
+        /* La riga e' la somma "di quel banco", invariata: il peso si misura a
+         * livello di evento, sui carrelli che attraversano piu' stand. */
+        expect(stand1.estimatedVisitorsTotal).toBe(2.7);
+        /* Il totale evento e' corretto, quindi non e' la somma delle righe. */
+        expect(res.body.totals.productEstimated).toBe(2);
+    });
+});
+
+describe('Integration — Visitor estimation, terza base sulle liquidazioni', () => {
+    it('espone null quando non ci sono liquidazioni', async () => {
+        const env = await setupEnvironment();
+        await createOrderDoc(env, {
+            standId: env.stand1._id, epId: env.epBurger._id, stationId: env.station1._id,
+            quantity: 1, creditAmountUsed: 20
+        });
+
+        const res = await getVisitors(env.adminSession, env.event._id.toString());
+        /* Zero liquidati non e' una stima di visitatori, e' un dato assente. */
+        expect(res.body.totals.settlementBasedEstimated).toBeNull();
+        expect(res.body.totals.settledCredits).toBe(0);
+    });
+
+    it('stima dai crediti liquidati usando i token per visitatore', async () => {
+        const env = await setupEnvironment();
+        /* Un ordine pagato tutto in crediti da 20 => tokensPerVisitor 20. */
+        await createOrderDoc(env, {
+            standId: env.stand1._id, epId: env.epBurger._id, stationId: env.station1._id,
+            quantity: 1, unitPrice: 20, creditAmountUsed: 20
+        });
+        await createSettlement(env, { standId: env.stand1._id, standName: 'Stand One', amount: 40 });
+
+        const res = await getVisitors(env.adminSession, env.event._id.toString());
+
+        expect(res.body.tokensPerVisitor).toBe(20);
+        expect(res.body.totals.settledCredits).toBe(40);
+        expect(res.body.totals.settlementBasedEstimated).toBe(2);
+
+        const stand1 = res.body.stands.find((s: { standName: string }) => s.standName === 'Stand One');
+        expect(stand1.settledCredits).toBe(40);
+        /* Crediti guadagnati su tutto l'evento, indipendentemente dalla finestra. */
+        expect(stand1.earnedCredits).toBe(20);
+    });
+
+    it('riporta i crediti non attribuibili se lo stand non ha vendite', async () => {
+        const env = await setupEnvironment();
+        await createSettlement(env, { standId: env.stand2._id, standName: 'Stand Two', amount: 30 });
+
+        const res = await getVisitors(env.adminSession, env.event._id.toString());
+
+        /* Il mix di vendita dello stand non esiste: spalmare sarebbe inventare. */
+        expect(res.body.totals.settledCredits).toBe(30);
+        expect(res.body.totals.unattributedSettledCredits).toBe(30);
+    });
+
+    it('ripartisce i crediti liquidati sul mix di vendita del loro stand', async () => {
+        const env = await setupEnvironment();
+        /* Stand One vende 3 panini da 8 e 1 bevanda da 3: 24 su 27 = 88.9% il
+         * fatturato e' panini. */
+        await createOrderDoc(env, {
+            standId: env.stand1._id, epId: env.epBurger._id, stationId: env.station1._id,
+            quantity: 3, unitPrice: 8
+        });
+        await createOrderDoc(env, {
+            standId: env.stand1._id, epId: env.epDrink._id, stationId: env.station1._id,
+            quantity: 1, unitPrice: 3
+        });
+        /* Stand Two vende UNA bevanda e un prodotto senza categoria, metà e metà: la
+         * ripartizione e' del suo banco e non deve conguagliarsi con quella dello
+         * stand uno, che ha venduto bevande per un fatturato ben diverso. */
+        await createOrderDoc(env, {
+            standId: env.stand2._id, epId: env.epDrink._id, stationId: env.station2._id,
+            quantity: 1, unitPrice: 5
+        });
+        await createOrderDoc(env, {
+            standId: env.stand2._id, epId: env.epPlain._id, stationId: env.station2._id,
+            quantity: 1, unitPrice: 5
+        });
+
+        await createSettlement(env, { standId: env.stand1._id, standName: 'Stand One', amount: 90 });
+        await createSettlement(env, { standId: env.stand2._id, standName: 'Stand Two', amount: 40 });
+
+        const res = await getVisitors(env.adminSession, env.event._id.toString());
+
+        const stand1 = res.body.stands.find((s: { standName: string }) => s.standName === 'Stand One');
+        const panini = stand1.categories.find((c: { label: string }) => c.label === 'Panini');
+        const bevande = stand1.categories.find((c: { label: string }) => c.label === 'Bevande');
+        expect(panini.settledCredits).toBe(80);
+        expect(bevande.settledCredits).toBe(10);
+
+        const stand2 = res.body.stands.find((s: { standName: string }) => s.standName === 'Stand Two');
+        /* 5 su 10 di fatturato in bevande = 20 crediti su 40 liquidati, non i 30
+         * che si otterrebbero sommando anche i 10 dello stand uno. */
+        expect(stand2.categories.find((c: { label: string }) => c.label === 'Bevande').settledCredits).toBe(20);
+        expect(stand2.categories.find((c: { label: string }) => c.label === 'Senza categoria').settledCredits)
+            .toBe(20);
+        /* Nessun credito degli altri stand deve comparire sulla riga. */
+        expect(res.body.totals.unattributedSettledCredits).toBe(0);
+        expect(res.body.totals.settledCredits).toBe(130);
+    });
+
+    it('non somma le tre basi fra loro', async () => {
+        const env = await setupEnvironment();
+        const customer = await EventUserModel.create({ eventId: env.event._id, balance: 0 });
+        await createTopUp(env, customer._id, 200);
+
+        await createOrderDoc(env, {
+            standId: env.stand1._id, epId: env.epBurger._id, stationId: env.station1._id,
+            quantity: 4, unitPrice: 5, creditAmountUsed: 20
+        });
+        await createSettlement(env, { standId: env.stand1._id, standName: 'Stand One', amount: 20 });
+
+        const res = await getVisitors(env.adminSession, env.event._id.toString());
+        const { totals } = res.body;
+
+        /* 200 token caricati / 20 token spesi per ordine = 10 per visitatore. */
+        expect(totals.productEstimated).toBe(4);
+        expect(totals.tokenBasedEstimated).toBe(10);
+        expect(totals.settlementBasedEstimated).toBe(1);
+        /* Sono tre letture dello stesso gruppo di persone: sommarle produrrebbe
+         * un numero senza significato, quindi nessun totale corrisponde alla
+         * somma delle altre due. */
+        expect(totals.productEstimated).not.toBe(
+            totals.tokenBasedEstimated + totals.settlementBasedEstimated
+        );
     });
 });

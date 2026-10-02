@@ -24,6 +24,74 @@ export type AnalyticsPrepBucket = {
   count: number
 }
 
+/** Totali delle liquidazioni stand nella finestra. */
+export type AnalyticsSettlementTotals = {
+  /** Crediti guadagnati dagli stand su TUTTO l'evento (non filtrato). */
+  earnedCredits: number
+  /** Crediti liquidati nella finestra. */
+  settledCredits: number
+  /** Lordo in euro delle liquidazioni. */
+  settledEuro: number
+  /** Crediti caricati al banco con DARE (carico crediti allo stand). */
+  loadedCredits: number
+  grossEuro: number
+  feeEuro: number
+  payoutEuro: number
+  /** Caricati e non ancora liquidati: segnale di chiusura mancante. */
+  toReturnCredits: number
+  /** Guadagnati e non ancora liquidati: il residuo da corrispondere. */
+  remainingEarnedCredits: number
+  settlementCount: number
+  loadCount: number
+  /** Stand che hanno guadagnato crediti ma non hanno MAI ricevuto una
+   *  liquidazione (controllo su tutto l'evento, non solo la finestra). */
+  standsNeverSettled: number
+}
+
+/**
+ * Resoconto dei token della moneta evento.
+ *
+ * `period` è filtrato dalla finestra e riguarda i soli ordini; `snapshot` è
+ * uno stato istantaneo e NON è filtrabile per data (per costruzione).
+ */
+export type AnalyticsTokenLedger = {
+  period: {
+    loaded: number
+    cashRefunded: number
+    orderRefunded: number
+    netLoaded: number
+    spent: number
+    spentShareOfNetLoaded: number | null
+    /** Caricati nel periodo e ancora non spesi: NON è il saldo dei portafogli. */
+    remaining: number
+  }
+  snapshot: {
+    /** Somme dei saldi di tutti i portafogli dell'evento. */
+    inCirculation: number
+    netFromTransactions: number
+    /** `inCirculation - netFromTransactions`: se non è 0 va segnalato, non nascosto. */
+    gap: number
+    /** Token fisicamente nelle casse (fondo - carichi + rimborsi + movimenti). */
+    inCash: number
+    cashRegisterCount: number
+    registerFloats: number
+    legacyFloat: number
+    movementsIn: number
+    movementsOut: number
+  }
+}
+
+export type AnalyticsTokenProduct = {
+  eventProductId: string
+  productName: string
+  standName: string
+  /** Token attribuiti al prodoto ripartendo `creditAmountUsed` sul `subtotal`. */
+  tokens: number
+  /** Quota sul totale speso nella finestra. */
+  share: number
+  quantity: number
+}
+
 export type AnalyticsStandRow = {
   standId: string
   standName: string
@@ -39,6 +107,23 @@ export type AnalyticsStandRow = {
   prepOrders: number
   /** Secondi; null se nessun ordine di questo stand è arrivato a "pronto". */
   avgPrepSeconds: number | null
+  /** Crediti guadagnati su tutto l'evento, non filtrato dalla finestra. */
+  earnedCredits: number
+  settledCredits: number
+  settledEuro: number
+  loadedCredits: number
+  grossEuro: number
+  feeEuro: number
+  payoutEuro: number
+  toReturnCredits: number
+  remainingEarnedCredits: number
+  settlementCount: number
+  loadCount: number
+  /** Liquidazioni su tutto l'evento, anche fuori finestra. */
+  settlementCountAllTime: number
+  lastSettlementAt: string | null
+  /** Ha venduto ma non è mai stato liquidato: la riga va segnalata. */
+  neverSettled: boolean
 }
 
 export type EventAnalytics = {
@@ -60,21 +145,26 @@ export type EventAnalytics = {
     giftOrders: number
     prepOrders: number
     avgPrepSeconds: number | null
+    settlements: AnalyticsSettlementTotals
   }
   hourly: AnalyticsHourBucket[]
   topProducts: AnalyticsTopProduct[]
   prepBuckets: AnalyticsPrepBucket[]
   byStand: AnalyticsStandRow[]
+  tokens: AnalyticsTokenLedger
+  tokensByProduct: AnalyticsTokenProduct[]
 }
 
 export function fetchEventAnalytics(
   eventId: string,
   from?: string,
   to?: string,
+  standId?: string,
 ): Promise<EventAnalytics> {
   const params = new URLSearchParams()
   if (from) params.set('from', from)
   if (to) params.set('to', to)
+  if (standId) params.set('standId', standId)
   const qs = params.toString()
   return apiRequest<EventAnalytics>(`/events/${eventId}/analytics${qs ? `?${qs}` : ''}`)
 }

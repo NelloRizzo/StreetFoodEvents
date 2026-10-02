@@ -320,3 +320,16 @@
     transform: translateX(0);
   }
 }
+
+@media print {
+  /* La sidebar è `position: fixed` con `height: 100vh`: in stampa viene
+     ridisegnata su ogni foglio e copre il contenuto. Va nascosta QUI, dentro
+     il modulo che possiede la classe: la regola equivalente in global.scss
+     (`.admin aside`) non aggancia, perché `.admin` qui è una classe di modulo
+     e nel CSS compilato diventa `._admin_<hash>` (verificato in
+     `dist/assets/index-*.css`). */
+  .sidebar,
+  .overlay {
+    display: none !important;
+  }
+}

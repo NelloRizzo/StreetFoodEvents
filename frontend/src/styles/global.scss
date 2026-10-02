@@ -254,9 +254,10 @@ p {
     display: none !important;
   }
 
-  .admin aside {
-    display: none !important;
-  }
+  /* La sidebar admin in stampa si nasconde in `AdminSidebar.module.scss`
+     (`@media print { .sidebar { display: none } }`). Una regola `.admin aside`
+     qui non funzionerebbe: `.admin` è una classe di modulo, quindi nel CSS
+     compilato è `._admin_<hash>` e il selettore globale non la aggancia. */
 }
 
 @media (min-width: 48rem) {

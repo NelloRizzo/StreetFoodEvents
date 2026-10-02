@@ -42,4 +42,15 @@
   .main {
     margin-left: 0;
   }
+
+  /* `min-height: 100vh` obbliga il contenitore a valere una pagina intera:
+     con i padding verticali di `.content` il foglio supera l'altezza utile e
+     Chrome aggiunge una pagina finale quasi vuota. */
+  .admin {
+    min-height: 0;
+  }
+
+  .content {
+    padding: 0;
+  }
 }

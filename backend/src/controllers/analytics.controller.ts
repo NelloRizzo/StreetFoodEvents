@@ -4,6 +4,13 @@ import { Types } from 'mongoose';
 import { EventModel } from '../models/event.model';
 import { OrderModel } from '../models/order.model';
 import { StandModel } from '../models/stand.model';
+import {
+    emptySettlementBuckets,
+    getEarnedCreditsByStand,
+    getSettlementBucketsByStand,
+    getSettlementPresenceByStand
+} from '../services/stand-settlements-analytics.service';
+import { getTokenLedger, getTokenSpentByProduct } from '../services/token-ledger.service';
 import { resolveDateWindow } from '../utils/date-window';
 
 function isValidObjectId(value: string | undefined): value is string {
@@ -121,6 +128,23 @@ export async function getEventAnalytics(req: Request, res: Response) {
 
     const secondsSinceCreation = { $divide: [{ $subtract: ['$readyAt', '$createdAt'] }, 1000] };
 
+    /* Liquidazioni e crediti guadagnati: finestra e per_tutto_Evento con
+       regole diverse, gestite nel modulo condiviso con i visitatori. */
+    const standFilterId = standIdQuery && isValidObjectId(standIdQuery) ? new Types.ObjectId(standIdQuery) : undefined;
+    const [settlementByStand, earnedByStand, settlementPresence] = await Promise.all([
+        getSettlementBucketsByStand({ eventId: eventIdObj, from, to, standId: standFilterId }),
+        getEarnedCreditsByStand({ eventId: eventIdObj, standId: standFilterId }),
+        /* Esistenza "mai liquidato": su tutto l'evento, non nella finestra. */
+        getSettlementPresenceByStand({ eventId: eventIdObj, standId: standFilterId })
+    ]);
+
+    /* Resoconto token: flussi del periodo, istantanea dei portafogli e dei
+     * cassoni, e ripartizione dei token spesi per prodotto. */
+    const [tokenLedger, tokenByProduct] = await Promise.all([
+        getTokenLedger({ eventId: eventIdObj, from, to }),
+        getTokenSpentByProduct({ eventId: eventIdObj, from, to, standId: standFilterId })
+    ]);
+
     const [hourlyRows, topProductRows, byStandRows, prepBucketRows, customerRows, giftRows] = await Promise.all([
         /* Distribuzione per ora: i bucket sono allineati sull'ora UTC. */
         OrderModel.aggregate([
@@ -198,7 +222,7 @@ export async function getEventAnalytics(req: Request, res: Response) {
             { $match: salesMatch },
             { $group: { _id: null, customers: { $addToSet: '$customerId' } } }
         ]),
-        OrderModel.aggregate([
+OrderModel.aggregate([
             { $match: { ...baseMatch, ...standFilter, status: { $ne: 'cancelled' }, isGift: true } },
             { $count: 'count' }
         ])
@@ -240,22 +264,62 @@ export async function getEventAnalytics(req: Request, res: Response) {
         standNameById.set(id, info.name);
     }
 
-    const byStand = byStandRows.map((row) => {
-        const standId = row._id.toString();
+    /* 'credit' = AVERE, lo stand viene pagato in euro; 'debit' = DARE, crediti
+     * caricati sullo stand senza pagamento. */
+    const standIdsInReport = new Set<string>([
+        ...byStandRows.map((r) => r._id.toString()),
+        ...settlementByStand.keys()
+    ]);
+
+    const salesByStand = new Map<string, (typeof byStandRows)[number]>(byStandRows.map((r) => [r._id.toString(), r]));
+
+    const byStand = [...standIdsInReport].map((standId) => {
         const info = standInfo.get(standId) ?? { name: 'Stand sconosciuto', number: null, location: null };
+        const row = salesByStand.get(standId);
+        const buckets = settlementByStand.get(standId) ?? emptySettlementBuckets();
+        const earnedCredits = earnedByStand.get(standId) ?? 0;
+        const presence = settlementPresence.get(standId);
+        const revenue = row?.revenue ?? 0;
+        const creditRevenue = row?.creditRevenue ?? 0;
+        const posRevenue = row?.posRevenue ?? 0;
+        const readySamples = row?.readySamples ?? 0;
         return {
             standId,
             standName: info.name,
             number: info.number,
             location: info.location,
-            orders: row.orders,
-            quantity: row.quantity,
-            revenue: round1(row.revenue),
-            creditRevenue: round1(row.creditRevenue),
-            posRevenue: round1(row.posRevenue),
-            cashRevenue: round1(row.revenue - row.creditRevenue - row.posRevenue),
-            prepOrders: row.readySamples,
-            avgPrepSeconds: row.readySamples > 0 ? Math.round(row.readySeconds / row.readySamples) : null
+            orders: row?.orders ?? 0,
+            quantity: row?.quantity ?? 0,
+            revenue: round1(revenue),
+            creditRevenue: round1(creditRevenue),
+            posRevenue: round1(posRevenue),
+            cashRevenue: round1(revenue - creditRevenue - posRevenue),
+            prepOrders: readySamples,
+            avgPrepSeconds: readySamples > 0 ? Math.round((row?.readySeconds ?? 0) / readySamples) : null,
+            /* Crediti guadagnati su tutto l'evento, indipendentemente dalla finestra. */
+            earnedCredits: round1(earnedCredits),
+            settledCredits: round1(buckets.settledCredits),
+            settledEuro: round1(buckets.settledEuro),
+            loadedCredits: round1(buckets.loadedCredits),
+            grossEuro: round1(buckets.grossEuro),
+            feeEuro: round1(buckets.feeEuro),
+            payoutEuro: round1(buckets.payoutEuro),
+            /* Crediti caricati ma non ancora liquidati: mai negativo, e' un
+             * segnale ("manca la chiusura"), non un errore contabile. */
+            toReturnCredits: round1(Math.max(0, buckets.loadedCredits - buckets.settledCredits)),
+            /* Crediti guadagnati e non ancora liquidati: e' il residuo che
+             * l'operatore deve ancora corrispondere. Diverso da `toReturnCredits`
+             * (che guarda i soli DARE) e calcolato sui crediti guadagnati su tutto
+             * l'evento contro i liquidati nella finestra. */
+            remainingEarnedCredits: round1(Math.max(0, earnedCredits - buckets.settledCredits)),
+            settlementCount: buckets.settlementCount,
+            loadCount: buckets.loadCount,
+            settlementCountAllTime: presence?.count ?? 0,
+            lastSettlementAt: presence?.lastOccurredAt ?? null,
+            /* Ha venduto ma non e' mai stato liquidato in nessun momento
+             * dell'evento: la riga resta con gli zeri delle liquidazioni e il
+             * frontend la segnala. */
+            neverSettled: presence === undefined && earnedCredits > 0
         };
     }).sort((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity) || a.standName.localeCompare(b.standName));
 
@@ -299,11 +363,32 @@ export async function getEventAnalytics(req: Request, res: Response) {
             distinctCustomers: (customerRows[0]?.customers ?? []).filter((c: unknown) => c !== null).length,
             giftOrders: giftRows[0]?.count ?? 0,
             prepOrders,
-            avgPrepSeconds: prepOrders > 0 ? Math.round(prepSeconds / prepOrders) : null
+            avgPrepSeconds: prepOrders > 0 ? Math.round(prepSeconds / prepOrders) : null,
+            /* Liquidazioni: sezione a parte, mai sommata al fatturato. I crediti
+             * guadagnati sono cumulativi sull'evento, le liquidazioni sono
+             * quelle cadute nella finestra. */
+            settlements: {
+                earnedCredits: round1([...earnedByStand.values()].reduce((a, b) => a + b, 0)),
+                settledCredits: round1(byStand.reduce((a, s) => a + s.settledCredits, 0)),
+                settledEuro: round1(byStand.reduce((a, s) => a + s.settledEuro, 0)),
+                loadedCredits: round1(byStand.reduce((a, s) => a + s.loadedCredits, 0)),
+                grossEuro: round1(byStand.reduce((a, s) => a + s.grossEuro, 0)),
+                feeEuro: round1(byStand.reduce((a, s) => a + s.feeEuro, 0)),
+                payoutEuro: round1(byStand.reduce((a, s) => a + s.payoutEuro, 0)),
+                toReturnCredits: round1(byStand.reduce((a, s) => a + s.toReturnCredits, 0)),
+                remainingEarnedCredits: round1(byStand.reduce((a, s) => a + s.remainingEarnedCredits, 0)),
+                settlementCount: byStand.reduce((a, s) => a + s.settlementCount, 0),
+                loadCount: byStand.reduce((a, s) => a + s.loadCount, 0),
+                /* Stand che hanno guadagnato crediti ma non hanno mai ricevuto
+                 * una liquidazione: vanno richiamati all'operatore. */
+                standsNeverSettled: byStand.filter((s) => s.neverSettled).length
+            }
         },
         hourly,
         topProducts,
         prepBuckets,
-        byStand
+        byStand,
+        tokens: tokenLedger,
+        tokensByProduct: tokenByProduct.products
     });
 }

@@ -1,10 +1,23 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
-import { fetchVisitorsEstimate, type VisitorsEstimate, type VisitorStandEstimate } from '../lib/visitors'
+import {
+  fetchVisitorsEstimate,
+  type VisitorsEstimate,
+  type VisitorStandEstimate,
+} from '../lib/visitors'
 import styles from './VisitorsEstimatePage.module.scss'
 
 function fmtVisitors(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ',')
+}
+
+function fmtPercent(value: number | null): string {
+  if (value === null) return '—'
+  return `${Math.round(value * 1000) / 10}%`
+}
+
+function fmtTokens(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ',')
 }
 
@@ -35,17 +48,21 @@ function StandRow({ stand, isTotal }: { stand: VisitorStandEstimate; isTotal?: b
                   </span>
                 </div>
               ))}
+              {stand.settledCredits > 0 && (
+                <div className={styles.catNote}>
+                  {fmtTokens(stand.settledCredits)} liquidati, ripartiti sulle categorie in base al
+                  fatturato di questo stand.
+                </div>
+              )}
             </div>
           </details>
         )}
       </td>
+      <td className={styles.num}>{fmtTokens(stand.earnedCredits)}</td>
+      <td className={styles.num}>{fmtTokens(stand.settledCredits)}</td>
       <td className={`${styles.num} ${styles.estimate}`}>{fmtVisitors(stand.estimatedVisitorsTotal)}</td>
     </tr>
   )
-}
-
-function fmtTokens(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ',')
 }
 
 export function VisitorsEstimatePage() {
@@ -79,6 +96,11 @@ export function VisitorsEstimatePage() {
 
   const totalOrders = data.stands.reduce((sum, s) => sum + s.ordersCount, 0)
   const totalCustomers = data.stands.reduce((sum, s) => sum + s.distinctCustomers, 0)
+  /* La somma delle righe e' il totale "grezzo": serve a far vedere quanto la
+     * correzione delle sovrapposizioni toglie, non e' il totale evento. */
+  const rowsSum = Math.round(
+    data.stands.reduce((sum, s) => sum + s.estimatedVisitorsTotal, 0) * 10,
+  ) / 10
 
   const customCoefficients = Object.entries(data.coefficientMap)
 
@@ -118,7 +140,8 @@ export function VisitorsEstimatePage() {
               <div className={styles.cardTitle}>Stima prodotti</div>
               <div className={styles.bigValue}>{fmtVisitors(data.totals.productEstimated)}</div>
               <div className={styles.cardNote}>
-                somma della stima per stand, dagli ordini registrati in piattaforma
+                dagli ordini registrati in piattaforma, con chi compra in più categorie contato una
+                volta sola
               </div>
             </div>
             <div className={styles.card}>
@@ -127,6 +150,27 @@ export function VisitorsEstimatePage() {
               <div className={styles.cardNote}>
                 {fmtTokens(data.totals.netTokensSold)} {data.currencyName} venduti divisi per
                 {fmtVisitors(data.tokensPerVisitor)} {data.currencyName} medi a visita
+              </div>
+            </div>
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>Stima liquidazioni</div>
+              {/* Zero liquidati non è "zero visitatori": è un dato assente, e
+                  mostrarlo come 0 farebbe sembrare una misura quella che è solo
+                  l'assenza di un dato. */}
+              <div className={styles.bigValue}>
+                {data.totals.settlementBasedEstimated === null
+                  ? '—'
+                  : fmtVisitors(data.totals.settlementBasedEstimated)}
+              </div>
+              <div className={styles.cardNote}>
+                {data.totals.settledCredits > 0 ? (
+                  <>
+                    {fmtTokens(data.totals.settledCredits)} {data.currencyName} liquidati divisi per
+                    {fmtVisitors(data.tokensPerVisitor)} {data.currencyName} a visita
+                  </>
+                ) : (
+                  'nessuna liquidazione registrata nel periodo'
+                )}
               </div>
             </div>
             <div className={styles.card}>
@@ -145,8 +189,65 @@ export function VisitorsEstimatePage() {
             </div>
           </div>
 
+          {data.categories.length > 0 && (
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>Categorie e sovrapposizione</div>
+              <p className={styles.cardNote}>
+                Chi beve e mangia nello stesso carrello è una persona sola: la categoria più grande
+                fa da base (peso 1), le altre pesano quanto la parte dei loro carrelli in cui quella
+                categoria &egrave; l&rsquo;unica presente.
+              </p>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Categoria</th>
+                      <th className={styles.num}>Quantit&agrave;</th>
+                      <th className={styles.num}>Coefficiente</th>
+                      <th className={styles.num}>Quota da sola</th>
+                      <th className={styles.num}>Peso</th>
+                      <th className={styles.num}>Stima pesata</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.categories.map((category) => (
+                      <tr key={category.label}>
+                        <td>{category.label}</td>
+                        <td className={styles.num}>{category.quantity}</td>
+                        <td className={styles.num}>{fmtVisitors(category.coefficient)}</td>
+                        <td className={styles.num}>{fmtPercent(category.soloQuota)}</td>
+                        <td className={styles.num}>{fmtPercent(category.weight)}</td>
+                        <td className={`${styles.num} ${styles.estimate}`}>
+                          {fmtVisitors(category.weightedVisitors)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className={styles.coeffNote}>
+                {data.overlap.totalBaskets === 0
+                  ? 'Nessun carrello osservabile: nessuna sovrapposizione da correggere.'
+                  : `${data.overlap.mixedBaskets} carrelli su ${data.overlap.totalBaskets} (${fmtPercent(data.overlap.multiCategoryBasketShare)}) contengono più di una categoria. Senza la correzione la somma sarebbe ${fmtVisitors(data.totals.productEstimatedUnweighted)} visitatori.`}
+              </div>
+              {data.totals.unattributedSettledCredits > 0 && (
+                <div className={styles.coeffNote}>
+                  {fmtTokens(data.totals.unattributedSettledCredits)} {data.currencyName} liquidati
+                  non sono attribuibili a nessuna categoria: gli stand che li hanno ricevuti non hanno
+                  vendite nel periodo, quindi il loro mix di fatturato non esiste.
+                </div>
+              )}
+            </div>
+          )}
+
           <div className={styles.card}>
             <div className={styles.cardTitle}>Dettaglio per stand</div>
+            <p className={styles.cardNote}>
+              La riga per stand &egrave; la somma di quel banco e resta grezza: la correzione delle
+              sovrapposizioni si pu&ograve; fare solo a livello di evento, perch&eacute; solo l&igrave;
+              si sa quali categorie sono finite nello stesso carrello. Per questo il totale non
+              &egrave; la somma delle righe.
+            </p>
             {data.stands.length === 0 ? (
               <p className={styles.empty}>Nessun dato disponibile.</p>
             ) : (
@@ -159,6 +260,8 @@ export function VisitorsEstimatePage() {
                       <th className={styles.num}>Ordini</th>
                       <th className={styles.num}>Clienti</th>
                       <th>Quantit&agrave; per categoria</th>
+                      <th className={styles.num}>Guadagnati</th>
+                      <th className={styles.num}>Liquidati</th>
                       <th className={styles.num}>Stima visitatori</th>
                     </tr>
                   </thead>
@@ -168,11 +271,25 @@ export function VisitorsEstimatePage() {
                     ))}
                     <tr className={styles.tableTotals}>
                       <td className={styles.num}>—</td>
-                      <td className={styles.standName}>TOTALE</td>
+                      <td className={styles.standName}>Somma delle righe</td>
                       <td className={styles.num}>{totalOrders}</td>
                       <td className={styles.num}>{totalCustomers}</td>
                       <td />
-                      <td className={`${styles.num} ${styles.estimate}`}>{fmtVisitors(data.totals.productEstimated)}</td>
+                      <td className={styles.num}>{fmtTokens(data.totals.earnedCredits)}</td>
+                      <td className={styles.num}>{fmtTokens(data.totals.settledCredits)}</td>
+                      <td className={`${styles.num} ${styles.estimate}`}>{fmtVisitors(rowsSum)}</td>
+                    </tr>
+                    <tr className={styles.tableTotals}>
+                      <td className={styles.num}>—</td>
+                      <td className={styles.standName}>Totale evento (corretto)</td>
+                      <td className={styles.num} />
+                      <td className={styles.num} />
+                      <td />
+                      <td className={styles.num} />
+                      <td className={styles.num} />
+                      <td className={`${styles.num} ${styles.estimate}`}>
+                        {fmtVisitors(data.totals.productEstimated)}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -181,11 +298,12 @@ export function VisitorsEstimatePage() {
           </div>
 
           <div className={styles.note}>
-            <strong>Stima approssimativa</strong> — i coefficienti trasformano le unit&agrave; vendute in visitatori
-            (es. 2 panini dello stesso tipo &#8776; 2 visitatori), non identificano persone uniche.
-            Gli stand senza ordini registrati contribuiscono con zero. Un prodotto in pi&ugrave; categorie
-            &egrave; conteggiato una sola volta, nella categoria col coefficiente pi&ugrave; alto. La stima &ldquo;token&rdquo;
-            copre tutti i visitatori solo se l&rsquo;economia dell&rsquo;evento passa dai token.{' '}
+            <strong>Tre stime, non un numero.</strong> Prodotti, token e liquidazioni misurano la
+            stessa folla con tre strumenti diversi, quindi non vanno sommate: quella che si vuole
+            usare dipende da quale dei tre segnali è più affidabile per quell&rsquo;evento. I
+            coefficienti trasformano le unit&agrave; vendute in visitatori (es. 2 panini dello stesso
+            tipo &#8776; 2 visitatori), non identificano persone uniche, e chi compra in pi&ugrave;
+            categorie nello stesso carrello viene contato una volta sola.
             {data.tokensPerVisitor === 10 && data.totals.nonCancelledOrders === 0 && (
               <span>Nessun ordine osservabile: usato il valore predefinito di 10 unit&agrave; per visitatore.</span>
             )}

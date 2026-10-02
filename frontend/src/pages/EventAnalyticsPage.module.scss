@@ -288,6 +288,67 @@
   margin: 0;
 }
 
+/* --- Badge di stato (es. "mai liquidato") --- */
+
+.pill {
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-brand-soft);
+  color: var(--color-ink-strong);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.pillWarn {
+  border-color: #e8b4b4;
+  background: #fdecec;
+  color: #8f1d1d;
+}
+
+/* Coppie etichetta/valore: usate al posto di una tabella quando il dato e'
+   una coppia e non una serie (resoconto token, quadratura cassa). */
+.kvGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.5rem 1.25rem;
+  margin-top: 0.75rem;
+}
+
+.kvRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-bottom: 1px dotted var(--color-line);
+  padding-bottom: 0.2rem;
+}
+
+.kvLabel {
+  font-size: 0.82rem;
+  color: var(--color-ink-soft);
+}
+
+.kvValue {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-ink-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.subTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-soft);
+  margin: 1.1rem 0 0;
+}
+
 @media (max-width: 40rem) {
   .bucketRow {
     grid-template-columns: 6rem 1fr 2.5rem;
@@ -300,15 +361,43 @@
 
 /* --- Stampa --- */
 
+/* I filtri (data e stand) spariscono in stampa: questa riga dichiara il
+   perimetro del foglio, altrimenti il report stampato non dice a cosa si
+   riferisce. Nascosta a schermo. */
+.printScope {
+  display: none;
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--color-ink-soft);
+}
+
 @media print {
   .headerActions,
   .note {
     display: none;
   }
 
+  .printScope {
+    display: block;
+  }
+
+  /* I padding verticali della pagina spingono il foglio oltre l'altezza utile:
+     il contenuto finiva su una pagina aggiuntiva quasi vuota. */
+  .page {
+    padding: 0;
+  }
+
   .card {
     break-inside: avoid;
     border-color: #999;
+  }
+
+  /* Le barre sono l'unico grafico della pagina: senza `print-color-adjust`
+     il browser le stampa bianche e il foglio sembra vuoto. */
+  .chartBar,
+  .bucketFill {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .chartBar {
@@ -317,6 +406,12 @@
 
   .bucketFill {
     background: #444;
+  }
+
+  /* Un contenitore scorrevole viene stampato solo nella parte visibile:
+     senza azzerare l'overflow le colonne fuori schermo spariscono. */
+  .tableWrap {
+    overflow: visible;
   }
 
   /* Leaflet nel foglio stampato aggiunge solo rumore: la tabella per stand

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
+import { apiRequest } from '../lib/api'
 import {
   fetchEventAnalytics,
   formatHourLabel,
@@ -12,8 +13,40 @@ import {
 } from '../lib/eventAnalytics'
 import styles from './EventAnalyticsPage.module.scss'
 
+type StandOption = {
+  id: string
+  name: string
+  numbers?: Array<{ eventId: string; number: number }>
+}
+
+/** Numero progressivo dello stand per l'evento corrente (la numerazione è
+ *  per evento, non globale). */
+function standNumberOf(stand: StandOption, eventId: string): number | null {
+  return stand.numbers?.find((n) => n.eventId === eventId)?.number ?? null
+}
+
 function fmtNumber(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ',')
+}
+
+/** Importi in euro: due decimali, i crediti restano con `fmtNumber`. */
+function fmtEuro(n: number): string {
+  return n.toFixed(2).replace('.', ',')
+}
+
+function fmtPercent(value: number | null): string {
+  if (value === null) return '—'
+  return `${Math.round(value * 1000) / 10}%`
+}
+
+function fmtDateTime(iso: string | null): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 /**
@@ -208,18 +241,56 @@ export function EventAnalyticsPage() {
   const [forbidden, setForbidden] = useState(false)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [stands, setStands] = useState<StandOption[]>([])
+  const [standId, setStandId] = useState('')
+
+  // L'elenco stand serve solo alla select: non va ripollato con i dati.
+  useEffect(() => {
+    if (!eventId) return
+    let cancelled = false
+    void apiRequest<{ items: StandOption[] }>(`/stands?eventId=${eventId}`)
+      .then((res) => {
+        if (!cancelled) setStands(res.items ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setStands([])
+      })
+    return () => { cancelled = true }
+  }, [eventId])
+
+  const sortedStands = useMemo(
+    () => [...stands].sort((a, b) => {
+      const na = standNumberOf(a, eventId ?? '')
+      const nb = standNumberOf(b, eventId ?? '')
+      if (na !== null && nb !== null && na !== nb) return na - nb
+      if (na !== null) return -1
+      if (nb !== null) return 1
+      return a.name.localeCompare(b.name)
+    }),
+    [stands, eventId],
+  )
+
+  const selectedStandName = useMemo(
+    () => stands.find((s) => s.id === standId)?.name ?? null,
+    [stands, standId],
+  )
 
   const load = useCallback(async () => {
     if (!eventId) return
     try {
-      const result = await fetchEventAnalytics(eventId, from || undefined, to || undefined)
+      const result = await fetchEventAnalytics(
+        eventId,
+        from || undefined,
+        to || undefined,
+        standId || undefined,
+      )
       setData(result)
       setForbidden(false)
     } catch {
       setForbidden(true)
     }
     setIsLoading(false)
-  }, [eventId, from, to])
+  }, [eventId, from, to, standId])
 
   useEffect(() => { void load() }, [load])
 
@@ -242,12 +313,40 @@ export function EventAnalyticsPage() {
   const revenueEuro = totals.revenue / (data.exchangeRate || 1)
   const positioned = data.byStand.filter((s) => s.location)
 
+  /* I filtri stanno in `.headerActions`, che in stampa viene nascosta: senza
+     questa riga il foglio non dice più quale stand e quale periodo riporta. */
+  const printScope = [
+    data.window.from || data.window.to
+      ? `Periodo: ${data.window.from || 'inizio evento'} - ${data.window.to || 'fine evento'}`
+      : null,
+    selectedStandName ? `Stand: ${selectedStandName}` : 'Stand: tutti',
+  ].filter(Boolean).join(' \u00b7 ')
+
   return (
     <div className={styles.page}>
       <div className="page-shell">
         <div className={styles.header}>
           <h1 className={styles.title}>Analisi vendite — {data.eventName}</h1>
           <div className={styles.headerActions}>
+            <div className={styles.dateGroup}>
+              <label className={styles.dateLabel}>Stand</label>
+              <select
+                value={standId}
+                onChange={(e) => { setIsLoading(true); setStandId(e.target.value) }}
+                className={styles.dateInput}
+                aria-label="Filtra per stand"
+              >
+                <option value="">Tutti gli stand</option>
+                {sortedStands.map((s) => {
+                  const n = standNumberOf(s, eventId)
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {n !== null ? `${n} \u2014 ` : ''}{s.name}
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
             <div className={styles.dateGroup}>
               <label className={styles.dateLabel}>Da</label>
               <input
@@ -269,6 +368,8 @@ export function EventAnalyticsPage() {
             </button>
           </div>
         </div>
+
+        <p className={styles.printScope}>{printScope}</p>
 
         <div className={styles.summaryGrid}>
           <div className={`${styles.card} ${styles.cardHighlight}`}>
@@ -300,6 +401,161 @@ export function EventAnalyticsPage() {
               {totals.prepOrders} ordini arrivati a &laquo;pronto&raquo;
             </div>
           </div>
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.cardTitle}>Liquidazioni stand</div>
+          <p className={styles.cardNote}>
+            I crediti guadagnati sono cumulativi su tutto l&rsquo;evento, le liquidazioni sono
+            quelle cadute nel periodo selezionato. Sono conti separati dal fatturato: un
+            pagamento in euro a un gestore non &egrave; una vendita.
+          </p>
+          <div className={styles.kvGrid}>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Liquidati</span>
+              <span className={styles.kvValue}>
+                {fmtNumber(totals.settlements.settledCredits)} {data.currencyName}
+              </span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Netto erogato</span>
+              <span className={styles.kvValue}>{fmtEuro(totals.settlements.payoutEuro)} &euro;</span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Trattenute</span>
+              <span className={styles.kvValue}>{fmtEuro(totals.settlements.feeEuro)} &euro;</span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Liquidazioni</span>
+              <span className={styles.kvValue}>{totals.settlements.settlementCount}</span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Guadagnati e non liquidati</span>
+              <span className={styles.kvValue}>
+                {fmtNumber(totals.settlements.remainingEarnedCredits)} {data.currencyName}
+              </span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Caricati e non rimborsati</span>
+              <span className={styles.kvValue}>
+                {fmtNumber(totals.settlements.toReturnCredits)} {data.currencyName}
+              </span>
+            </div>
+          </div>
+          {totals.settlements.standsNeverSettled > 0 && (
+            <p className={styles.cardNote}>
+              <span className={`${styles.pill} ${styles.pillWarn}`}>
+                {totals.settlements.standsNeverSettled}{' '}
+                {totals.settlements.standsNeverSettled === 1 ? 'stand mai liquidato' : 'stand mai liquidati'}
+              </span>{' '}
+              Stand che hanno guadagnato crediti ma non hanno mai ricevuto una liquidazione, nemmeno
+              fuori dal periodo. Vedi il badge nella tabella qui sotto.
+            </p>
+          )}
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.cardTitle}>Resoconto dei {data.currencyName}</div>
+          <p className={styles.cardNote}>
+            Prima met&agrave;: i flussi del periodo. Seconda met&agrave;: la fotografia di adesso,
+            che &egrave; per definizione non filtrabile a pi&ograve; date.
+          </p>
+
+          <h3 className={styles.subTitle}>Movimenti del periodo</h3>
+          <div className={styles.kvGrid}>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Caricati dai visitatori</span>
+              <span className={styles.kvValue}>{fmtNumber(data.tokens.period.loaded)}</span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Rimborsi del banco cambio</span>
+              <span className={styles.kvValue}>&minus;{fmtNumber(data.tokens.period.cashRefunded)}</span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Messi in circolazione</span>
+              <span className={styles.kvValue}>{fmtNumber(data.tokens.period.netLoaded)}</span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Spesi in ordini</span>
+              <span className={styles.kvValue}>{fmtNumber(data.tokens.period.spent)}</span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Quota spesa</span>
+              <span className={styles.kvValue}>{fmtPercent(data.tokens.period.spentShareOfNetLoaded)}</span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Ancora non spesi</span>
+              <span className={styles.kvValue}>{fmtNumber(data.tokens.period.remaining)}</span>
+            </div>
+          </div>
+
+          <h3 className={styles.subTitle}>Situazione adesso</h3>
+          <div className={styles.kvGrid}>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Nei portafogli</span>
+              <span className={styles.kvValue}>{fmtNumber(data.tokens.snapshot.inCirculation)}</span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Nelle casse</span>
+              <span className={styles.kvValue}>{fmtNumber(data.tokens.snapshot.inCash)}</span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Fondi di cassa</span>
+              <span className={styles.kvValue}>
+                {fmtNumber(data.tokens.snapshot.registerFloats + data.tokens.snapshot.legacyFloat)}
+              </span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Quadratura</span>
+              <span
+                className={`${styles.pill} ${Math.abs(data.tokens.snapshot.gap) > 0.01 ? styles.pillWarn : ''}`}
+              >
+                {Math.abs(data.tokens.snapshot.gap) <= 0.01
+                  ? 'coerente'
+                  : `scarto ${fmtNumber(data.tokens.snapshot.gap)}`}
+              </span>
+            </div>
+          </div>
+          {Math.abs(data.tokens.snapshot.gap) > 0.01 && (
+            <p className={styles.cardNote}>
+              I portafogli e le transazioni non tornano: può essere un intervento manuale o un
+              caricamento a cassa non ancora registrato. Meglio saperlo che leggerlo come fatturato.
+            </p>
+          )}
+
+          {data.tokensByProduct.length > 0 && (
+            <>
+              <h3 className={styles.subTitle}>Dove sono finiti i {data.currencyName} spesi</h3>
+              <p className={styles.cardNote}>
+                I crediti usati su un ordine multi-riga sono ripartiti sulle righe in proporzione
+                al loro importo: un prodotto &egrave; cos&igrave; pagato solo in parte.
+              </p>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Prodotto</th>
+                      <th>Stand</th>
+                      <th className={styles.num}>Quantit&agrave;</th>
+                      <th className={styles.num}>{data.currencyName}</th>
+                      <th className={styles.num}>Quota</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.tokensByProduct.map((product) => (
+                      <tr key={`${product.eventProductId}-${product.standName}`}>
+                        <td>{product.productName}</td>
+                        <td>{product.standName}</td>
+                        <td className={styles.num}>{product.quantity}</td>
+                        <td className={styles.num}>{fmtNumber(product.tokens)}</td>
+                        <td className={styles.num}>{fmtPercent(product.share)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
 
         <div className={styles.card}>
@@ -419,6 +675,10 @@ export function EventAnalyticsPage() {
                     <th className={styles.num}>POS</th>
                     <th className={styles.num}>Crediti</th>
                     <th className={styles.num}>Preparazione</th>
+                    <th className={styles.num}>Guadagnati</th>
+                    <th className={styles.num}>Liquidati</th>
+                    <th className={styles.num}>Da liquidare</th>
+                    <th>Liquidazione</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -433,6 +693,32 @@ export function EventAnalyticsPage() {
                       <td className={styles.num}>{fmtNumber(stand.posRevenue)}</td>
                       <td className={styles.num}>{fmtNumber(stand.creditRevenue)}</td>
                       <td className={styles.num}>{formatSeconds(stand.avgPrepSeconds)}</td>
+                      <td className={styles.num}>{fmtNumber(stand.earnedCredits)}</td>
+                      <td className={styles.num}>{fmtNumber(stand.settledCredits)}</td>
+                      <td className={styles.num}>{fmtNumber(stand.remainingEarnedCredits)}</td>
+                      <td>
+                        {stand.neverSettled ? (
+                          <span className={`${styles.pill} ${styles.pillWarn}`}>mai liquidato</span>
+                        ) : stand.settlementCount > 0 ? (
+                          <>
+                            {stand.settlementCount} liquidazione
+                            {stand.settlementCount === 1 ? '' : 'ni'}
+                            {stand.settlementCountAllTime > stand.settlementCount && (
+                              <span className={styles.cardNote}>
+                                {' '}
+                                ({stand.settlementCountAllTime} in tutto)
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className={styles.cardNote}>
+                            {stand.earnedCredits > 0 ? 'nessuna nel periodo' : '—'}
+                          </span>
+                        )}
+                        {stand.lastSettlementAt && (
+                          <span className={styles.cardNote}> &middot; ultima {fmtDateTime(stand.lastSettlementAt)}</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                   <tr className={styles.tableTotals}>
@@ -445,6 +731,12 @@ export function EventAnalyticsPage() {
                     <td className={styles.num}>{fmtNumber(totals.posRevenue)}</td>
                     <td className={styles.num}>{fmtNumber(totals.creditRevenue)}</td>
                     <td className={styles.num}>{formatSeconds(totals.avgPrepSeconds)}</td>
+                    <td className={styles.num}>{fmtNumber(totals.settlements.earnedCredits)}</td>
+                    <td className={styles.num}>{fmtNumber(totals.settlements.settledCredits)}</td>
+                    <td className={styles.num}>
+                      {fmtNumber(totals.settlements.remainingEarnedCredits)}
+                    </td>
+                    <td>{totals.settlements.settlementCount} totali</td>
                   </tr>
                 </tbody>
               </table>

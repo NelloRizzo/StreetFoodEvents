@@ -7,6 +7,12 @@ import { apiRequest } from '../lib/api'
 import { trackStandClick } from '../lib/analytics'
 import styles from './EventMapPage.module.scss'
 
+/* Zoom nativo dei provider verificato scaricando i tile: Esri street e imagery
+   danno tile veri fino a z19, a z20+ restituiscono lo stesso segnaposto grigio
+   "Map data not yet available". Stesso tetto della mappa delle vendite, cosi il
+   comportamento non cambia da una pagina all'altra. */
+const NATIVE_ZOOM = 19
+
 type EventData = {
   id: string
   name: string
@@ -118,20 +124,24 @@ export function EventMapPage() {
       center: [45.0700, 7.6860],
       zoom: 14,
       zoomControl: true,
-      maxZoom: 22,
+      /* Tetto 19 come nella mappa delle vendite: oltre, Esri street e imagery
+       restituiscono tutti e due lo stesso segnaposto grigio "Map data not yet
+       available". Senza `maxNativeZoom` Leaflet continua a chiedere i tile fino
+       a `maxZoom` e il risultato è una mappa grigia col segnaposto in mosaico. */
+      maxZoom: NATIVE_ZOOM,
     })
     mapRef.current = map
 
     const streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
-      maxZoom: 20,
-      maxNativeZoom: 20,
+      maxZoom: NATIVE_ZOOM,
+      maxNativeZoom: NATIVE_ZOOM,
     })
 
     const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
-      maxZoom: 23,
-      maxNativeZoom: 23,
+      maxZoom: NATIVE_ZOOM,
+      maxNativeZoom: NATIVE_ZOOM,
     })
 
     satelliteLayer.addTo(map)
