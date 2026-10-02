@@ -63,15 +63,23 @@ describe('formatSeconds', () => {
     expect(formatSeconds(null)).toBe('—')
   })
 
-  it('usa i secondi sotto il minuto', () => {
-    expect(formatSeconds(0)).toBe('0 s')
-    expect(formatSeconds(45)).toBe('45 s')
+  it('usa i secondi con il doppio apostrofo sotto il minuto', () => {
+    expect(formatSeconds(0)).toBe('0"')
+    expect(formatSeconds(45)).toBe('45"')
   })
 
-  it('usa i minuti, con i secondi solo se non sono zero', () => {
-    expect(formatSeconds(60)).toBe('1 min')
-    expect(formatSeconds(300)).toBe('5 min')
-    expect(formatSeconds(330)).toBe('5 min 30 s')
+  it('usa l\'apostrofo per i minuti, coi secondi solo se non sono zero', () => {
+    expect(formatSeconds(60)).toBe("1'")
+    expect(formatSeconds(300)).toBe("5'")
+    expect(formatSeconds(330)).toBe("5'30\"")
+  })
+
+  /* Arrotondando il resto si otterrebbe 1'60: il resto va calcolato sui secondi
+   totali arrotondati, non sul resto della divisione. 59,6 s arrotondano a
+   60 s, che è esattamente un minuto: `1'`, non `60"`. */
+  it('non produce mai 60 secondi dopo un minuto', () => {
+    expect(formatSeconds(119.6)).toBe("2'")
+    expect(formatSeconds(59.6)).toBe("1'")
   })
 })
 

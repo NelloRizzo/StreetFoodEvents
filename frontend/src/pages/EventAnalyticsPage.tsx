@@ -578,6 +578,68 @@ export function EventAnalyticsPage() {
             </p>
           )}
 
+          {/* Token emessi dal banco: cosa e' passato davvero dalla cassa cambio piu'
+              quello che le casse hanno ancora in cassetto. Il confronto con il
+              totale dei token dell'evento c'e' solo se i tagli sono configurati
+              (`null` non e' zero). */}
+          <h3 className={styles.subTitle}>Token emessi dal banco cambio</h3>
+          <div className={styles.kvGrid}>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Ricevuti dai visitatori</span>
+              <span className={styles.kvValue}>
+                {fmtNumber(data.tokens.issued.receivedCredits)}
+              </span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Ancora nelle casse</span>
+              <span className={styles.kvValue}>
+                {fmtNumber(data.tokens.issued.inCashCredits)}
+              </span>
+            </div>
+            <div className={styles.kvRow}>
+              <span className={styles.kvLabel}>Emessi finora</span>
+              <span className={styles.kvValue}>
+                {fmtNumber(data.tokens.issued.totalCredits)}
+              </span>
+            </div>
+            {data.tokens.issued.configuredCredits !== null && (
+              <div className={styles.kvRow}>
+                <span className={styles.kvLabel}>
+                  Totale token dell'evento ({data.tokens.issued.denominationCount}{' '}
+                  {data.tokens.issued.denominationCount === 1 ? 'taglio' : 'tagli'})
+                </span>
+                <span className={styles.kvValue}>
+                  {fmtNumber(data.tokens.issued.configuredCredits)}
+                </span>
+              </div>
+            )}
+            {data.tokens.issued.difference !== null && (
+              <div className={styles.kvRow}>
+                <span className={styles.kvLabel}>Differenza</span>
+                <span
+                  className={`${styles.pill} ${
+                    Math.abs(data.tokens.issued.difference) > 0.01 ? styles.pillWarn : ''
+                  }`}
+                >
+                  {Math.abs(data.tokens.issued.difference) <= 0.01
+                    ? 'coerente'
+                    : data.tokens.issued.difference > 0
+                      ? `emessi in più ${fmtNumber(data.tokens.issued.difference)}`
+                      : `non emessi ${fmtNumber(Math.abs(data.tokens.issued.difference))}`}
+                </span>
+              </div>
+            )}
+          </div>
+          <p className={styles.cardNote}>
+            Emessi = ricevuti dai visitatori + ancora nelle casse, cio&egrave; tutto ci&ograve; che
+            &egrave; passato dalla cassa cambio. Vale su tutto l'evento e non sul periodo
+            selezionato. {data.tokens.issued.configuredCredits !== null && (
+              <>Con i tagli configurati si vede quanti token stampati non sono ancora passati
+                dalla cassa (differenza negativa) o quanti ne sono usciti piu; del previsto
+                (differenza positiva).</>
+            )}
+          </p>
+
           {data.tokensByProduct.length > 0 && (
             <>
               <h3 className={styles.subTitle}>Dove sono finiti i {data.currencyName} spesi</h3>
@@ -585,8 +647,8 @@ export function EventAnalyticsPage() {
                 I crediti usati su un ordine multi-riga sono ripartiti sulle righe in proporzione
                 al loro importo: un prodotto &egrave; cos&igrave; pagato solo in parte.
               </p>
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
+<div className={styles.tableWrap}>
+              <table className={styles.table}>
                   <thead>
                     <tr>
 <th>Prodotto</th>
@@ -740,7 +802,10 @@ export function EventAnalyticsPage() {
             <p className={styles.empty}>Nessun dato disponibile.</p>
           ) : (
             <div className={styles.tableWrap}>
-              <table className={styles.table}>
+              {/* `tableVerticalHead`: in stampa le intestazioni di questa tabella
+                  girano in verticale (vedi il module), liberando larghezza per le
+                  13 colonne di dati. */}
+              <table className={`${styles.table} ${styles.tableVerticalHead}`}>
                 <thead>
                   <tr>
                     <Th num>N&deg;</Th>

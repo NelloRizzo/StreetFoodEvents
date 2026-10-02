@@ -415,9 +415,10 @@ describe('Integration — Event analytics', () => {
            deve restare confrontabile fra eventi. */
         expect(prepBuckets).toHaveLength(7);
         const counts = Object.fromEntries(prepBuckets.map((b: { label: string; count: number }) => [b.label, b.count]));
-        expect(counts['fino a 2 min'] ?? 0).toBe(1);
-        expect(counts['5-10 min'] ?? 0).toBe(1);
-        expect(counts['10-15 min'] ?? 0).toBe(0);
+        /* Le label usano la notazione breve: apostrofo = minuti. */
+        expect(counts["0'-2'"] ?? 0).toBe(1);
+        expect(counts["5'-10'"] ?? 0).toBe(1);
+        expect(counts["10'-15'"] ?? 0).toBe(0);
     });
 
     it('ordina i prodotti per quantità e riporta stand e numero', async () => {
@@ -743,6 +744,98 @@ describe('Integration — Event analytics, resoconto token', () => {
         expect(res.body.tokens.period.spentShareOfNetLoaded).toBeNull();
         expect(res.body.tokens.snapshot.inCirculation).toBe(0);
         expect(res.body.tokens.snapshot.gap).toBe(0);
+    });
+
+    it('confronta i token emessi in configurazione con quelli in giro', async () => {
+        const env = await setupEnvironment();
+        /* 100 pezzi da 1 credito + 100 pezzi da 5 crediti = 600 emessi. */
+        await EventModel.updateOne(
+            { _id: env.event._id },
+            {
+                $set: {
+                    denominations: [
+                        { label: '1', value: 1, quantity: 100 },
+                        { label: '5', value: 5, quantity: 100 }
+                    ]
+                }
+            }
+        );
+
+        const register = await CashRegisterModel.create({
+            eventId: env.event._id,
+            name: 'Cassa 1',
+            status: 'open',
+            openedByUserId: new Types.ObjectId(),
+            openedAt: utcAt(10),
+            cashFloat: { euro: 100, credits: 250, setAt: utcAt(10) }
+        });
+        const wallet = await createWallet(env, 150);
+        await createTokenTransaction(env, {
+            eventUserId: wallet._id, type: 'top-up', direction: 'credit',
+            amount: 200, occurredAt: utcAt(11), cashRegisterId: register._id
+        });
+
+        const res = await getAnalytics(env.adminSession, env.event._id.toString());
+        const { issued } = res.body.tokens;
+
+        expect(issued.denominationCount).toBe(2);
+        expect(issued.totalCredits).toBe(250);
+        /* 100 pezzi da 1 + 100 da 5 = 600 token configurati per l'evento. */
+        expect(issued.configuredCredits).toBe(600);
+        /* Ricevuti 200, in cassa 50 (fondo 250 - 200 consegnati). */
+        expect(issued.receivedCredits).toBe(200);
+        expect(issued.inCashCredits).toBe(50);
+        /* Emessi 250 contro 600 configurati: ne restano 350 da emettere. */
+        expect(issued.difference).toBe(-350);
+    });
+
+    it('segnala quando gli emessi superano il totale dei token dell\'evento', async () => {
+        const env = await setupEnvironment();
+        await EventModel.updateOne(
+            { _id: env.event._id },
+            { $set: { denominations: [{ label: '1', value: 1, quantity: 50 }] } }
+        );
+
+        /* Cassa con fondo 300 e un caricamento da 100: in cassa restano 200. */
+        const register = await CashRegisterModel.create({
+            eventId: env.event._id,
+            name: 'Cassa 1',
+            status: 'open',
+            openedByUserId: new Types.ObjectId(),
+            openedAt: utcAt(10),
+            cashFloat: { euro: 300, credits: 300, setAt: utcAt(10) }
+        });
+        await createTokenTransaction(env, {
+            eventUserId: (await createWallet(env, 100))._id, type: 'top-up', direction: 'credit',
+            amount: 100, occurredAt: utcAt(11), cashRegisterId: register._id
+        });
+
+        const res = await getAnalytics(env.adminSession, env.event._id.toString());
+        const { issued } = res.body.tokens;
+
+        expect(issued.configuredCredits).toBe(50);
+        expect(issued.receivedCredits).toBe(100);
+        expect(issued.inCashCredits).toBe(200);
+        /* Emessi = ricevuti 100 + in cassa 200 = 300, cioe' il fondo messo a
+           disposizione del banco: i token consegnati ai visitatori escono dal
+           conteggio e non lo fanno crescere. */
+        expect(issued.totalCredits).toBe(300);
+        /* Segno positivo: sono stati emessi piu' token di quanti configurati. */
+        expect(issued.difference).toBe(250);
+    });
+
+    it('senza tagli configurati non inventa un totale token dell\'evento', async () => {
+        const env = await setupEnvironment();
+        const res = await getAnalytics(env.adminSession, env.event._id.toString());
+        const { issued } = res.body.tokens;
+
+        /* `null` e non 0: un evento senza moneta fisica non ha zero token
+           configurati, semplicemente non ha una configurazione di tagli. */
+        expect(issued.configuredCredits).toBeNull();
+        expect(issued.denominationCount).toBe(0);
+        expect(issued.difference).toBeNull();
+        /* Gli emessi, invece, sono un dato reale e valgono zero a regime. */
+        expect(issued.totalCredits).toBe(0);
     });
 
     it('riporta la quota di token spesa per prodotto', async () => {

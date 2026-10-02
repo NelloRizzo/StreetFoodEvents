@@ -79,6 +79,30 @@ export type AnalyticsTokenLedger = {
     movementsIn: number
     movementsOut: number
   }
+/**
+ * Token **emessi finora dal banco cambio** e confronto con la configurazione.
+ *
+ * Anche questo blocco è event-wide e non filtrabile: `receivedTotal` e
+ * `inCash` sono cumulati storici e i tagli sono configurazione, quindi il
+ * confronto non usa il `period`.
+ */
+  issued: {
+    /**
+     * Token **emessi finora dal banco cambio**: totale ricevuto dai visitatori
+     * (tutto il tempo) + contenuto attuale delle casse.
+     */
+    totalCredits: number
+    /** Totale ricevuto dai visitatori, tutto il tempo. */
+    receivedCredits: number
+    /** Contenuto attuale di tutte le casse. */
+    inCashCredits: number
+    /** Totale dei token dell'evento da configurazione (`Σ quantity × value`). `null` se assente. */
+    configuredCredits: number | null
+    /** Quanti tagli sono configurati: 0 se l'evento non usa moneta fisica. */
+    denominationCount: number
+    /** `totalCredits - configuredCredits`. `null` se non configurati. */
+    difference: number | null
+  }
 }
 
 export type AnalyticsTokenProduct = {
@@ -263,10 +287,22 @@ export function listBucketDays(buckets: AnalyticsHourBucket[]): string[] {
   return [...days].sort()
 }
 
+/**
+ * Durata in minuti e secondi con la notazione breve: `45"`, `1'`, `5'30"`.
+ *
+ * L'apostrofo per i minuti e il doppio apostrofo per i secondi è la forma usata
+ * ovunque (cronometri, gestionali): in una colonna stretta di una tabella
+ * `5 min 30 s` occupa tre righe, `5'30"` una.
+ *
+ * **Arrotondamento sui secondi totali, non sul resto**: arrotondando il resto
+ * si ottiene `1'60` (119,6 s → 1 min + 60 s). Si arrota il totale e poi si
+ * divide.
+ */
 export function formatSeconds(seconds: number | null): string {
   if (seconds === null) return '—'
-  if (seconds < 60) return `${Math.round(seconds)} s`
-  const minutes = Math.floor(seconds / 60)
-  const rest = Math.round(seconds % 60)
-  return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`
+  const total = Math.round(seconds)
+  if (total < 60) return `${total}"`
+  const minutes = Math.floor(total / 60)
+  const rest = total % 60
+  return rest === 0 ? `${minutes}'` : `${minutes}'${rest}"`
 }

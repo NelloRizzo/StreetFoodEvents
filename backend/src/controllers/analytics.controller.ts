@@ -25,15 +25,19 @@ function round1(value: number): number {
  * Bucket per la distribuzione dei tempi di preparazione, in secondi.
  * Confini fissi (non relativi al min/max): devono essere gli stessi per tutti gli
  * eventi, altrimenti due report non sarebbero confrontabili.
+ *
+ * Le label usano la notazione breve dei tempi (apostrofo = minuti, doppio
+ * apostrofo = secondi, `5'-10'`) coerente con `formatSeconds` lato frontend:
+ * le colonne dei tempi sono strette e `5-10 min` andrebbe a capo.
  */
 const PREP_BUCKETS: { label: string; upperBound: number }[] = [
-    { label: 'fino a 2 min', upperBound: 120 },
-    { label: '2-5 min', upperBound: 300 },
-    { label: '5-10 min', upperBound: 600 },
-    { label: '10-15 min', upperBound: 900 },
-    { label: '15-20 min', upperBound: 1200 },
-    { label: '20-30 min', upperBound: 1800 },
-    { label: 'oltre 30 min', upperBound: Infinity }
+    { label: "0'-2'", upperBound: 120 },
+    { label: "2'-5'", upperBound: 300 },
+    { label: "5'-10'", upperBound: 600 },
+    { label: "10'-15'", upperBound: 900 },
+    { label: "15'-20'", upperBound: 1200 },
+    { label: "20'-30'", upperBound: 1800 },
+    { label: "oltre 30'", upperBound: Infinity }
 ];
 
 const PREP_BUCKET_LABELS = PREP_BUCKETS.map((b) => b.label);
@@ -54,6 +58,68 @@ PREP_FINITE_BUCKETS.forEach((bucket, i) => {
         PREP_LABEL_BY_LOWER_BOUND.set(lowerBound, bucket.label);
     }
 });
+
+/**
+ * Token **emessi finora dal banco cambio**, e confronto con la
+ * configurazione dell'evento.
+ *
+ * "Emessi" non e' il totale dei tagli stampati: sono i token che il banco ha
+ * davvero messo in gioco, cioe' **totale ricevuto dai visitatori + contenuto
+ * attuale delle casse**. La formula e' quella del cassiere: tutto cio' che e'
+ * passato dalla cassa cambio, piu' quello che le casse hanno ancora in
+ * cassetto. (Combinata con `inCash = fondo - caricamenti + rimborsi +
+ * movimenti`, equivale al fondo iniziale piu' tutto cio' che e' rientrato:
+ * i token messi in circolazione non la cambiano, e infatti non devono.)
+ *
+ * Il confronto e' con `Event.denominations`, cioe' la quantita' di moneta
+ * fisica configurata per l'evento (`value` e' il valore del taglio **in
+ * crediti**: `count * value / exchangeRate` e' l'euro corrispondente). Serve a
+ * sapere quanti token stampati non sono ancora passati dalla cassa.
+ *
+ * Tutte e tre le grandezze sono **event-wide**: i tagli sono configurazione e
+ * `receivedTotal` e `inCash` sono cumulati storici, quindi qui NON si usa il
+ * `period` filtrato (mescolare le due cose darebbe uno scarto falso appena si
+ * cambia il periodo). Senza tagli configurati `configuredCredits` resta
+ * `null`: non e' la stessa cosa di zero token emessi, e la UI non mostra nulla.
+ */
+function buildIssuedTokens(
+    event: { denominations?: unknown },
+    ledger: { snapshot: { receivedTotal: number; inCash: number } }
+) {
+    const denominations = Array.isArray(event.denominations)
+        ? event.denominations as Array<{ value?: unknown; quantity?: unknown }>
+        : [];
+
+    const round2 = (value: number): number => Math.round(value * 100) / 100;
+
+    const receivedCredits = round2(ledger.snapshot.receivedTotal);
+    const inCashCredits = round2(ledger.snapshot.inCash);
+    const totalCredits = round2(receivedCredits + inCashCredits);
+
+    const configuredCredits = denominations.length > 0
+        ? round2(denominations.reduce((sum, d) => {
+            const value = Number(d.value);
+            const quantity = Number(d.quantity);
+            if (!Number.isFinite(value) || !Number.isFinite(quantity)) return sum;
+            return sum + value * quantity;
+        }, 0))
+        : null;
+
+    return {
+        /** Emessi finora: `receivedCredits + inCashCredits`. */
+        totalCredits,
+        /** Totale ricevuto dai visitatori, tutto il tempo. */
+        receivedCredits,
+        /** Contenuto attuale di tutte le casse. */
+        inCashCredits,
+        /** Totale dei tagli configurati in crediti, `null` se non configurati. */
+        configuredCredits,
+        /** Quanti tagli sono configurati: 0 se l'evento non usa moneta fisica. */
+        denominationCount: denominations.length,
+        /** `totalCredits - configuredCredits`: positivo = emessi piu' dei tagli configurati. */
+        difference: configuredCredits === null ? null : round2(totalCredits - configuredCredits)
+    };
+}
 
 /**
  * La posizione dello stand e' un GeoJSON Point: `coordinates` e' [lng, lat].
@@ -91,7 +157,8 @@ export async function getEventAnalytics(req: Request, res: Response) {
     }
 
     const event = await EventModel.findById(eventId)
-        .select('name currencyName currencySymbol exchangeRate startDate endDate');
+        /* `denominations` serve per il confronto "token emessi" della card token. */
+        .select('name currencyName currencySymbol exchangeRate startDate endDate denominations');
     if (!event) {
         return res.status(404).json({ message: 'Event not found' });
     }
@@ -388,7 +455,7 @@ OrderModel.aggregate([
         topProducts,
         prepBuckets,
         byStand,
-        tokens: tokenLedger,
+        tokens: { ...tokenLedger, issued: buildIssuedTokens(event, tokenLedger) },
         tokensByProduct: tokenByProduct.products
     });
 }

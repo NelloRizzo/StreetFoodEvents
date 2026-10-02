@@ -464,6 +464,27 @@
     font-size: 0.78rem;
   }
 
+  /* Le intestazioni in verticale: la tabella per stand ha 13 colonne e il
+     foglio A4 è stretto. Girando l'intestazione, la larghezza si libera per i
+     dati, che sono la parte che serve leggere. `rotate(180deg)` su
+     `vertical-rl` fa leggere dal basso in alto, come negli strumenti da
+     foglio di calcolo. Vale solo in stampa: a schermo l'intestazione
+     orizzontale è più comoda. */
+  .table.tableVerticalHead th {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    vertical-align: bottom;
+    padding: 0.3rem 0.25rem;
+    height: 5.5rem;
+  }
+
+  /* La riga di intestazione ruotata va ancorata al fondo, altrimenti il
+     foglio le riserva tutta l'altezza e i dati partono dalla seconda pagina. */
+  .table.tableVerticalHead thead tr {
+    height: 5.5rem;
+  }
+
   /* Lo sfondo colorato: senza "Grafica di sfondo" spuntata nel browser gli
      sfondi non vengono stampati, ma quelli chiari del tema evento possono
      anche rendere il testo illeggibile. In stampa il foglio resta bianco e

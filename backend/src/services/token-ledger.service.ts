@@ -49,6 +49,13 @@ export type TokenLedger = {
         netFromTransactions: number;
         gap: number;
         inCash: number;
+        /**
+         * Totale dei crediti **ricevuti dai visitatori, tutto il tempo**
+         * (somma dei `top-up`, senza filtro di data): la base del calcolo dei
+         * token emessi dal banco. Va nello `snapshot` e non nel `period`
+         * perche' e' un cumulato storico e non una finestra.
+         */
+        receivedTotal: number;
         cashRegisterCount: number;
         registerFloats: number;
         legacyFloat: number;
@@ -215,6 +222,9 @@ export async function getTokenLedger(params: {
 
     const inCirculation = balanceRow[0]?.balance ?? 0;
     const netFromTransactions = allTimeFlowRows[0]?.net ?? 0;
+    /* Totale ricevuto dai visitatori, tutto il tempo: e' la stessa aggregazione
+     * per cassa che alimenta `inCash`, quindi non serve una query in piu'. */
+    const receivedTotal = [...exchangeByRegister.values()].reduce((sum, e) => sum + e.topUp, 0);
 
     return {
         period: {
@@ -231,6 +241,7 @@ export async function getTokenLedger(params: {
             netFromTransactions: round2(netFromTransactions),
             gap: round2(inCirculation - netFromTransactions),
             inCash: round2(inCash),
+            receivedTotal: round2(receivedTotal),
             cashRegisterCount: registers.length,
             registerFloats: round2(registerFloats),
             legacyFloat: round2(legacyFloat),
