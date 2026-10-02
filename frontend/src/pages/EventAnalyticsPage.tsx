@@ -33,6 +33,41 @@ function fmtNumber(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ',')
 }
 
+/**
+ * Intestazione di tabella con **sigla abbreviata nel solo foglio stampato**.
+ *
+ * La tabella per stand ha 13 colonne e il foglio A4 è più stretto dello
+ * schermo: i nomi per esteso costringono il testo a spezzarsi su due righe e
+ * la tabella resta scomoda da leggere. A schermo resta il nome intero, che è
+ * più chiaro; la sigla serve solo al foglio, dove non c'è hover a mostrare il
+ * testo pieno.
+ *
+ * `title` tiene la parola estesa a schermo, e lo `span` della sigla è
+ * `aria-hidden`: chi usa uno screen reader sente "Preparazione", non "Prep.".
+ */
+function Th({
+  children,
+  short,
+  num,
+}: {
+  children: string
+  short?: string
+  num?: boolean
+}) {
+  return (
+    <th className={num ? styles.num : undefined} title={children}>
+      {short ? (
+        <>
+          <span className={styles.thLong}>{children}</span>
+          <span className={styles.thShort} aria-hidden="true">{short}</span>
+        </>
+      ) : (
+        children
+      )}
+    </th>
+  )
+}
+
 /** Importi in euro: due decimali, i crediti restano con `fmtNumber`. */
 function fmtEuro(n: number): string {
   return n.toFixed(2).replace('.', ',')
@@ -554,11 +589,11 @@ export function EventAnalyticsPage() {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>Prodotto</th>
-                      <th>Stand</th>
-                      <th className={styles.num}>Quantit&agrave;</th>
-                      <th className={styles.num}>{data.currencyName}</th>
-                      <th className={styles.num}>Quota</th>
+<th>Prodotto</th>
+                  <th>Stand</th>
+                  <Th num short="Q.t&agrave;">Quantit&agrave;</Th>
+                  <Th num>{data.currencyName}</Th>
+                  <Th num short="%">Quota</Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -660,11 +695,11 @@ export function EventAnalyticsPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th className={styles.num}>#</th>
-                    <th>Prodotto</th>
-                    <th>Stand</th>
-                    <th className={styles.num}>Quantit&agrave;</th>
-                    <th className={styles.num}>Ricavo</th>
+<th className={styles.num}>#</th>
+                  <th>Prodotto</th>
+                  <th>Stand</th>
+                  <Th num short="Q.t&agrave;">Quantit&agrave;</Th>
+                  <Th num short="Ric.">Ricavo</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -708,19 +743,19 @@ export function EventAnalyticsPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th className={styles.num}>N&deg;</th>
-                    <th>Stand</th>
-                    <th className={styles.num}>Ordini</th>
-                    <th className={styles.num}>Quantit&agrave;</th>
-                    <th className={styles.num}>Fatturato</th>
-                    <th className={styles.num}>Contanti</th>
-                    <th className={styles.num}>POS</th>
-                    <th className={styles.num}>Crediti</th>
-                    <th className={styles.num}>Preparazione</th>
-                    <th className={styles.num}>Guadagnati</th>
-                    <th className={styles.num}>Liquidati</th>
-                    <th className={styles.num}>Da liquidare</th>
-                    <th>Liquidazione</th>
+                    <Th num>N&deg;</Th>
+                    <Th>Stand</Th>
+                    <Th num short="Ord.">Ordini</Th>
+                    <Th num short="Q.t&agrave;">Quantit&agrave;</Th>
+                    <Th num short="Fatt.">Fatturato</Th>
+                    <Th num short="Cont.">Contanti</Th>
+                    <Th num>POS</Th>
+                    <Th num short="Cred.">Crediti</Th>
+                    <Th num short="Prep.">Preparazione</Th>
+                    <Th num short="Guad.">Guadagnati</Th>
+                    <Th num short="Liqu.">Liquidati</Th>
+                    <Th num short="Da liq.">Da liquidare</Th>
+                    <Th>Liquidazione</Th>
                   </tr>
                 </thead>
                 <tbody>

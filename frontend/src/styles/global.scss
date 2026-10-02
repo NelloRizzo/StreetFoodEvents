@@ -295,6 +295,20 @@ p {
     display: none !important;
   }
 
+  /* Lo SFONDO del foglio resta bianco. Sopra `*` è impostato
+     `print-color-adjust: exact`, che forza a stampare gli sfondi (senza, le
+     barre dei grafici spariscono): quello stesso «exact» fa pero' stampare
+     anche i fondi colorati dei contenitori strutturali, e `--color-surface`
+     è un crema in alcune palette evento → foglio interamente colorato.
+     Si azzera il fondo di body e radice, NON con `#root *`: una regola del
+     genere con `!important` cancellerebbe anche le barre dei grafici, che
+     invece devono restare. I contenitori con fondo proprio (`.admin`) si
+     correggono nel module che li possiede. */
+  body,
+  #root {
+    background: #fff !important;
+  }
+
   /* La sidebar admin in stampa si nasconde in `AdminSidebar.module.scss`
      (`@media print { .sidebar { display: none } }`). Una regola `.admin aside`
      qui non funzionerebbe: `.admin` è una classe di modulo, quindi nel CSS

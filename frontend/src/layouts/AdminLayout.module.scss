@@ -60,6 +60,13 @@
     min-height: 0;
   }
 
+  /* `--color-surface` è un crema in alcune palette evento e, con il
+     `print-color-adjust: exact` globale (serve alle barre dei grafici), viene
+     stampato: senza questa riga il foglio esce colorato. */
+  .admin {
+    background: #fff;
+  }
+
   .content {
     padding: 0;
     overflow: visible;

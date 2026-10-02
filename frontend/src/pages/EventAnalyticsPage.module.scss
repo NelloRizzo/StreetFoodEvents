@@ -218,6 +218,22 @@
   margin-bottom: 0;
 }
 
+/* Le intestazioni portano il nome esteso a schermo e una sigla abbreviata
+   nel solo foglio stampato (il CSS le scambia). Vedi il componente `Th`. */
+.thShort {
+  display: none;
+}
+
+@media print {
+  .thLong {
+    display: none;
+  }
+
+  .thShort {
+    display: inline;
+  }
+}
+
 /* --- Tabelle --- */
 
 .tableWrap {
