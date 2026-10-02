@@ -273,6 +273,22 @@
     overflow: visible;
   }
 
+  /* Il foglio è più stretto dello schermo: il testo (nome stand, categorie)
+     può andare a capo per far entrare la tabella, ma **i numeri mai**: un
+     importo o una quantità spezzati su due righe non si leggono, e con
+     `tabular-nums` le cifre perderebbero l'allineamento. */
+  .table th,
+  .table td {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .table td.num,
+  .table th.num {
+    white-space: nowrap;
+    word-break: normal;
+  }
+
   .note {
     border: none;
     background: transparent;

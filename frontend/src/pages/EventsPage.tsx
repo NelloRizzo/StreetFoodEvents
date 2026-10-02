@@ -170,6 +170,22 @@ type StandItem = {
   locations?: Array<{ eventId: string; location: unknown }>
 }
 
+/**
+ * Equivalente in euro di un valore espresso in crediti.
+ *
+ * `Event.exchangeRate` è "quante unità di moneta evento valgono 1 €", quindi
+ * crediti → euro è una divisione (è la stessa formula della liquidazione:
+ * `euroAmount = count * value / exchangeRate`). Serve a mostrare accanto al
+ * campo la cifra in euro, così l'operatore non deve fare il conto a mente e
+ * l'etichetta del campo può stare in crediti senza ingannare nessuno.
+ */
+function fmtEuroHint(credits: string, exchangeRate: string): string {
+  const value = Number(credits)
+  const rate = Number(exchangeRate)
+  if (!Number.isFinite(value) || !Number.isFinite(rate) || rate <= 0) return '—'
+  return `${(value / rate).toFixed(2).replace('.', ',')} €`
+}
+
 function ThemeColorFields({
   form,
   setForm,
@@ -1242,7 +1258,12 @@ export function EventsPage() {
 
             <fieldset className={styles.fieldset}>
               <legend className={styles.legend}>Tagli valuta</legend>
-              <p className={styles.fieldHint}>Definisci i tagli di moneta fisica emessi per l'evento. Quantità fissa per taglio, usata per il riepilogo tagli in fase di liquidazione.</p>
+              <p className={styles.fieldHint}>
+        Definisci i tagli di moneta fisica emessi per l'evento. Quantità fissa per taglio, usata
+        per il riepilogo tagli in fase di liquidazione e per il confronto con i token emessi in
+        Analisi vendite. I valori sono in <strong>crediti</strong>: l'equivalente in euro si calcola
+        con il tasso di cambio dell'evento.
+      </p>
               {form.denominations.map((d, idx) => (
                 <div key={idx} className={styles.fieldRow}>
                   <div className={styles.field} style={{ flex: 2 }}>
@@ -1258,11 +1279,17 @@ export function EventsPage() {
                     />
                   </div>
                   <div className={styles.field} style={{ flex: 1 }}>
-                    <label>Valore (EUR)</label>
+                    {/* `value` e' il valore del taglio in CREDITI, non in euro:
+                        lo conferma la liquidazione (`count * value` sono
+                        crediti, l'euro e' `count * value / exchangeRate`).
+                        Scrivere "EUR" qui faceva leggere male la configurazione
+                        su un evento con tasso diverso da 1. */}
+                    <label>Valore (crediti)</label>
                     <input
                       type="number"
                       min="0.01"
                       step="0.01"
+                      title={`Crediti per ogni pezzo. Corrispondono ${fmtEuroHint(d.value, form.exchangeRate)} in euro.`}
                       value={d.value}
                       onChange={(e) => {
                         const denoms = [...form.denominations]

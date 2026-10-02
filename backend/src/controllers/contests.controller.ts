@@ -7,6 +7,28 @@ import { ContestPOIModel } from '../models/contest-poi.model';
 import { ContestParticipationModel } from '../models/contest-participation.model';
 import { POIModel } from '../models/poi.model';
 import { StandModel } from '../models/stand.model';
+import { EventModel } from '../models/event.model';
+import { ensureEventStarted } from '../utils/event-schedule';
+
+/**
+ * Gate "evento iniziato" per il contest.
+ *
+ * Il contest ha già una finestra propria (`startsAt`/`endsAt`), ma quella
+ * dice quando parte **il contest**: può essere impostata e avviata in
+ * anticipo rispetto all'evento. Le scansioni e il completamento, invece,
+ * generano partecipazioni e premi: registrarne prima del via produrrebbe
+ * punteggi e classifiche su un evento che non è ancora iniziato.
+ */
+async function ensureContestEventStarted(
+    contest: { eventId?: unknown } | null | undefined,
+    res: Response
+): Promise<boolean> {
+    const eventId = contest?.eventId;
+    if (!eventId || !Types.ObjectId.isValid(eventId as string)) return true;
+    const event = await EventModel.findById(eventId).select('startDate');
+    if (!event) return true;
+    return ensureEventStarted(event, res);
+}
 
 const QR_OPTIONS = {
     width: 400,
@@ -573,6 +595,11 @@ async function startContest(req: Request, res: Response) {
         return res.status(404).json({ message: 'Contest not found' });
     }
 
+    /* Avviare il contest prima del via aprirebbe la caccia ai POI su un evento
+       che non c'e' ancora: le scansioni verrebbero comunque rifiutate, quindi il
+       contest si aprirebbe "a vuoto". Si blocca qui, non solo alle scansioni. */
+    if (!await ensureContestEventStarted(contest, res)) return;
+
     const now = new Date();
     contest.startsAt = now;
     contest.endsAt = new Date(now.getTime() + contest.durationMinutes * 60 * 1000);
@@ -626,6 +653,7 @@ async function registerScan(req: Request, res: Response) {
     if (contest.endsAt && now > contest.endsAt) {
         return res.status(400).json({ message: 'Contest has ended' });
     }
+    if (!await ensureContestEventStarted(contest, res)) return;
 
     const poiObjectId = new Types.ObjectId(poiId);
     if (!contest.orderedPOIIds.some((id) => id.toString() === poiId)) {
@@ -695,6 +723,7 @@ async function completeParticipation(req: Request, res: Response) {
     if (contest.endsAt && now > contest.endsAt) {
         return res.status(400).json({ message: 'Contest has ended' });
     }
+    if (!await ensureContestEventStarted(contest, res)) return;
 
     const participation = await ContestParticipationModel.findOne({ contestId, participantId });
     if (!participation) {

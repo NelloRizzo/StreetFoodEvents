@@ -99,6 +99,8 @@
   font-weight: 700;
   color: var(--color-brand-deep);
   line-height: 1.2;
+  /* Un tempo (`7'30"`) o un importo non si spezzano mai a capo. */
+  white-space: nowrap;
 }
 
 .empty {
@@ -462,6 +464,17 @@
     word-break: break-word;
     padding: 0.35rem 0.4rem;
     font-size: 0.78rem;
+  }
+
+  /* **MA i numeri non vanno mai a capo.** Con le intestazioni in verticale
+     le colonne di dati sono strette, e un numero spezzato («1 2 3 0 4 0»
+     su due righe, o `1'30"` diviso) non è più un numero: è rumore. Il testo
+     invece (nome stand, nome prodotto) può andare a capo, ed è quello che
+     serve per far entrare la tabella nel foglio. */
+  .table td.num,
+  .table th.num {
+    white-space: nowrap;
+    word-break: normal;
   }
 
   /* Le intestazioni in verticale: la tabella per stand ha 13 colonne e il

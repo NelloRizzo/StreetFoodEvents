@@ -3,6 +3,8 @@ import { Readable } from 'node:stream';
 import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { EventFrameModel } from '../models/event-frame.model';
+import { EventModel } from '../models/event.model';
+import { ensureEventStarted } from '../utils/event-schedule';
 import { deleteImage, uploadImageBuffer } from '../services/cloudinary-upload.service';
 
 function isValidObjectId(value: string | undefined): value is string {
@@ -43,6 +45,12 @@ export async function createEventFrame(req: Request, res: Response) {
     if (!isValidObjectId(eventId)) {
         return res.status(400).json({ message: 'Invalid event id' });
     }
+
+    /* Stessa regola delle foto: prima del via dell'evento non si carica una
+       cornice, altrimenti la galleria del fotobooth mostra cornici di un evento
+       che non è ancora iniziato. */
+    const event = await EventModel.findById(eventId).select('startDate');
+    if (!ensureEventStarted(event, res)) return;
 
     const { name } = req.body;
 

@@ -546,7 +546,17 @@ export function EventContestManagePage() {
                     try {
                       const data = await startContest(contest.id)
                       setContests((prev) => prev.map((c) => c.id === contest.id ? data.item : c))
-                    } catch { /* ignore */ }
+                    } catch (err) {
+                      /* Prima l'errore spariva: il backend rifiuta l'avvio se
+                         l'evento non è ancora iniziato (409) e l'operatore
+                         vedeva un bottone che non faceva nulla. */
+                      setModal({
+                        open: true,
+                        variant: 'alert',
+                        title: 'Contest non avviato',
+                        message: err instanceof Error ? err.message : 'Operazione non riuscita.',
+                      })
+                    }
                   }}>Avvia</button>
                 )}
                 {contest.isActive && contest.startsAt && (

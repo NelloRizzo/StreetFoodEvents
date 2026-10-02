@@ -5,6 +5,7 @@ import { EventModel } from '../models/event.model';
 import { EventPhotoModel } from '../models/event-photo.model';
 import { deleteImage, deleteVideo, uploadImageBuffer, uploadVideoBuffer } from '../services/cloudinary-upload.service';
 import { isEmailConfigured, sendPhotoEmail, sendPhotosEmail } from '../services/email.service';
+import { ensureEventStarted } from '../utils/event-schedule';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -54,6 +55,14 @@ export async function createEventPhoto(req: Request, res: Response) {
     if (!isValidObjectId(eventId)) {
         return res.status(400).json({ message: 'Invalid event id' });
     }
+
+    /* Un evento non ancora iniziato non ha foto: immagini scattate prima del
+       via finirebbero in galleria e nel raggruppamento "foto per giorno" fuori
+       dal periodo dell'evento, e nessuno le spiegherà. Se l'evento non esiste
+       non si blocca (comportamento preesistente: la validità dell'id la
+       controlla chi legge la galleria). */
+    const event = await EventModel.findById(eventId).select('startDate');
+    if (!ensureEventStarted(event, res)) return;
 
     const files = req.files as
         | { [fieldname: string]: Express.Multer.File[] }

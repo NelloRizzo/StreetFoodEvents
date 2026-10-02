@@ -11,6 +11,7 @@ import { StationModel } from '../models/station.model';
 import { UserStationModel } from '../models/user-station.model';
 import { createEventUserTransaction, EventUserTransactionError } from '../services/event-user-transactions.service';
 import { EventModel } from '../models/event.model';
+import { ensureEventStarted } from '../utils/event-schedule';
 import { StandModel } from '../models/stand.model';
 import { StandSettlementModel } from '../models/stand-settlement.model';
 import { CashRegisterModel } from '../models/cash-register.model';
@@ -535,8 +536,28 @@ export async function getStandKioskRecent(req: Request, res: Response) {
     });
 }
 
-export async function createOrder(req: Request, res: Response) {
-    if (!req.user) {
+/**
+ * Gate "evento iniziato" per le operazioni che hanno **solo** l'ordine
+ * (avanzamento stati, cancellazioni, postazioni pronte).
+ *
+ * Queste funzioni non caricano l'evento, quindi il controllo richiede una
+ * query: si carica solo `startDate` e solo per l'ordine da cui si sta
+ * intervenendo. Se l'evento non c'è più non si blocca nulla: è un caso
+ * limite che le funzioni stime già trattano a modo loro, e fallire chiuso
+ * qui renderebbe gli ordini orfani immovibili.
+ */
+async function ensureOrderEventStarted(
+    order: { eventId?: unknown } | null | undefined,
+    res: Response
+): Promise<boolean> {
+    const eventId = order?.eventId;
+    if (!eventId || !Types.ObjectId.isValid(eventId as string)) return true;
+    const event = await EventModel.findById(eventId).select('startDate');
+    if (!event) return true;
+    return ensureEventStarted(event, res);
+}
+
+export async function createOrder(req: Request, res: Response) {    if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
     }
 
@@ -561,6 +582,10 @@ export async function createOrder(req: Request, res: Response) {
     if (!event) {
         return res.status(404).json({ message: 'Event not found' });
     }
+
+    /* La cassa non si apre prima del via: un ordine creato fuori periodo
+       finirebbe fuori dai report e non sarebbe riconciliabile. */
+    if (!ensureEventStarted(event, res)) return;
 
     const session = await mongoose.startSession();
 
@@ -860,6 +885,8 @@ export async function updateOrderStatus(req: Request, res: Response) {
         return res.status(404).json({ message: 'Order not found' });
     }
 
+    if (!await ensureOrderEventStarted(order, res)) return;
+
     const allowed = validTransitions[order.status];
 
     if (!allowed || !allowed.includes(status)) {
@@ -916,6 +943,8 @@ export async function cancelOrder(req: Request, res: Response) {
     if (!order) {
         return res.status(404).json({ message: 'Order not found' });
     }
+
+    if (!await ensureOrderEventStarted(order, res)) return;
 
     if (order.status === 'completed' || order.status === 'cancelled') {
         return res.status(400).json({
@@ -998,6 +1027,10 @@ export async function payOrder(req: Request, res: Response) {
     if (!payEvent) {
         return res.status(404).json({ message: 'Event not found' });
     }
+
+    /* Stesso blocco della creazione: incassare un ordine significa mettere in
+       circolazione crediti, quindi vale la stessa regola di evento iniziato. */
+    if (!ensureEventStarted(payEvent, res)) return;
 
     const creditAmount = Math.max(0, Math.min(
         req.body.creditAmount !== undefined ? Number(req.body.creditAmount) : order.total,
@@ -1132,6 +1165,8 @@ export async function markStationReady(req: Request, res: Response) {
         return res.status(404).json({ message: 'Order not found' });
     }
 
+    if (!await ensureOrderEventStarted(order, res)) return;
+
     if (order.status !== 'preparing') {
         return res.status(400).json({
             message: `Cannot mark items ready when order status is ${order.status}`
@@ -1181,6 +1216,8 @@ export async function markItemReady(req: Request, res: Response) {
     if (!order) {
         return res.status(404).json({ message: 'Order not found' });
     }
+
+    if (!await ensureOrderEventStarted(order, res)) return;
 
     if (order.status === 'ready' || order.status === 'completed' || order.status === 'cancelled') {
         return res.status(400).json({
@@ -1238,6 +1275,8 @@ export async function cancelOrderItems(req: Request, res: Response) {
     if (!order) {
         return res.status(404).json({ message: 'Order not found' });
     }
+
+    if (!await ensureOrderEventStarted(order, res)) return;
 
     if (order.status === 'completed' || order.status === 'cancelled') {
         return res.status(400).json({

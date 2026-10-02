@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+import { isEventFinished, isEventOngoing, notStartedMessage } from '../lib/eventSchedule'
 import { useAuth } from '../features/auth/auth-context'
 import { useAdminEvent } from '../layouts/AdminEventContext'
 import { QRCodeDownload } from '../components/QRCodeDownload'
@@ -9,7 +10,9 @@ import styles from './EventDetailPage.module.scss'
 import manageStyles from './StandManagePage.module.scss'
 
 type RoleInfo = { slug: string; scope: string; eventId: string | null; standId: string | null }
-type StandEvent = { id: string; name: string; endDate: string | null }
+/* `startDate` serve al blocco "evento non ancora iniziato": senza, la pagina
+   non può distinguere un evento che deve iniziare da uno già aperto. */
+type StandEvent = { id: string; name: string; startDate: string | null; endDate: string | null }
 type StationItem = { id: string; name: string; standId: string | null; standName: string | null }
 
 export function StandManagePage() {
@@ -48,8 +51,13 @@ export function StandManagePage() {
         const eventIds = [...new Set((standRes.item.numbers ?? []).map((n) => n.eventId))]
         const events = await Promise.all(
           eventIds.map((eventId) =>
-            apiRequest<{ item: { name: string; endDate?: string | null } }>(`/events/${eventId}`)
-              .then((r) => ({ id: eventId, name: r.item.name, endDate: r.item.endDate ?? null }))
+            apiRequest<{ item: { name: string; startDate?: string | null; endDate?: string | null } }>(`/events/${eventId}`)
+              .then((r) => ({
+                id: eventId,
+                name: r.item.name,
+                startDate: r.item.startDate ?? null,
+                endDate: r.item.endDate ?? null,
+              }))
               .catch(() => null)
           )
         )
@@ -65,15 +73,16 @@ export function StandManagePage() {
     }
   }, [standId, isAuthenticated])
 
-  const isEventFinished = (eventId: string) => {
-    const ev = standEvents.find((e) => e.id === eventId)
-    if (!ev?.endDate) return false
-    const endOfDay = new Date(ev.endDate)
-    endOfDay.setHours(23, 59, 59, 999)
-    return endOfDay.getTime() < now
-  }
-
-  const eventOngoing = selectedEventId ? !isEventFinished(selectedEventId) : false
+  /* Il check temporale sta in `lib/eventSchedule`: prima ne esistevano cinque
+     copie sparpagliate, e quello che mancava del tutto e' il caso "non ancora
+     iniziato". */
+  const selectedEvent = selectedEventId
+    ? standEvents.find((e) => e.id === selectedEventId) ?? null
+    : null
+  const eventNotStarted = notStartedMessage(selectedEvent, now)
+  /* "Aperto" = iniziato e non terminato: sia le cassa sia le code postazioni
+     restano chiuse prima del via (il backend lo blocca comunque, con 409). */
+  const eventOngoing = selectedEventId ? isEventOngoing(selectedEvent, now) : false
 
   const canAccessCash =
     !!selectedEventId &&
@@ -166,13 +175,17 @@ export function StandManagePage() {
         )}
       </div>
 
+      {eventNotStarted && (
+        <p className={manageStyles.finishedNote}>{eventNotStarted}</p>
+      )}
+
       {selectedEventId && !standEvents.some((ev) => ev.id === selectedEventId) && (
         <p className={manageStyles.finishedNote}>
           Lo stand non partecipa all&apos;evento selezionato.
         </p>
       )}
 
-      {!isEventFinished(selectedEventId ?? '') && (
+      {!isEventFinished(selectedEvent?.endDate, now) && (
         <section>
           <h2 className={styles.sectionTitle}>Operazioni</h2>
           <div className={manageStyles.cardsGrid}>

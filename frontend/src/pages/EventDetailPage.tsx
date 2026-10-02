@@ -12,6 +12,7 @@ import { fetchReviewsSummary, type ReviewsSummary } from '../lib/reviews'
 import { safeExternalUrl } from '../lib/externalUrl'
 import { isCustomersPwa } from '../lib/app-mode'
 import { trackStandClick } from '../lib/analytics'
+import { isEventFinished as isEventFinishedFn, isEventStarted as isEventStartedFn } from '../lib/eventSchedule'
 import { PhotoBoothModal } from './PhotoBoothModal'
 import styles from './EventDetailPage.module.scss'
 
@@ -97,12 +98,12 @@ export function EventDetailPage() {
   const [altroMenuOpen, setAltroMenuOpen] = useState(false)
   const [reviewsSummary, setReviewsSummary] = useState<ReviewsSummary | null>(null)
   const altroMenuRef = useRef<HTMLDivElement>(null)
-  const isEventFinished = (() => {
-    if (!event) return false
-    const endOfDay = new Date(event.endDate)
-    endOfDay.setHours(23, 59, 59, 999)
-    return endOfDay.getTime() < now
-  })()
+  /* Check temporale centralizzato in `lib/eventSchedule`. `eventOpen` serve al
+     fotobooth: il backend rifiuta (409) le foto di un evento non iniziato,
+     quindi il pulsante non deve nemmeno comparire. */
+  const isEventFinished = isEventFinishedFn(event?.endDate, now)
+  const isEventStarted = isEventStartedFn(event?.startDate, now)
+  const isEventOpen = !isEventFinished && isEventStarted
   const themeData = useMemo(
     () =>
       event
@@ -370,7 +371,7 @@ export function EventDetailPage() {
                 <span className={styles.actionIcon} aria-hidden="true">⭐</span>
                 <span className={styles.actionText}>{reviewsLabel}</span>
               </Link>
-              {!isEventFinished && (
+              {isEventOpen && (
                 <button
                   type="button"
                   className={styles.actionBtnOutline}
