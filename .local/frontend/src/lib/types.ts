@@ -121,7 +121,25 @@ export interface ImportResult {
     pendingCount?: number;
 }
 
+/**
+ * Ordine che il remoto ha rifiutato (registrato dopo la chiusura
+ * dell'evento). Va risolto a mano: la pagina Sync lo elenca e non lo
+ * ripropone al prossimo push.
+ */
+export interface RejectedOrder {
+    localId: string;
+    orderNumber: number | null;
+    /** Data/ora dell'ordine secondo l'orologio del notebook. */
+    orderedAt: string | null;
+    total: number | null;
+    status: string;
+    reason: string;
+    rejectedAt: string | null;
+}
+
 export interface PushResult {
     pushed: number;
     errors: string[];
+    /** Presente sempre nella risposta del backend locale, vuoto se nulla. */
+    rejected?: RejectedOrder[];
 }

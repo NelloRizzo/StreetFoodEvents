@@ -482,20 +482,27 @@
      dati, che sono la parte che serve leggere. `rotate(180deg)` su
      `vertical-rl` fa leggere dal basso in alto, come negli strumenti da
      foglio di calcolo. Vale solo in stampa: a schermo l'intestazione
-     orizzontale è più comoda. */
+     orizzontale è più comoda.
+
+     Qui le etichette sono **per esteso** (`Preparazione`, `Da liquidare`):
+     in verticale c'è spazio in altezza ed è la forma più leggibile. Le sigle
+     brevi restano disponibili nel componente `Th` (`short=...`) per le
+     tabelle con molte colonne ma intestazioni orizzontali. */
   .table.tableVerticalHead th {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     white-space: nowrap;
     vertical-align: bottom;
     padding: 0.3rem 0.25rem;
-    height: 5.5rem;
+    /* Abbastanza per l'etichetta più lunga ("Da liquidare") al corpo ridotto
+       della stampa: più stretta e il testo verrebbe tagliato. */
+    height: 7rem;
   }
 
   /* La riga di intestazione ruotata va ancorata al fondo, altrimenti il
      foglio le riserva tutta l'altezza e i dati partono dalla seconda pagina. */
   .table.tableVerticalHead thead tr {
-    height: 5.5rem;
+    height: 7rem;
   }
 
   /* Lo sfondo colorato: senza "Grafica di sfondo" spuntata nel browser gli

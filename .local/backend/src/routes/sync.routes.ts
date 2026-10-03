@@ -7,6 +7,8 @@ import {
     countPending,
     pushToRemote,
     listPending,
+    listRejectedOrders,
+    clearRejectedOrders,
     setSyncPassword
 } from '../sync.service';
 
@@ -91,6 +93,16 @@ async function handlePush(_req: Request, res: Response) {
     return res.status(200).json(result);
 }
 
+async function handleRejectedList(_req: Request, res: Response) {
+    const items = await listRejectedOrders();
+    return res.status(200).json({ items, count: items.length });
+}
+
+async function handleRejectedClear(_req: Request, res: Response) {
+    const cleared = await clearRejectedOrders();
+    return res.status(200).json({ cleared });
+}
+
 syncRouter.get('/meta', asyncHandler(handleGetMeta));
 syncRouter.get('/remote/events', asyncHandler(handleRemoteEvents));
 syncRouter.get('/remote/events/:eventId/stands', asyncHandler(handleRemoteStands));
@@ -99,5 +111,7 @@ syncRouter.get('/pending/count', asyncHandler(handlePendingCount));
 syncRouter.get('/pending', asyncHandler(handlePendingList));
 syncRouter.post('/push', asyncHandler(handlePush));
 syncRouter.post('/password', asyncHandler(handleSyncPassword));
+syncRouter.get('/rejected', asyncHandler(handleRejectedList));
+syncRouter.post('/rejected/clear', asyncHandler(handleRejectedClear));
 
 export default syncRouter;

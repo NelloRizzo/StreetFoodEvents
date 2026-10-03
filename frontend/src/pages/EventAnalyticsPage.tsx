@@ -810,16 +810,16 @@ export function EventAnalyticsPage() {
                   <tr>
                     <Th num>N&deg;</Th>
                     <Th>Stand</Th>
-                    <Th num short="Ord.">Ordini</Th>
-                    <Th num short="Q.t&agrave;">Quantit&agrave;</Th>
-                    <Th num short="Fatt.">Fatturato</Th>
-                    <Th num short="Cont.">Contanti</Th>
+                    <Th num>Ordini</Th>
+                    <Th num>Quantit&agrave;</Th>
+                    <Th num>Fatturato</Th>
+                    <Th num>Contanti</Th>
                     <Th num>POS</Th>
-                    <Th num short="Cred.">Crediti</Th>
-                    <Th num short="Prep.">Preparazione</Th>
-                    <Th num short="Guad.">Guadagnati</Th>
-                    <Th num short="Liqu.">Liquidati</Th>
-                    <Th num short="Da liq.">Da liquidare</Th>
+                    <Th num>Crediti</Th>
+                    <Th num>Preparazione</Th>
+                    <Th num>Guadagnati</Th>
+                    <Th num>Liquidati</Th>
+                    <Th num>Da liquidare</Th>
                     <Th>Liquidazione</Th>
                   </tr>
                 </thead>

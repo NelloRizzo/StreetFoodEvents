@@ -229,6 +229,150 @@ describe('Sync API', () => {
         expect(res.status).toBe(400);
     });
 
+    /**
+     * Ordine sincronizzato, con `orderedAt` = quando l'ordine è stato preso in
+     * cassa sul notebook. Il payload è ridotto all'essenziale: il controller
+     * non deve aver bisogno di tutto il documento per la finestra temporale.
+     */
+    function orderPayload(opts: { eventId: string; standId: string; orderedAt?: string }) {
+        return {
+            _id: new Types.ObjectId().toString(),
+            eventId: opts.eventId,
+            standId: opts.standId,
+            orderNumber: 42,
+            userId: new Types.ObjectId().toString(),
+            status: 'confirmed',
+            items: [
+                {
+                    eventProductId: new Types.ObjectId().toString(),
+                    productId: new Types.ObjectId().toString(),
+                    productName: 'Panino',
+                    stationId: new Types.ObjectId().toString(),
+                    stationName: 'Cucina',
+                    quantity: 1,
+                    unitPrice: 5,
+                    subtotal: 5,
+                    ready: false
+                }
+            ],
+            total: 5,
+            creditAmountUsed: 0,
+            paymentStatus: 'unpaid',
+            updatedAt: new Date().toISOString(),
+            ...(opts.orderedAt ? { orderedAt: opts.orderedAt } : {})
+        };
+    }
+
+    it('rifiuta e segnala gli ordini registrati dopo la chiusura dell\'evento', async () => {
+        app = createTestApp();
+        const { event, stand } = await seedEventWithStand();
+        /* Chiusura dell'evento: il fixture sta nel 2099, quindi un ordine "di
+           ieri" è certamente dopo. */
+        const orderedAt = new Date(new Date(event.endDate).getTime() + 60 * 60 * 1000).toISOString();
+        const payload = orderPayload({ eventId: event._id.toString(), standId: stand._id.toString(), orderedAt });
+
+        const res = await request(app)
+            .post('/api/sync/push')
+            .set(TOKEN)
+            .set(PWD)
+            .send({ standId: stand._id.toString(), orders: [payload] });
+
+        expect(res.status).toBe(200);
+        expect(res.body.rejected).toHaveLength(1);
+        expect(res.body.rejected[0]).toMatchObject({
+            localId: payload._id,
+            orderNumber: 42,
+            reason: 'event_closed'
+        });
+        /* Rifiutato vuol dire NON scritto. */
+        expect(res.body.results.orders).toBe(0);
+        expect(await OrderModel.findById(payload._id)).toBeNull();
+    });
+
+    it('accetta un ordine dentro la finestra dell\'evento e ne mantiene la data', async () => {
+        app = createTestApp();
+        const { event, stand } = await seedEventWithStand();
+        const start = new Date(event.startDate).getTime();
+        /* A mezzanotte dell'ultimo giorno: dentro la finestra, ma con una data
+           diversa da quella del push, che è il punto del test. */
+        const orderedAt = new Date(new Date(event.endDate).getTime() - 60 * 60 * 1000).toISOString();
+        const payload = orderPayload({ eventId: event._id.toString(), standId: stand._id.toString(), orderedAt });
+
+        const res = await request(app)
+            .post('/api/sync/push')
+            .set(TOKEN)
+            .set(PWD)
+            .send({ standId: stand._id.toString(), orders: [payload] });
+
+        expect(res.status).toBe(200);
+        expect(res.body.rejected).toEqual([]);
+        expect(res.body.results.orders).toBe(1);
+
+        const saved = await OrderModel.findById(payload._id).lean();
+        expect(saved).not.toBeNull();
+        /* Fa fede l'orologio del notebook: `createdAt` deve essere quello, non
+           l'istante del push (che sarebbe il giorno di oggi). */
+        expect(new Date(saved!.createdAt).toISOString()).toBe(orderedAt);
+        expect(new Date(saved!.createdAt).getTime()).toBeGreaterThan(start);
+        /* `orderedAt` è un campo di trasporto: non deve finire nel documento. */
+        expect(saved).not.toHaveProperty('orderedAt');
+    });
+
+    it('non rifiuta un ordine senza orologio (dato mancante, non colpa dell\'ordine)', async () => {
+        app = createTestApp();
+        const { event, stand } = await seedEventWithStand();
+        const payload = orderPayload({ eventId: event._id.toString(), standId: stand._id.toString() });
+
+        const res = await request(app)
+            .post('/api/sync/push')
+            .set(TOKEN)
+            .set(PWD)
+            .send({ standId: stand._id.toString(), orders: [payload] });
+
+        expect(res.status).toBe(200);
+        expect(res.body.rejected).toEqual([]);
+        expect(res.body.results.orders).toBe(1);
+        expect(await OrderModel.findById(payload._id)).not.toBeNull();
+    });
+
+    it('un ordine rifiutato non blocca gli altri della stessa sincronizzazione', async () => {
+        app = createTestApp();
+        const { event, stand } = await seedEventWithStand();
+        const afterClose = new Date(new Date(event.endDate).getTime() + 3600 * 1000).toISOString();
+        const inside = new Date(new Date(event.endDate).getTime() - 3600 * 1000).toISOString();
+        const rejectedOrder = orderPayload({ eventId: event._id.toString(), standId: stand._id.toString(), orderedAt: afterClose });
+        const goodOrder = orderPayload({ eventId: event._id.toString(), standId: stand._id.toString(), orderedAt: inside });
+
+        const res = await request(app)
+            .post('/api/sync/push')
+            .set(TOKEN)
+            .set(PWD)
+            .send({ standId: stand._id.toString(), orders: [rejectedOrder, goodOrder] });
+
+        expect(res.status).toBe(200);
+        expect(res.body.rejected).toHaveLength(1);
+        expect(res.body.rejected[0].localId).toBe(rejectedOrder._id);
+        expect(res.body.results.orders).toBe(1);
+        expect(await OrderModel.findById(goodOrder._id)).not.toBeNull();
+        expect(await OrderModel.findById(rejectedOrder._id)).toBeNull();
+    });
+
+    it('il campo rejected è sempre presente, anche vuoto', async () => {
+        app = createTestApp();
+        const { stand } = await seedEventWithStand();
+        const res = await request(app)
+            .post('/api/sync/push')
+            .set(TOKEN)
+            .set(PWD)
+            .send({ standId: stand._id.toString(), counters: [{ standId: stand._id.toString(), seq: 3 }] });
+
+        expect(res.status).toBe(200);
+        /* Il locale deve poter distinguere "nessun rifiuto" da "campo assente":
+           altrimenti rischierebbe di marcare come sincronizzate righe scartate. */
+        expect(res.body).toHaveProperty('rejected');
+        expect(res.body.rejected).toEqual([]);
+    });
+
     it('rejects push without the sync password', async () => {
         app = createTestApp();
         const { stand } = await seedEventWithStand();

@@ -173,20 +173,62 @@ export async function pushSyncChanges(req: Request, res: Response) {
     }
 
     const results = { orders: 0, transactions: 0, counters: 0, eventUserBalances: 0 };
+    /** Ordini rifiutati: non scritti, e restituiti al locale perché li segnali. */
+    const rejected: SyncRejectedOrder[] = [];
 
     if (Array.isArray(body.orders) && body.orders.length > 0) {
+        /* La finestra dell'evento serve a rifiutare gli ordini presi dopo la
+           chiusura: si caricano gli eventi distinti presenti nel payload (di
+           fatto uno) invece di farlo per ogni ordine. */
+        const eventIds = [...new Set(body.orders
+            .map((o) => o?.eventId)
+            .filter((id): id is string => typeof id === 'string' && isValidObjectId(id))
+            .map((id) => new Types.ObjectId(id).toString()))];
+        const eventsById = new Map<string, { startDate?: Date | null; endDate?: Date | null }>();
+        if (eventIds.length > 0) {
+            const events = await EventModel.find({ _id: { $in: eventIds.map((id) => new Types.ObjectId(id)) } })
+                .select('startDate endDate')
+                .lean();
+            for (const ev of events) eventsById.set(ev._id.toString(), ev);
+        }
+
         for (const incoming of body.orders) {
             if (!incoming?._id || !isValidObjectId(incoming._id)) continue;
             const remoteId = new Types.ObjectId(incoming._id);
+
+            /* Fa fede l'orologio del notebook, non l'ora del push: `orderedAt`
+               e' l'istante in cui l'ordine e' stato preso in cassa. */
+            const orderedAt = readOrderedAt(incoming);
+            const event = typeof incoming.eventId === 'string' && isValidObjectId(incoming.eventId)
+                ? eventsById.get(new Types.ObjectId(incoming.eventId).toString())
+                : undefined;
+            const closed = isOrderAfterEventEnd(orderedAt, event);
+            if (closed) {
+                /* Rifiutato e NON scritto. Non e' un errore di rete: il push
+                   va avanti con gli altri ordini, e il locale lo segnala
+                   all'operatore (che puo' valutare l'inserimento a mano). */
+                rejected.push({
+                    localId: incoming._id,
+                    orderNumber: typeof incoming.orderNumber === 'number' ? incoming.orderNumber : null,
+                    orderedAt: orderedAt ? orderedAt.toISOString() : null,
+                    reason: 'event_closed'
+                });
+                continue;
+            }
+
             const incomingUpdated = new Date((incoming.updatedAt as Date | undefined) ?? 0);
             const existing = await OrderModel.findById(remoteId).lean();
             if (!existing) {
-                await OrderModel.create(sanitizeDoc({ ...incoming, _id: remoteId }));
+                /* `createdAt` prende l'orologio del notebook quando arriva:
+                   senza, un ordine preso alle 23:50 e sincronizzato alle 00:05
+                   finirebbe nel giorno e nell'ora sbagliati in ogni report. */
+                const doc = sanitizeDoc({ ...incoming, _id: remoteId });
+                delete doc.orderedAt;
+                await OrderModel.create(orderedAt ? { ...doc, createdAt: orderedAt } : doc);
             } else if (incomingUpdated >= new Date(existing.updatedAt ?? 0)) {
-                await OrderModel.updateOne(
-                    { _id: remoteId },
-                    { $set: sanitizeDoc({ ...incoming, _id: remoteId, createdAt: existing.createdAt }) }
-                );
+                const doc = sanitizeDoc({ ...incoming, _id: remoteId, createdAt: existing.createdAt });
+                delete doc.orderedAt;
+                await OrderModel.updateOne({ _id: remoteId }, { $set: doc });
             }
             results.orders += 1;
         }
@@ -238,7 +280,59 @@ export async function pushSyncChanges(req: Request, res: Response) {
         }
     }
 
-    return res.status(200).json({ results });
+    /* `rejected` e' sempre presente (anche vuoto): il locale non deve
+       distinguere "nessun rifiuto" da "campo assente" per non marcare come
+       sincronizzate righe che in realta sono state scartate. */
+    return res.status(200).json({ results, rejected });
+}
+
+/**
+ * Ordine rifiutato dal push, restituito al locale perché lo segnali.
+ *
+ * `localId` è l'_id generato dal notebook (= `_id` che avrebbe avuto nel
+ * cloud), così il locale sa esattamente quale riga del ledger fermare.
+ */
+export type SyncRejectedOrder = {
+    localId: string;
+    orderNumber: number | null;
+    /** ISO dell'ordine secondo l'orologio del notebook; `null` se assente. */
+    orderedAt: string | null;
+    /**
+     * - `event_closed`: ordine registrato dopo la chiusura dell'evento.
+     */
+    reason: 'event_closed';
+};
+
+/**
+ * Istante in cui l'ordine è stato preso in cassa, secondo il notebook.
+ *
+ * Va in un campo dedicato (`orderedAt`) e non in `createdAt` perché il
+ * timestamp mongoose è comunque gestito dal cloud: `createdAt` viene
+ * sovrascritto in ogni update, `orderedAt` no, ed è questo il valore che
+ * "fa fede" per il rifiuto.
+ */
+function readOrderedAt(incoming: Record<string, unknown>): Date | null {
+    const raw = incoming.orderedAt;
+    if (raw === undefined || raw === null) return null;
+    const date = new Date(raw as string | number | Date);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * L'ordine è stato preso dopo la chiusura dell'evento?
+ *
+ * Il confronto è con `Event.endDate` così com'è, non con la fine giornata
+ * dell'evento: `endDate` è l'orologio di chiusura dichiarato, ed è quello con
+ * cui l'operatore ragiona. Manca `orderedAt` o l'evento non è caricabile?
+ * Allora non si può provare nulla e si accetta (il controllo non deve
+ * bloccare la sincronizzazione per un dato mancante).
+ */
+function isOrderAfterEventEnd(
+    orderedAt: Date | null,
+    event: { endDate?: Date | null } | undefined
+): boolean {
+    if (!orderedAt || !event?.endDate) return false;
+    return orderedAt.getTime() > new Date(event.endDate).getTime();
 }
 
 function sanitizeDoc(doc: Record<string, unknown>): Record<string, unknown> {

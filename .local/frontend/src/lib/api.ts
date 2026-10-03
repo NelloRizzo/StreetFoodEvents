@@ -1,4 +1,4 @@
-import type { DisplayOrder, ImportResult, Meta, Order, PushResult, RemoteEvent, RemoteStand, StandCatalog } from './types';
+import type { DisplayOrder, ImportResult, Meta, Order, PushResult, RemoteEvent, RemoteStand, RejectedOrder, StandCatalog } from './types';
 
 const BASE = '/api';
 
@@ -50,6 +50,10 @@ export const api = {
         request<ImportResult>(`/sync/import`, { method: 'POST', body: JSON.stringify({ eventId, standId, force, syncPassword: syncPassword || undefined }) }),
     getPendingCount: () => request<{ count: number }>(`/sync/pending/count`),
     pushToRemote: () => request<PushResult>(`/sync/push`, { method: 'POST' }),
+    /** Ordini rifiutati dal remoto: non verranno riproposti al push. */
+    getRejectedOrders: () => request<{ items: RejectedOrder[]; count: number }>(`/sync/rejected`),
+    /** Dimentica i rifiuti (dopo la gestione manuale). */
+    clearRejectedOrders: () => request<{ cleared: number }>(`/sync/rejected/clear`, { method: 'POST' }),
     setSyncPassword: (syncPassword: string) =>
         request<{ hasSyncPassword: boolean }>(`/sync/password`, { method: 'POST', body: JSON.stringify({ syncPassword }) })
 };

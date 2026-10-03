@@ -1,6 +1,13 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
 
-export const syncStatusValues = ['pending', 'synced', 'conflict'] as const;
+/**
+ * `rejected` = il remoto ha **rifiutato** la riga (ordine preso dopo la
+ * chiusura dell'evento). Non e' `pending`: non ripartirà al prossimo push,
+ * altrimenti l'operatore continuerebbe a vedere "modifiche da sincronizzare"
+ * per ordini che il remoto non accetterà mai. Va risolto a mano, e per questo
+ * la pagina Sync lo elenca con `rejectReason`.
+ */
+export const syncStatusValues = ['pending', 'synced', 'conflict', 'rejected'] as const;
 
 const syncLedgerSchema = new Schema(
     {
@@ -10,6 +17,9 @@ const syncLedgerSchema = new Schema(
         syncStatus: { type: String, enum: syncStatusValues, default: 'pending', index: true },
         lastModifiedAt: { type: Date, default: Date.now },
         syncedAt: { type: Date, default: null },
+        /** Motivo del rifiuto remoto (`event_closed`): mostrato nella pagina Sync. */
+        rejectReason: { type: String, default: null },
+        rejectedAt: { type: Date, default: null },
         remoteVersion: { type: Number, default: 0 }
     },
     { versionKey: false }

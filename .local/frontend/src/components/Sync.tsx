@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import type { RemoteEvent, RemoteStand } from '../lib/types';
+import type { RemoteEvent, RemoteStand, RejectedOrder } from '../lib/types';
 import { useMeta } from '../lib/MetaContext';
 
 type ConfirmAction = { type: 'import'; eventId: string; standId: string; force?: boolean } | { type: 'push' } | null;
@@ -17,6 +17,13 @@ export function Sync() {
     const [loadingRemote, setLoadingRemote] = useState(false);
     const [remoteError, setRemoteError] = useState('');
     const [syncPassword, setSyncPassword] = useState('');
+    const [rejected, setRejected] = useState<RejectedOrder[]>([]);
+
+    useEffect(() => {
+        api.getRejectedOrders()
+            .then((r) => setRejected(r.items))
+            .catch(() => setRejected([]));
+    }, [meta.pendingCount]);
 
     useEffect(() => {
         setLoadingRemote(true);
@@ -97,8 +104,19 @@ export function Sync() {
         setLogs('');
         try {
             const res = await api.pushToRemote();
+            const rifiutati = res.rejected ?? [];
+            /* Un rifiuto non è un errore di rete: gli altri ordini sono
+               comunque partiti, quindi va detto il numero esatto e non
+               "errore". */
+            const righe = [];
             if (res.errors.length > 0) {
-                setLogs(`Push: ${res.pushed} elementi inviati, ${res.errors.length} errori (${res.errors[0]}).`);
+                righe.push(`${res.errors.length} errori (${res.errors[0]})`);
+            }
+            if (rifiutati.length > 0) {
+                righe.push(`${rifiutati.length} ordini rifiutati dal remoto (registrati dopo la chiusura dell'evento)`);
+            }
+            if (righe.length > 0) {
+                setLogs(`Push: ${res.pushed} elementi sincronizzati, ${righe.join(', ')}.`);
             } else {
                 setLogs(`Push completato: ${res.pushed} modifiche sincronizzate sul remoto.`);
             }
@@ -109,6 +127,25 @@ export function Sync() {
             setBusy(false);
             setConfirm(null);
         }
+    }
+
+    async function clearRejected() {
+        setBusy(true);
+        try {
+            const res = await api.clearRejectedOrders();
+            setLogs(`Rifiuti archiviati: ${res.cleared}.`);
+            await refresh();
+        } catch (e) {
+            setLogs(`Errore: ${(e as Error).message}`);
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    /** `event_closed` è l'unico motivo oggi; resta aperto per i futuri. */
+    function rejectReasonText(reason: string): string {
+        if (reason === 'event_closed') return "registrato dopo la chiusura dell'evento";
+        return reason;
     }
 
     const selectedStandSyncDisabled = stands.find((s) => s.id === standId)?.syncEnabled === false;
@@ -157,6 +194,50 @@ export function Sync() {
                     </div>
                 )}
             </div>
+
+            {/* Ordini che il remoto ha rifiutato: restano fuori dalla coda di
+                sincronizzazione e vanno risolti a mano. */}
+            {rejected.length > 0 && (
+                <div style={styles.card}>
+                    <div style={styles.cardHeader}>Ordini rifiutati dal remoto ({rejected.length})</div>
+                    <div style={styles.warning}>
+                        Il remoto ha <strong>rifiutato</strong> questi ordini perché sono stati registrati
+                        <strong> dopo la chiusura dell&apos;evento</strong>: fanno fede la data e l&apos;ora
+                        dell&apos;ordine sul questo notebook, non l&apos;ora della sincronizzazione. Non
+                        verranno riproposti al prossimo push. Se sono vendite reali, valuta l&apos;inserimento
+                        manuale nel DB dell&apos;app.
+                    </div>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                            <thead>
+                                <tr>
+                                    <th style={styles.th}>Ordine</th>
+                                    <th style={styles.th}>Registrato</th>
+                                    <th style={styles.th}>Totale</th>
+                                    <th style={styles.th}>Motivo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rejected.map((r) => (
+                                    <tr key={r.localId}>
+                                        <td style={styles.td}>#{r.orderNumber ?? '—'}</td>
+                                        <td style={styles.td}>
+                                            {r.orderedAt ? new Date(r.orderedAt).toLocaleString('it-IT') : '—'}
+                                        </td>
+                                        <td style={styles.td}>{r.total ?? '—'}</td>
+                                        <td style={{ ...styles.td, color: '#c0392b' }}>{rejectReasonText(r.reason)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                        <button onClick={clearRejected} disabled={busy} style={styles.pushBtn}>
+                            Ho gestito il caso: archivia i rifiuti
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div style={styles.card}>
                 <div style={styles.cardHeader}>Importa evento e stand dal remoto</div>
@@ -285,6 +366,8 @@ const styles: Record<string, React.CSSProperties> = {
     input: { marginLeft: 8, padding: 6, minWidth: 200 },
     pending: { color: '#c0392b', fontWeight: 700 },
     ok: { color: '#27ae60', fontWeight: 700 },
+    th: { textAlign: 'left', padding: '6px 8px', borderBottom: '2px solid #ddd', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.03em' },
+    td: { padding: '6px 8px', borderBottom: '1px solid #eee' },
     pushBtn: { background: '#264137', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 16px', cursor: 'pointer', fontSize: 14 },
     importBtn: { background: '#c0392b', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 16px', cursor: 'pointer', fontSize: 14 },
     dangerBtn: { background: '#c0392b', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 16px', cursor: 'pointer' },

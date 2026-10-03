@@ -48,6 +48,68 @@ export async function countPending(): Promise<number> {
     return SyncLedgerModel.countDocuments({ syncStatus: 'pending' });
 }
 
+/** Ordini che il remoto ha rifiutato, con i dati minimi per leggerli in pagina. */
+export type RejectedOrderRow = {
+    localId: string;
+    orderNumber: number | null;
+    /** Data/ora dell'ordine secondo l'orologio di questo notebook. */
+    orderedAt: string | null;
+    total: number | null;
+    status: string;
+    reason: string;
+    rejectedAt: string | null;
+};
+
+/**
+ * Elenco dei rifiuti, arricchito con i dati dell'ordine locale.
+ *
+ * Il ledger sa solo che la riga è stata rifiutata e perché: per mostrare
+ * "ordine #12 del 5 ottobre" il numero e la data vengono letti dall'ordine
+ * locale. `orderedAt` usa `createdAt` locale perché è l'unico orologio
+ * dell'ordine (vedi `cleanForPush`).
+ */
+export async function listRejectedOrders(): Promise<RejectedOrderRow[]> {
+    const rows = await SyncLedgerModel.find({ entityType: 'Order', syncStatus: 'rejected' })
+        .sort({ rejectedAt: 1 })
+        .lean();
+
+    if (rows.length === 0) return [];
+
+    const orders = await OrderModel.find({ _id: { $in: rows.map((r) => r.localId) } })
+        .select('orderNumber createdAt total status')
+        .lean();
+    const byId = new Map(orders.map((o) => [o._id.toString(), o]));
+
+    return rows.map((row) => {
+        const order = byId.get(row.localId.toString());
+        return {
+            localId: row.localId.toString(),
+            orderNumber: order?.orderNumber ?? null,
+            orderedAt: order?.createdAt ? new Date(order.createdAt).toISOString() : null,
+            total: typeof order?.total === 'number' ? order.total : null,
+            status: order?.status ?? '',
+            reason: row.rejectReason ?? 'unknown',
+            rejectedAt: row.rejectedAt ? new Date(row.rejectedAt).toISOString() : null
+        };
+    });
+}
+
+/**
+ * Dimentica i rifiuti.
+ *
+ * Serve dopo che l'operatore ha gestito il caso a mano (inserimento
+ * manuale nel DB dell'app): senza, la pagina mostrerebbe per sempre ordini
+ * "rifiutati" che l'operatore ha già sistemato. Le righe restano in ledger
+ * come `synced` con il motivo, così non tornano indietro a `pending`.
+ */
+export async function clearRejectedOrders(): Promise<number> {
+    const res = await SyncLedgerModel.updateMany(
+        { entityType: 'Order', syncStatus: 'rejected' },
+        { $set: { syncStatus: 'synced', syncedAt: new Date() } }
+    );
+    return res.modifiedCount ?? 0;
+}
+
 // ─── Meta (active event / stand) ──────────────────────────────────────────────
 
 export interface EventThemeColors {
@@ -252,7 +314,28 @@ export async function importFromRemote(eventId: string, standId: string, force: 
 
 // ─── Push to remote ────────────────────────────────────────────────────────────
 
-export async function pushToRemote(): Promise<{ pushed: number; errors: string[] }> {
+/**
+ * Esito del push verso il remoto.
+ *
+ * `rejected` è distinto da `errors`: un errore è un problema di trasporto (la
+ * coda resta `pending` e si ritenta), un rifiuto è una **decisione del
+ * remoto** su quei dati (l'ordine è stato preso dopo la chiusura
+ * dell'evento) e non si ritenta da solo.
+ */
+export type RejectedSyncRow = {
+    localId: string;
+    reason: string;
+    orderNumber?: number | null;
+    orderedAt?: string | null;
+};
+
+export type PushResult = {
+    pushed: number;
+    errors: string[];
+    rejected?: RejectedSyncRow[];
+};
+
+export async function pushToRemote(): Promise<PushResult> {
     const state = await LocalStateModel.findOne({ key: 'current' }).lean();
     const syncPassword = state?.syncPassword ?? null;
     const remoteStandId = state?.remoteStandId ?? null;
@@ -294,6 +377,7 @@ export async function pushToRemote(): Promise<{ pushed: number; errors: string[]
 
     const errors: string[] = [];
     let pushed = 0;
+    let rejected: RejectedSyncRow[] = [];
 
     try {
         if (!config.remoteUrl) throw new Error('REMOTE_URL non configurato');
@@ -312,19 +396,63 @@ export async function pushToRemote(): Promise<{ pushed: number; errors: string[]
             throw new Error(errBody.message ?? res.statusText);
         }
 
-        // mark all as synced
-        const allLedgerIds = [...pendingOrders, ...pendingCounters].map((l) => l._id);
-        if (allLedgerIds.length > 0) {
-            await SyncLedgerModel.updateMany({ _id: { $in: allLedgerIds } }, { $set: { syncStatus: 'synced', syncedAt: new Date() } });
+        const payload: any = await res.json().catch(() => ({}));
+
+        /* Ordini che il remoto ha **rifiutato** (registrati dopo la chiusura
+           dell'evento): non sono errori di rete e non verranno riprovati. Le
+           righe di ledger passano a `rejected` con il motivo, così restano
+           visibili nella pagina Sync e l'operatore può valutare l'inserimento
+           a mano. */
+        const rejectedRemote: Array<{ localId: string; reason: string }> = Array.isArray(payload?.rejected)
+            ? payload.rejected
+                  .filter((r: any) => r?.localId)
+                  .map((r: any) => ({ localId: String(r.localId), reason: String(r.reason ?? 'unknown') }))
+            : [];
+        rejected = rejectedRemote;
+
+        const rejectedLocalIds = new Set(rejectedRemote.map((r) => r.localId));
+        const syncedOrders = pendingOrders.filter((o) => !rejectedLocalIds.has(o.localId.toString()));
+        const syncedCounters = pendingCounters;
+
+        const acceptedLedgerIds = [...syncedOrders, ...syncedCounters].map((l) => l._id);
+        if (acceptedLedgerIds.length > 0) {
+            await SyncLedgerModel.updateMany(
+                { _id: { $in: acceptedLedgerIds } },
+                { $set: { syncStatus: 'synced', syncedAt: new Date(), rejectReason: null, rejectedAt: null } }
+            );
         }
-        pushed = allLedgerIds.length;
+
+        /* I rifiutati si fermano qui: se restassero `pending` verrebbero
+           rinviati al prossimo push e il badge "modifiche non sincronizzate"
+           non scenderebbe mai. Il motivo è per riga (un `updateMany` metterebbe
+           quello del primo a tutti). */
+        for (const row of rejectedRemote) {
+            if (!mongoose.Types.ObjectId.isValid(row.localId)) continue;
+            await SyncLedgerModel.updateOne(
+                { entityType: 'Order', localId: new mongoose.Types.ObjectId(row.localId) },
+                { $set: { syncStatus: 'rejected', rejectReason: row.reason, rejectedAt: new Date(), syncedAt: null } }
+            );
+        }
+
+        pushed = acceptedLedgerIds.length;
     } catch (error) {
         errors.push(error instanceof Error ? error.message : String(error));
     }
 
-    return { pushed, errors };
+    return { pushed, errors, rejected };
 }
 
+/**
+ * Prepara un documento per il push.
+ *
+ * `createdAt` viene scartato di proposito: è un timestamp mongoose e il
+ * remoto usa il suo. **Ma l'istante in cui l'ordine è stato preso in cassa
+ * non può perdersi**, altrimenti sul cloud l'ordine nasce con la data del push
+ * (un ordine delle 23:50 sincronizzato alle 00:05 finisce nel giorno
+ * sbagliato) e soprattutto il remoto non può più rifiutare un ordine preso
+ * dopo la chiusura dell'evento. Per questo lo viaggio in `orderedAt`, un campo
+ * dedicato che nessuno dei due lati sovrascrive.
+ */
 function cleanForPush(doc: Record<string, unknown>): Record<string, unknown> {
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(doc)) {
@@ -336,6 +464,9 @@ function cleanForPush(doc: Record<string, unknown>): Record<string, unknown> {
         } else {
             out[key] = value;
         }
+    }
+    if (doc.createdAt instanceof Date && !Number.isNaN(doc.createdAt.getTime())) {
+        out.orderedAt = doc.createdAt.toISOString();
     }
     return out;
 }
