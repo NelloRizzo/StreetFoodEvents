@@ -13,8 +13,20 @@ I file di documentazione sono in `docs/`. Modifiche a questi file NON attivano u
 | `docs/GUIDA.md` | **Guida di prodotto** | Filosofia dell'app, i 13 ruoli su 3 scope, e il comportamento atteso per visitatore / admin piattaforma / admin evento / gestore stand / operatore, più i tre conti distinti (ordini, banco cambio, liquidazione) e un glossario. È la risposta a "perché è fatta così": quando si tocca un flusso, va tenuta allineata. |
 | `docs/CHANGELOG_ANNUALE.md` | **Cronologia storica (annuale)** | Archivio delle voci uscite dal mese corrente. NON si aggiorna con nuove feature: le nuove entry vanno SOLO in `docs/CHANGELOG.md`. |
 | `docs/ARCHITECTURE.md` | **Decisioni progettuali** | Pattern architetturali, motivazioni delle scelte, "cose da non fare", gotchas che un agente AI deve conoscere per non ripetere errori. Aggiornare quando si introduce un nuovo pattern o si impara una lezione. |
-| `docs/TODO.md` | **Task in sospeso** | Feature non ancora implementate, bug aperti, attività pianificate per il futuro. Spostare qui le entry da `docs/CHANGELOG.md` solo quando diventano obsolete, non quando sono completate. |
+| `docs/TODO.md` | **Task in sospeso** | Feature non ancora implementate, bug aperti, attività pianificate per il futuro. Spostare qui le entry da `docs/CHANGELOG.md` solo quando diventano obsolete, non quando sono completate. **La riga 4 è un segnaposto fisso**: vedi la regola sotto. |
 | `AGENTS.md` (questo file, radice) | **Setup operativo** | Istruzioni di base, comandi, struttura repo, API routes, deploy. NON contiene storia feature né progetti futuri — solo ciò che serve per operare OGGI. |
+
+### Regola invariante — il segnaposto dei bug in `docs/TODO.md`
+
+Quando **non ci sono bug aperti**, la riga 4 di `docs/TODO.md` (sotto `## Bug riscontrati in questa sessione`) deve riportare **SEMPRE e IMMUTABILE**:
+
+```
+- _(nessun bug aperto: vedi CHANGELOG.md)_
+```
+
+- **Non riformulare il segnaposto**: non scrivere varianti del tipo "nessun bug aperto in questa sessione", "tutti i bug risolti", "(nessuno)", né lasciare la sezione vuota o con un trattino. La riga 4 è un segnaposto, non un testo da personalizzare.
+- **Non sostituirlo con il testo del bug risolto**: quando un bug viene chiuso, la sua voce va in `docs/CHANGELOG.md` e la riga 4 torna **esattamente** al segnaposto. Un riepilogo del risolto ("risolto in questa sessione, vedi CHANGELOG.md") è una deviazione: duplica il CHANGELOG dentro il TODO e non sta nella formula.
+- **La ragione**: il segnaposto serve a distinguere a colpo d'occhio "non ho controllato" da "ho controllato e non c'è nulla". Se la frase cambia, un agente (o l'operatore) non può più fidarsi del fatto che la sezione sia davvero vuota.
 
 ## Repo structure
 
