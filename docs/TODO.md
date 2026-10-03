@@ -1,8 +1,7 @@
 # TODO — Street Food Events
 
 ## Bug riscontrati in questa sessione
-
-- _(nessun bug aperto)_
+- _(nessun bug aperto: il bug sui totali delle vendite con i soldi liquidati e' stato risolto in questa sessione, vedi CHANGELOG.md)_
 
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_

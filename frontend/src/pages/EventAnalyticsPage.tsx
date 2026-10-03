@@ -462,8 +462,17 @@ export function EventAnalyticsPage() {
           <div className={styles.cardTitle}>Liquidazioni stand</div>
           <p className={styles.cardNote}>
             I crediti guadagnati sono cumulativi su tutto l&rsquo;evento, le liquidazioni sono
-            quelle cadute nel periodo selezionato. Sono conti separati dal fatturato: un
-            pagamento in euro a un gestore non &egrave; una vendita.
+            quelle cadute nel periodo selezionato.{' '}
+            <strong>
+              Il fatturato include anche il netto erogato
+              {totals.settlements.payoutEuro !== 0 && (
+                <> ({fmtEuro(totals.settlements.payoutEuro)} &euro;)</>
+              )}
+            </strong>
+            , quindi per uno stand liquidato quegli euro sono contati due volte: una
+            come vendita e una come pagamento. &Egrave; una scelta, serve a dire quanto
+            denaro &egrave; passato dalla cassa cambio: la sola quota dovuta agli ordini
+            &egrave; la colonna &laquo;Ordini&nbsp;&euro;&raquo; del totale.
           </p>
           <div className={styles.kvGrid}>
             <div className={styles.kvRow}>

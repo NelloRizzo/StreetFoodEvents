@@ -124,7 +124,14 @@ export type AnalyticsStandRow = {
   location: { lat: number; lng: number } | null
   orders: number
   quantity: number
+  /** Fatturato **comprensivo delle liquidazioni** del periodo (vedi `orderRevenue`). */
   revenue: number
+  /** Parte del fatturato che viene dagli ordini: la differenza con `revenue` è
+   *  la quota di liquidazione riportata in crediti. I due numeri non vanno
+   *  sommati né confrontati con i report di cassa. */
+  orderRevenue: number
+  /** Euro erogati nella finestra, riportati in crediti (× tasso evento). */
+  payoutCredits: number
   creditRevenue: number
   posRevenue: number
   cashRevenue: number
@@ -160,7 +167,12 @@ export type EventAnalytics = {
   totals: {
     orders: number
     quantity: number
+    /** Fatturato comprensivo delle liquidazioni (vedi `orderRevenue`). */
     revenue: number
+    /** Parte del fatturato che viene dagli ordini. */
+    orderRevenue: number
+    /** Liquidazioni riportate in crediti e sommate al fatturato. */
+    payoutCredits: number
     creditRevenue: number
     posRevenue: number
     cashRevenue: number

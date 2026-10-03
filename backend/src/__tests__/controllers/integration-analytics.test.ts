@@ -507,7 +507,7 @@ describe('Integration — Event analytics, liquidazioni', () => {
         expect(res.body.totals.settlements.settledCredits).toBe(0);
     });
 
-    it('include uno stand liquidato senza ordini nella finestra, con fatturato a zero', async () => {
+    it('include uno stand liquidato senza ordini nella finestra, con fatturato pari al netto erogato', async () => {
         const env = await setupEnvironment();
         /* Stand Due non ha ordini: l'unica attivita' e' la liquidazione. */
         await createSettlement(env, {
@@ -526,8 +526,15 @@ describe('Integration — Event analytics, liquidazioni', () => {
         /* Solo Stand Due ha attivita' (la liquidazione): Stand Uno non ha ordini
          * ne' liquidazioni e non ha motivo di comparire. */
         expect(res.body.byStand).toHaveLength(1);
+        /* Il netto erogato entra nel fatturato: 27 euro con tasso 1 = 27 crediti. */
+        expect(due.revenue).toBe(27);
+        expect(due.orderRevenue).toBe(0);
+        expect(due.payoutCredits).toBe(27);
+        expect(due.cashRevenue).toBe(27);
+        /* Ordini e quantita' sarebbero stimati dagli scontrini medi, ma in questo
+         * evento non c'e' un solo ordine da cui ricavarli: restano 0. */
         expect(due.orders).toBe(0);
-        expect(due.revenue).toBe(0);
+        expect(due.quantity).toBe(0);
         expect(due.settledCredits).toBe(30);
         expect(due.grossEuro).toBe(30);
         expect(due.feeEuro).toBe(3);
@@ -536,9 +543,49 @@ describe('Integration — Event analytics, liquidazioni', () => {
         expect(due.neverSettled).toBe(false);
         expect(due.earnedCredits).toBe(0);
 
-        /* Il payout non entra nel fatturato. */
-        expect(res.body.totals.revenue).toBe(0);
+        /* Il netto erogato entra nel fatturato anche quando lo stand ha ordini. */
+        expect(res.body.totals.revenue).toBe(27);
+        expect(res.body.totals.orderRevenue).toBe(0);
         expect(res.body.totals.settlements.payoutEuro).toBe(27);
+    });
+
+    it('somma il netto erogato al fatturato anche per uno stand con ordini, proporzionando le colonne', async () => {
+        const env = await setupEnvironment();
+        await seedSales(env);
+        /* Stand Uno: 2 ordini, 5 pezzi, 25 crediti di fatturato. */
+        await createSettlement(env, {
+            standId: env.stand1._id,
+            standName: 'Stand Uno',
+            amount: 25,
+            grossEuro: 25,
+            feeEuro: 0,
+            payoutEuro: 25,
+            occurredAt: utcAt(18)
+        });
+
+        const res = await getAnalytics(env.adminSession, env.event._id.toString());
+        const uno = res.body.byStand.find((s: { standName: string }) => s.standName === 'Stand Uno');
+
+        /* 25 dagli ordini + 25 di netto erogato (tasso 1) = 50. */
+        expect(uno.orderRevenue).toBe(25);
+        expect(uno.payoutCredits).toBe(25);
+        expect(uno.revenue).toBe(50);
+        /* Proporzione 50/25 = 2 su tutto quello che dipende dal fatturato. */
+        expect(uno.orders).toBe(4);
+        expect(uno.quantity).toBe(10);
+        expect(uno.cashRevenue).toBe(50);
+        /* Gli ordini di Stand Due non sono toccati: nessuna liquidazione. */
+        const due = res.body.byStand.find((s: { standName: string }) => s.standName === 'Stand Due');
+        expect(due.revenue).toBe(6);
+        expect(due.orders).toBe(1);
+        expect(due.payoutCredits).toBe(0);
+
+        /* I totali sommano le righe comprensive: 50 + 6, non 25 + 6. */
+        expect(res.body.totals.revenue).toBe(56);
+        expect(res.body.totals.orderRevenue).toBe(31);
+        expect(res.body.totals.payoutCredits).toBe(25);
+        expect(res.body.totals.orders).toBe(5);
+        expect(res.body.totals.quantity).toBe(12);
     });
 
     it('NON segnala mai liquidato uno stand liquidato fuori dalla finestra', async () => {

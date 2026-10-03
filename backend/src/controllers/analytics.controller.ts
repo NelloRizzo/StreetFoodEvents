@@ -340,53 +340,125 @@ OrderModel.aggregate([
 
     const salesByStand = new Map<string, (typeof byStandRows)[number]>(byStandRows.map((r) => [r._id.toString(), r]));
 
+    /* ------------------------------------------------------------------
+     * FATTURATO COMPRENDENTE LE LIQUIDAZIONI (decisione di prodotto).
+     *
+     * Il denaro liquidato a uno stand **entra anche nel suo fatturato**, e con
+     * lui tutte le colonne che dal fatturato dipendono. Quindi:
+     *
+     *  - `payoutEuro` è in EURO e il fatturato è in CREDITI: la somma richiede
+     *    la conversione (`× exchangeRate`). Senza, con un tasso diverso da 1 si
+     *    sommerebbero due unità diverse.
+     *  - se lo stand ha ordini nella finestra, le colonne si **proporzionano**
+     *    al fatturato (`scale = fatturato comprensivo / fatturato ordini`);
+     *  - se NON ha ordini ma ha una liquidazione, ordini e quantità sono
+     *    **stimati** dagli scontrini/prezzi medi dell'evento e la ripartizione
+     *    contanti/crediti usa le quote osservate sull'evento.
+     *
+     * AVVERTENZA CONTABILE: per uno stand i cui ordini sono già nella finestra
+     * questo **doppia** il valore (quegli stessi euro sono già dentro
+     * `order.total`). È una scelta deliberata: il fatturato così dice "quanto
+     * denaro è passato dalla cassa cambio", non "quanto è stato venduto". Per
+     * questo `orderRevenue` resta esposto accanto a `revenue`: la differenza è
+     * la quota di liquidazione, e i due numeri non vanno sommati né confrontati
+     * con i report di cassa.
+     * ------------------------------------------------------------------ */
+    const exchangeRate = event.exchangeRate ?? 1;
+
+    /* Medie e quote dell'evento, calcolate sugli ordini (base "pulita"): servono
+       solo per gli stand che non hanno ordini nella finestra. */
+    const orderRevenueTotal = byStandRows.reduce((sum, row) => sum + row.revenue, 0);
+    const orderOrdersTotal = byStandRows.reduce((sum, row) => sum + row.orders, 0);
+    const orderQuantityTotal = byStandRows.reduce((sum, row) => sum + row.quantity, 0);
+    const orderCreditTotal = byStandRows.reduce((sum, row) => sum + row.creditRevenue, 0);
+    const orderPosTotal = byStandRows.reduce((sum, row) => sum + row.posRevenue, 0);
+    const avgOrderValue = orderOrdersTotal > 0 ? orderRevenueTotal / orderOrdersTotal : 0;
+    const avgUnitPrice = orderQuantityTotal > 0 ? orderRevenueTotal / orderQuantityTotal : 0;
+    const creditShare = orderRevenueTotal > 0 ? orderCreditTotal / orderRevenueTotal : 0;
+    const posShare = orderRevenueTotal > 0 ? orderPosTotal / orderRevenueTotal : 0;
+
     const byStand = [...standIdsInReport].map((standId) => {
         const info = standInfo.get(standId) ?? { name: 'Stand sconosciuto', number: null, location: null };
         const row = salesByStand.get(standId);
         const buckets = settlementByStand.get(standId) ?? emptySettlementBuckets();
-        const earnedCredits = earnedByStand.get(standId) ?? 0;
+        const earnedCreditsObserved = earnedByStand.get(standId) ?? 0;
         const presence = settlementPresence.get(standId);
-        const revenue = row?.revenue ?? 0;
-        const creditRevenue = row?.creditRevenue ?? 0;
-        const posRevenue = row?.posRevenue ?? 0;
         const readySamples = row?.readySamples ?? 0;
+
+        const orderRevenue = row?.revenue ?? 0;
+        const orderCreditRevenue = row?.creditRevenue ?? 0;
+        const orderPosRevenue = row?.posRevenue ?? 0;
+        /* Euro erogati riportati in crediti: è la grandezza che si somma. */
+        const payoutCredits = buckets.payoutEuro * exchangeRate;
+        const revenue = orderRevenue + payoutCredits;
+
+        let orders: number;
+        let quantity: number;
+        let creditRevenue: number;
+        let posRevenue: number;
+        let earned: number;
+
+        if (orderRevenue > 0) {
+            /* Proporzione sul fatturato: le colonne restano proporzionate a
+               come sono state registrate sugli ordini. */
+            const scale = revenue / orderRevenue;
+            orders = Math.round((row?.orders ?? 0) * scale);
+            quantity = (row?.quantity ?? 0) * scale;
+            creditRevenue = orderCreditRevenue * scale;
+            posRevenue = orderPosRevenue * scale;
+            earned = earnedCreditsObserved * scale;
+        } else {
+            /* Nessun ordine nella finestra: stime dalle medie dell'evento. */
+            orders = avgOrderValue > 0 ? Math.round(revenue / avgOrderValue) : 0;
+            quantity = avgUnitPrice > 0 ? revenue / avgUnitPrice : 0;
+            creditRevenue = revenue * creditShare;
+            posRevenue = revenue * posShare;
+            earned = revenue * creditShare;
+        }
+
         return {
             standId,
             standName: info.name,
             number: info.number,
             location: info.location,
-            orders: row?.orders ?? 0,
-            quantity: row?.quantity ?? 0,
+            orders,
+            quantity: round1(quantity),
+            /** Fatturato comprensivo delle liquidazioni (vedi blocco sopra). */
             revenue: round1(revenue),
+            /** Quota del fatturato che viene dagli ordini: `revenue - orderRevenue`
+             *  è la liquidazione. */
+            orderRevenue: round1(orderRevenue),
+            /** Euro erogati riportati in crediti. */
+            payoutCredits: round1(payoutCredits),
             creditRevenue: round1(creditRevenue),
             posRevenue: round1(posRevenue),
             cashRevenue: round1(revenue - creditRevenue - posRevenue),
             prepOrders: readySamples,
             avgPrepSeconds: readySamples > 0 ? Math.round((row?.readySeconds ?? 0) / readySamples) : null,
-            /* Crediti guadagnati su tutto l'evento, indipendentemente dalla finestra. */
-            earnedCredits: round1(earnedCredits),
+            /** Crediti guadagnati comprensivi della quota liquidata (cumulativi
+             *  sull'evento): base temporale mista, come sopra. */
+            earnedCredits: round1(earned),
             settledCredits: round1(buckets.settledCredits),
             settledEuro: round1(buckets.settledEuro),
             loadedCredits: round1(buckets.loadedCredits),
             grossEuro: round1(buckets.grossEuro),
             feeEuro: round1(buckets.feeEuro),
             payoutEuro: round1(buckets.payoutEuro),
-            /* Crediti caricati ma non ancora liquidati: mai negativo, e' un
+            /* Crediti caricati ma non ancora liquidati: mai negativo, è un
              * segnale ("manca la chiusura"), non un errore contabile. */
             toReturnCredits: round1(Math.max(0, buckets.loadedCredits - buckets.settledCredits)),
-            /* Crediti guadagnati e non ancora liquidati: e' il residuo che
+            /* Crediti guadagnati e non ancora liquidati: è il residuo che
              * l'operatore deve ancora corrispondere. Diverso da `toReturnCredits`
-             * (che guarda i soli DARE) e calcolato sui crediti guadagnati su tutto
-             * l'evento contro i liquidati nella finestra. */
-            remainingEarnedCredits: round1(Math.max(0, earnedCredits - buckets.settledCredits)),
+             * (che guarda i soli DARE). */
+            remainingEarnedCredits: round1(Math.max(0, earned - buckets.settledCredits)),
             settlementCount: buckets.settlementCount,
             loadCount: buckets.loadCount,
             settlementCountAllTime: presence?.count ?? 0,
             lastSettlementAt: presence?.lastOccurredAt ?? null,
-            /* Ha venduto ma non e' mai stato liquidato in nessun momento
+            /* Ha venduto ma non è mai stato liquidato in nessun momento
              * dell'evento: la riga resta con gli zeri delle liquidazioni e il
              * frontend la segnala. */
-            neverSettled: presence === undefined && earnedCredits > 0
+            neverSettled: presence === undefined && earnedCreditsObserved > 0
         };
     }).sort((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity) || a.standName.localeCompare(b.standName));
 
@@ -404,13 +476,20 @@ OrderModel.aggregate([
         };
     });
 
-    const orders = byStandRows.reduce((sum, row) => sum + row.orders, 0);
-    const quantity = byStandRows.reduce((sum, row) => sum + row.quantity, 0);
-    const revenue = byStandRows.reduce((sum, row) => sum + row.revenue, 0);
-    const creditRevenue = byStandRows.reduce((sum, row) => sum + row.creditRevenue, 0);
-    const posRevenue = byStandRows.reduce((sum, row) => sum + row.posRevenue, 0);
+    /* I totali sommano le righe **comprensive delle liquidazioni**: se
+       sommassero gli aggregati sugli ordini, la tabella e il totale
+       mostrerebbero due numeri diversi per la stessa cosa. */
+    const orders = byStand.reduce((sum, row) => sum + row.orders, 0);
+    const quantity = byStand.reduce((sum, row) => sum + row.quantity, 0);
+    const revenue = byStand.reduce((sum, row) => sum + row.revenue, 0);
+    const creditRevenue = byStand.reduce((sum, row) => sum + row.creditRevenue, 0);
+    const posRevenue = byStand.reduce((sum, row) => sum + row.posRevenue, 0);
     const prepOrders = byStandRows.reduce((sum, row) => sum + row.readySamples, 0);
     const prepSeconds = byStandRows.reduce((sum, row) => sum + row.readySeconds, 0);
+    /* Quota del fatturato che viene dagli ordini: esposta perche' il fatturato
+       ora include le liquidazioni e i due numeri non vanno sommati. */
+    const orderRevenue = byStand.reduce((sum, row) => sum + row.orderRevenue, 0);
+    const payoutCredits = byStand.reduce((sum, row) => sum + row.payoutCredits, 0);
 
     return res.status(200).json({
         eventId,
@@ -423,6 +502,10 @@ OrderModel.aggregate([
             orders,
             quantity,
             revenue: round1(revenue),
+            /** Parte del fatturato che viene dagli ordini (vedi blocco stand). */
+            orderRevenue: round1(orderRevenue),
+            /** Liquidazioni riportate in crediti e sommate al fatturato. */
+            payoutCredits: round1(payoutCredits),
             creditRevenue: round1(creditRevenue),
             posRevenue: round1(posRevenue),
             cashRevenue: round1(revenue - creditRevenue - posRevenue),
