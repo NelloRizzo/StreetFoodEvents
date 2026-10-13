@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Street Food Events</string>
+    <string name="nav_events">Eventi</string>
+    <string name="nav_menu">Menu</string>
+    <string name="nav_wallet">Wallet</string>
+    <string name="nav_orders">Ordini</string>
+    <string name="nav_settings">Impostazioni</string>
+</resources>

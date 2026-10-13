@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Food / Burger & Fork symbol in Accent Gold -->
+    <path
+        android:fillColor="#E5A93C"
+        android:pathData="M34,44 C34,36.27 40.27,30 48,30 L60,30 C67.73,30 74,36.27 74,44 L34,44 Z" />
+    <path
+        android:fillColor="#E5A93C"
+        android:pathData="M32,50 L76,50 C77.1,50 78,50.9 78,52 C78,53.1 77.1,54 76,54 L32,54 C30.9,54 30,53.1 30,52 C30,50.9 30.9,50 32,50 Z" />
+    <path
+        android:fillColor="#E5A93C"
+        android:pathData="M34,60 L74,60 C74,67.73 67.73,74 60,74 L48,74 C40.27,74 34,67.73 34,60 Z" />
+</vector>
