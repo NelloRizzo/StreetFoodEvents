@@ -1,10 +1,15 @@
 # TODO — Street Food Events
+_(ogni voce è separata dalle altre con una riga bianca)_
 
 ## Bug riscontrati in questa sessione
 - _(nessun bug aperto: vedi CHANGELOG.md)_
 
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
+
+- Un prodotto in menu deve mostrare la descrizione se presente.
+- Deve essere possibile esportare i singoli prodotti per i social così come fatto per il menu dello stand:
+  - creiamo un altro pulsante accanto ad "Esporta Social" che possa consentire di scegliere i prodotti da esportare per i social con lo stesso formato del menu (una immagine per prodotto)
 
 ## Idee e implementazioni future
 Qui stanno le voci **non urgenti**: analizzate e rimandate di proposito, non dimenticate. Ogni voce porta con sé la valutazione, così non va rifatta da capo.
