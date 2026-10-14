@@ -333,6 +333,22 @@
   font-size: 1rem;
 }
 
+/* Descrizione del prodotto in elenco: si ferma a 2 righe. Il testo intero
+   arriva a 2000 caratteri e in una lista farebbe esplodere la card, mentre
+   il modale (e il menu stampabile) mostrano già la versione completa.
+   `-webkit-box` + `-webkit-box-orient` sono richiesti dal line-clamp. */
+.menuDescription {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.35;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 .menuIngredients {
   color: var(--color-ink-soft);
   font-size: 0.8rem;

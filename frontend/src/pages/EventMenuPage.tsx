@@ -262,6 +262,11 @@ export function EventMenuPage() {
                         )}
                         <div className={styles.menuInfo}>
                           <strong className={styles.menuName}>{product.name}</strong>
+                          {/* Descrizione in elenco (non solo nel modale), come
+                              nella pagina del singolo stand. */}
+                          {product.description && (
+                            <span className={styles.menuDescription}>{product.description}</span>
+                          )}
                           {product.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>{product.ingredients.join(', ')}</span>
                           )}
@@ -359,6 +364,9 @@ export function EventMenuPage() {
                         )}
                         <div className={styles.menuInfo}>
                           <strong className={styles.menuName}>{product.name}</strong>
+                          {product.description && (
+                            <span className={styles.menuDescription}>{product.description}</span>
+                          )}
                           {product.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>{product.ingredients.join(', ')}</span>
                           )}

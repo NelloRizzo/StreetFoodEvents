@@ -499,6 +499,12 @@ export function EventStandMenuPage() {
                           <strong className={styles.menuName}>
                             {product?.name ?? 'Prodotto sconosciuto'}
                           </strong>
+                          {/* La descrizione si vede anche in elenco, non solo
+                              nel modale: era il posto dove si leggeva cosa si
+                              sta mangiando. Stringa vuota = nessuna riga. */}
+                          {product?.description && (
+                            <span className={styles.menuDescription}>{product.description}</span>
+                          )}
                           {product && product.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>
                               {product.ingredients.join(', ')}
@@ -680,6 +686,9 @@ export function EventStandMenuPage() {
                             )}
                             <div className={styles.menuInfo}>
                               <strong className={styles.menuName}>{item.name}</strong>
+                              {item.description && (
+                                <span className={styles.menuDescription}>{item.description}</span>
+                              )}
                               {item.standName && (
                                 <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                               )}
@@ -718,6 +727,9 @@ export function EventStandMenuPage() {
                         )}
                         <div className={styles.menuInfo}>
                           <strong className={styles.menuName}>{item.name}</strong>
+                          {item.description && (
+                            <span className={styles.menuDescription}>{item.description}</span>
+                          )}
                           {item.standName && (
                             <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                           )}

@@ -1,0 +1,194 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+/* La descrizione prodotto sta gia' nel payload (`productId` popolato per
+   /event-products, `product.description` per /events/:id/menu): qui si
+   verifica solo che arrivi a schermo anche in elenco, non solo nel modale. */
+
+const DESCRIPTION = 'Pane con cotto, salsa speciale della casa'
+
+const eventBase = {
+  id: 'evt1',
+  name: 'Festa di prova',
+  logo: null,
+  startDate: '2026-09-10T00:00:00.000Z',
+  endDate: '2026-09-12T00:00:00.000Z',
+  location: null,
+  shortDescription: null,
+  currencyName: 'Token',
+  currencySymbol: null,
+  exchangeRate: 1,
+  themeBrand: null,
+  themeText: null,
+  themeSurface: null,
+  themeHighlight: null,
+}
+
+const standOne = {
+  id: 'st1',
+  name: 'Stand Uno',
+  slogan: null,
+  description: null,
+  coverImage: null,
+  logo: null,
+  gallery: [],
+  numbers: [{ eventId: 'evt1', number: 1, showOnMap: true }],
+}
+
+const standTwo = {
+  ...standOne,
+  id: 'st2',
+  name: 'Stand Due',
+  numbers: [{ eventId: 'evt1', number: 2, showOnMap: true }],
+}
+
+/* Descrizione del prodotto principale: cambiata da ogni test. */
+let productDescription: string | null = DESCRIPTION
+let categoryDescription: string | null = null
+
+const apiRequest = vi.fn(async (path: string) => {
+  if (path.startsWith('/events/evt1/menu')) {
+    return {
+      categories: ['Panini'],
+      items: [
+        {
+          standId: 'st1',
+          standName: 'Stand Uno',
+          standNumber: 1,
+          productId: 'p9',
+          eventProductId: 'ep9',
+          name: 'Panino categoria',
+          description: categoryDescription,
+          price: 6,
+          ingredients: ['pane'],
+          allergens: [],
+          isFrozen: false,
+          coverImage: null,
+          categoryIds: ['Panini'],
+          stationIds: ['s1'],
+        },
+      ],
+    }
+  }
+  if (path.startsWith('/events/')) return { item: eventBase }
+  if (path === '/stands/st1') return { item: standOne }
+  if (path.startsWith('/event-products')) {
+    return {
+      items: [
+        {
+          id: 'ep1',
+          eventId: 'evt1',
+          standId: 'st1',
+          productId: 'p1',
+          product: {
+            id: 'p1',
+            name: 'Panino della casa',
+            description: productDescription,
+            price: 5,
+            ingredients: ['pane', 'cotto'],
+            allergens: [],
+            isFrozen: false,
+            coverImage: null,
+          },
+          stationIds: ['s1'],
+          priceOverride: null,
+        },
+      ],
+    }
+  }
+  if (path.startsWith('/stands')) return { items: [standOne, standTwo] }
+  throw new Error('unexpected ' + path)
+})
+
+vi.mock('../../lib/api', () => ({ apiRequest: (p: string) => apiRequest(p) }))
+vi.mock('../../lib/reviews', () => ({
+  fetchReviewsSummary: async () => ({ event: { count: 0, average: null }, stands: [] }),
+}))
+/* useAuth lancia fuori dal provider e qui non serve l'autenticato. */
+vi.mock('../../features/auth/auth-context', () => ({
+  useAuth: () => ({ isAuthenticated: false, user: null }),
+}))
+
+import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { ThemeProvider } from '../../features/theme/ThemeProvider'
+import { EventStandMenuPage } from '../../pages/EventStandMenuPage'
+/* La classe e' quella del module.scss: gli hash cambiano da build a build,
+   quindi si importa lo stesso identico modulo invece di copiare il nome. */
+import styles from '../../pages/EventStandMenuPage.module.scss'
+
+const renderPage = () =>
+  render(
+    <ThemeProvider>
+      <MemoryRouter initialEntries={['/events/evt1/stands/st1']}>
+        <Routes>
+          <Route path="events/:eventId/stands/:standId" element={<EventStandMenuPage />} />
+        </Routes>
+      </MemoryRouter>
+    </ThemeProvider>,
+  )
+
+const descNodes = () => document.querySelectorAll(`.${styles.menuDescription}`)
+
+describe('menu stand — descrizione del prodotto in elenco', () => {
+  beforeEach(() => {
+    apiRequest.mockClear()
+    productDescription = DESCRIPTION
+    categoryDescription = null
+  })
+
+  it('mostra la descrizione nella card, senza dover aprire il modale', async () => {
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    expect(screen.getByText(DESCRIPTION)).toBeInTheDocument()
+    expect(descNodes()).toHaveLength(1)
+  })
+
+  it('non rende nessun elemento quando la descrizione manca', async () => {
+    productDescription = null
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    expect(descNodes()).toHaveLength(0)
+  })
+
+  it('non rende nessun elemento quando la descrizione e\' una stringa vuota', async () => {
+    /* Il campo arriva dal form admin anche come "" (non solo null): senza il
+       controllo truthy comparirebbe una riga vuota sotto il nome. */
+    productDescription = ''
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    expect(descNodes()).toHaveLength(0)
+  })
+
+  it('il modale mostra la descrizione per esteso', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByText('Panino della casa'))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent(DESCRIPTION)
+  })
+})
+
+describe('menu stand — descrizione nella vista per categoria', () => {
+  beforeEach(() => {
+    apiRequest.mockClear()
+    productDescription = DESCRIPTION
+    categoryDescription = 'Con tagliere di affettati e mostarda'
+  })
+
+  it('la mostra anche quando i prodotti sono raggruppati per categoria', async () => {
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    /* Il bottone "Per categoria" compare solo con piu' di uno stand. */
+    fireEvent.click(screen.getByRole('button', { name: /Per categoria/i }))
+
+    await screen.findByText('Panino categoria')
+    expect(screen.getByText('Con tagliere di affettati e mostarda')).toBeInTheDocument()
+    /* La vista per categoria sostituisce quella dello stand (ternary in
+       pagina), quindi qui c'e' solo la card del prodotto categorizzato. */
+    expect(descNodes()).toHaveLength(1)
+  })
+})
