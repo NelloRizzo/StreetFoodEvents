@@ -7,22 +7,90 @@ import type { UploadedImage } from './upload'
  *  quelle del menu: due copie delle stesse funzioni andrebbero tenute
  *  allineate a mano, e un divergimento si vede solo sull'immagine scaricata.
  *
- *  I valori qui sotto sono quelli storici di `SocialMenuExport`: cambiarli
- *  cambia l'aspetto delle immagini già scaricate dagli stand. */
+ *  **Due formati, non uno.** Un'immagine 4:5 caricata in una storia viene
+ *  ritagliata: il footer con il QR (cioè la parte che porta al menu)
+ *  cadrebbe via. Quindi il formato è scelto dall'operatore e ognuno dei due
+ *  ha il suoposto. Tutto ciò che è ancorato ai bordi — banda in alto,
+ *  footer in basso — si calcola da `posterMetrics`, mentre la sagoma di
+ *  ciascun poster (nome, foto, prezzi) adatta le proprie coordinate
+ *  all'altezza utile. */
 
-export const POSTER_WIDTH = 1080
-export const POSTER_HEIGHT = 1350
+export type PosterFormatId = 'feed' | 'story'
 
-/** Banda di testa: logo e nome dell'evento. */
-const BAND_H = 140
-/** Blocco basso: luogo/data a sinistra, QR del menu a destra. */
-const FOOTER_Y = 1160
-const FOOTER_H = 118
-const FOOTER_X = 95
-const FOOTER_W = 700
-const QR_SIZE = 118
-const QR_X = POSTER_WIDTH - FOOTER_X - QR_SIZE
-const QR_Y = FOOTER_Y - 4
+export type PosterFormat = {
+  id: PosterFormatId
+  /** Etichetta mostrata all'operatore. */
+  label: string
+  /** Dove si usa, per chi non ha familiarità con le sigle. */
+  hint: string
+  width: number
+  height: number
+}
+
+export const POSTER_FORMATS: Record<PosterFormatId, PosterFormat> = {
+  feed: {
+    id: 'feed',
+    label: '4:5',
+    hint: 'Post',
+    width: 1080,
+    height: 1350,
+  },
+  story: {
+    id: 'story',
+    label: '9:16',
+    hint: 'Storie e reel',
+    width: 1080,
+    height: 1920,
+  },
+}
+
+/** Il formato di partenza: 9:16, cioè quello per cui si è chiesto il
+ *  cambio (storie e reel, che si vedono a schermo intero). Chi non sceglie
+ *  nulla ottiene immagini diverse da quelle storiche: è una scelta, e per
+ *  tornare indietro basta selezionare 4:5 nei due export. */
+export const DEFAULT_FORMAT: PosterFormatId = 'story'
+
+export type PosterMetrics = PosterFormat & {
+  /** Fattore delle **distanze verticali** rispetto al formato 4:5.
+   *
+   *  Non scala tutto: a parità di larghezza dell'immagine (1080 in entrambi
+   *  i formati) un corpo dei caratteri più grande sarebbe sproporzionato,
+   *  perché sul telefono le due immagini si vedono alla stessa
+   *  larghezza. Crescono quindi i **spazi**, che è quello che serve a un
+   *  formato più alto: più aria e, nel menu, più prodotti in elenco. */
+  vScale: number
+  /** Altezza della banda di testa (logo e nome dell'evento). */
+  bandH: number
+  /** Y del blocco basso: luogo/data a sinistra, QR del menu a destra. */
+  footerY: number
+  footerH: number
+}
+
+/** Altezza del formato di riferimento: i disegni sono scritti per il 4:5 e
+ *  le distanze verticali si riscalano da lì. */
+const BASE_HEIGHT = POSTER_FORMATS.feed.height
+/** Quanto del salto di altezza si traduce in spazio. Mezzo: oltre, gli
+ *  elementi resterebbero troppo distanti fra loro; meno, il formato alto
+ *  sembrerebbe affollato. */
+const V_SCALE_WEIGHT = 0.5
+
+/** Geometria ancorata ai bordi di un formato. Il footer è calcolato dalla
+ *  fine del foglio, non da una coordinata fissa: cambiarne l'altezza o il
+ *  margine sposta tutto il blocco senza toccare i disegni dentro, che sono
+ *  calcolati da `footerY`. */
+export function posterMetrics(format: PosterFormatId): PosterMetrics {
+  const f = POSTER_FORMATS[format] ?? POSTER_FORMATS[DEFAULT_FORMAT]
+  const vScale = 1 + (f.height / BASE_HEIGHT - 1) * V_SCALE_WEIGHT
+  const footerH = 118
+  const bottomMargin = 72
+  return {
+    ...f,
+    vScale,
+    bandH: Math.round(140 * vScale),
+    footerH,
+    footerY: f.height - bottomMargin - footerH,
+  }
+}
 
 export type SocialPosterEvent = {
   id: string
@@ -282,30 +350,34 @@ export function drawCurrencyGlyph(
 export function drawEventBand(
   ctx: CanvasRenderingContext2D,
   colors: PosterColors,
+  metrics: PosterMetrics,
   eventLogo: HTMLImageElement | null,
   eventName: string,
 ) {
+  const W = metrics.width
   ctx.save()
   ctx.fillStyle = colors.brand
-  ctx.fillRect(0, 0, POSTER_WIDTH, BAND_H)
+  ctx.fillRect(0, 0, W, metrics.bandH)
 
   if (eventLogo) {
-    drawCircleImage(ctx, eventLogo, 92, 70, 76, eventName)
+    drawCircleImage(ctx, eventLogo, 100, metrics.bandH / 2, 92, eventName)
   }
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillStyle = '#ffffff'
-  ctx.font = '700 40px "Segoe UI", Inter, sans-serif'
-  const evNameLines = wrapText(ctx, eventName, POSTER_WIDTH - 165 - 40, 1)
-  ctx.fillText(evNameLines[0] ?? '', 165, 70)
+  ctx.font = '700 46px "Segoe UI", Inter, sans-serif'
+  const evNameLines = wrapText(ctx, eventName, W - 200 - 40, 1)
+  ctx.fillText(evNameLines[0] ?? '', 200, metrics.bandH / 2)
   ctx.restore()
 }
 
 /** Blocco basso comune: riquadro brand con luogo e date, QR del menu a
- *  destra con la sua didascalia. */
+ *  destra con la sua didascalia. Le posizioni dentro il riquadro sono
+ *  calcolate da `footerY`: il blocco si può spostare senza riscriverlo. */
 export function drawPosterFooter(
   ctx: CanvasRenderingContext2D,
   colors: PosterColors,
+  metrics: PosterMetrics,
   opts: {
     locationLabel: string
     dateRange: string
@@ -313,9 +385,15 @@ export function drawPosterFooter(
     qrLabel: string
   },
 ) {
+  const footerX = 95
+  const footerW = 700
+  const qrSize = 118
+  const qrX = metrics.width - footerX - qrSize
+  const qrY = metrics.footerY - 4
+
   ctx.save()
   ctx.fillStyle = colors.brand
-  drawRoundRect(ctx, FOOTER_X, FOOTER_Y, FOOTER_W, FOOTER_H, 24)
+  drawRoundRect(ctx, footerX, metrics.footerY, footerW, metrics.footerH, 24)
   ctx.fill()
   ctx.restore()
 
@@ -325,11 +403,11 @@ export function drawPosterFooter(
   ctx.textBaseline = 'middle'
   if (opts.locationLabel) {
     ctx.font = '700 34px "Segoe UI", Inter, sans-serif'
-    ctx.fillText(opts.locationLabel, 150, 1200)
+    ctx.fillText(opts.locationLabel, 150, metrics.footerY + 40)
   }
   if (opts.dateRange) {
     ctx.font = '500 30px "Segoe UI", Inter, sans-serif'
-    ctx.fillText(opts.dateRange, 150, opts.locationLabel ? 1244 : 1220)
+    ctx.fillText(opts.dateRange, 150, metrics.footerY + (opts.locationLabel ? 84 : 60))
   }
   ctx.restore()
 
@@ -337,24 +415,48 @@ export function drawPosterFooter(
 
   ctx.save()
   ctx.fillStyle = '#ffffff'
-  drawRoundRect(ctx, QR_X, QR_Y, QR_SIZE, QR_SIZE, 16)
+  drawRoundRect(ctx, qrX, qrY, qrSize, qrSize, 16)
   ctx.fill()
   ctx.clip()
-  ctx.drawImage(opts.qrImage, QR_X + 5, QR_Y + 5, QR_SIZE - 10, QR_SIZE - 10)
+  ctx.drawImage(opts.qrImage, qrX + 5, qrY + 5, qrSize - 10, qrSize - 10)
   ctx.restore()
 
   ctx.save()
   ctx.strokeStyle = colors.brand
   ctx.lineWidth = 4
-  drawRoundRect(ctx, QR_X, QR_Y, QR_SIZE, QR_SIZE, 16)
+  drawRoundRect(ctx, qrX, qrY, qrSize, qrSize, 16)
   ctx.stroke()
   ctx.restore()
 
   ctx.fillStyle = colors.brand
-  ctx.font = '600 22px "Segoe UI", Inter, sans-serif'
+  ctx.font = '600 26px "Segoe UI", Inter, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(opts.qrLabel, QR_X + QR_SIZE / 2, QR_Y + QR_SIZE + 20)
+  ctx.fillText(opts.qrLabel, qrX + qrSize / 2, qrY + qrSize + 26)
+}
+
+export type Rect = { x: number; y: number; w: number; h: number }
+
+/** Riquadro che contiene **senza tagliare** la foto, centrato nell'area data.
+ *  In 9:16 un riquadro alto e stretto con dentro una foto panoramica
+ *  lascerebbe due bande vuote *dentro* il riquadro bianco: sembrerebbe un
+ *  errore di caricamento. Qui il riquadro si stringe attorno alla foto e
+ *  attorno a lui resta il colore del poster. */
+export function fitPhotoBox(img: HTMLImageElement | null, area: Rect): Rect {
+  if (!img || !(img.width > 0) || !(img.height > 0)) return area
+  const ratio = img.width / img.height
+  let w = area.w
+  let h = w / ratio
+  if (h > area.h) {
+    h = area.h
+    w = h * ratio
+  }
+  return {
+    x: area.x + (area.w - w) / 2,
+    y: area.y + (area.h - h) / 2,
+    w,
+    h,
+  }
 }
 
 /** Prezzo in crediti con glifo della moneta. Il simbolo nudo ('€') va

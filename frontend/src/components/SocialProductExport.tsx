@@ -11,20 +11,24 @@ import {
   isBareCurrencySymbol,
 } from '../lib/socialMenu'
 import {
-  POSTER_HEIGHT,
-  POSTER_WIDTH,
   drawCircleImage,
   drawEventBand,
   drawPhotoBox,
   drawPosterFooter,
   drawPrice,
+  fitPhotoBox,
   loadImage,
   posterColors,
+  posterMetrics,
   wrapText,
+  type PosterFormatId,
+  type PosterMetrics,
   type SocialPosterEvent,
   type SocialPosterStand,
 } from '../lib/socialCanvas'
 import type { UploadedImage } from '../lib/upload'
+import { useSocialFormat } from '../lib/useSocialFormat'
+import { SocialFormatPicker } from './SocialFormatPicker'
 import styles from './SocialExport.module.scss'
 
 const INCLUDE_PRICES_KEY = 'sfe-social-include-prices'
@@ -60,10 +64,32 @@ type GeneratedImage = {
  *  l'interfaccia e non si vede nulla finché non ha finito. */
 const yieldToUi = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
 
+/** Impaginazione del poster di un singolo prodotto.
+ *
+ *  Come per il menu: numeri scritti per il formato 4:5, distanze verticali
+ *  riscalate da `vScale`. La foto, però, è l'unica parte che *guadagna*
+ *  davvero spazio nel formato più alto, perché prende tutto quello che
+ *  resta fra il prezzo e il footer. */
+function productLayout(m: PosterMetrics) {
+  const v = m.vScale
+  return {
+    logoY: Math.round(250 * v),
+    logoD: Math.round(120 * (1 + (v - 1) * 0.6)),
+    nameY: Math.round(340 * v),
+    nameLh: Math.round(58 * v),
+    dividerY: Math.round(430 * v),
+    titleY: Math.round(485 * v),
+    nameFont: 46,
+  }
+}
+
 /** Un poster per prodotto, con la stessa impaginazione del poster del menu:
  *  banda dell'evento, logo e nome dello stand, foto e prezzo del prodotto,
- *  riquadro luogo/data e QR verso il menu. Le differenze sono la foto
- *  grande al centro e il nome prodotto al posto del titolo "Il menu". */
+ *  riquadro luogo/data e QR verso il menu.
+ *
+ *  La foto è l'unica parte che si espande con il formato: prende tutto lo
+ *  spazio fra il prezzo e il footer, e si stringe attorno alla foto reale
+ *  per non lasciare bande vuote dentro il riquadro. */
 async function generateProductPoster(
   ctx: CanvasRenderingContext2D,
   event: SocialPosterEvent,
@@ -75,21 +101,24 @@ async function generateProductPoster(
   currencyImage: HTMLImageElement | null,
   qrImage: HTMLImageElement | null,
   includePrices: boolean,
+  format: PosterFormatId,
 ): Promise<void> {
-  const W = POSTER_WIDTH
+  const m = posterMetrics(format)
+  const W = m.width
+  const L = productLayout(m)
   const colors = posterColors(event)
   const currencyName = (event.currencyName ?? '').trim() || '€'
   const bareSymbol = isBareCurrencySymbol(event.currencyName) ? currencyName : null
 
   ctx.save()
   ctx.fillStyle = colors.surface
-  ctx.fillRect(0, 0, W, POSTER_HEIGHT)
+  ctx.fillRect(0, 0, W, m.height)
 
-  drawEventBand(ctx, colors, eventLogo, event.name)
+  drawEventBand(ctx, colors, m, eventLogo, event.name)
 
   // ── Logo e nome dello stand (più piccoli del poster del menu: qui il
   //    prodotto è il protagonista) ──
-  drawCircleImage(ctx, standLogo, W / 2, 250, 120, stand.name)
+  drawCircleImage(ctx, standLogo, W / 2, L.logoY, L.logoD, stand.name)
 
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -97,25 +126,25 @@ async function generateProductPoster(
   ctx.font = '700 38px "Segoe UI", Inter, sans-serif'
   const standNameLines = wrapText(ctx, stand.name, W - 280, 2)
   standNameLines.forEach((line, i) => {
-    ctx.fillText(line, W / 2, 340 + i * 46)
+    ctx.fillText(line, W / 2, L.nameY + i * L.nameLh)
   })
 
   ctx.fillStyle = colors.highlight
-  ctx.fillRect(250, 430, W - 500, 5)
+  ctx.fillRect(250, L.dividerY, W - 500, 5)
 
   // ── Nome prodotto (max 3 righe) ──
   ctx.fillStyle = colors.ink
-  ctx.font = '700 46px "Segoe UI", Inter, sans-serif'
+  ctx.font = `700 ${L.nameFont}px "Segoe UI", Inter, sans-serif`
   const nameLines = wrapText(ctx, product.name, W - 200, 3)
   nameLines.forEach((line, i) => {
-    ctx.fillText(line, W / 2, 485 + i * 58)
+    ctx.fillText(line, W / 2, L.titleY + i * L.nameLh)
   })
 
-  let cursor = 485 + nameLines.length * 58 + 10
+  let cursor = L.titleY + nameLines.length * L.nameLh + Math.round(20 * m.vScale)
 
   // ── Prezzo sotto il nome ──
   if (includePrices && product.price > 0) {
-    drawPrice(ctx, colors, formatCredits(product.price), W / 2, cursor + 20, {
+    drawPrice(ctx, colors, formatCredits(product.price), W / 2, cursor, {
       align: 'center',
       bareSymbol,
       glyphSize: 40,
@@ -123,15 +152,17 @@ async function generateProductPoster(
       currencyInitial: currencyInitial(event.currencyName),
       fontSize: 40,
     })
-    cursor += 74
+    cursor += Math.round(74 * m.vScale)
   }
 
-  // ── Foto del prodotto: cresce con lo spazio rimasto, con un minimo ──
-  const photoTop = cursor + 26
-  const photoH = Math.max(300, 1090 - photoTop)
-  drawPhotoBox(ctx, productImage, 100, photoTop, W - 200, photoH, 28, product.name)
+  // ── Foto: si stringe attorno alla foto reale (niente bande vuote dentro)
+  //    e arriva fino al footer ──
+  const gap = Math.round(26 * m.vScale)
+  const area = { x: 100, y: cursor + gap, w: W - 200, h: m.footerY - gap - (cursor + gap) }
+  const box = fitPhotoBox(productImage, area)
+  drawPhotoBox(ctx, productImage, box.x, box.y, box.w, box.h, 28, product.name)
 
-  drawPosterFooter(ctx, colors, {
+  drawPosterFooter(ctx, colors, m, {
     locationLabel: (event.location?.city ?? event.location?.label ?? '').trim(),
     dateRange: formatEventDateRange(event.startDate, event.endDate),
     qrImage,
@@ -139,6 +170,32 @@ async function generateProductPoster(
   })
 
   ctx.restore()
+}
+
+/** Esposto solo per lo script di anteprima (`frontend/preview/`), che
+ *  disegna il poster su un canvas vero per controllarne l'impaginazione. */
+export async function generateProductPosterForPreview(
+  ctx: CanvasRenderingContext2D,
+  event: SocialPosterEvent,
+  stand: SocialPosterStand,
+  product: { name: string; price: number; coverImage?: UploadedImage | null },
+  includePrices: boolean,
+  format: PosterFormatId,
+) {
+  const productImage = product.coverImage?.url ? await loadImage(product.coverImage.url, true) : null
+  await generateProductPoster(
+    ctx,
+    event,
+    stand,
+    { id: 'preview', name: product.name, coverImage: product.coverImage ?? null, price: product.price },
+    productImage,
+    null,
+    null,
+    null,
+    null,
+    includePrices,
+    format,
+  )
 }
 
 export function SocialProductExport({ open, event, stand, menuItems, onClose }: Props) {
@@ -153,6 +210,16 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
   const [images, setImages] = useState<GeneratedImage[]>([])
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
+  /* Stessa chiave dell'export del menu: il formato non si sceglie due volte. */
+  const [format, setFormat] = useSocialFormat()
+
+  /* Le anteprime sono immagini: cambiando formato quelle già generate sono
+     del formato vecchio, e mostrarle accanto alla nuova scelta sarebbe
+     un invio sbagliato. */
+  const changeFormat = (next: PosterFormatId) => {
+    setFormat(next)
+    setImages([])
+  }
 
   useEffect(() => {
     try {
@@ -234,10 +301,11 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
       ])
 
       let failed = 0
+      const m = posterMetrics(format)
       for (const [index, product] of chosen.entries()) {
         const canvas = document.createElement('canvas')
-        canvas.width = POSTER_WIDTH
-        canvas.height = POSTER_HEIGHT
+        canvas.width = m.width
+        canvas.height = m.height
         const ctx = canvas.getContext('2d')
         let url: string | null = null
         if (ctx) {
@@ -255,6 +323,7 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
             currencyImage,
             qrImage,
             includePrices,
+            format,
           )
           url = canvas.toDataURL('image/png')
         }
@@ -309,6 +378,8 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
           <div className={styles.loading}>Questo stand non ha ancora prodotti in menu.</div>
         ) : (
           <>
+            <SocialFormatPicker format={format} onChange={changeFormat} />
+
             <div className={styles.optionsRow}>
               <label className={styles.optionsLabel}>
                 <input

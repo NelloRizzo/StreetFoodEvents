@@ -14,8 +14,6 @@ import {
    produrre immagini con lo stesso formato, e due copie andrebbero tenute
    allineate a mano. */
 import {
-  POSTER_HEIGHT,
-  POSTER_WIDTH,
   drawCircleImage,
   drawEventBand,
   drawPosterFooter,
@@ -23,14 +21,87 @@ import {
   drawRoundedImage,
   loadImage,
   posterColors,
+  posterMetrics,
   wrapText,
+  type PosterFormatId,
+  type PosterMetrics,
   type SocialPosterEvent,
   type SocialPosterStand,
 } from '../lib/socialCanvas'
 import type { UploadedImage } from '../lib/upload'
+import { useSocialFormat } from '../lib/useSocialFormat'
+import { SocialFormatPicker } from './SocialFormatPicker'
 import styles from './SocialExport.module.scss'
 
 const INCLUDE_PRICES_KEY = 'sfe-social-include-prices'
+
+/** Quante colonne ha la griglia prodotti. */
+const GRID_COLS = 2
+const GRID_X = [95, 545]
+const GRID_COL_W = 440
+
+/** Impaginazione del poster del menu.
+ *
+ *  I numeri sono quelli del formato **4:5** (l'impiaginazione storica, che
+ *  resta identica) moltiplicati per `vScale`, il fattore delle distanze
+ *  verticali. I corpi dei caratteri e le larghezze restano quelli di base:
+ *  a parità di larghezza dell'immagine non è il testo che deve crescere,
+ *  è lo spazio fra le cose.
+ *
+ *  Il numero di righe della griglia non è scritto: arriva dallo spazio fra
+ *  l'intestazione e il footer. È quello che fa mostrare 8 prodotti in 4:5 e
+ *  14 in 9:16 senza due elenchi di coordinate da tenere allineati — e senza
+ *  che un formato più basso finisca per disegnare prodotti sopra il footer. */
+function menuLayout(m: PosterMetrics) {
+  const v = m.vScale
+  const bandBottom = m.bandH
+  const bannerH = Math.round(220 * v)
+  /* Il logo si sovrappone al banner come prima: il cerchio è centrato sul
+     bordo inferiore del banner. */
+  const logoY = bandBottom + bannerH
+  const logoD = Math.round(150 * (1 + (v - 1) * 0.6))
+  const nameY = Math.round((508 * v))
+  const standNameLh = Math.round(60 * v)
+  const sloganY = Math.round(640 * v)
+  const sloganLh = Math.round(36 * v)
+  const dividerY = Math.round(706 * v)
+  const titleY = Math.round(752 * v)
+  const monetaY = Math.round(790 * v)
+  const gridTop = Math.round(818 * v)
+
+  /* Riga piu' alta nel formato alto, ma non proporzionale: la cella deve
+     continuare a contenere il nome su due righe senza diventare
+     illeggibile, e il 4:5 deve mostrare gli stessi 8 prodotti di prima. */
+  const rowH = Math.round(74 * (1 + (v - 1) * 0.6))
+  const thumb = Math.round(rowH * 0.76)
+
+  /* Spazio riservato alla riga "+N altri" sotto l'ultima riga usata: senza
+     questa riserva il "+N altri" finiva sopra il footer. */
+  const restLineH = Math.round(32 * v)
+  const gridBottom = m.footerY - restLineH - 8
+  const rows = Math.max(1, Math.floor((gridBottom - gridTop) / rowH))
+
+  return {
+    bandBottom,
+    bannerH,
+    logoY,
+    logoD,
+    nameY,
+    standNameLh,
+    sloganY,
+    sloganLh,
+    dividerY,
+    titleY,
+    monetaY,
+    gridTop,
+    rowH,
+    thumb,
+    rows,
+    priceColW: Math.round(rowH * 1.9),
+    nameTop: Math.round((rowH - thumb) / 2) + 5,
+    nameLh: Math.round(rowH * 0.38),
+  }
+}
 
 /* Alias mantenuti: i nomi sono quelli con cui il componente è stato
    introdotto e restano nella sua firma pubblica. */
@@ -68,9 +139,12 @@ export async function generatePoster(
   products: SocialProduct[],
   qrImage: HTMLImageElement | null,
   includePrices: boolean,
+  format: PosterFormatId,
 ): Promise<void> {
-  const W = POSTER_WIDTH
-  const H = POSTER_HEIGHT
+  const m = posterMetrics(format)
+  const W = m.width
+  const H = m.height
+  const L = menuLayout(m)
   const colors = posterColors(event)
   const { brand, ink, inkSoft, surface, highlight } = colors
   const currencyName = (event.currencyName ?? '').trim() || '€'
@@ -96,11 +170,11 @@ export async function generatePoster(
   ctx.fillRect(0, 0, W, H)
 
   // ── Brand band (event) ──
-  drawEventBand(ctx, colors, eventLogo, event.name)
+  drawEventBand(ctx, colors, m, eventLogo, event.name)
 
   // ── Banner stand (se presente) ──
-  const bandBottom = 140
-  const bannerH = 220
+  const bandBottom = L.bandBottom
+  const bannerH = L.bannerH
   if (bannerImg) {
     // contenuto: intero, senza ritaglio (object-fit: contain)
     const s = Math.min(W / bannerImg.width, bannerH / bannerImg.height)
@@ -117,53 +191,55 @@ export async function generatePoster(
   }
 
   // ── Logo stand (sovrapposto al banner) ──
-  drawCircleImage(ctx, logoImg, W / 2, 360, 150, stand.name)
+  drawCircleImage(ctx, logoImg, W / 2, L.logoY, L.logoD, stand.name)
 
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillStyle = ink
-  ctx.font = '700 50px "Segoe UI", Inter, sans-serif'
+  ctx.font = '700 54px "Segoe UI", Inter, sans-serif'
   const standNameLines = wrapText(ctx, stand.name, W - 240, 2)
   standNameLines.forEach((line, i) => {
-    ctx.fillText(line, W / 2, 508 + i * 60)
+    ctx.fillText(line, W / 2, L.nameY + i * L.standNameLh)
   })
 
   if (stand.slogan) {
     ctx.fillStyle = inkSoft
-    ctx.font = 'italic 400 28px "Segoe UI", Inter, sans-serif'
+    ctx.font = 'italic 400 30px "Segoe UI", Inter, sans-serif'
     const sloganLines = wrapText(ctx, stand.slogan, W - 280, 2)
     sloganLines.forEach((line, i) => {
-      ctx.fillText(line, W / 2, 640 + i * 36)
+      ctx.fillText(line, W / 2, L.sloganY + i * L.sloganLh)
     })
   }
 
   // ── Divider + "Il menu" ──
   ctx.fillStyle = highlight
-  ctx.fillRect(250, 706, W - 500, 5)
+  ctx.fillRect(250, L.dividerY, W - 500, 5)
   ctx.fillStyle = brand
-  ctx.font = '700 36px "Segoe UI", Inter, sans-serif'
-  ctx.fillText('Il menu', W / 2, 752)
+  ctx.font = '700 42px "Segoe UI", Inter, sans-serif'
+  ctx.fillText('Il menu', W / 2, L.titleY)
 
   // ── Moneta evento (legenda, solo con prezzi e moneta non-euro) ──
   const showMonetaLine = includePrices && monetaLine != null
   if (showMonetaLine) {
     ctx.fillStyle = inkSoft
-    ctx.font = 'italic 400 26px "Segoe UI", Inter, sans-serif'
+    ctx.font = 'italic 400 27px "Segoe UI", Inter, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(monetaLine, W / 2, 790)
+    ctx.fillText(monetaLine, W / 2, L.monetaY)
   }
 
   // ── Products grid (foto + nome, prezzo opzionale) ──
-  const MAX_PRODUCTS = 8
+  // Il tetto non e' scritto: e' il numero di righe ricavato dallo spazio
+  // utile (8 prodotti in 4:5, 12 in 9:16). Il "+N altri" copre il resto.
+  const MAX_PRODUCTS = L.rows * GRID_COLS
   const list = products.slice(0, MAX_PRODUCTS)
   const remainder = products.length - list.length
-  const colWidth = 440
-  const colX = [95, 545]
-  const rowStartY = showMonetaLine ? 818 : 788
-  const rowH = 80
-  const thumbSize = 58
-  const priceColW = 150
+  const colWidth = GRID_COL_W
+  const colX = GRID_X
+  const rowStartY = showMonetaLine ? L.gridTop : L.gridTop - 30
+  const rowH = L.rowH
+  const thumbSize = L.thumb
+  const priceColW = L.priceColW
 
   list.forEach((p, i) => {
     const row = Math.floor(i / 2)
@@ -172,24 +248,27 @@ export async function generatePoster(
     const y = rowStartY + row * rowH
     const hasPrice = includePrices && (p.price ?? 0) > 0
 
-    drawRoundedImage(ctx, thumbs[i], x, y + 4, thumbSize, 14)
+    drawRoundedImage(ctx, thumbs[i], x, y + (rowH - thumbSize) / 2, thumbSize, 18)
 
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
-    ctx.font = '500 30px "Segoe UI", Inter, sans-serif'
+    /* Corpo storico (30px): con 32 il nome su due righe entrava nella riga
+       sotto, e su un formato piu' stretto la terza riga veniva tagliata. */
+    ctx.font = '500 28px "Segoe UI", Inter, sans-serif'
     ctx.fillStyle = ink
-    const lines = wrapText(ctx, p.name, colWidth - thumbSize - 20 - (hasPrice ? priceColW : 0), 2)
+    const lines = wrapText(ctx, p.name, colWidth - thumbSize - 24 - (hasPrice ? priceColW : 0), 2)
     lines.forEach((line, li) => {
-      ctx.fillText(line, x + thumbSize + 20, y + (li === 0 ? 10 : 44))
+      ctx.fillText(line, x + thumbSize + 24, y + L.nameTop + li * L.nameLh)
     })
 
     if (hasPrice) {
-      drawPrice(ctx, colors, formatCredits(p.price), x + colWidth - 8, y + 32, {
+      drawPrice(ctx, colors, formatCredits(p.price), x + colWidth - 8, y + rowH / 2, {
         align: 'right',
         bareSymbol: currencyBareSymbol,
-        glyphSize: 30,
+        glyphSize: 28,
         currencyImage: currencyImg,
         currencyInitial: currencyGlyphInitial,
+        fontSize: 26,
       })
     }
   })
@@ -198,18 +277,26 @@ export async function generatePoster(
     ctx.fillStyle = inkSoft
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.font = 'italic 400 32px "Segoe UI", Inter, sans-serif'
-    ctx.fillText('Il menu è in preparazione', W / 2, 970)
+    ctx.font = 'italic 400 36px "Segoe UI", Inter, sans-serif'
+    ctx.fillText('Il menu è in preparazione', W / 2, rowStartY + rowH)
   } else if (remainder > 0) {
     ctx.fillStyle = brand
-    ctx.font = '600 28px "Segoe UI", Inter, sans-serif'
+    ctx.font = '600 30px "Segoe UI", Inter, sans-serif'
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
-    ctx.fillText(`+ ${remainder} altri`, colX[0] + thumbSize + 20, rowStartY + 4 * rowH)
+    /* "+N altri" sta sotto l'ultima riga usata, non dopo un numero fisso
+       di righe: il tetto cambia con il formato e il resto deve stare dove
+       finiscono i prodotti mostrati. */
+    const usedRows = Math.ceil(list.length / GRID_COLS)
+    ctx.fillText(
+      `+ ${remainder} altri`,
+      colX[0] + thumbSize + 24,
+      rowStartY + usedRows * rowH,
+    )
   }
 
   // ── Bottom: location/date box + QR ──
-  drawPosterFooter(ctx, colors, {
+  drawPosterFooter(ctx, colors, m, {
     locationLabel: (event.location?.city ?? event.location?.label ?? '').trim(),
     dateRange: formatEventDateRange(event.startDate, event.endDate),
     qrImage,
@@ -232,6 +319,9 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
       return false
     }
   })
+  /* Il formato è lo stesso scelto nell'export dei prodotti: la chiave è
+     condivisa, quindi non serve portarlo qui dalla pagina. */
+  const [format, setFormat] = useSocialFormat()
 
   useEffect(() => {
     try {
@@ -295,11 +385,11 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
         setQrUrl(qrResp.qrCode)
 
         const canvas = document.createElement('canvas')
-        canvas.width = POSTER_WIDTH
-        canvas.height = POSTER_HEIGHT
+        canvas.width = posterMetrics(format).width
+        canvas.height = posterMetrics(format).height
         const ctx = canvas.getContext('2d')
         if (!ctx) return
-        await generatePoster(ctx, event, stand, products, qrImg, includePrices)
+        await generatePoster(ctx, event, stand, products, qrImg, includePrices, format)
         if (cancelled) return
         setPosterUrl(canvas.toDataURL('image/png'))
       } catch {
@@ -313,7 +403,7 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
     return () => {
       cancelled = true
     }
-  }, [open, event, stand, products, includePrices])
+  }, [open, event, stand, products, includePrices, format])
 
   useEffect(() => {
     if (open) {
@@ -384,6 +474,8 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
               Poster con banner e logo dello stand, prodotti, logo dell&apos;evento e QR per
               raggiungere la pagina.
             </p>
+
+            <SocialFormatPicker format={format} onChange={setFormat} />
 
             <div className={styles.optionsRow}>
               <label className={styles.optionsLabel}>

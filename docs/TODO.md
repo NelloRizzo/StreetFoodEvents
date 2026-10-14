@@ -7,8 +7,6 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
 
-- Le esportazioni social dovrebbero essere 1080 x 1920
-
 ## Idee e implementazioni future
 Qui stanno le voci **non urgenti**: analizzate e rimandate di proposito, non dimenticate. Ogni voce porta con sé la valutazione, così non va rifatta da capo.
 

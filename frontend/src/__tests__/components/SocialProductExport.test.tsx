@@ -15,7 +15,7 @@ let apiPaths: string[] = []
 
 vi.mock('../../lib/api', () => ({ apiRequest: (p: string) => apiRequest(p) }))
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { SocialProductExport } from '../../components/SocialProductExport'
 import type { UploadedImage } from '../../lib/upload'
 /* Anche la checkbox dei prezzi sta dentro una <label>: per prendere solo i
@@ -161,6 +161,48 @@ describe('export prodotti per social', () => {
   it('non genera nulla se nessun prodotto è selezionato', () => {
     renderModal()
     expect(screen.getByRole('button', { name: /Genera 0 immagini/ })).toBeDisabled()
+  })
+
+  it('propone i due formati, con 9:16 già selezionato', () => {
+    renderModal()
+    /* Il default e' 9:16 (storie/reel): e' il formato chiesto perche' si vede
+       a schermo intero. Chi vuole il post 4:5 lo sceglie. */
+    expect(screen.getByRole('button', { name: /9:16/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /4:5/ })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('il formato scelto resta quello alla riapertura successiva', () => {
+    renderModal()
+    fireEvent.click(screen.getByRole('button', { name: /4:5/ }))
+    expect(screen.getByRole('button', { name: /4:5/ })).toHaveAttribute('aria-pressed', 'true')
+
+    /* Stessa chiave dell'export del menu: si ricorda fra un export e l'altro. */
+    expect(localStorage.getItem('sfe-social-format')).toBe('feed')
+
+    cleanup()
+    renderModal()
+    expect(screen.getByRole('button', { name: /4:5/ })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('il canvas ha le dimensioni del formato scelto', async () => {
+    const sizes: { w: number; h: number }[] = []
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockImplementation(function (this: HTMLCanvasElement) {
+      sizes.push({ w: this.width, h: this.height })
+      return 'data:image/png;base64,POSTER'
+    })
+    renderModal()
+    fireEvent.click(productChecks()[0])
+    await generate(1)
+
+    expect(sizes[0]).toEqual({ w: 1080, h: 1920 })
+
+    /* Cambiando formato le immagini di prima spariscono: sono 9:16, non
+       4:5, e scaricarle sarebbe scaricare il formato sbagliato. */
+    fireEvent.click(screen.getByRole('button', { name: /4:5/ }))
+    expect(screen.queryByAltText(/^Poster /)).toBeNull()
+
+    await generate(1)
+    expect(sizes[1]).toEqual({ w: 1080, h: 1350 })
   })
 
   it('sceglie i prodotti uno a uno e conta', () => {
