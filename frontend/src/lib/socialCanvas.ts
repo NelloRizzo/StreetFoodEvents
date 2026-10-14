@@ -459,10 +459,20 @@ export function fitPhotoBox(img: HTMLImageElement | null, area: Rect): Rect {
   }
 }
 
-/** Prezzo in crediti con glifo della moneta. Il simbolo nudo ('€') va
- *  scritto accanto al numero, l'iniziale è disegnata a parte. Il numero
- *  arriva già formattato (`formatCredits`): qui si disegna, non si decide
- *  come si scrive. */
+/** Prezzo in crediti con glifo della moneta (o con il simbolo nudo, '€').
+ *
+ *  Il numero arriva già formattato (`formatCredits`): qui si disegna, non si
+ *  decide come si scrive.
+ *
+ *  **Numero e simbolo sono due pezzi misurati, non una stringa con uno
+ *  spazio**: lo spazio dipende dal carattere di spaziatura del font e sui
+ *  numeri in grassetto al telefono risulta invisibile. Qui la distanza è
+ *  un numero (proporzionale al corpo) e vale per entrambi i casi.
+ *
+ *  **L'allineamento riguarda il gruppo numero+simbolo**, non il numero: la
+ *  versione precedente posizionava il testo come se fosse sempre allineato a
+ *  destra, quindi con `center` (il poster di un singolo prodotto) il glifo
+ *  entrava dentro il numero. */
 export function drawPrice(
   ctx: CanvasRenderingContext2D,
   colors: PosterColors,
@@ -478,26 +488,36 @@ export function drawPrice(
     fontSize?: number
   },
 ) {
+  const fontSize = opts.fontSize ?? 26
+  /* Stacco numero/simbolo: abbastanza da leggersi su uno schermo di
+     telefono, e scala col corpo come tutto il resto del poster. */
+  const gap = Math.round(fontSize * 0.3)
+
   ctx.fillStyle = colors.brand
-  ctx.font = `700 ${opts.fontSize ?? 26}px "Segoe UI", Inter, sans-serif`
-  /* L'ordine dei setter è quello del vecchio codice del poster del menu:
-     identico a schermo, ma tiene la sequenza di disegno identica. */
-  ctx.textAlign = opts.align
+  ctx.font = `700 ${fontSize}px "Segoe UI", Inter, sans-serif`
+  ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
 
+  const textWidth = ctx.measureText(formattedPrice).width
+  const symbolWidth = opts.bareSymbol
+    ? ctx.measureText(opts.bareSymbol).width
+    : opts.glyphSize
+  const total = textWidth + gap + symbolWidth
+
+  const left = opts.align === 'right' ? x - total : opts.align === 'center' ? x - total / 2 : x
+
+  ctx.fillText(formattedPrice, left, y)
+
   if (opts.bareSymbol) {
-    ctx.fillText(`${formattedPrice} ${opts.bareSymbol}`, x, y)
+    ctx.fillText(opts.bareSymbol, left + textWidth + gap, y)
     return
   }
 
-  const gap = 7
-  const glyphSize = opts.glyphSize
-  ctx.fillText(formattedPrice, x - gap - glyphSize, y)
   drawCurrencyGlyph(
     ctx,
-    x - glyphSize / 2,
+    left + textWidth + gap + opts.glyphSize / 2,
     y,
-    glyphSize,
+    opts.glyphSize,
     opts.currencyImage,
     opts.currencyInitial,
     colors.brand,
