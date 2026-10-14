@@ -64,6 +64,21 @@ export function formatCurrencyInline(currencyName: string | null | undefined): s
   return circledInitialText(currencyName)
 }
 
+/** Nome file per i download degli export social.
+ *
+ *  Il nome dello stand o del prodotto arriva da un form admin e finisce
+ *  nell'attributo `download`: le vocali accentate diventerebbero trattini
+ *  ("Caff-" invece di "Caffe"), quindi si normalizza prima di ripulire.
+ *  Il fallback evita il nome vuoto, che alcuni browser ignorano. */
+export function fileSlug(value: string): string {
+  const ascii = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return ascii || 'senza-nome'
+}
+
 export function stripHtml(html: string | null | undefined): string {
   return (html ?? '')
     .replace(/<[^>]*>/g, ' ')

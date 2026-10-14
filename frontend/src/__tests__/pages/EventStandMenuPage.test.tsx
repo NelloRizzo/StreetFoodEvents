@@ -44,6 +44,13 @@ const standTwo = {
 /* Descrizione del prodotto principale: cambiata da ogni test. */
 let productDescription: string | null = DESCRIPTION
 let categoryDescription: string | null = null
+/* Prodotti in menu: `null` = fixture standard (costruita al momento della
+   fetch, cosi' i test che cambiano la descrizione sono visti), `[]` = stand
+   senza menu. */
+let eventProducts: unknown[] | null
+/* Utente corrente: i due pulsanti di export compaiono solo per chi puo'
+   esportare (platform-admin o proprietario dello stand). */
+let authUser: { firstName: string; lastName: string; isPlatformAdmin?: boolean } | null = null
 
 const apiRequest = vi.fn(async (path: string) => {
   if (path.startsWith('/events/evt1/menu')) {
@@ -72,28 +79,9 @@ const apiRequest = vi.fn(async (path: string) => {
   if (path.startsWith('/events/')) return { item: eventBase }
   if (path === '/stands/st1') return { item: standOne }
   if (path.startsWith('/event-products')) {
-    return {
-      items: [
-        {
-          id: 'ep1',
-          eventId: 'evt1',
-          standId: 'st1',
-          productId: 'p1',
-          product: {
-            id: 'p1',
-            name: 'Panino della casa',
-            description: productDescription,
-            price: 5,
-            ingredients: ['pane', 'cotto'],
-            allergens: [],
-            isFrozen: false,
-            coverImage: null,
-          },
-          stationIds: ['s1'],
-          priceOverride: null,
-        },
-      ],
-    }
+    /* La fixture e' costruita qui e non in beforeEach: un test che cambia
+       `productDescription` deve vedere il valore nuovo nella fetch. */
+    return { items: eventProducts ?? buildMenu() }
   }
   if (path.startsWith('/stands')) return { items: [standOne, standTwo] }
   throw new Error('unexpected ' + path)
@@ -103,9 +91,10 @@ vi.mock('../../lib/api', () => ({ apiRequest: (p: string) => apiRequest(p) }))
 vi.mock('../../lib/reviews', () => ({
   fetchReviewsSummary: async () => ({ event: { count: 0, average: null }, stands: [] }),
 }))
-/* useAuth lancia fuori dal provider e qui non serve l'autenticato. */
+/* useAuth lancia fuori dal provider: l'utente e' variabile perche' i
+   pulsanti di export social compaiono solo se l'operatore puo' esportare. */
 vi.mock('../../features/auth/auth-context', () => ({
-  useAuth: () => ({ isAuthenticated: false, user: null }),
+  useAuth: () => ({ isAuthenticated: authUser != null, user: authUser }),
 }))
 
 import { fireEvent, render, screen } from '@testing-library/react'
@@ -129,11 +118,40 @@ const renderPage = () =>
 
 const descNodes = () => document.querySelectorAll(`.${styles.menuDescription}`)
 
+/* Fixture del menu letta al momento della fetch, così un test può cambiare
+   i prodotti senza toccare il mock dell'API. */
+const buildMenu = () => [
+  {
+    id: 'ep1',
+    eventId: 'evt1',
+    standId: 'st1',
+    productId: 'p1',
+    product: {
+      id: 'p1',
+      name: 'Panino della casa',
+      description: productDescription,
+      price: 5,
+      ingredients: ['pane', 'cotto'],
+      allergens: [],
+      isFrozen: false,
+      coverImage: null,
+    },
+    stationIds: ['s1'],
+    priceOverride: null,
+  },
+]
+
+const resetFixture = () => {
+  apiRequest.mockClear()
+  productDescription = DESCRIPTION
+  categoryDescription = null
+  authUser = null
+  eventProducts = null
+}
+
 describe('menu stand — descrizione del prodotto in elenco', () => {
   beforeEach(() => {
-    apiRequest.mockClear()
-    productDescription = DESCRIPTION
-    categoryDescription = null
+    resetFixture()
   })
 
   it('mostra la descrizione nella card, senza dover aprire il modale', async () => {
@@ -173,8 +191,7 @@ describe('menu stand — descrizione del prodotto in elenco', () => {
 
 describe('menu stand — descrizione nella vista per categoria', () => {
   beforeEach(() => {
-    apiRequest.mockClear()
-    productDescription = DESCRIPTION
+    resetFixture()
     categoryDescription = 'Con tagliere di affettati e mostarda'
   })
 
@@ -190,5 +207,43 @@ describe('menu stand — descrizione nella vista per categoria', () => {
     /* La vista per categoria sostituisce quella dello stand (ternary in
        pagina), quindi qui c'e' solo la card del prodotto categorizzato. */
     expect(descNodes()).toHaveLength(1)
+  })
+})
+
+describe('menu stand — pulsanti di export social', () => {
+  beforeEach(() => {
+    resetFixture()
+    authUser = { firstName: 'Mario', lastName: 'Rossi', isPlatformAdmin: true }
+  })
+
+  it('quello dei prodotti sta accanto a quello del menu', async () => {
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    const menuBtn = screen.getByRole('button', { name: 'Esporta social' })
+    const prodottiBtn = screen.getByRole('button', { name: 'Esporta prodotti' })
+    /* DOCUMENT_POSITION_FOLLOWING = 4: sta subito dopo nell'ordine del DOM. */
+    expect(menuBtn.compareDocumentPosition(prodottiBtn) & 4).toBe(4)
+  })
+
+  it('quello dei prodotti spiega perche\' e\' disabilitato se il menu e\' vuoto', async () => {
+    eventProducts = []
+    renderPage()
+    /* Il nome dello stand e' anche nei chip in alto: si cerca l'h1. */
+    await screen.findByRole('heading', { name: 'Stand Uno', level: 1 })
+
+    const btn = screen.getByRole('button', { name: 'Esporta prodotti' })
+    /* Un bottone morto e' un vicolo cieco: il title dice il motivo. */
+    expect(btn).toBeDisabled()
+    expect(btn.getAttribute('title')).toBe('Nessun prodotto in menu da esportare')
+  })
+
+  it('nessuno dei due compare per chi non puo\' esportare', async () => {
+    authUser = null
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    expect(screen.queryByRole('button', { name: 'Esporta social' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Esporta prodotti' })).toBeNull()
   })
 })

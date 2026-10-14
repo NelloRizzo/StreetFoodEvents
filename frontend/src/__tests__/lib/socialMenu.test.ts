@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildSocialMenuCaption,
   circledInitialText,
+  fileSlug,
   formatCurrencyInline,
   formatEventDateRange,
   formatCredits,
@@ -103,6 +104,24 @@ describe('stripHtml', () => {
   it('handles null and empty input', () => {
     expect(stripHtml(null)).toBe('')
     expect(stripHtml('')).toBe('')
+  })
+})
+
+describe('fileSlug', () => {
+  it('toglie spazi e caratteri che non stanno in un nome file', () => {
+    expect(fileSlug('Stand Uno')).toBe('Stand-Uno')
+    expect(fileSlug('Panino "della casa" / 2')).toBe('Panino-della-casa-2')
+  })
+
+  it('leggibile sulle vocali accentate, non "Caff-"', () => {
+    /* Il nome arriva da un form admin e finisce in download: con il solo
+       replace delle lettere non-ASCII "Caffè" diventerebbe "Caff-". */
+    expect(fileSlug('Caffè Perù')).toBe('Caffe-Peru')
+  })
+
+  it('non lascia trattini alle estremità e non diventa mai vuoto', () => {
+    expect(fileSlug('  Stand Uno  ')).toBe('Stand-Uno')
+    expect(fileSlug('...')).toBe('senza-nome')
   })
 })
 

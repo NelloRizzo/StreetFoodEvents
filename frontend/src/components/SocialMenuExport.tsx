@@ -10,37 +10,32 @@ import {
   formatMonetaLine,
   isBareCurrencySymbol,
 } from '../lib/socialMenu'
+/* Le primitive di disegno stanno in lib: l'export dei singoli prodotti deve
+   produrre immagini con lo stesso formato, e due copie andrebbero tenute
+   allineate a mano. */
+import {
+  POSTER_HEIGHT,
+  POSTER_WIDTH,
+  drawCircleImage,
+  drawEventBand,
+  drawPosterFooter,
+  drawPrice,
+  drawRoundedImage,
+  loadImage,
+  posterColors,
+  wrapText,
+  type SocialPosterEvent,
+  type SocialPosterStand,
+} from '../lib/socialCanvas'
 import type { UploadedImage } from '../lib/upload'
-import styles from './SocialMenuExport.module.scss'
+import styles from './SocialExport.module.scss'
 
-const POSTER_WIDTH = 1080
-const POSTER_HEIGHT = 1350
 const INCLUDE_PRICES_KEY = 'sfe-social-include-prices'
 
-export type SocialMenuExportEvent = {
-  id: string
-  name: string
-  logo: UploadedImage | null
-  startDate: string
-  endDate: string
-  location?: { label?: string | null; city?: string | null } | null
-  shortDescription?: string | null
-  currencyName: string
-  currencySymbol?: UploadedImage | null
-  exchangeRate?: number | null
-  themeBrand?: string | null
-  themeText?: string | null
-  themeSurface?: string | null
-  themeHighlight?: string | null
-}
-
-export type SocialMenuExportStand = {
-  id: string
-  name: string
-  slogan?: string | null
-  logo: UploadedImage | null
-  coverImage: UploadedImage | null
-}
+/* Alias mantenuti: i nomi sono quelli con cui il componente è stato
+   introdotto e restano nella sua firma pubblica. */
+export type SocialMenuExportEvent = SocialPosterEvent
+export type SocialMenuExportStand = SocialPosterStand
 
 export type SocialMenuExportMenuItem = {
   id: string
@@ -66,173 +61,7 @@ type Props = {
   onClose: () => void
 }
 
-function loadImage(src: string, crossOrigin = false): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    if (crossOrigin) img.crossOrigin = 'anonymous'
-    img.onload = () => resolve(img)
-    img.onerror = () => resolve(null)
-    img.src = src
-  })
-}
-
-function drawRoundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.arcTo(x + w, y, x + w, y + h, r)
-  ctx.arcTo(x + w, y + h, x, y + h, r)
-  ctx.arcTo(x, y + h, x, y, r)
-  ctx.arcTo(x, y, x + w, y, r)
-  ctx.closePath()
-}
-
-function clipRoundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.save()
-  drawRoundRect(ctx, x, y, w, h, r)
-  ctx.clip()
-}
-
-function drawRoundedImage(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement | null,
-  x: number,
-  y: number,
-  size: number,
-  radius: number,
-) {
-  clipRoundRect(ctx, x, y, size, size, radius)
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(x, y, size, size)
-  if (img) {
-    const s = Math.max(size / img.width, size / img.height)
-    const w = img.width * s
-    const h = img.height * s
-    ctx.drawImage(img, x + (size - w) / 2, y + (size - h) / 2, w, h)
-  }
-  ctx.restore()
-  ctx.save()
-  drawRoundRect(ctx, x, y, size, size, radius)
-  ctx.strokeStyle = 'rgba(255,255,255,0.85)'
-  ctx.lineWidth = 3
-  ctx.stroke()
-  ctx.restore()
-}
-
-function drawCircleImage(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement | null,
-  cx: number,
-  cy: number,
-  d: number,
-  initial: string,
-) {
-  ctx.save()
-  ctx.beginPath()
-  ctx.arc(cx, cy, d / 2, 0, Math.PI * 2)
-  ctx.closePath()
-  ctx.fillStyle = '#ffffff'
-  ctx.fill()
-  if (img) {
-    ctx.clip()
-    const s = Math.max(d / img.width, d / img.height)
-    const w = img.width * s
-    const h = img.height * s
-    ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h)
-  } else {
-    ctx.clip()
-    ctx.fillStyle = '#f1ebde'
-    ctx.fill()
-    ctx.fillStyle = '#587065'
-    ctx.font = '700 52px "Segoe UI", Inter, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(initial.charAt(0).toUpperCase(), cx, cy + 2)
-  }
-  ctx.restore()
-  ctx.save()
-  ctx.beginPath()
-  ctx.arc(cx, cy, d / 2, 0, Math.PI * 2)
-  ctx.closePath()
-  ctx.strokeStyle = 'rgba(255,255,255,0.85)'
-  ctx.lineWidth = 5
-  ctx.stroke()
-  ctx.restore()
-}
-
-function drawCurrencyGlyph(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  d: number,
-  img: HTMLImageElement | null,
-  initial: string,
-  brand: string,
-) {
-  ctx.save()
-  ctx.beginPath()
-  ctx.arc(cx, cy, d / 2, 0, Math.PI * 2)
-  ctx.closePath()
-  ctx.fillStyle = '#ffffff'
-  ctx.fill()
-  if (img) {
-    ctx.clip()
-    const s = Math.max(d / img.width, d / img.height)
-    const w = img.width * s
-    const h = img.height * s
-    ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h)
-  } else {
-    ctx.fillStyle = brand
-    ctx.font = '700 18px "Segoe UI", Inter, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(initial, cx, cy + 1)
-  }
-  ctx.beginPath()
-  ctx.arc(cx, cy, d / 2, 0, Math.PI * 2)
-  ctx.strokeStyle = brand
-  ctx.lineWidth = 2
-  ctx.stroke()
-  ctx.restore()
-}
-
-function wrapText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-  maxLines: number,
-): string[] {
-  const words = text.split(/\s+/)
-  const lines: string[] = []
-  let line = ''
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word
-    if (ctx.measureText(candidate).width > maxWidth && line) {
-      lines.push(line)
-      line = word
-      if (lines.length >= maxLines) break
-    } else {
-      line = candidate
-    }
-  }
-  if (line && lines.length < maxLines) lines.push(line)
-  return lines
-}
-
-async function generatePoster(
+export async function generatePoster(
   ctx: CanvasRenderingContext2D,
   event: SocialMenuExportEvent,
   stand: SocialMenuExportStand,
@@ -242,11 +71,8 @@ async function generatePoster(
 ): Promise<void> {
   const W = POSTER_WIDTH
   const H = POSTER_HEIGHT
-  const brand = event.themeBrand ?? '#bf5a2a'
-  const ink = event.themeText ?? '#14261f'
-  const inkSoft = event.themeText ?? '#587065'
-  const surface = event.themeSurface ?? '#fffaf2'
-  const highlight = event.themeHighlight ?? '#f4c978'
+  const colors = posterColors(event)
+  const { brand, ink, inkSoft, surface, highlight } = colors
   const currencyName = (event.currencyName ?? '').trim() || '€'
   const monetaLine = formatMonetaLine(event.currencyName, event.exchangeRate)
   const currencyBareSymbol = isBareCurrencySymbol(event.currencyName) ? currencyName : null
@@ -270,20 +96,7 @@ async function generatePoster(
   ctx.fillRect(0, 0, W, H)
 
   // ── Brand band (event) ──
-  ctx.save()
-  ctx.fillStyle = brand
-  ctx.fillRect(0, 0, W, 140)
-
-  if (eventLogo) {
-    drawCircleImage(ctx, eventLogo, 92, 70, 76, event.name)
-  }
-  ctx.textAlign = 'left'
-  ctx.textBaseline = 'middle'
-  ctx.fillStyle = '#ffffff'
-  ctx.font = '700 40px "Segoe UI", Inter, sans-serif'
-  const evNameLines = wrapText(ctx, event.name, W - 165 - 40, 1)
-  ctx.fillText(evNameLines[0] ?? '', 165, 70)
-  ctx.restore()
+  drawEventBand(ctx, colors, eventLogo, event.name)
 
   // ── Banner stand (se presente) ──
   const bandBottom = 140
@@ -371,28 +184,13 @@ async function generatePoster(
     })
 
     if (hasPrice) {
-      ctx.fillStyle = brand
-      ctx.font = '700 26px "Segoe UI", Inter, sans-serif'
-      ctx.textAlign = 'right'
-      ctx.textBaseline = 'middle'
-      const rightX = x + colWidth - 8
-
-      if (currencyBareSymbol) {
-        ctx.fillText(`${formatCredits(p.price)} ${currencyBareSymbol}`, rightX, y + 32)
-      } else {
-        const glyphSize = 30
-        const gap = 7
-        ctx.fillText(formatCredits(p.price), rightX - gap - glyphSize, y + 32)
-        drawCurrencyGlyph(
-          ctx,
-          rightX - glyphSize / 2,
-          y + 32,
-          glyphSize,
-          currencyImg,
-          currencyGlyphInitial,
-          brand,
-        )
-      }
+      drawPrice(ctx, colors, formatCredits(p.price), x + colWidth - 8, y + 32, {
+        align: 'right',
+        bareSymbol: currencyBareSymbol,
+        glyphSize: 30,
+        currencyImage: currencyImg,
+        currencyInitial: currencyGlyphInitial,
+      })
     }
   })
 
@@ -411,54 +209,12 @@ async function generatePoster(
   }
 
   // ── Bottom: location/date box + QR ──
-  const dateRange = formatEventDateRange(event.startDate, event.endDate)
-  const locLabel = (event.location?.city ?? event.location?.label ?? '').trim()
-
-  ctx.save()
-  ctx.fillStyle = brand
-  drawRoundRect(ctx, 95, 1160, 700, 118, 24)
-  ctx.fill()
-  ctx.restore()
-
-  ctx.save()
-  ctx.fillStyle = '#ffffff'
-  ctx.textAlign = 'left'
-  ctx.textBaseline = 'middle'
-  if (locLabel) {
-    ctx.font = '700 34px "Segoe UI", Inter, sans-serif'
-    ctx.fillText(locLabel, 150, 1200)
-  }
-  if (dateRange) {
-    ctx.font = '500 30px "Segoe UI", Inter, sans-serif'
-    ctx.fillText(dateRange, 150, locLabel ? 1244 : 1220)
-  }
-  ctx.restore()
-
-  if (qrImage) {
-    const qrSize = 118
-    const qx = W - 95 - qrSize
-    const qy = 1156
-    ctx.save()
-    ctx.fillStyle = '#ffffff'
-    drawRoundRect(ctx, qx, qy, qrSize, qrSize, 16)
-    ctx.fill()
-    ctx.clip()
-    ctx.drawImage(qrImage, qx + 5, qy + 5, qrSize - 10, qrSize - 10)
-    ctx.restore()
-
-    ctx.save()
-    ctx.strokeStyle = brand
-    ctx.lineWidth = 4
-    drawRoundRect(ctx, qx, qy, qrSize, qrSize, 16)
-    ctx.stroke()
-    ctx.restore()
-
-    ctx.fillStyle = brand
-    ctx.font = '600 22px "Segoe UI", Inter, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('Menu dello stand', qx + qrSize / 2, qy + qrSize + 20)
-  }
+  drawPosterFooter(ctx, colors, {
+    locationLabel: (event.location?.city ?? event.location?.label ?? '').trim(),
+    dateRange: formatEventDateRange(event.startDate, event.endDate),
+    qrImage,
+    qrLabel: 'Menu dello stand',
+  })
 
   ctx.restore()
 }

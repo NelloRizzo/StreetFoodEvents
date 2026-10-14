@@ -10,6 +10,7 @@ import { useAuth } from '../features/auth/auth-context'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { SocialMenuExport } from '../components/SocialMenuExport'
+import { SocialProductExport } from '../components/SocialProductExport'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { ALLERGEN_LABELS } from '../lib/allergens'
 import { trackOrderCreated, trackStandClick, trackProductClick } from '../lib/analytics'
@@ -108,6 +109,7 @@ export function EventStandMenuPage() {
   const [categoryItems, setCategoryItems] = useState<CategoryMenuItem[]>([])
   const [categoryLabels, setCategoryLabels] = useState<string[]>([])
   const [socialOpen, setSocialOpen] = useState(false)
+  const [productSocialOpen, setProductSocialOpen] = useState(false)
   const [canExportSocial, setCanExportSocial] = useState(false)
   const [reviewAvg, setReviewAvg] = useState<{ avg: number; count: number } | null>(null)
 
@@ -416,13 +418,28 @@ export function EventStandMenuPage() {
                 )}
               </Link>
               {canExportSocial && user && (
-                <button
-                  type="button"
-                  className={styles.socialBtn}
-                  onClick={() => setSocialOpen(true)}
-                >
-                  Esporta social
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className={styles.socialBtn}
+                    onClick={() => setSocialOpen(true)}
+                  >
+                    Esporta social
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.socialBtn}
+                    onClick={() => setProductSocialOpen(true)}
+                    disabled={menuItems.length === 0}
+                    title={
+                      menuItems.length === 0
+                        ? 'Nessun prodotto in menu da esportare'
+                        : 'Un\'immagine per prodotto'
+                    }
+                  >
+                    Esporta prodotti
+                  </button>
+                </>
               )}
               <QRCodeDownload
                 apiPath={`/stands/${standId}/qrcode?eventId=${eventId}`}
@@ -829,6 +846,15 @@ export function EventStandMenuPage() {
           stand={stand}
           menuItems={menuItems}
           onClose={() => setSocialOpen(false)}
+        />
+      )}
+      {productSocialOpen && (
+        <SocialProductExport
+          open={productSocialOpen}
+          event={event}
+          stand={stand}
+          menuItems={menuItems}
+          onClose={() => setProductSocialOpen(false)}
         />
       )}
       {alertMsg && (

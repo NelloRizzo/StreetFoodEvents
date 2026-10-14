@@ -161,6 +161,10 @@
   align-items: center;
   gap: 0.6rem;
   flex-shrink: 0;
+  /* Con i due pulsanti di export affiancati, su telefono la riga non entra:
+     senza wrap i pulsanti escono dal bordo destro invece di andare a capo. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .socialBtn {
