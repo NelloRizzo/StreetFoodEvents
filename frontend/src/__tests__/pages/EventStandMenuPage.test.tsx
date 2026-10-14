@@ -118,6 +118,13 @@ const renderPage = () =>
 
 const descNodes = () => document.querySelectorAll(`.${styles.menuDescription}`)
 
+/* La classe dei secondi meta e' usata anche dalla riga "Stand: N — Nome",
+   quindi si filtrano le righe che cominciano con l'etichetta. */
+const ingredientNodes = () =>
+  [...document.querySelectorAll(`.${styles.menuIngredients}`)].filter((el) =>
+    el.textContent?.startsWith('Ingredienti: '),
+  )
+
 /* Fixture del menu letta al momento della fetch, così un test può cambiare
    i prodotti senza toccare il mock dell'API. */
 const buildMenu = () => [
@@ -186,6 +193,34 @@ describe('menu stand — descrizione del prodotto in elenco', () => {
 
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveTextContent(DESCRIPTION)
+  })
+})
+
+describe('menu stand — etichetta degli ingredienti', () => {
+  beforeEach(() => {
+    resetFixture()
+  })
+
+  it('la riga ingredienti inizia con "Ingredienti: "', async () => {
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    const lines = ingredientNodes()
+    expect(lines).toHaveLength(1)
+    expect(lines[0].textContent).toBe('Ingredienti: pane, cotto')
+  })
+
+  it('la riga "Stand:" della vista per categoria NON ha l\'etichetta', async () => {
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    fireEvent.click(screen.getByRole('button', { name: /Per categoria/i }))
+    await screen.findByText('Panino categoria')
+
+    /* Nella vista per categoria la stessa classe disegna anche "Stand: N" */
+    const standLine = screen.getByText(/^Stand: /)
+    expect(standLine.textContent?.startsWith('Ingredienti: ')).toBe(false)
+    expect(ingredientNodes()).toHaveLength(1)
   })
 })
 

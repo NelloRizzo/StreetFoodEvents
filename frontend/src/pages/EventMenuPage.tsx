@@ -268,7 +268,12 @@ export function EventMenuPage() {
                             <span className={styles.menuDescription}>{product.description}</span>
                           )}
                           {product.ingredients.length > 0 && (
-                            <span className={styles.menuIngredients}>{product.ingredients.join(', ')}</span>
+                            <span className={styles.menuIngredients}>
+                              {/* Stessa etichetta della pagina del singolo
+                                  stand e del modale prodotto. */}
+                              <strong>Ingredienti: </strong>
+                              {product.ingredients.join(', ')}
+                            </span>
                           )}
                         </div>
                         <div className={styles.menuRight}>
@@ -368,7 +373,10 @@ export function EventMenuPage() {
                             <span className={styles.menuDescription}>{product.description}</span>
                           )}
                           {product.ingredients.length > 0 && (
-                            <span className={styles.menuIngredients}>{product.ingredients.join(', ')}</span>
+                            <span className={styles.menuIngredients}>
+                              <strong>Ingredienti: </strong>
+                              {product.ingredients.join(', ')}
+                            </span>
                           )}
                         </div>
                         <div className={styles.menuRight}>

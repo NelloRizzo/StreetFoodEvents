@@ -524,6 +524,10 @@ export function EventStandMenuPage() {
                           )}
                           {product && product.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>
+                              {/* Etichetta come nel modale: senza, una riga
+                                  di ingredienti non si distingue dalla
+                                  descrizione sopra. */}
+                              <strong>Ingredienti: </strong>
                               {product.ingredients.join(', ')}
                             </span>
                           )}
@@ -710,7 +714,10 @@ export function EventStandMenuPage() {
                                 <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                               )}
                               {item.ingredients.length > 0 && (
-                                <span className={styles.menuIngredients}>{item.ingredients.join(', ')}</span>
+                                <span className={styles.menuIngredients}>
+                                  <strong>Ingredienti: </strong>
+                                  {item.ingredients.join(', ')}
+                                </span>
                               )}
                             </div>
                             <div className={styles.menuRight}>
@@ -751,7 +758,10 @@ export function EventStandMenuPage() {
                             <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                           )}
                           {item.ingredients.length > 0 && (
-                            <span className={styles.menuIngredients}>{item.ingredients.join(', ')}</span>
+                            <span className={styles.menuIngredients}>
+                              <strong>Ingredienti: </strong>
+                              {item.ingredients.join(', ')}
+                            </span>
                           )}
                         </div>
                         <div className={styles.menuRight}>

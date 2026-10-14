@@ -4,6 +4,11 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Ottobre 2026
+- **Menu: la riga degli ingredienti parte con "Ingredienti: "**. Richiesta dell'operatore.
+  • **Le 5 card dei due menu pubblici** (pagina stand: vista stand, per categoria, "Senza categoria"; pagina menu evento: per stand, per categorie). I **modali** avevano già l'etichetta in grassetto: ora anche l'elenco dice la stessa cosa, e una riga di ingredienti non si confonde più con la descrizione sopra.
+  • **Le righe "Stand: N — Nome" non la prendono**: nella vista per categoria usano la stessa classe e si distinguevano solo dal contenuto. Il test filtra per l'inizio del testo, così non passerebbe anche con l'etichetta assente.
+  • **Da tenere d'occhio: la riga è troncata.** La linea ingredienti è a nowrap con puntini di sospensione e "Ingredienti: " ne mangia circa un terzo: su una lista lunga il fondo si taglia prima di prima. Se serve, il passo dopo è due righe alla lista (`line-clamp: 2`) invece di una.
+  • Verifica: build ✓, **200 test ✓** (26 file, +4), lint 0 errori; i nuovi test verificati **non verdi a vuoto** (tolta l'etichetta ne falliscono 4 su 15).
 - **Export social: il prezzo e il simbolo della moneta non si toccano più (e non si sovrappongono)**. Difetto segnalato sull'immagine.
   • **Il difetto era due cose in una, e una più grave di quanto sembrasse.** Il gap fra numero e glifo era di 7px fissi — invisibile su uno schermo di telefono — e soprattutto la posizione del testo era calcolata **come se l'allineamento fosse sempre "right"**: nel poster di un singolo prodotto l'allineamento è `center`, quindi il glifo entrava **dentro il numero** (il testo veniva messo a `x - gap - glyphSize`, che con il testo centrato si sposta di metà la sua larghezza). Sembrava un problema di spaziatura, era un problema di posizionamento.
   • **Numero e simbolo sono ora due pezzi misurati**: la larghezza del numero si legge con `measureText` e il simbolo viene disegnato esattamente `gap` più in là. Niente più spazio dentro la stringa, che dipende dal carattere di spaziatura del font e sui numeri in grassetto sparisce. Vale sia per il glifo (cerchetto con l'iniziale o l'immagine caricata dal form) sia per il simbolo nudo `€`.

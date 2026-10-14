@@ -94,6 +94,14 @@ const renderPage = () =>
 
 const descNodes = () => document.querySelectorAll(`.${styles.menuDescription}`)
 
+/* Stessa classe anche per la riga "Stand: N — Nome": si filtra per
+   l'inizio del testo, altrimenti il test passerebbe anche senza
+   etichetta. */
+const ingredientNodes = () =>
+  [...document.querySelectorAll(`.${styles.menuIngredients}`)].filter((el) =>
+    el.textContent?.startsWith('Ingredienti: '),
+  )
+
 describe('menu evento — descrizione del prodotto in elenco', () => {
   beforeEach(() => {
     apiRequest.mockClear()
@@ -134,5 +142,26 @@ describe('menu evento — descrizione del prodotto in elenco', () => {
     await screen.findByText('Salsiccia e caciocavallo')
 
     expect(descNodes()).toHaveLength(0)
+  })
+
+  it('la riga ingredienti inizia con "Ingredienti: " in entrambe le viste', async () => {
+    renderPage()
+    await screen.findByText('Salsiccia e caciocavallo')
+    expect(ingredientNodes()[0].textContent).toBe('Ingredienti: salsiccia, caciotta')
+
+    fireEvent.click(screen.getByRole('tab', { name: /Per categorie/i }))
+    expect(ingredientNodes()).toHaveLength(1)
+    expect(ingredientNodes()[0].textContent).toBe('Ingredienti: salsiccia, caciotta')
+  })
+
+  it('la riga "Stand:" della vista per categorie resta senza etichetta', async () => {
+    renderPage()
+    await screen.findByText('Salsiccia e caciocavallo')
+    fireEvent.click(screen.getByRole('tab', { name: /Per categorie/i }))
+
+    /* Nella vista per categorie la stessa classe disegna anche "Stand: N",
+       che non e' una lista di ingredienti. */
+    expect(screen.getByText(/^Stand: /).textContent?.startsWith('Ingredienti: ')).toBe(false)
+    expect(ingredientNodes()).toHaveLength(1)
   })
 })
