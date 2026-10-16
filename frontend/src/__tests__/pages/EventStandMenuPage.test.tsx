@@ -281,4 +281,30 @@ describe('menu stand — pulsanti di export social', () => {
     expect(screen.queryByRole('button', { name: 'Esporta social' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Esporta prodotti' })).toBeNull()
   })
+
+  /* I due pulsanti stanno su una riga tutta loro, SOTTO l'header: dentro
+     l'header rubavano larghezza al nome della manifestazione, che sul
+     telefono si rimpiccioliva. La classe e' module-scoped e quindi il nome
+     cambia a ogni build, pero' il confronto fra classi dei due elementi
+     regge: quello del bottone non puo' essere fra le classi del contenitore
+     del nome evento. */
+  it('i due pulsanti stanno fuori dall\'header, in una riga separata', async () => {
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    const eventName = screen.getByText(/Festa di prova/)
+    const eventTitle = eventName.closest('p')
+    expect(eventTitle).not.toBeNull()
+    const headerText = eventTitle!.parentElement!
+
+    const menuBtn = screen.getByRole('button', { name: 'Esporta social' })
+    const prodottiBtn = screen.getByRole('button', { name: 'Esporta prodotti' })
+
+    expect(headerText.contains(menuBtn)).toBe(false)
+    expect(headerText.contains(prodottiBtn)).toBe(false)
+
+    /* E condividono lo stesso genitore, quello della riga dedicata. */
+    expect(menuBtn.parentElement).toBe(prodottiBtn.parentElement)
+    expect(menuBtn.parentElement!.contains(headerText)).toBe(false)
+  })
 })

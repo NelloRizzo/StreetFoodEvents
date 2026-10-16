@@ -161,10 +161,28 @@
   align-items: center;
   gap: 0.6rem;
   flex-shrink: 0;
-  /* Con i due pulsanti di export affiancati, su telefono la riga non entra:
-     senza wrap i pulsanti escono dal bordo destro invece di andare a capo. */
+  /* Restano solo recensione e QR: i due pulsanti di export sono su `.exportRow`.
+     Il wrap serve per quando la stella con il conteggio e' lunga. */
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+/* Riga dei due pulsanti di export, a tutta larghezza e sotto l'header.
+   Il margine sopra e' negativo per riprendere il `margin-bottom` dell'header
+   (1.5rem): senza, fra nome e pulsanti ci sarebbe una riga di vuoto. */
+.exportRow {
+  display: flex;
+  gap: 0.6rem;
+  margin: -0.75rem 0 1.25rem;
+}
+
+/* Ciascun pulsante prende meta' larghezza: due parole su un telefono stretto
+   non stanno in due terzi di riga, e i due bottoni insieme coprono la
+   larghezza del contenuto. `min-width: 0` serve perche' il testo lungo
+   (genere "Esporta prodotti") possa andare a capo invece di allargare la riga. */
+.exportRow .socialBtn {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .socialBtn {

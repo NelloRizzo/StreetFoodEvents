@@ -417,30 +417,6 @@ export function EventStandMenuPage() {
                   <span className={styles.reviewIcon} aria-hidden="true">⭐</span>
                 )}
               </Link>
-              {canExportSocial && user && (
-                <>
-                  <button
-                    type="button"
-                    className={styles.socialBtn}
-                    onClick={() => setSocialOpen(true)}
-                  >
-                    Esporta social
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.socialBtn}
-                    onClick={() => setProductSocialOpen(true)}
-                    disabled={menuItems.length === 0}
-                    title={
-                      menuItems.length === 0
-                        ? 'Nessun prodotto in menu da esportare'
-                        : 'Un\'immagine per prodotto'
-                    }
-                  >
-                    Esporta prodotti
-                  </button>
-                </>
-              )}
               <QRCodeDownload
                 apiPath={`/stands/${standId}/qrcode?eventId=${eventId}`}
                 fileName={`menu-${stand.name}`}
@@ -448,6 +424,34 @@ export function EventStandMenuPage() {
             </div>
           )}
         </div>
+
+        {/* I due pulsanti di export stanno su una riga tutta loro: dentro
+            `.headerActions` rubavano larghezza a `.headerText`, e il nome
+            della manifestazione si restringeva sul telefono. */}
+        {viewMode === 'stand' && canExportSocial && user && (
+          <div className={styles.exportRow}>
+            <button
+              type="button"
+              className={styles.socialBtn}
+              onClick={() => setSocialOpen(true)}
+            >
+              Esporta social
+            </button>
+            <button
+              type="button"
+              className={styles.socialBtn}
+              onClick={() => setProductSocialOpen(true)}
+              disabled={menuItems.length === 0}
+              title={
+                menuItems.length === 0
+                  ? 'Nessun prodotto in menu da esportare'
+                  : 'Un\'immagine per prodotto'
+              }
+            >
+              Esporta prodotti
+            </button>
+          </div>
+        )}
 
         {viewMode === 'stand' ? (
           <div className={styles.layout}>
