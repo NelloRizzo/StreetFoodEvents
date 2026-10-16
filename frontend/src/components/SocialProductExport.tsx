@@ -9,7 +9,9 @@ import {
   formatEventDateRange,
   formatMonetaLine,
   isBareCurrencySymbol,
+  standQrQuery,
   stripHtml,
+  type StandShortLinks,
 } from '../lib/socialMenu'
 import {
   drawCircleImage,
@@ -30,6 +32,7 @@ import {
 import type { UploadedImage } from '../lib/upload'
 import { useSocialFormat } from '../lib/useSocialFormat'
 import { SocialFormatPicker } from './SocialFormatPicker'
+import { ShortLinkNotice } from './ShortLinkNotice'
 import styles from './SocialExport.module.scss'
 
 const INCLUDE_PRICES_KEY = 'sfe-social-include-prices'
@@ -49,6 +52,8 @@ type Props = {
     priceOverride: number | null
   }[]
   onClose: () => void
+  /** Link brevi dello stand e dell'evento, se esistono. */
+  shortLinks?: StandShortLinks
 }
 
 type Product = {
@@ -230,7 +235,7 @@ export async function generateProductPosterForPreview(
   )
 }
 
-export function SocialProductExport({ open, event, stand, menuItems, onClose }: Props) {
+export function SocialProductExport({ open, event, stand, menuItems, shortLinks, onClose }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [includePrices, setIncludePrices] = useState<boolean>(() => {
     try {
@@ -340,7 +345,7 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
 
     try {
       const qrResponse = await apiRequest<{ qrCode: string }>(
-        `/stands/${stand.id}/qrcode?eventId=${event.id}`,
+        standQrQuery({ eventId: event.id, standId: stand.id, shortLinks }),
       )
       const qrImage = await loadImage(qrResponse.qrCode)
       const logoSource = stand.logo?.url ?? stand.coverImage?.url ?? ''
@@ -430,6 +435,8 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
         ) : (
           <>
             <SocialFormatPicker format={format} onChange={changeFormat} />
+
+            {!shortLinks?.standAlias && <ShortLinkNotice standId={stand.id} />}
 
             <div className={styles.optionsRow}>
               <label className={styles.optionsLabel}>

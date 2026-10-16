@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildSocialMenuCaption,
+  standAliasFromName,
+  standPublicUrl,
+  standQrQuery,
   circledInitialText,
   fileSlug,
   formatCurrencyInline,
@@ -122,6 +125,77 @@ describe('fileSlug', () => {
   it('non lascia trattini alle estremità e non diventa mai vuoto', () => {
     expect(fileSlug('  Stand Uno  ')).toBe('Stand-Uno')
     expect(fileSlug('...')).toBe('senza-nome')
+  })
+})
+
+describe('standPublicUrl', () => {
+  const base = { origin: 'https://app.example.com', eventId: 'e1', standId: 's1' }
+
+  /* Il link breve del menu sta dentro quello dell'evento:
+     `/show/stand/<alias evento>/<alias stand>`. */
+  it('con i due alias compone il link annidato', () => {
+    expect(
+      standPublicUrl({
+        ...base,
+        shortLinks: { standAlias: 'panino-doro', eventAlias: 'evento-2027' },
+      }),
+    ).toBe('https://app.example.com/show/stand/evento-2027/panino-doro')
+  })
+
+  /* Composto al volo e non scritto da nessuna parte: senza alias dell'evento
+     si usa quello dello stand, che da solo porta comunque alla sua pagina. */
+  it('senza alias dell\'evento usa quello dello stand', () => {
+    expect(standPublicUrl({ ...base, shortLinks: { standAlias: 'panino-doro', eventAlias: null } })).toBe(
+      'https://app.example.com/show/stand/panino-doro',
+    )
+  })
+
+  it('senza nessun alias resta il link lungo, che funziona', () => {
+    expect(standPublicUrl({ ...base })).toBe('https://app.example.com/events/e1/stands/s1')
+    expect(standPublicUrl({ ...base, shortLinks: { standAlias: null, eventAlias: null } })).toBe(
+      'https://app.example.com/events/e1/stands/s1',
+    )
+  })
+})
+
+describe('standQrQuery', () => {
+  const base = { eventId: 'e1', standId: 's1' }
+
+  it('manda al server i due alias, che il server verifica', () => {
+    const q = standQrQuery({
+      ...base,
+      shortLinks: { standAlias: 'panino-doro', eventAlias: 'evento-2027' },
+    })
+    expect(q).toContain('/stands/s1/qrcode')
+    expect(q).toContain('eventId=e1')
+    expect(q).toContain('alias=panino-doro')
+    expect(q).toContain('eventAlias=evento-2027')
+  })
+
+  it('senza alias manda solo l\'evento', () => {
+    const q = standQrQuery({ ...base })
+    expect(q).toBe('/stands/s1/qrcode?eventId=e1')
+  })
+})
+
+describe('standAliasFromName', () => {
+  it('ripulisce il nome in qualcosa che si puo\' scrivere in un URL', () => {
+    expect(standAliasFromName("Panino d'Oro")).toBe('panino-d-oro')
+    expect(standAliasFromName('Caffè & Piadè')).toBe('caffe-piade')
+    expect(standAliasFromName('  Porchetta  e  Brasato  ')).toBe('porchetta-e-brasato')
+  })
+
+  /* Un alias col nome di segnaposto sarebbe un alias falso: meglio il campo
+     vuoto, cosi' l'operatore deve scegliere. */
+  it('un nome senza nulla di scrivibile non produce un alias', () => {
+    expect(standAliasFromName('…')).toBe('')
+    expect(standAliasFromName('')).toBe('')
+  })
+
+  it('il risultato e\' sempre ammesso dal validatore degli alias', () => {
+    for (const name of ["Panino d'Oro", 'Caffè & Piadè', '数字 123', 'A-B_C']) {
+      expect(standAliasFromName(name)).toMatch(/^[a-z0-9_-]*$/)
+    }
   })
 })
 

@@ -88,6 +88,15 @@
   margin: 0 0 1rem;
 }
 
+/* Spiegazione del campo: dice a cosa serve il nome proposto e cosa diventa
+   l'indirizzo, cosi' l'operatore decide senza aprire il link. */
+.hint {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin: 0 0 0.75rem;
+}
+
 .list {
   display: flex;
   flex-direction: column;

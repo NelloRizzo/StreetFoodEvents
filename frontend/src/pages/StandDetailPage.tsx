@@ -12,6 +12,7 @@ import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { CategorySelect } from '../components/CategorySelect'
 import { ALLERGEN_OPTIONS } from '../lib/allergens'
 import { eventWithDate } from '../lib/events'
+import { standAliasFromName } from '../lib/socialMenu'
 import type { UploadedImage } from '../lib/upload'
 import styles from './StandDetailPage.module.scss'
 
@@ -79,6 +80,7 @@ export function StandDetailPage() {
   const [favLoading, setFavLoading] = useState(false)
   const [eventProducts, setEventProducts] = useState<EventProduct[]>([])
   const [events, setEvents] = useState<EventRef[]>([])
+  const [eventAliases, setEventAliases] = useState<Record<string, string>>({})
   const [products, setProducts] = useState<ProductRef[]>([])
   const [showProductForm, setShowProductForm] = useState(false)
   const [productForm, setProductForm] = useState<ProductFormData>(emptyProductForm)
@@ -233,6 +235,36 @@ export function StandDetailPage() {
     }
   }, [standId])
 
+  /* Alias degli eventi collegati: serve a spiegare quale sara' l'indirizzo
+     breve del menu, che e' annidato dentro quello dell'evento. */
+  useEffect(() => {
+    if (!stand?.eventIds?.length) {
+      setEventAliases({})
+      return
+    }
+    let cancelled = false
+    const load = async () => {
+      const found: Record<string, string> = {}
+      await Promise.all(
+        stand.eventIds.map(async (id) => {
+          try {
+            const data = await apiRequest<{ items: { text: string }[] }>(
+              `/aliases?entityType=event&entityRef=${id}`,
+            )
+            if (data.items[0]) found[id] = data.items[0].text
+          } catch {
+            /* evento senza alias: semplicemente non si annida niente */
+          }
+        }),
+      )
+      if (!cancelled) setEventAliases(found)
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [stand?.eventIds])
+
   useEffect(() => {
     if (window.location.hash === '#prodotti') {
       document.getElementById('prodotti')?.scrollIntoView({ behavior: 'smooth' })
@@ -336,6 +368,19 @@ export function StandDetailPage() {
   )
     .slice()
     .sort((a, b) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0))
+
+  /* Il link breve del menu e' annidato in quello dell'evento:
+     `/show/stand/<alias evento>/<alias stand>`. I due alias restano segmenti
+     singoli e vengono composti dal server, quindi il nome proposto qui puo'
+     essere solo quello dello stand: non c'e' niente da tenere allineato se
+     l'evento cambia link breve. */
+  const suggestedStandAlias = stand ? standAliasFromName(stand.name) : ''
+  const linkedEventAlias = stand?.eventIds
+    .map((id) => eventAliases[id])
+    .find((alias) => Boolean(alias))
+  const standAliasHint = linkedEventAlias
+    ? `Proposto dal nome dello stand. Con il link breve dell'evento il menu si aprira' su /show/stand/${linkedEventAlias}/${suggestedStandAlias}.`
+    : 'Nessun evento collegato ha ancora un link breve: creane uno dalla pagina dell\'evento, cosi\' anche il link del menu si accorcia.'
 
   const sortedStations = stations.slice().sort((a, b) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0))
 
@@ -663,7 +708,12 @@ export function StandDetailPage() {
           </div>
         </section>
 
-        <AliasManager entityType="stand" entityRef={standId!} />
+        <AliasManager
+          entityType="stand"
+          entityRef={standId!}
+          suggestedText={suggestedStandAlias}
+          hint={standAliasHint}
+        />
       </div>
     </div>
   )

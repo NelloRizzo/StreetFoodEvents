@@ -13,6 +13,7 @@ import { SocialMenuExport } from '../components/SocialMenuExport'
 import { SocialProductExport } from '../components/SocialProductExport'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { ALLERGEN_LABELS } from '../lib/allergens'
+import type { StandShortLinks } from '../lib/socialMenu'
 import { trackOrderCreated, trackStandClick, trackProductClick } from '../lib/analytics'
 import type { UploadedImage } from '../lib/upload'
 import styles from './EventStandMenuPage.module.scss'
@@ -111,6 +112,10 @@ export function EventStandMenuPage() {
   const [socialOpen, setSocialOpen] = useState(false)
   const [productSocialOpen, setProductSocialOpen] = useState(false)
   const [canExportSocial, setCanExportSocial] = useState(false)
+  const [shortLinks, setShortLinks] = useState<StandShortLinks>({
+    standAlias: null,
+    eventAlias: null,
+  })
   const [reviewAvg, setReviewAvg] = useState<{ avg: number; count: number } | null>(null)
 
   const total = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
@@ -164,9 +169,43 @@ export function EventStandMenuPage() {
       .catch(() => setIsLoading(false))
   }, [eventId, standId])
 
+  /* I link brevi servono all'export social, al post e al QR: quello dello
+     stand e, per il link annidato, quello dell'evento. Si cercano solo se
+     l'operatore puo' esportare: la rotta degli alias e' protetta da
+     `authMiddleware`, quindi per un visitatore anonimo risponderebbe 401 e la
+     pagina continuerebbe comunque a funzionare. */
   useEffect(() => {
-    if (user) setCustomerName(`${user.firstName} ${user.lastName}`)
-  }, [user])
+    if (!canExportSocial || !standId || !eventId) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const [standData, eventData] = await Promise.all([
+          apiRequest<{ items: { text: string }[] }>(
+            `/aliases?entityType=stand&entityRef=${standId}`,
+          ),
+          apiRequest<{ items: { text: string }[] }>(
+            `/aliases?entityType=event&entityRef=${eventId}`,
+          ),
+        ])
+        /* Se uno ne avesse piu' di uno si prende il primo in ordine
+           alfabetico: e' l'ordine con cui l'API li restituisce e quello con
+           cui li mostra la pagina di amministrazione, quindi non e' una scelta
+           nascosta. */
+        if (!cancelled) {
+          setShortLinks({
+            standAlias: standData.items[0]?.text ?? null,
+            eventAlias: eventData.items[0]?.text ?? null,
+          })
+        }
+      } catch {
+        /* nessun alias, o rotta non raggiungibile: si resta sul link lungo */
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [canExportSocial, standId, eventId])
 
   useEffect(() => {
     if (!user || !eventId || !standId) return
@@ -859,6 +898,7 @@ export function EventStandMenuPage() {
           event={event}
           stand={stand}
           menuItems={menuItems}
+          shortLinks={shortLinks}
           onClose={() => setSocialOpen(false)}
         />
       )}
@@ -868,6 +908,7 @@ export function EventStandMenuPage() {
           event={event}
           stand={stand}
           menuItems={menuItems}
+          shortLinks={shortLinks}
           onClose={() => setProductSocialOpen(false)}
         />
       )}

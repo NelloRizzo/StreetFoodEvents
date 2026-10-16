@@ -200,3 +200,63 @@ export async function resolveAlias(req: Request, res: Response) {
         entityName: entity.name
     });
 }
+
+/**
+ * Link breve di uno stand **annidato nell'evento**: `/show/stand/<alias evento>/<alias stand>`.
+ *
+ *  I due alias restano segmenti singoli e vengono composti qui, al momento della
+ *  richiesta: `/show/stand/evento-2027/panino-doro` resta valido anche se il
+ *  giorno dopo l'evento viene rinominato da `evento-2027` a `sf-2027`, perche'
+ *  l'URL non contiene niente di scritto da riallineare. Il percorso non viene
+ *  mai salvato da nessuna parte.
+ *
+ *  Il controllo che conta e' l'ultimo: lo stand deve essere **di quell'evento**.
+ *  Senza, `/show/stand/evento-a/stand-b` porterebbe alla pagina di uno stand
+ *  estraneo all'evento, cioe' un link breve che porta fuori dal contesto per
+ *  cui e' stato scritto.
+ */
+export async function resolveStandAliasInEvent(req: Request, res: Response) {
+    const eventAlias = (req.params.eventAlias as string | undefined)?.trim().toLowerCase();
+    const standAlias = (req.params.standAlias as string | undefined)?.trim().toLowerCase();
+
+    if (!eventAlias || !standAlias) {
+        return res.status(400).json({ message: 'Event alias and stand alias are required' });
+    }
+
+    const [eventDoc, standDoc] = await Promise.all([
+        AliasModel.findOne({ text: eventAlias, entityType: 'event' }),
+        AliasModel.findOne({ text: standAlias, entityType: 'stand' })
+    ]);
+
+    if (!eventDoc) {
+        return res.status(404).json({ message: 'event alias not found' });
+    }
+
+    if (!standDoc) {
+        return res.status(404).json({ message: 'stand alias not found' });
+    }
+
+    const stand = await StandModel.findById(standDoc.entityRef)
+        .select('name eventIds locations')
+        .lean();
+
+    if (!stand) {
+        return res.status(404).json({ message: 'Referenced stand not found' });
+    }
+
+    const eventId = eventDoc.entityRef.toString();
+    const linked = stand.eventIds?.some((id) => id.toString() === eventId) === true
+        || stand.locations?.some((loc) => loc.eventId?.toString() === eventId) === true;
+
+    if (!linked) {
+        return res.status(404).json({ message: 'Stand is not linked to that event' });
+    }
+
+    return res.status(200).json({
+        entityType: 'stand',
+        eventId,
+        standId: stand._id.toString(),
+        entityId: stand._id.toString(),
+        entityName: stand.name
+    });
+}

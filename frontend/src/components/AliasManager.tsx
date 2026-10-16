@@ -13,9 +13,16 @@ type AliasItem = {
 type Props = {
   entityType: 'event' | 'stand'
   entityRef: string
+  /** Testo proposto nel campo, mostrato finche' l'operatore non lo cambia.
+   *
+   *  Serve a proporre il nome senza scrivere niente alle spalle dell'utente:
+   *  il pulsante "Aggiungi" resta una decisione sua. */
+  suggestedText?: string | null
+  /** Cosa spiega il campo, quando il nome non parla da solo. */
+  hint?: string
 }
 
-export function AliasManager({ entityType, entityRef }: Props) {
+export function AliasManager({ entityType, entityRef, suggestedText, hint }: Props) {
   const [aliases, setAliases] = useState<AliasItem[]>([])
   const [newText, setNewText] = useState('')
   const [loading, setLoading] = useState(true)
@@ -37,8 +44,14 @@ export function AliasManager({ entityType, entityRef }: Props) {
     fetchAliases()
   }, [fetchAliases])
 
+  /* Il campo parte gia' compilato con il testo proposto, e resta
+     modificabile: `newText` parte vuoto e il suggerimento si vede finche'
+     l'operatore non scrive qualcosa. Non viene creato nulla da solo, il
+     pulsante resta la sua decisione. */
+  const effectiveText = newText || (suggestedText ?? '')
+
   const handleAdd = async () => {
-    const text = newText.trim().toLowerCase()
+    const text = effectiveText.trim().toLowerCase()
     if (!text || saving) return
 
     if (!/^[a-z0-9_-]+$/.test(text)) {
@@ -82,16 +95,18 @@ export function AliasManager({ entityType, entityRef }: Props) {
         <input
           className={styles.input}
           type="text"
-          value={newText}
+          value={effectiveText}
           onChange={(e) => { setNewText(e.target.value); setError(null) }}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           placeholder="mio-alias"
           pattern="[a-z0-9_-]+"
         />
-        <button className={styles.addBtn} onClick={handleAdd} disabled={saving || !newText.trim()}>
+        <button className={styles.addBtn} onClick={handleAdd} disabled={saving || !effectiveText.trim()}>
           {saving ? '...' : 'Aggiungi'}
         </button>
       </div>
+
+      {hint && <p className={styles.hint}>{hint}</p>}
 
       {error && <p className={styles.error}>{error}</p>}
 

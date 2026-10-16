@@ -211,6 +211,8 @@ export const router = createBrowserRouter([
   { path: 'orders/station/:stationId', element: <StationQueuePage /> },
   { path: 'events/:eventId/stands/:standId/tracking', element: <StandTrackingPage /> },
   { path: 'flyer', element: <FlyerPage /> },
+  // PRIMA di show/:entityType/:alias: il link annidato ha un segmento in piu'.
+  { path: 'show/stand/:eventAlias/:standAlias', element: <AliasRedirectPage /> },
   { path: 'show/:entityType/:alias', element: <AliasRedirectPage /> },
   { path: 'attiva/:token', element: <ActivationPage /> },
   { path: 'events/:eventId/adhesion-form', element: <AdhesionFormPublicPage /> },

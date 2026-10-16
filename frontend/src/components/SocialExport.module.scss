@@ -72,6 +72,24 @@
   cursor: pointer;
 }
 
+/* Avviso sul link breve mancante: un consiglio, non un errore, quindi tinta
+   attenuata e non quella rossa dei messaggi di errore. */
+.linkNotice {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-soft, #f7f3ec);
+  color: var(--color-ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.linkNotice a {
+  color: var(--color-brand-deep, inherit);
+  font-weight: 600;
+}
+
 .optionsNote {
   display: block;
   font-style: italic;

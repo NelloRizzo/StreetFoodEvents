@@ -97,6 +97,9 @@ export const customerRouter = createBrowserRouter(
     /* Standalone routes (no layout) */
     { path: '/orders/station/:stationId', element: <StationQueuePage /> },
     { path: '/events/:eventId/stands/:standId/tracking', element: <StandTrackingPage /> },
+    /* Link annidato (evento + stand): va messo PRIMA di quello semplice, che ha
+       un segmento in meno e altrimenti non lo raggiungerebbe. */
+    { path: '/show/stand/:eventAlias/:standAlias', element: <AliasRedirectPage /> },
     { path: '/show/:entityType/:alias', element: <AliasRedirectPage /> },
     { path: '/attiva/:token', element: <ActivationPage /> },
     { path: '/events/:eventId/adhesion-form', element: <AdhesionFormPublicPage /> },

@@ -8,6 +8,7 @@ import { type UploadedDocument, type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { DocumentUploader } from '../components/DocumentUploader'
 import { OverlayPanel } from '../components/OverlayPanel'
+import { AliasManager } from '../components/AliasManager'
 import { EVENT_TIMEZONES } from '../lib/timezones'
 import { RichEditor } from '../components/RichEditor'
 import { useItalianComuni, searchComuni, getProvinces, getProvinceName, getProvinceSigla } from '../lib/italian-comuni'
@@ -1330,6 +1331,22 @@ export function EventsPage() {
                 + Aggiungi taglio
               </button>
             </fieldset>
+
+            {/* Gli alias sono gia' su modello e API da prima: era sparito
+                solo questo pezzo di UI. Serve perche' l'export social dello
+                stand propone il link breve, e senza questa pagina non c'era
+                dove crearlo. */}
+            {editingId && (
+              <fieldset className={styles.fieldset}>
+                <legend className={styles.legend}>Link brevi</legend>
+                <p className={styles.fieldHint}>
+                  Un nome breve per l&apos;evento: il link <code>/show/event/…</code>{' '}
+                  porta alla stessa pagina. Ogni stand ne ha uno suo, creato dalla pagina
+                  dello stand.
+                </p>
+                <AliasManager entityType="event" entityRef={editingId} />
+              </fieldset>
+            )}
 
             <fieldset className={styles.fieldset}>
               <legend className={styles.legend}>Partecipazione stand</legend>

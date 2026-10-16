@@ -4,6 +4,7 @@ import * as argon2 from 'argon2';
 import * as qrcode from 'qrcode';
 
 import { StandModel } from '../models/stand.model';
+import { AliasModel } from '../models/alias.model';
 import { sanitizeHtmlContent } from '../utils/html-sanitizer';
 import { RoleModel } from '../models/role.model';
 import { UserRoleModel } from '../models/user-role.model';
@@ -383,6 +384,47 @@ export async function reorderStands(req: Request, res: Response) {
     return res.status(204).send();
 }
 
+/**
+ * Indirizzo che il QR del menu deve portare.
+ *
+ *  Preferisce sempre il link breve, e fra i due il piu' corto: con i due alias
+ *  (quello dell'evento e quello dello stand) si usa il link annidato
+ *  `/show/stand/<evento>/<stand>`, che e' anche quello che viene scritto nel
+ *  post. Con uno solo alias si usa `/show/stand/<stand>`.
+ *
+ *  **Il testo degli alias arriva gia' risolto dal database**, mai dalla
+ *  query: e' il chiamante a passare `null` se l'alias non esiste o non
+ *  combacia, e qui si cade silenziosamente sul link lungo. Il QR del menu
+ *  deve esistere comunque: un 404 su un link breve non creato bloccherebbe
+ *  l'export di un export per una cosa che l'operatore puo' sistemare dopo.
+ *
+ *  Esposta per essere verificata da sola: la risposta HTTP e' una data URL e
+ *  non si puo' decodificare per vedere cosa c'era dentro.
+ */
+export function buildStandQrUrl(input: {
+    origin: string;
+    standId: string;
+    eventId?: string | undefined;
+    standAliasText?: string | null;
+    eventAliasText?: string | null;
+}): string {
+    const { origin, standId, eventId, standAliasText, eventAliasText } = input;
+
+    if (standAliasText && eventAliasText) {
+        return `${origin}/show/stand/${eventAliasText}/${standAliasText}`;
+    }
+
+    if (standAliasText) {
+        return `${origin}/show/stand/${standAliasText}`;
+    }
+
+    if (eventId) {
+        return `${origin}/events/${eventId}/stands/${standId}`;
+    }
+
+    return `${origin}/stands/${standId}`;
+}
+
 export async function standQrCode(req: Request, res: Response) {
   const standId = req.params.standId;
 
@@ -398,9 +440,39 @@ export async function standQrCode(req: Request, res: Response) {
 
   const origin = req.headers.origin ?? `${req.protocol}://${req.headers.host}`;
   const eventId = req.query.eventId as string | undefined;
-  const url = eventId
-    ? `${origin}/events/${eventId}/stands/${standId}`
-    : `${origin}/stands/${standId}`;
+
+  /* Con `alias` (ed eventualmente `eventAlias`) il QR punta al link breve
+     invece che all'URL con gli id: `/show/stand/<alias>` oppure, se c'e' anche
+     l'alias dell'evento, il link annidato `/show/stand/<alias evento>/<alias
+     stand>`.
+
+     Gli alias **non** vengono usati come arrivo ne' interpolati nell'URL: si
+     cercano nel database e l'URL si costruisce con il testo letto da li'. Se un
+     alias non esiste, o non e' di questo stand, o l'evento non combacia, si
+     cade sul link lungo senza fallire: il QR del menu deve esistere comunque,
+     e il link lungo funziona. */
+  const aliasText = (req.query.alias as string | undefined)?.trim().toLowerCase();
+  const eventAliasText = (req.query.eventAlias as string | undefined)?.trim().toLowerCase();
+
+  const [standAlias, eventAlias] = await Promise.all([
+    aliasText
+      ? AliasModel.findOne({ text: aliasText, entityType: 'stand', entityRef: stand._id })
+      : null,
+    eventAliasText
+      ? AliasModel.findOne({ text: eventAliasText, entityType: 'event' })
+      : null,
+  ]);
+
+  const eventAliasMatchesStand =
+    !!eventAlias && !!eventId && eventAlias.entityRef.toString() === eventId;
+
+  const url = buildStandQrUrl({
+    origin,
+    standId,
+    eventId,
+    standAliasText: standAlias?.text ?? null,
+    eventAliasText: eventAliasMatchesStand ? eventAlias!.text : null
+  });
 
   const qrDataUrl = await qrcode.toDataURL(url, {
     width: 400,

@@ -20,6 +20,7 @@ vi.mock('@/services/cloudinary-upload.service', () => ({
 import { EventModel } from '../../models/event.model';
 import { SessionModel } from '../../models/session.model';
 import { StandModel } from '../../models/stand.model';
+import { buildStandQrUrl } from '../../controllers/stands.controller';
 import { UserModel } from '../../models/user.model';
 import {
     generateSessionToken,
@@ -63,6 +64,43 @@ async function createSessionFor(user: { _id: Types.ObjectId }) {
     });
     return sessionToken;
 }
+
+describe('buildStandQrUrl', () => {
+    /* La risposta HTTP e' una data URL, quindi l'indirizzo dentro il QR non si
+       puo' leggere dai test: la composizione e' verificata qui, da sola. */
+    const base = { origin: 'https://app.example.com', standId: 's1', eventId: 'e1' };
+
+    it('con i due alias usa il link annidato', () => {
+        expect(buildStandQrUrl({
+            ...base,
+            standAliasText: 'panino-d-oro',
+            eventAliasText: 'sf2027'
+        })).toBe('https://app.example.com/show/stand/sf2027/panino-d-oro');
+    });
+
+    it('con il solo alias dello stand usa il link breve semplice', () => {
+        expect(buildStandQrUrl({ ...base, standAliasText: 'panino-d-oro' }))
+            .toBe('https://app.example.com/show/stand/panino-d-oro');
+    });
+
+    /* L'alias dell'evento da solo non basta: il link breve del menu e'
+       annidato, e senza quello dello stand non c'e' nulla da annidare. */
+    it('con il solo alias dell\'evento resta il link lungo', () => {
+        expect(buildStandQrUrl({ ...base, eventAliasText: 'sf2027' }))
+            .toBe('https://app.example.com/events/e1/stands/s1');
+    });
+
+    it('senza alias resta il link lungo con i codici', () => {
+        expect(buildStandQrUrl(base)).toBe('https://app.example.com/events/e1/stands/s1');
+    });
+
+    /* Chiamata senza evento (rotta usata anche senza contesto): niente alias,
+       resta il link lungo alla pagina dello stand. */
+    it('senza evento resta il link lungo allo stand', () => {
+        expect(buildStandQrUrl({ origin: 'https://app.example.com', standId: 's1' }))
+            .toBe('https://app.example.com/stands/s1');
+    });
+});
 
 describe('Stands API', () => {
     it('lists stands (empty)', async () => {

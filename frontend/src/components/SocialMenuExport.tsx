@@ -9,6 +9,9 @@ import {
   formatEventDateRange,
   formatMonetaLine,
   isBareCurrencySymbol,
+  standPublicUrl,
+  standQrQuery,
+  type StandShortLinks,
 } from '../lib/socialMenu'
 /* Le primitive di disegno stanno in lib: l'export dei singoli prodotti deve
    produrre immagini con lo stesso formato, e due copie andrebbero tenute
@@ -31,6 +34,7 @@ import {
 import type { UploadedImage } from '../lib/upload'
 import { useSocialFormat } from '../lib/useSocialFormat'
 import { SocialFormatPicker } from './SocialFormatPicker'
+import { ShortLinkNotice } from './ShortLinkNotice'
 import styles from './SocialExport.module.scss'
 
 const INCLUDE_PRICES_KEY = 'sfe-social-include-prices'
@@ -134,6 +138,8 @@ type Props = {
   event: SocialMenuExportEvent
   stand: SocialMenuExportStand
   menuItems: SocialMenuExportMenuItem[]
+  /** Link brevi dello stand e dell'evento, se esistono. */
+  shortLinks?: StandShortLinks
   onClose: () => void
 }
 
@@ -311,7 +317,7 @@ export async function generatePoster(
   ctx.restore()
 }
 
-export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Props) {
+export function SocialMenuExport({ open, event, stand, menuItems, shortLinks, onClose }: Props) {
   const [posterUrl, setPosterUrl] = useState<string | null>(null)
   const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [generating, setGenerating] = useState(true)
@@ -369,8 +375,13 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
 
   const menuUrl = useMemo(() => {
     const base = typeof window !== 'undefined' ? window.location.origin : ''
-    return `${base}/events/${event.id}/stands/${stand.id}`
-  }, [event.id, stand.id])
+    return standPublicUrl({
+      origin: base,
+      eventId: event.id,
+      standId: stand.id,
+      shortLinks,
+    })
+  }, [event.id, stand.id, shortLinks])
 
   const monetaNote = formatMonetaLine(event.currencyName, event.exchangeRate)
 
@@ -401,7 +412,7 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
     const load = async () => {
       try {
         const qrResp = await apiRequest<{ qrCode: string }>(
-          `/stands/${stand.id}/qrcode?eventId=${event.id}`,
+          standQrQuery({ eventId: event.id, standId: stand.id, shortLinks }),
         )
         const qrImg = await loadImage(qrResp.qrCode)
         if (cancelled) return
@@ -426,7 +437,7 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
     return () => {
       cancelled = true
     }
-  }, [open, event, stand, products, includePrices, format])
+  }, [open, event, stand, products, includePrices, format, shortLinks])
 
   useEffect(() => {
     if (open) {
@@ -499,6 +510,8 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
             </p>
 
             <SocialFormatPicker format={format} onChange={setFormat} />
+
+            {!shortLinks?.standAlias && <ShortLinkNotice standId={stand.id} />}
 
             <div className={styles.optionsRow}>
               <label className={styles.optionsLabel}>

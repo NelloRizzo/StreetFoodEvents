@@ -9,11 +9,39 @@ type ResolveData = {
   entityName: string
 }
 
+/* La rotta annidata (`/show/stand/<alias evento>/<alias stand>`) restituisce
+ * anche l'evento, perche' il link finisce sulla pagina dello stand **within
+ * l'evento** (`/events/:eventId/stands/:standId`) e non su quella dello stand
+ * generica. */
+type ResolveStandInEventData = ResolveData & { eventId: string; standId: string }
+
 export function AliasRedirectPage() {
-  const { entityType, alias } = useParams<{ entityType: string; alias: string }>()
+  const { entityType, alias, eventAlias, standAlias } = useParams<{
+    entityType?: string
+    alias?: string
+    eventAlias?: string
+    standAlias?: string
+  }>()
   const navigate = useNavigate()
 
+  /* Il link annidato non passa da `entityType`: i suoi due segmenti sono gia'
+     i due alias. */
+  const nested = Boolean(eventAlias && standAlias)
+
   useEffect(() => {
+    if (nested) {
+      apiRequest<ResolveStandInEventData>(
+        `/resolve/stand/${eventAlias}/${standAlias}`,
+      )
+        .then((data) => {
+          window.location.href = `/events/${data.eventId}/stands/${data.standId}`
+        })
+        .catch(() => {
+          navigate('/', { replace: true })
+        })
+      return
+    }
+
     if (!entityType || !alias) {
       navigate('/', { replace: true })
       return
@@ -27,7 +55,7 @@ export function AliasRedirectPage() {
       .catch(() => {
         navigate('/', { replace: true })
       })
-  }, [entityType, alias, navigate])
+  }, [entityType, alias, eventAlias, standAlias, nested, navigate])
 
   return (
     <div style={{ padding: '3rem 1.5rem', textAlign: 'center' }}>

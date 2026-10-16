@@ -114,6 +114,74 @@ export function formatMonetaLine(
   return `Moneta evento: ${name} (1 ${name} = ${euroLabel} €)`
 }
 
+/** I due link brevi che servono a chiudere il menu di uno stand.
+ *
+ *  Quello del **menu** porta lo stand dentro l'evento, quindi si compone con i
+ *  due alias: `/show/stand/<alias evento>/<alias stand>`. I due alias restano
+ *  segmenti singoli e vengono composti dal server al momento della richiesta,
+ *  per cui rinominare l'alias dell'evento non lascia sporgenti i link gia'
+ *  stampati. */
+export type StandShortLinks = {
+  /** Alias dello stand, senza slash. */
+  standAlias: string | null
+  /** Alias dell'evento, senza slash: e' quello che va davanti. */
+  eventAlias: string | null
+}
+
+/** Come si chiama uno stand in un link breve: il nome ripulito di tutto cio'
+ *  che in un URL non serve e non si puo' scrivere.
+ *
+ *  Riusa `fileSlug`, che fa gia' questa pulizia per i nomi dei file: due
+ *  versioni della stessa regola andrebbero tenute allineate a mano. Il
+ *  segnaposto di `fileSlug` ('senza-nome') qui diventa stringa vuota: un alias
+ *  con quel nome sarebbe un alias falso, meglio che il campo resti da riempire.
+ *  Espone l'idea anche senza alias, cosi' il campo della pagina stand puo'
+ *  riempirsi da solo prima che l'operatore prema "Aggiungi". */
+export function standAliasFromName(name: string): string {
+  /* Il minuscolo non e' facoltativo: il validatore degli alias accetta solo
+     `[a-z0-9_-]` e il campo ha anche il `pattern` HTML, quindi proporre un
+     nome con le maiuscole lo mostrerebbe gia' come non valido. */
+  const slug = fileSlug(name).toLowerCase()
+  return slug === 'senza-nome' ? '' : slug
+}
+
+/** Link pubblico della pagina di uno stand.
+ *
+ *  Con l'alias si usa il link breve, che e' quello che si mette in un post e
+ *  quello che va nel QR del poster: con gli ObjectId nel link il visitatore ne
+ *  vede uno solo e il QR diventa illeggibile da lontano. Serve l'alias anche
+ *  dell'evento, perche' il link breve del menu e' annidato. Senza si resta sul
+ *  link lungo, che funziona, e l'export avvisa che conviene creare gli
+ *  shortlink. */
+export function standPublicUrl(input: {
+  origin: string
+  eventId: string
+  standId: string
+  shortLinks?: StandShortLinks
+}): string {
+  const { origin, eventId, standId, shortLinks } = input
+  const standAlias = shortLinks?.standAlias
+  const eventAlias = shortLinks?.eventAlias
+  if (standAlias && eventAlias) return `${origin}/show/stand/${eventAlias}/${standAlias}`
+  if (standAlias) return `${origin}/show/stand/${standAlias}`
+  return `${origin}/events/${eventId}/stands/${standId}`
+}
+
+/** Query per il QR del menu: con i due alias il server costruisce il link breve
+ *  annidato, altrimenti il link lungo. Il server verifica che gli alias esistano
+ *  e che lo stand sia di quell'evento, quindi non e' una fiducia cieca. */
+export function standQrQuery(input: {
+  eventId: string
+  standId: string
+  shortLinks?: StandShortLinks
+}): string {
+  const { eventId, standId, shortLinks } = input
+  const params = new URLSearchParams({ eventId })
+  if (shortLinks?.standAlias) params.set('alias', shortLinks.standAlias)
+  if (shortLinks?.eventAlias) params.set('eventAlias', shortLinks.eventAlias)
+  return `/stands/${standId}/qrcode?${params.toString()}`
+}
+
 export type SocialMenuCaptionProduct = {
   name: string
   description?: string | null

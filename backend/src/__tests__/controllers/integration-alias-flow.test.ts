@@ -124,6 +124,170 @@ describe('Alias creation → resolution integration', () => {
         expect(resolveRes.body.entityName).toBe('Summer Food Festival 2026');
     });
 
+    /* Link breve annidato: /show/stand/<alias evento>/<alias stand>.
+       I due alias restano segmenti singoli e vengono composti qui. */
+    it('resolves the nested stand link inside its event', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Street Food 2027',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2027-06-01'),
+            endDate: new Date('2027-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({
+            name: 'Panino d\'Oro',
+            eventIds: [event._id]
+        });
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'sf2027', entityType: 'event', entityRef: event._id.toString() });
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'panino-d-oro', entityType: 'stand', entityRef: stand._id.toString() });
+
+        const res = await request(app).get('/api/resolve/stand/sf2027/panino-d-oro');
+
+        expect(res.status).toBe(200);
+        expect(res.body.eventId).toBe(event._id.toString());
+        expect(res.body.standId).toBe(stand._id.toString());
+        expect(res.body.entityName).toBe('Panino d\'Oro');
+    });
+
+    /* Il controllo che conta: lo stand deve essere di quell'evento. Senza,
+       un link breve porterebbe alla pagina di uno stand estraneo al contesto
+       per cui e' stato scritto. */
+    it('rejects the nested link when the stand is not in that event', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const eventA = await EventModel.create({
+            name: 'Evento A',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2027-06-01'),
+            endDate: new Date('2027-06-07'),
+            currencyName: 'TC'
+        });
+        const eventB = await EventModel.create({
+            name: 'Evento B',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2027-07-01'),
+            endDate: new Date('2027-07-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({
+            name: 'Solo di B',
+            eventIds: [eventB._id]
+        });
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'evento-a', entityType: 'event', entityRef: eventA._id.toString() });
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'solo-di-b', entityType: 'stand', entityRef: stand._id.toString() });
+
+        const res = await request(app).get('/api/resolve/stand/evento-a/solo-di-b');
+
+        expect(res.status).toBe(404);
+    });
+
+    /* Lo stand puo' essere collegato a un evento anche solo da `locations`
+       (la numerazione per evento): il collegamento non si legge solo da
+       `eventIds`. */
+    it('accepts the nested link when the event is linked via locations', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Solo locations',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2027-06-01'),
+            endDate: new Date('2027-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({
+            name: 'Collegato per location',
+            locations: [{ eventId: event._id, location: { type: 'Point', coordinates: [12.5, 41.9] } }]
+        });
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'sl', entityType: 'event', entityRef: event._id.toString() });
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'per-location', entityType: 'stand', entityRef: stand._id.toString() });
+
+        const res = await request(app).get('/api/resolve/stand/sl/per-location');
+
+        expect(res.status).toBe(200);
+        expect(res.body.eventId).toBe(event._id.toString());
+    });
+
+    /* La rotta semplice deve continuare a funzionare: `/stand/sf2027` non e'
+       un alias annidato, e' quello dello stand. */
+    it('the plain stand alias still resolves on its own', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const stand = await StandModel.create({ name: 'Semplice' });
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'semplice', entityType: 'stand', entityRef: stand._id.toString() });
+
+        const res = await request(app).get('/api/resolve/stand/semplice');
+
+        expect(res.status).toBe(200);
+        expect(res.body.entityId).toBe(stand._id.toString());
+    });
+
+    it('nested link 404 when one of the two aliases is missing', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Evento',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2027-06-01'),
+            endDate: new Date('2027-06-07'),
+            currencyName: 'TC'
+        });
+        const stand = await StandModel.create({ name: 'Stand', eventIds: [event._id] });
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'ev', entityType: 'event', entityRef: event._id.toString() });
+
+        /* Manca l'alias dello stand. */
+        expect((await request(app).get('/api/resolve/stand/ev/non-esiste')).status).toBe(404);
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'st', entityType: 'stand', entityRef: stand._id.toString() });
+
+        /* Manca l'alias dell'evento. */
+        expect((await request(app).get('/api/resolve/stand/non-esiste/st')).status).toBe(404);
+    });
+
     it('update alias text — old text no longer resolves', async () => {
         app = createTestApp();
         const { sessionToken } = await createAuthSession();
