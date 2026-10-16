@@ -9,6 +9,7 @@ import {
   formatEventDateRange,
   formatMonetaLine,
   isBareCurrencySymbol,
+  stripHtml,
 } from '../lib/socialMenu'
 import {
   drawCircleImage,
@@ -32,6 +33,9 @@ import { SocialFormatPicker } from './SocialFormatPicker'
 import styles from './SocialExport.module.scss'
 
 const INCLUDE_PRICES_KEY = 'sfe-social-include-prices'
+/** Condivisa con l'export del menu: e' la stessa scelta, non due da tenere
+ *  allineate (come per i prezzi e per il formato). */
+const INCLUDE_DESCRIPTIONS_KEY = 'sfe-social-include-descriptions'
 
 /** Stessa chiave del menu: la scelta "mostra i prezzi" è la stessa
  *  preferenza dell'operatore, non una scelta per ogni export. */
@@ -41,7 +45,7 @@ type Props = {
   stand: SocialPosterStand
   menuItems: {
     id: string
-    product: { name: string; price: number; coverImage?: UploadedImage | null } | null
+    product: { name: string; description?: string | null; price: number; coverImage?: UploadedImage | null } | null
     priceOverride: number | null
   }[]
   onClose: () => void
@@ -50,6 +54,7 @@ type Props = {
 type Product = {
   id: string
   name: string
+  description?: string | null
   coverImage: UploadedImage | null
   price: number
 }
@@ -80,6 +85,8 @@ function productLayout(m: PosterMetrics) {
     dividerY: Math.round(430 * v),
     titleY: Math.round(485 * v),
     nameFont: 46,
+    descFont: 30,
+    descLh: Math.round(38 * v),
   }
 }
 
@@ -102,6 +109,7 @@ async function generateProductPoster(
   qrImage: HTMLImageElement | null,
   includePrices: boolean,
   format: PosterFormatId,
+  includeDescriptions = false,
 ): Promise<void> {
   const m = posterMetrics(format)
   const W = m.width
@@ -155,6 +163,22 @@ async function generateProductPoster(
     cursor += Math.round(74 * m.vScale)
   }
 
+  // ── Descrizione (facoltativa), fra prezzo e foto ──
+  /* Sta sotto il prezzo e la foto si stringe di conseguenza: la foto e'
+     l'unica parte che si espande con il formato alto, quindi una descrizione
+     lunga si vede meglio in 9:16 che in 4:5. */
+  if (includeDescriptions && product.description) {
+    ctx.fillStyle = colors.inkSoft
+    ctx.font = `400 ${L.descFont}px "Segoe UI", Inter, sans-serif`
+    /* La descrizione e' HTML (gia' sanitizzato dal server): qui si stacca il
+       testo. Quattro righe: oltre, la foto non avrebbe piu' spazio. */
+    const descLines = wrapText(ctx, stripHtml(product.description), W - 240, 4)
+    descLines.forEach((line, i) => {
+      ctx.fillText(line, W / 2, cursor + i * L.descLh)
+    })
+    cursor += descLines.length * L.descLh + Math.round(16 * m.vScale)
+  }
+
   // ── Foto: si stringe attorno alla foto reale (niente bande vuote dentro)
   //    e arriva fino al footer ──
   const gap = Math.round(26 * m.vScale)
@@ -178,16 +202,23 @@ export async function generateProductPosterForPreview(
   ctx: CanvasRenderingContext2D,
   event: SocialPosterEvent,
   stand: SocialPosterStand,
-  product: { name: string; price: number; coverImage?: UploadedImage | null },
+  product: { name: string; description?: string | null; price: number; coverImage?: UploadedImage | null },
   includePrices: boolean,
   format: PosterFormatId,
+  includeDescriptions = false,
 ) {
   const productImage = product.coverImage?.url ? await loadImage(product.coverImage.url, true) : null
   await generateProductPoster(
     ctx,
     event,
     stand,
-    { id: 'preview', name: product.name, coverImage: product.coverImage ?? null, price: product.price },
+    {
+      id: 'preview',
+      name: product.name,
+      description: product.description ?? null,
+      coverImage: product.coverImage ?? null,
+      price: product.price,
+    },
     productImage,
     null,
     null,
@@ -195,6 +226,7 @@ export async function generateProductPosterForPreview(
     null,
     includePrices,
     format,
+    includeDescriptions,
   )
 }
 
@@ -203,6 +235,15 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
   const [includePrices, setIncludePrices] = useState<boolean>(() => {
     try {
       return localStorage.getItem(INCLUDE_PRICES_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  /* Stessa chiave dell'export del menu: e' la stessa scelta di cosa mettere
+     nell'immagine, non due impostazioni da tenere allineate a mano. */
+  const [includeDescriptions, setIncludeDescriptions] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(INCLUDE_DESCRIPTIONS_KEY) === '1'
     } catch {
       return false
     }
@@ -230,6 +271,14 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
   }, [includePrices])
 
   useEffect(() => {
+    try {
+      localStorage.setItem(INCLUDE_DESCRIPTIONS_KEY, includeDescriptions ? '1' : '0')
+    } catch {
+      /* localStorage non disponibile */
+    }
+  }, [includeDescriptions])
+
+  useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
     }
@@ -245,6 +294,7 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
         out.push({
           id: m.id,
           name: m.product.name,
+          description: m.product.description ?? null,
           coverImage: m.product.coverImage ?? null,
           price: m.priceOverride ?? m.product.price ?? 0,
         })
@@ -324,6 +374,7 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
             qrImage,
             includePrices,
             format,
+            includeDescriptions,
           )
           url = canvas.toDataURL('image/png')
         }
@@ -392,6 +443,21 @@ export function SocialProductExport({ open, event, stand, menuItems, onClose }: 
                   {includePrices && monetaNote ? (
                     <em className={styles.optionsNote}>{monetaNote}</em>
                   ) : null}
+                </span>
+              </label>
+
+              <label className={styles.optionsLabel}>
+                <input
+                  type="checkbox"
+                  checked={includeDescriptions}
+                  onChange={(e) => setIncludeDescriptions(e.target.checked)}
+                />
+                <span>
+                  Includi le descrizioni
+                  <em className={styles.optionsNote}>
+                    Va fra il prezzo e la foto: su una descrizione lunga la foto
+                    si stringe, quindi in 4:5 resta piu&apos; spazio che in 9:16.
+                  </em>
                 </span>
               </label>
 

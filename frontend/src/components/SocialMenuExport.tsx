@@ -34,6 +34,9 @@ import { SocialFormatPicker } from './SocialFormatPicker'
 import styles from './SocialExport.module.scss'
 
 const INCLUDE_PRICES_KEY = 'sfe-social-include-prices'
+/** Condivisa con l'export del prodotto: e' la stessa scelta di cosa mostrare
+ *  di un piatto, non due impostazioni da tenere allineate a mano. */
+const INCLUDE_DESCRIPTIONS_KEY = 'sfe-social-include-descriptions'
 
 /** Quante colonne ha la griglia prodotti. */
 const GRID_COLS = 2
@@ -112,6 +115,7 @@ export type SocialMenuExportMenuItem = {
   id: string
   product: {
     name: string
+    description?: string | null
     price: number
     coverImage?: UploadedImage | null
   } | null
@@ -120,6 +124,7 @@ export type SocialMenuExportMenuItem = {
 
 type SocialProduct = {
   name: string
+  description?: string | null
   coverImage: UploadedImage | null
   price: number
 }
@@ -331,12 +336,29 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
     }
   }, [includePrices])
 
+  const [includeDescriptions, setIncludeDescriptions] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(INCLUDE_DESCRIPTIONS_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(INCLUDE_DESCRIPTIONS_KEY, includeDescriptions ? '1' : '0')
+    } catch {
+      /* localStorage non disponibile */
+    }
+  }, [includeDescriptions])
+
   const products = useMemo<SocialProduct[]>(() => {
     const out: SocialProduct[] = []
     for (const m of menuItems) {
       if (m.product?.name) {
         out.push({
           name: m.product.name,
+          description: m.product.description ?? null,
           coverImage: m.product.coverImage ?? null,
           price: m.priceOverride ?? m.product.price ?? 0,
         })
@@ -365,10 +387,11 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
         products,
         menuUrl,
         includePrices,
+        includeDescriptions,
         currencyName: event.currencyName ?? null,
         exchangeRate: event.exchangeRate ?? null,
       }),
-    [stand.name, stand.slogan, event.name, event.startDate, event.endDate, event.location, event.shortDescription, products, menuUrl, includePrices, event.currencyName, event.exchangeRate],
+    [stand.name, stand.slogan, event.name, event.startDate, event.endDate, event.location, event.shortDescription, products, menuUrl, includePrices, includeDescriptions, event.currencyName, event.exchangeRate],
   )
 
   useEffect(() => {
@@ -489,6 +512,21 @@ export function SocialMenuExport({ open, event, stand, menuItems, onClose }: Pro
                   {includePrices && monetaNote ? (
                     <em className={styles.optionsNote}>{monetaNote}</em>
                   ) : null}
+                </span>
+              </label>
+              <label className={styles.optionsLabel}>
+                <input
+                  type="checkbox"
+                  checked={includeDescriptions}
+                  onChange={(e) => setIncludeDescriptions(e.target.checked)}
+                />
+                <span>
+                  Includi le descrizioni
+                  <em className={styles.optionsNote}>
+                    Solo nel testo del post, non nel poster: l&apos;immagine 4:5 ha
+                    poco spazio e una riga con la descrizione ne mostrerebbe uno o
+                    tre piatti invece degli otto.
+                  </em>
                 </span>
               </label>
             </div>

@@ -116,6 +116,7 @@ export function formatMonetaLine(
 
 export type SocialMenuCaptionProduct = {
   name: string
+  description?: string | null
   price: number | null
 }
 
@@ -130,6 +131,14 @@ export type SocialMenuCaptionInput = {
   products: SocialMenuCaptionProduct[]
   menuUrl: string
   includePrices?: boolean
+  /** Descrizioni dei piatti nel testo del post, non nel poster.
+   *
+   *  La descrizione va qui e non nell'immagine perche' nel formato 4:5 il
+   *  poster ha 302px liberi fra intestazione e footer: una riga con la
+   *  descrizione e' alta 136-170px e ne contiene una sola, mentre la griglia
+   *  storica alta 74px ne contiene due. Metterla nell'immagine farebbe
+   *  passare da 8 prodotti a 1-3. Il testo non ha questo limite. */
+  includeDescriptions?: boolean
   currencyName?: string | null
   exchangeRate?: number | null
 }
@@ -150,7 +159,11 @@ export function buildSocialMenuCaption(input: SocialMenuCaptionInput): string {
 
   const currency = formatCurrencyInline(input.currencyName)
   const products = input.products
-    .map((p) => ({ name: p.name.trim(), price: p.price }))
+    .map((p) => ({
+      name: p.name.trim(),
+      description: stripHtml(p.description),
+      price: p.price,
+    }))
     .filter((p) => p.name.length > 0)
   if (products.length > 0) {
     lines.push('')
@@ -161,6 +174,12 @@ export function buildSocialMenuCaption(input: SocialMenuCaptionInput): string {
         line += ` ${formatCredits(p.price)} ${currency}`
       }
       lines.push(line)
+      /* La descrizione sta nella riga sotto, indentata: attaccata al nome
+         con i trattini diventerebbe illeggibile, e il prezzo sta gia' sul
+         nome. */
+      if (input.includeDescriptions && p.description) {
+        lines.push(`  ${p.description}`)
+      }
     })
     const moneta = formatMonetaLine(input.currencyName, input.exchangeRate)
     if (input.includePrices && moneta) lines.push(moneta)

@@ -161,6 +161,67 @@ describe('buildSocialMenuCaption', () => {
     expect(caption).toContain('Street Food Fest — Roma')
   })
 
+  /* Le descrizioni vanno nel TESTO del post, non nel poster: nell'immagine 4:5
+     una riga con la descrizione e' alta 136-170px e ne contiene una, mentre
+     la griglia storica alta 74px ne contiene due. */
+  it('senza includeDescriptions la descrizione non compare', () => {
+    const caption = buildSocialMenuCaption({
+      ...base,
+      products: [{ name: 'Panino con porchetta', description: 'Maiale e rosmarino', price: 12 }],
+    })
+    expect(caption).toContain('• Panino con porchetta')
+    expect(caption).not.toContain('Maiale e rosmarino')
+  })
+
+  it('con includeDescriptions la descrizione va nella riga sotto il nome', () => {
+    const caption = buildSocialMenuCaption({
+      ...base,
+      includeDescriptions: true,
+      products: [{ name: 'Panino con porchetta', description: 'Maiale e rosmarino', price: 12 }],
+    })
+    expect(caption).toContain('• Panino con porchetta\n  Maiale e rosmarino')
+  })
+
+  /* La descrizione e' HTML come quella dell'evento: nel testo deve comparire
+     il testo, non i tag. */
+  it('la descrizione viene ripulita dagli eventuali tag HTML', () => {
+    const caption = buildSocialMenuCaption({
+      ...base,
+      includeDescriptions: true,
+      products: [
+        { name: 'Panino', description: '<p>Maiale e <b>rosmarino</b></p>', price: 12 },
+      ],
+    })
+    expect(caption).toContain('Maiale e rosmarino')
+    expect(caption).not.toContain('<')
+  })
+
+  it('un piatto senza descrizione non aggiunge una riga vuota', () => {
+    const caption = buildSocialMenuCaption({
+      ...base,
+      includeDescriptions: true,
+      products: [
+        { name: 'Panino', description: null, price: 12 },
+        { name: 'Arrosticini', description: '', price: 10 },
+      ],
+    })
+    expect(caption).toContain('• Panino')
+    expect(caption).toContain('• Arrosticini')
+    expect(caption).not.toMatch(/\n\s{2}\n/)
+  })
+
+  /* Prezzi e descrizioni si sommano sulla stessa riga di prodotto. */
+  it('descrizione e prezzo possono stare insieme', () => {
+    const caption = buildSocialMenuCaption({
+      ...base,
+      includePrices: true,
+      includeDescriptions: true,
+      products: [{ name: 'Panino con porchetta', description: 'Maiale e rosmarino', price: 12 }],
+    })
+    expect(caption).toContain('• Panino con porchetta 12')
+    expect(caption).toContain('  Maiale e rosmarino')
+  })
+
   it('skips empty product names', () => {
     const caption = buildSocialMenuCaption({
       ...base,

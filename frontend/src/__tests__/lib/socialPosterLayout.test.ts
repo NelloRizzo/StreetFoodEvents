@@ -74,10 +74,13 @@ get proxy() {
 
   /** Celle prodotto = le miniature quadrate disegnate dalla griglia.
    *  Contare le righe di testo non va bene: un nome che va a capo su due
-   *  righe produrrebbe due chiamate per un solo prodotto. */
-  productCells() {
+   *  righe produrrebbe due chiamate per un solo prodotto.
+   *  `maxSize` e' il tetto del lato: la griglia storica ha miniature piccole,
+   *  quella a colonna singola sono piu' grandi e senza un tetto proprio il
+   *  conteggio darebbe zero. */
+  productCells(maxSize = 120) {
     return this.ops.filter(
-      (o) => o.kind === 'fillRect' && o.args[2] === o.args[3] && o.args[2] > 0 && o.args[2] <= 120,
+      (o) => o.kind === 'fillRect' && o.args[2] === o.args[3] && o.args[2] > 0 && o.args[2] <= maxSize,
     ).length
   }
 }
@@ -120,6 +123,10 @@ const stand = {
 
 const products = Array.from({ length: 20 }, (_, i) => ({
   name: `Prodotto numero ${i + 1} con nome abbastanza lungo`,
+  description:
+    'Descrizione lunga del prodotto, con ingredienti e una frase che sul canvas occupa piu' +
+    ' di una riga perche' +
+    ' serve a vedere il comportamento con il testo vero.',
   coverImage: null,
   price: 5 + (i % 7),
 }))
@@ -136,15 +143,21 @@ async function drawMenu(format: PosterFormatId, withPrices: boolean) {
   return rec
 }
 
-async function drawProduct(format: PosterFormatId, withPrices: boolean, name = 'Panino porchetta') {
+async function drawProduct(
+  format: PosterFormatId,
+  withPrices: boolean,
+  name = 'Panino porchetta',
+  withDescriptions = false,
+) {
   const rec = new Recorder()
   await generateProductPosterForPreview(
     rec.proxy,
     event,
     stand,
-    { name, price: 7, coverImage: null },
+    { name, price: 7, coverImage: null, description: products[0].description },
     withPrices,
     format,
+    withDescriptions,
   )
   return rec
 }
@@ -212,6 +225,32 @@ describe.each(FORMATS)('poster del menu — formato %s', (format) => {
        diventasse piu' alto senza adattare nulla, quel testo resterebbe a
        meta' immagine. */
     expect(rec.textOps().some((o) => o.args[1] >= m.footerY)).toBe(true)
+  })
+})
+
+describe.each(FORMATS)('poster di un prodotto con la descrizione — formato %s', (format) => {
+  it('non disegna nulla fuori dal foglio', async () => {
+    for (const withPrices of [true, false]) {
+      const rec = await drawProduct(format, withPrices, 'Panino porchetta', true)
+      assertInside(rec, format)
+    }
+  })
+
+  /* La descrizione sta fra il prezzo e la foto: e' il posto dove non
+     copre niente, e la foto si stringe di conseguenza. */
+  it('la descrizione non arriva sul footer', async () => {
+    const m = posterMetrics(format)
+    const rec = await drawProduct(format, true, 'Panino porchetta', true)
+    const lines = rec.textOps().filter((o) => o.text?.startsWith('Descrizione lunga del prodotto'))
+    expect(lines.length).toBeGreaterThan(0)
+    for (const line of lines) {
+      expect(line.args[1]).toBeLessThan(m.footerY)
+    }
+  })
+
+  it('senza descrizioni la descrizione non viene scritta', async () => {
+    const rec = await drawProduct(format, true, 'Panino porchetta', false)
+    expect(rec.textOps().some((o) => o.text?.startsWith('Descrizione lunga del prodotto'))).toBe(false)
   })
 })
 
