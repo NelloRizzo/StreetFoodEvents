@@ -5,6 +5,7 @@ import { ALLERGEN_OPTIONS, ALLERGEN_LABELS } from '../lib/allergens'
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { OverlayPanel } from '../components/OverlayPanel'
 import styles from './ProductsPage.module.scss'
 
 type Product = {
@@ -140,8 +141,32 @@ export function ProductsPage() {
           </button>
         </div>
 
+        {/* In drawer laterale: il modulo e' lungo (descrizione, allergeni, due
+            caricatori di immagini) e inline spingeva la griglia dei prodotti
+            sotto lo schermo. Il footer sta fuori dal `<form>` e invia con
+            l'attributo `form=`, altrimenti non invierebbe. */}
         {showForm && (
-          <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
+          <OverlayPanel
+            open={showForm}
+            placement="right"
+            title={editingId ? 'Modifica prodotto' : 'Nuovo prodotto'}
+            onClose={() => setShowForm(false)}
+            footer={
+              <>
+                <button type="submit" form="product-form" className={styles.primaryBtn}>
+                  {editingId ? 'Salva modifiche' : 'Crea prodotto'}
+                </button>
+                <button type="button" className={styles.secondaryBtn} onClick={() => setShowForm(false)}>
+                  Annulla
+                </button>
+              </>
+            }
+          >
+            <form
+              id="product-form"
+              className={styles.formFlush}
+              onSubmit={(e) => { e.preventDefault(); handleSubmit() }}
+            >
             <div className={styles.field}>
               <label htmlFor="prod-name">Nome</label>
               <input id="prod-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -205,16 +230,8 @@ export function ProductsPage() {
                 onChange={(data) => setForm({ ...form, gallery: data as UploadedImage[] })}
                 label="Galleria"
               />
-
-            <div className={styles.formActions}>
-              <button type="submit" className={styles.primaryBtn}>
-                {editingId ? 'Salva modifiche' : 'Crea prodotto'}
-              </button>
-              <button type="button" className={styles.secondaryBtn} onClick={() => setShowForm(false)}>
-                Annulla
-              </button>
-            </div>
-          </form>
+            </form>
+          </OverlayPanel>
         )}
 
         <div className={styles.list}>

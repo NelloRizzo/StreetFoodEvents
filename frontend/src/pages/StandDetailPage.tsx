@@ -8,6 +8,7 @@ import { useAdminEvent } from '../layouts/AdminEventContext'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { ImageUploader } from '../components/ImageUploader'
+import { OverlayPanel } from '../components/OverlayPanel'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { CategorySelect } from '../components/CategorySelect'
 import { ALLERGEN_OPTIONS } from '../lib/allergens'
@@ -56,15 +57,18 @@ type EventProduct = {
 type EventRef = { id: string; name: string; startDate: string; currencyName: string; currencySymbol: UploadedImage | null }
 type ProductRef = { id: string; name: string; price: number }
 
+/* Niente `eventId`: l'evento e' quello attivo nella barra laterale
+   (`AdminEventContext`), unico posto dove si sceglie. Metterlo anche qui
+   faceva scegliere due volte la stessa cosa, e con due edizioni della stessa
+   manifestazione la select era quella che le distingueva. */
 type ProductFormData = {
-  eventId: string
   productId: string
   stationIds: string[]
   priceOverride: string
   categoryIds: string[]
 }
 
-const emptyProductForm: ProductFormData = { eventId: '', productId: '', stationIds: [], priceOverride: '', categoryIds: [] }
+const emptyProductForm: ProductFormData = { productId: '', stationIds: [], priceOverride: '', categoryIds: [] }
 
 export function StandDetailPage() {
   const { standId } = useParams<{ standId: string }>()
@@ -281,10 +285,14 @@ export function StandDetailPage() {
   }
 
   const createEventProduct = async () => {
+    /* Senza evento attivo non c'e' dove associare il prodotto: il pulsante
+       resta disabilitato e questa guardia e' per il tipo, non per l'utente. */
+    if (!selectedEventId) return
+
     await apiRequest('/event-products', {
       method: 'POST',
       bodyJson: {
-        eventId: productForm.eventId,
+        eventId: selectedEventId,
         standId,
         productId: productForm.productId,
         stationIds: productForm.stationIds,
@@ -368,6 +376,13 @@ export function StandDetailPage() {
   )
     .slice()
     .sort((a, b) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0))
+
+  /* L'evento attivo, con la sua moneta: serve al modulo di associazione, che
+     non lo sceglie piu' e quindi lo deve leggere. */
+  const activeEvent = selectedEventId ? events.find((e) => e.id === selectedEventId) : undefined
+  const activeCurrency = activeEvent?.currencyName
+    ? activeEvent.currencyName.charAt(0).toUpperCase()
+    : '€'
 
   /* Il link breve del menu e' annidato in quello dell'evento:
      `/show/stand/<alias evento>/<alias stand>`. I due alias restano segmenti
@@ -499,9 +514,37 @@ export function StandDetailPage() {
             </div>
           )}
 
-          {showNewProductForm && (
-            <form className={styles.productForm} onSubmit={(e) => { e.preventDefault(); createNewProduct() }}>
-              <h3 className={styles.formSubtitle}>Nuovo prodotto</h3>
+          {/* I due moduli stanno in un drawer laterale (`OverlayPanel`):
+              inline il primo spingeva il resto della sezione fuori schermo,
+              e il secondo si apriva *sotto* la lista dei prodotti, lontano
+              dal bottone che lo apre. Il footer e' fuori dal `<form>` e
+              invia con l'attributo `form=`, altrimenti non invierebbe. */}
+          <OverlayPanel
+            open={showNewProductForm}
+            placement="right"
+            title="Nuovo prodotto"
+            onClose={() => setShowNewProductForm(false)}
+            footer={
+              <>
+                <button
+                  type="submit"
+                  form="new-product-form"
+                  className={styles.primaryBtn}
+                  disabled={!newProductForm.name || !newProductForm.price}
+                >
+                  Crea e associa
+                </button>
+                <button type="button" className={styles.secondaryBtn} onClick={() => setShowNewProductForm(false)}>
+                  Annulla
+                </button>
+              </>
+            }
+          >
+            <form
+              id="new-product-form"
+              className={styles.formFlush}
+              onSubmit={(e) => { e.preventDefault(); createNewProduct() }}
+            >
               <div className={styles.field}>
                 <label htmlFor="np-name">Nome *</label>
                 <input id="np-name" value={newProductForm.name} onChange={(e) => setNewProductForm({ ...newProductForm, name: e.target.value })} required />
@@ -555,28 +598,46 @@ export function StandDetailPage() {
                 onChange={(data) => setNewProductForm({ ...newProductForm, gallery: data as UploadedImage[] })}
                 label="Galleria"
               />
-              <div className={styles.formActions}>
-                <button type="submit" className={styles.primaryBtn} disabled={!newProductForm.name || !newProductForm.price}>
-                  Crea e associa
+            </form>
+          </OverlayPanel>
+
+          <OverlayPanel
+            open={showProductForm}
+            placement="right"
+            title="Associa prodotto esistente"
+            onClose={() => setShowProductForm(false)}
+            footer={
+              <>
+                <button
+                  type="submit"
+                  form="link-existing-form"
+                  className={styles.primaryBtn}
+                  disabled={!selectedEventId || !productForm.productId || productForm.stationIds.length === 0}
+                >
+                  Associa
                 </button>
-                <button type="button" className={styles.secondaryBtn} onClick={() => setShowNewProductForm(false)}>
+                <button type="button" className={styles.secondaryBtn} onClick={() => setShowProductForm(false)}>
                   Annulla
                 </button>
-              </div>
-            </form>
-          )}
-
-          {showProductForm && (
-            <form className={styles.productForm} onSubmit={(e) => { e.preventDefault(); createEventProduct() }}>
-              <h3 className={styles.formSubtitle}>Associa prodotto esistente</h3>
+              </>
+            }
+          >
+            <form
+              id="link-existing-form"
+              className={styles.formFlush}
+              onSubmit={(e) => { e.preventDefault(); createEventProduct() }}
+            >
+              {/* L'evento non si sceglie qui: e' quello attivo nella barra
+                  laterale, e il prodotto va associato a quello. Mostriamo
+                  quale, perche' con due edizioni della stessa manifestazione
+                  la differenza si vede solo nella data. */}
               <div className={styles.field}>
-                <label htmlFor="ep-event">Evento</label>
-                <select id="ep-event" value={productForm.eventId} onChange={(e) => setProductForm({ ...emptyProductForm, eventId: e.target.value })} required>
-                  <option value="">Seleziona evento</option>
-                  {events.filter((ev) => stand.eventIds.includes(ev.id)).map((ev) => (
-                    <option key={ev.id} value={ev.id}>{eventWithDate(ev)}</option>
-                  ))}
-                </select>
+                <label>Evento</label>
+                <p className={styles.hint}>
+                  {activeEvent
+                    ? eventWithDate(activeEvent)
+                    : 'Nessun evento attivo: scegline uno dalla barra laterale.'}
+                </p>
               </div>
 
               <div className={styles.field}>
@@ -584,10 +645,7 @@ export function StandDetailPage() {
                 <select id="ep-product" value={productForm.productId} onChange={(e) => setProductForm({ ...productForm, productId: e.target.value })} required>
                 <option value="">Seleziona prodotto</option>
                 {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.price.toFixed(2)} {(() => {
-                    const ev = events.find((e) => e.id === productForm.eventId)
-                    return ev?.currencyName ? ev.currencyName.charAt(0).toUpperCase() : '€'
-                  })()})</option>
+                  <option key={p.id} value={p.id}>{p.name} ({p.price.toFixed(2)} {activeCurrency})</option>
                 ))}
                 </select>
               </div>
@@ -623,17 +681,8 @@ export function StandDetailPage() {
                   )}
                 </div>
               </div>
-
-              <div className={styles.formActions}>
-                <button type="submit" className={styles.primaryBtn} disabled={!productForm.eventId || !productForm.productId || productForm.stationIds.length === 0}>
-                  Associa
-                </button>
-                <button type="button" className={styles.secondaryBtn} onClick={() => setShowProductForm(false)}>
-                  Annulla
-                </button>
-              </div>
             </form>
-          )}
+          </OverlayPanel>
 
           <div className={styles.productList}>
             {filteredEventProducts.map((ep, index) => (

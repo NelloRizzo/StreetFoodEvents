@@ -235,6 +235,18 @@
   margin: 0;
 }
 
+/* Dentro OverlayPanel il form non ha piu' bisogno del proprio riquadro: il
+   pannello fa da contenitore e aggiunge gia' il padding. Serve anche il
+   `display: grid`, altrimenti i campi si accavallano senza spazio fra loro. */
+.formFlush {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  margin-bottom: 0;
+  border: 0;
+  background: none;
+}
+
 .productForm {
   display: grid;
   gap: 1rem;

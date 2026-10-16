@@ -7,6 +7,14 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
 
+- **Descrizione del prodotto in HTML** (nota del supervisore, **analizzata e rimandata** Ott 2026). Non è un campo da cambiare in un form: la descrizione oggi è testo semplice e viene **stampata come testo in almeno 10 punti**, quindi va cambiata tutta insieme o niente.
+  • **I punti che la mostrano** (tutti da passare a markup): `EventStandMenuPage` ×4 (card stand, vista per categoria, modale prodotto), `EventMenuPage` ×3 (card per stand, vista per categoria, modale), `ProductsPage:230` (card del catalogo), `MenuPrintPage` ×2. **I punti che la modificano**: i tre form con `<textarea>` (`ProductsPage`, `StandDetailPage`, e il wizard).
+  • **Il caso serio è `MenuPrintPage`**: usa `esc()` e costruisce l'HTML a mano, quindi l'HTML ci finirebbe stampato come `<p>` letterale. Va deciso se il menu stampabile deve mostrare la descrizione formattata o solo il testo.
+  • **Il buco più importante: i prodotti nascono da due posti**, `products.controller.ts` e `stand-adhesions.controller.ts` (il wizard di adesione). Per rendere la descrizione HTML serve `sanitizeHtmlContent()` **in entrambi**, come fa già `Event.shortDescription`: sanitizzare solo uno dei due lascia passare HTML non sanitizzato che finisce in un `innerHTML`. Sanitizzare a metà è peggio che non farlo.
+  • **I dati già in archivio** sono testo semplice e verrebbero resi con `innerHTML`: quasi sempre innocui, ma una descrizione con `prezzo < 5€` verrebbe mangiata come tag. Serve una normalizzazione in lettura o un intervento sui dati.
+  • **Da decidere prima di scrivere**: se l'HTML vale anche per il menu stampabile e per il wizard adesione (che la mostra e la lascia modificare in un `<input>` di testo), e se `maxlength: 2000` va ripensato perché i tag mangiano il budget.
+  • **Dipendenza dal resto**: questa voce si chiude bene insieme a una decisione unica su "i campi descrittivi sono HTML sanitizzato", che oggi vale per l'evento e non per il prodotto.
+
 ## Idee e implementazioni future
 Qui stanno le voci **non urgenti**: analizzate e rimandate di proposito, non dimenticate. Ogni voce porta con sé la valutazione, così non va rifatta da capo.
 
