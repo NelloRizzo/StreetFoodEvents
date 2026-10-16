@@ -11,6 +11,7 @@ import { ImageUploader } from '../components/ImageUploader'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { CategorySelect } from '../components/CategorySelect'
 import { ALLERGEN_OPTIONS } from '../lib/allergens'
+import { eventWithDate } from '../lib/events'
 import type { UploadedImage } from '../lib/upload'
 import styles from './StandDetailPage.module.scss'
 
@@ -47,7 +48,11 @@ type EventProduct = {
   updatedAt: string
 }
 
-type EventRef = { id: string; name: string; currencyName: string; currencySymbol: UploadedImage | null }
+/* `startDate` serve a distinguere due edizioni della stessa manifestazione:
+   senza la data una `<select>` con dentro "Street Food Roma" due volte non
+   lascia scegliere quale sia. Il dato arriva gia' da `GET /api/events`
+   (lo rimanda `toEventResponse`), quindi qui basta tiparlo. */
+type EventRef = { id: string; name: string; startDate: string; currencyName: string; currencySymbol: UploadedImage | null }
 type ProductRef = { id: string; name: string; price: number }
 
 type ProductFormData = {
@@ -318,7 +323,11 @@ export function StandDetailPage() {
     }))
   }
 
-  const eventName = (id: string) => events.find((e) => e.id === id)?.name ?? id
+  /* Il nome evento porta la data: due edizioni della stessa manifestazione
+     altrimenti sarebbero due voci identiche. L'id resta il fallback quando
+     l'evento non e' in lista (non deve accadere, ma un id e' meglio di un
+     buco). */
+  const eventName = (id: string) => eventWithDate(events.find((e) => e.id === id)) || id
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? id
 
   const filteredEventProducts = (selectedEventId
@@ -520,7 +529,7 @@ export function StandDetailPage() {
                 <select id="ep-event" value={productForm.eventId} onChange={(e) => setProductForm({ ...emptyProductForm, eventId: e.target.value })} required>
                   <option value="">Seleziona evento</option>
                   {events.filter((ev) => stand.eventIds.includes(ev.id)).map((ev) => (
-                    <option key={ev.id} value={ev.id}>{ev.name}</option>
+                    <option key={ev.id} value={ev.id}>{eventWithDate(ev)}</option>
                   ))}
                 </select>
               </div>
