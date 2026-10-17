@@ -493,6 +493,13 @@ export function drawPrice(
      telefono, e scala col corpo come tutto il resto del poster. */
   const gap = Math.round(fontSize * 0.3)
 
+  /* `save`/`restore` attorno a tutto il corpo: il prezzo cambia `textAlign`
+     e `textBaseline` per misurare e posizionare il gruppo numero+simbolo, e
+     senza ripristino quei valori restano sul contesto condiviso e rovinano
+     cio' che viene disegnato dopo. E' successo alla descrizione del
+     prodotto, che si appoggia al `center` della testa del poster: partiva
+     dal centro e proseguiva verso destra. */
+  ctx.save()
   ctx.fillStyle = colors.brand
   ctx.font = `700 ${fontSize}px "Segoe UI", Inter, sans-serif`
   ctx.textAlign = 'left'
@@ -510,16 +517,16 @@ export function drawPrice(
 
   if (opts.bareSymbol) {
     ctx.fillText(opts.bareSymbol, left + textWidth + gap, y)
-    return
+  } else {
+    drawCurrencyGlyph(
+      ctx,
+      left + textWidth + gap + opts.glyphSize / 2,
+      y,
+      opts.glyphSize,
+      opts.currencyImage,
+      opts.currencyInitial,
+      colors.brand,
+    )
   }
-
-  drawCurrencyGlyph(
-    ctx,
-    left + textWidth + gap + opts.glyphSize / 2,
-    y,
-    opts.glyphSize,
-    opts.currencyImage,
-    opts.currencyInitial,
-    colors.brand,
-  )
+  ctx.restore()
 }

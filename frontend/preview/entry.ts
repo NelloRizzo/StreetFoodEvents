@@ -49,6 +49,19 @@ const many = [
 
 const one = [{ name: 'Panino porchetta', coverImage: null, price: 5 }]
 
+/* Descrizione **con** il prezzo acceso: e' la combinazione in cui il difetto
+   si vedeva, perche' il prezzo passa dal contesto prima della descrizione. */
+const withDesc = [
+  {
+    name: 'Panino porchetta',
+    coverImage: null,
+    price: 5,
+    description:
+      'Panino con porchetta di Ariccia, cipolla croccante e salsa della casa. ' +
+      'Servito con patatine fritte appena sfornate e una spolverata di pepe nero.',
+  },
+]
+
 const longName = [
   {
     name: 'Salsiccia con caciocavallo, cipolla croccante e la salsa speciale della casa',
@@ -70,7 +83,7 @@ async function canvasFor(label: string, h: number) {
   return c.getContext('2d')!
 }
 
-type Case = 'menu' | 'menu-empty' | 'prod' | 'prod-long'
+type Case = 'menu' | 'menu-empty' | 'prod' | 'prod-long' | 'prod-desc'
 
 async function run() {
   const params = new URLSearchParams(location.search)
@@ -82,6 +95,8 @@ async function run() {
   if (which === 'menu') await generatePoster(ctx, event, stand, many, null, true, format)
   else if (which === 'menu-empty') await generatePoster(ctx, event, stand, [], null, false, format)
   else if (which === 'prod') await generateProductPosterForPreview(ctx, event, stand, one[0], true, format)
+  else if (which === 'prod-desc')
+    await generateProductPosterForPreview(ctx, event, stand, withDesc[0], true, format, true)
   else await generateProductPosterForPreview(ctx, event, stand, longName[0], false, format)
 
   document.title = 'done'

@@ -12,14 +12,35 @@ import { generatePoster } from '../../components/SocialMenuExport'
 import { generateProductPosterForPreview } from '../../components/SocialProductExport'
 import { posterMetrics, POSTER_FORMATS, type PosterFormatId } from '../../lib/socialCanvas'
 
-type Op = { kind: string; args: number[]; text?: string; font?: string }
+type Op = {
+  kind: string
+  args: number[]
+  text?: string
+  font?: string
+  /* Allineamento del contesto al momento del disegno: la descrizione non lo
+     imposta da sola, quindi un `fillText` che si appoggia a un `textAlign`
+     cambiato da un disegno precedente si vede solo qui. */
+  textAlign?: string
+}
 
 class Recorder {
   ops: Op[] = []
   state: Record<string, unknown> = { font: '', textAlign: '', textBaseline: '' }
+  /* Stack di `save`/`restore`: senza, il contesto finto non ha memoria e un
+     disegno che cambia l'allineamento e poi lo ripristina sembra non averlo
+     cambiato. E' quello che nascondeva il difetto della descrizione: il
+     glifo moneta fa save/center/restore, e sul canvas vero quel restore
+     riporta l'allineamento a `left` impostato dal prezzo. */
+  stack: Record<string, unknown>[] = []
 
   push(kind: string, args: number[], text?: string) {
-    this.ops.push({ kind, args, text, font: String(this.state.font ?? '') })
+    this.ops.push({
+      kind,
+      args,
+      text,
+      font: String(this.state.font ?? ''),
+      textAlign: String(this.state.textAlign ?? ''),
+    })
   }
 
   measureText(text: string) {
@@ -37,6 +58,18 @@ get proxy() {
     get: (t, prop) => {
       const key = String(prop)
       if (key === 'measureText') return (t2: string) => this.measureText(t2)
+      /* `save`/`restore` come sul canvas vero. */
+      if (key === 'save') {
+        return () => {
+          this.stack.push({ ...this.state })
+        }
+      }
+      if (key === 'restore') {
+        return () => {
+          const prev = this.stack.pop()
+          if (prev) this.state = prev
+        }
+      }
       if (key in t) return t[key]
       return (...args: unknown[]) => {
         /* `fillText` ha il testo come primo argomento: va tenuto, altrimenti
@@ -233,6 +266,19 @@ describe.each(FORMATS)('poster di un prodotto con la descrizione — formato %s'
     for (const withPrices of [true, false]) {
       const rec = await drawProduct(format, withPrices, 'Panino porchetta', true)
       assertInside(rec, format)
+    }
+  })
+
+  /* La descrizione non imposta `textAlign`: si appoggia a quello della testa
+     del poster. Se un disegno fra i due (il prezzo) lo cambia e non lo
+     ripristina, ogni riga parte dal centro e va a destra — che e' il difetto
+     riferito sulla nota del supervisore. */
+  it('la descrizione resta centrata anche sotto il prezzo', async () => {
+    const rec = await drawProduct(format, true, 'Panino porchetta', true)
+    const desc = rec.textOps().filter((o) => o.text?.startsWith('Descrizione lunga del prodotto'))
+    expect(desc.length).toBeGreaterThan(0)
+    for (const line of desc) {
+      expect(line.textAlign, `riga "${line.text}"`).toBe('center')
     }
   })
 

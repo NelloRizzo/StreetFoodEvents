@@ -33,6 +33,7 @@ e aprire `preview/story.png`.
 | `menu-empty` | poster del menu di uno stand senza prodotti |
 | `prod` | poster di un singolo prodotto con prezzo |
 | `prod-long` | nome su più righe, senza prezzo |
+| `prod-desc` | prodotto con **descrizione e prezzo**: è la combinazione in cui il prezzo passa dal contesto prima della descrizione |
 
 Il parametro `format` è `story` (9:16, il default) o `feed` (4:5).
 
