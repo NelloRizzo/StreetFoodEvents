@@ -4,11 +4,13 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/auth-context'
 import { apiRequest } from '../lib/api'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
+import { MONTH_LABELS, paginate, startYearMonth } from '../lib/list-nav'
 import { type UploadedDocument, type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { DocumentUploader } from '../components/DocumentUploader'
 import { OverlayPanel } from '../components/OverlayPanel'
 import { AliasManager } from '../components/AliasManager'
+import { DateIndex, Pagination } from '../components/ListNavigator'
 import { EVENT_TIMEZONES } from '../lib/timezones'
 import { RichEditor } from '../components/RichEditor'
 import { useItalianComuni, searchComuni, getProvinces, getProvinceName, getProvinceSigla } from '../lib/italian-comuni'
@@ -251,6 +253,11 @@ export function EventsPage() {
   const [form, setForm] = useState<EventFormData>(emptyForm)
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
   const [favMap, setFavMap] = useState<Map<string, string>>(new Map())
+  /* Paginazione e navigazione per data client-side: /events torna l'intera
+     lista, non ha paginazione lato server. */
+  const [page, setPage] = useState(1)
+  const [year, setYear] = useState<number | null>(null)
+  const [month, setMonth] = useState<number | null>(null)
   const [standList, setStandList] = useState<StandItem[]>([])
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [savingStands, setSavingStands] = useState<Set<string>>(new Set())
@@ -371,6 +378,72 @@ export function EventsPage() {
     fetchStands()
     return () => { mountedRef.current = false }
   }, [])
+
+  /* Anno e mese si leggono dall'ISO come stringa (lo stesso prefisso che
+     mostrano la card e il form): nessun fuso orario puo' spostare la data
+     di un giorno rispetto a cio' che l'operatore legge. */
+  const years = useMemo(() => {
+    const set = new Set<number>()
+    for (const ev of events) {
+      const ym = startYearMonth(ev.startDate)
+      if (ym) set.add(ym.year)
+    }
+    /* Decrescente: e' l'ordine con cui il server restituisce le liste
+       amministrative (edizioni piu' recenti in testa). */
+    return [...set].sort((a, b) => b - a)
+  }, [events])
+
+  /* Se l'anno selezionato non esiste piu' (cancellazione, cambio lista)
+     il filtro si spegne da solo: restare attivo ma non piu' selezionabile
+     nasconderebbe tutti gli eventi dietro un filtro invisibile. */
+  const activeYear = year !== null && years.includes(year) ? year : null
+
+  const months = useMemo(() => {
+    if (activeYear === null) return []
+    const set = new Set<number>()
+    for (const ev of events) {
+      const ym = startYearMonth(ev.startDate)
+      if (ym && ym.year === activeYear) set.add(ym.month)
+    }
+    return [...set].sort((a, b) => a - b)
+  }, [events, activeYear])
+
+  const activeMonth = activeYear !== null && month !== null && months.includes(month) ? month : null
+
+  const filtered = useMemo(
+    () =>
+      events.filter((ev) => {
+        if (activeYear === null) return true
+        const ym = startYearMonth(ev.startDate)
+        /* Senza data leggibile l'evento non puo' essere attribuito a un
+           periodo: da un filtro data attivo esce, ma resta visibile col
+           filtro disattivo. */
+        if (!ym) return false
+        if (ym.year !== activeYear) return false
+        if (activeMonth !== null && ym.month !== activeMonth) return false
+        return true
+      }),
+    [events, activeYear, activeMonth]
+  )
+
+  /* Si renderizza `view.page` e non la state: dopo un filtro piu' stretto
+     o una cancellazione la state puo' superare totalPages e la lista
+     diventerebbe vuota a fronte di eventi presenti. */
+  const view = paginate(filtered, page)
+
+  /* Cambiare anno azzera il mese: il mese e' relativo all'anno scelto e
+     un mese dell'anno precedente resterebbe attivo senza comparire fra i
+     chip — un filtro che nessuno vede. */
+  const handleYear = (next: number | null) => {
+    if (next !== year) setMonth(null)
+    setYear(next)
+    setPage(1)
+  }
+
+  const handleMonth = (next: number | null) => {
+    setMonth(next)
+    setPage(1)
+  }
 
   const toggleFavorite = async (eventId: string) => {
     if (favoriteIds.has(eventId)) {
@@ -1474,8 +1547,17 @@ export function EventsPage() {
           </form>
         )}
 
+        <DateIndex
+          years={years}
+          months={months}
+          activeYear={activeYear}
+          activeMonth={activeMonth}
+          onYear={handleYear}
+          onMonth={handleMonth}
+        />
+
         <div className={styles.list}>
-          {events.map((ev) => (
+          {view.slice.map((ev) => (
             <article key={ev.id} className={styles.card}>
               <div className={styles.cardBody}>
                 <strong className={styles.cardName}>{ev.name}</strong>
@@ -1534,10 +1616,24 @@ export function EventsPage() {
             </article>
           ))}
 
-          {events.length === 0 && (
-            <p className={styles.empty}>Nessun evento. Creane uno nuovo.</p>
+          {filtered.length === 0 && (
+            <p className={styles.empty}>
+              {activeYear !== null
+                ? activeMonth !== null
+                  ? `Nessun evento in ${MONTH_LABELS[activeMonth]} ${activeYear}.`
+                  : `Nessun evento nel ${activeYear}.`
+                : 'Nessun evento. Creane uno nuovo.'}
+            </p>
           )}
         </div>
+
+        <Pagination
+          page={view.page}
+          totalPages={view.totalPages}
+          total={filtered.length}
+          noun={{ one: 'evento', many: 'eventi' }}
+          onChange={setPage}
+        />
       </div>
 
       <ConfirmModal

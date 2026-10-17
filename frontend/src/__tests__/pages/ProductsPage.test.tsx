@@ -43,7 +43,7 @@ const apiRequest = vi.fn(async (path: string) => {
 
 vi.mock('../../lib/api', () => ({ apiRequest: (p: string) => apiRequest(p) }))
 
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { ProductsPage } from '../../pages/ProductsPage'
@@ -76,7 +76,99 @@ describe('catalogo prodotti — descrizione', () => {
   })
 })
 
+describe('catalogo prodotti — paginazione', () => {
+  beforeEach(() => {
+    apiRequest.mockClear()
+  })
+
+  it('mostra una pagina alla volta e il conteggio, e si sposta per pagina', async () => {
+    products = Array.from({ length: 25 }, (_, i) =>
+      product({ id: `p${i}`, name: `Prodotto ${String(i + 1).padStart(2, '0')}` })
+    )
+    renderPage()
+    await screen.findByText('Prodotto 01')
+
+    expect(screen.getByText('Pagina 1 di 2 · 25 prodotti')).toBeInTheDocument()
+    expect(screen.queryByText('Prodotto 21')).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: /Successiva/ }))
+
+    expect(await screen.findByText('Prodotto 21')).toBeInTheDocument()
+    expect(screen.getByText('Pagina 2 di 2 · 25 prodotti')).toBeInTheDocument()
+    expect(screen.queryByText('Prodotto 01')).toBeNull()
+
+    /* Con l'ultima pagina raggiunta avanti non deve essere piu' cliccabile. */
+    expect(screen.getByRole('button', { name: /Successiva/ })).toBeDisabled()
+  })
+
+  it('con una sola pagina resta solo il conteggio', async () => {
+    products = [product()]
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    expect(screen.getByText('1 prodotto')).toBeInTheDocument()
+    expect(screen.queryByText(/Pagina/)).toBeNull()
+    expect(screen.queryByRole('button', { name: /Precedente/ })).toBeNull()
+  })
+})
+
+describe('catalogo prodotti — navigatore per iniziale', () => {
+  beforeEach(() => {
+    apiRequest.mockClear()
+  })
+
+  it('filtra sulla lettera scelta e «Tutte» azzera', async () => {
+    products = [
+      product({ id: 'p1', name: 'Arancia' }),
+      product({ id: 'p2', name: 'Anice' }),
+      product({ id: 'p3', name: 'Banana' }),
+      product({ id: 'p4', name: 'Zucchina' }),
+    ]
+    renderPage()
+    await screen.findByText('Arancia')
+
+    await userEvent.click(screen.getByRole('button', { name: 'B' }))
+
+    expect(screen.queryByText('Arancia')).toBeNull()
+    expect(screen.queryByText('Zucchina')).toBeNull()
+    expect(screen.getByText('Banana')).toBeInTheDocument()
+    /* Singolare: un filtro ristretto fa capire subito cosa resta. */
+    expect(screen.getByText('1 prodotto')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tutte' }))
+
+    expect(screen.getByText('Arancia')).toBeInTheDocument()
+    expect(screen.getByText('Zucchina')).toBeInTheDocument()
+  })
+
+  it('propone solo le iniziali presenti, in ordine alfabetico con # in testa', async () => {
+    products = [
+      product({ id: 'p1', name: 'Arancia' }),
+      product({ id: 'p2', name: 'Banana' }),
+      product({ id: 'p3', name: '2 Palle' }),
+    ]
+    renderPage()
+    await screen.findByText('Arancia')
+
+    const group = screen.getByRole('group', { name: 'Iniziale' })
+    expect(within(group).getByRole('button', { name: 'A' })).toBeInTheDocument()
+    expect(within(group).getByRole('button', { name: 'B' })).toBeInTheDocument()
+    expect(within(group).getByRole('button', { name: '#' })).toBeInTheDocument()
+    /* Nessuna lettera assente: non compaiono pulsanti che non portano da nessuna parte. */
+    expect(within(group).queryByRole('button', { name: 'C' })).toBeNull()
+  })
+
+  it('una sola iniziale in elenco: non c\'e\' niente da scegliere e il navigatore non compare', async () => {
+    products = [product({ id: 'p1', name: 'Panino' })]
+    renderPage()
+    await screen.findByText('Panino')
+
+    expect(screen.queryByRole('group', { name: 'Iniziale' })).toBeNull()
+  })
+})
+
 describe('form prodotto — descrizione', () => {
+
   beforeEach(() => {
     apiRequest.mockClear()
     products = [product()]

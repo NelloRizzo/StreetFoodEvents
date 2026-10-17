@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../features/auth/auth-context'
 import { useAdminEvent } from '../layouts/AdminEventContext'
 import { apiRequest } from '../lib/api'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
+import { availableInitials, initialOf, paginate } from '../lib/list-nav'
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { MapPicker } from '../components/MapPicker'
 import { OverlayPanel } from '../components/OverlayPanel'
+import { LetterIndex, Pagination } from '../components/ListNavigator'
 import styles from './StandsPage.module.scss'
 
 type StandType = 'food' | 'artigianato' | 'divertimento'
@@ -62,6 +64,10 @@ export function StandsPage() {
   const [events, setEvents] = useState<{ id: string; name: string; location: { coordinates?: { coordinates: [number, number] } | null } }[]>([])
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
   const [favMap, setFavMap] = useState<Map<string, string>>(new Map())
+  /* Paginazione e filtro per iniziale client-side: /stands torna l'intera
+     lista (già filtrata per evento attivo dal server). */
+  const [page, setPage] = useState(1)
+  const [letter, setLetter] = useState<string | null>(null)
 
   /* Solo gli stand collegati all'evento attivo: il filtro lo fa il server
    * (`GET /stands?eventId=`), non serve scaricare tutto e filtrare qui. */
@@ -107,6 +113,24 @@ export function StandsPage() {
     fetchFavs()
     /* Ricarica quando cambia l'evento attivo nella sidebar. */
   }, [fetchStands])
+
+  /* Le iniziali si calcolano sull'elenco INTERO e non sulla pagina
+     corrente: le lettere devono restare cliccabili dovunque ci si trovi. */
+  const letters = useMemo(() => availableInitials(stands.map((s) => s.name)), [stands])
+  /* Il filtro per iniziale NON riordina: gli stand restano in numero
+     progressivo per evento (l'ordine del server). E se l'iniziale non c'e'
+     piu' — cambio evento, cancellazione — il filtro si spegne da solo,
+     altrimenti resterebbe attivo ma non selezionabile e nasconderebbe
+     l'elenco dietro un filtro invisibile. */
+  const activeLetter = letter !== null && letters.includes(letter) ? letter : null
+  const filtered = useMemo(
+    () => (activeLetter ? stands.filter((s) => initialOf(s.name) === activeLetter) : stands),
+    [stands, activeLetter]
+  )
+  /* Si renderizza `view.page` e non la state: dopo un filtro piu' stretto
+     o una cancellazione la state puo' superare totalPages e la lista
+     diventerebbe vuota a fronte di stand presenti. */
+  const view = paginate(filtered, page)
 
   const toggleFavorite = async (standId: string) => {
     if (favoriteIds.has(standId)) {
@@ -347,8 +371,14 @@ export function StandsPage() {
           </OverlayPanel>
         )}
 
+        <LetterIndex
+          letters={letters}
+          active={activeLetter}
+          onChange={(l) => { setLetter(l); setPage(1) }}
+        />
+
         <div className={styles.list}>
-          {stands.map((stand) => (
+          {view.slice.map((stand) => (
             <article key={stand.id} className={styles.card}>
               <div className={styles.cardBody}>
                 <strong className={styles.cardName}>{stand.name}</strong>
@@ -384,14 +414,24 @@ export function StandsPage() {
             </article>
           ))}
 
-          {stands.length === 0 && (
+          {filtered.length === 0 && (
             <p className={styles.empty}>
-              {selectedEvent
-                ? `Nessuno stand collegato a «${selectedEvent.name}»: creane uno nuovo o collegane uno esistente.`
-                : 'Nessuno stand. Creane uno nuovo.'}
+              {activeLetter
+                ? `Nessuno stand che inizia per «${activeLetter}».`
+                : selectedEvent
+                  ? `Nessuno stand collegato a «${selectedEvent.name}»: creane uno nuovo o collegane uno esistente.`
+                  : 'Nessuno stand. Creane uno nuovo.'}
             </p>
           )}
         </div>
+
+        <Pagination
+          page={view.page}
+          totalPages={view.totalPages}
+          total={filtered.length}
+          noun={{ one: 'stand', many: 'stand' }}
+          onChange={setPage}
+        />
       </div>
     </div>
   )

@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
 import { ALLERGEN_OPTIONS, ALLERGEN_LABELS } from '../lib/allergens'
 import { stripHtml } from '../lib/socialMenu'
+import { availableInitials, initialOf, paginate } from '../lib/list-nav'
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { OverlayPanel } from '../components/OverlayPanel'
 import { RichEditor } from '../components/RichEditor'
+import { LetterIndex, Pagination } from '../components/ListNavigator'
 import styles from './ProductsPage.module.scss'
 
 type Product = {
@@ -53,6 +55,10 @@ export function ProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<ProductFormData>(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  /* Paginazione e filtro per iniziale client-side: /products torna
+     l'intero catalogo, non ha paginazione lato server. */
+  const [page, setPage] = useState(1)
+  const [letter, setLetter] = useState<string | null>(null)
 
   const fetchProducts = async () => {
     const data = await apiRequest<{ items: Product[] }>('/products')
@@ -63,6 +69,22 @@ export function ProductsPage() {
   useEffect(() => {
     fetchProducts()
   }, [])
+
+  /* Le iniziali si calcolano sull'elenco INTERO e non sulla pagina
+     corrente: le lettere devono restare cliccabili dovunque ci si trovi. */
+  const letters = useMemo(() => availableInitials(products.map((p) => p.name)), [products])
+  /* Se l'iniziale selezionata sparisce dall'elenco (cancellazioni) il
+     filtro si spegne da solo: restare attivo ma non piu' selezionabile
+     nasconderebbe il catalogo dietro un filtro invisibile. */
+  const activeLetter = letter !== null && letters.includes(letter) ? letter : null
+  const filtered = useMemo(
+    () => (activeLetter ? products.filter((p) => initialOf(p.name) === activeLetter) : products),
+    [products, activeLetter]
+  )
+  /* Si renderizza `view.page` e non la state: dopo un filtro piu' stretto
+     o una cancellazione la state puo' superare totalPages e la lista
+     diventerebbe vuota a fronte di prodotti presenti. */
+  const view = paginate(filtered, page)
 
   const openCreate = () => {
     setForm(emptyForm)
@@ -251,8 +273,14 @@ export function ProductsPage() {
           </OverlayPanel>
         )}
 
+        <LetterIndex
+          letters={letters}
+          active={activeLetter}
+          onChange={(l) => { setLetter(l); setPage(1) }}
+        />
+
         <div className={styles.list}>
-          {products.map((product) => (
+          {view.slice.map((product) => (
             <article key={product.id} className={styles.card}>
               <div className={styles.cardBody}>
                 <strong className={styles.cardName}>
@@ -287,10 +315,22 @@ export function ProductsPage() {
             </article>
           ))}
 
-          {products.length === 0 && (
-            <p className={styles.empty}>Nessun prodotto. Creane uno nuovo.</p>
+          {filtered.length === 0 && (
+            <p className={styles.empty}>
+              {activeLetter
+                ? `Nessun prodotto che inizia per «${activeLetter}».`
+                : 'Nessun prodotto. Creane uno nuovo.'}
+            </p>
           )}
         </div>
+
+        <Pagination
+          page={view.page}
+          totalPages={view.totalPages}
+          total={filtered.length}
+          noun={{ one: 'prodotto', many: 'prodotti' }}
+          onChange={setPage}
+        />
       </div>
 
       <ConfirmModal

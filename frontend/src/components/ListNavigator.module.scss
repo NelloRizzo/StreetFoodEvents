@@ -1,0 +1,88 @@
+/* Navigazione delle liste: indice (iniziali / anno-mese) e paginazione.
+   Le tre pagine condividono questo blocco: i colori arrivano dai token
+   globali, nessun foglio separato per pagina. */
+
+.indexBlock {
+  display: grid;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.indexRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.indexLabel {
+  min-width: 5rem;
+  margin-right: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+.chip {
+  min-width: 2rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: #fffaf2;
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.chipActive,
+.chipActive:hover {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: #fffaf2;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.navBtn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink-strong);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.navBtn:hover:not(:disabled) {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.navBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* `tabular-nums`: il conteggio non deve ballare fra una pagina e l'altra. */
+.pageInfo {
+  font-size: 0.9rem;
+  color: var(--color-ink-soft);
+  font-variant-numeric: tabular-nums;
+}
