@@ -6,6 +6,7 @@ import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { ALLERGEN_LABELS } from '../lib/allergens'
 import { trackStandClick, trackProductClick } from '../lib/analytics'
 import type { UploadedImage } from '../lib/upload'
+import { MenuDescriptionText } from './EventStandMenuPage'
 import styles from './EventStandMenuPage.module.scss'
 
 type MenuItem = {
@@ -263,16 +264,23 @@ export function EventMenuPage() {
                         <div className={styles.menuInfo}>
                           <strong className={styles.menuName}>{product.name}</strong>
                           {/* Descrizione in elenco (non solo nel modale), come
-                              nella pagina del singolo stand. */}
-                          {product.description && (
-                            <span className={styles.menuDescription}>{product.description}</span>
-                          )}
+                              nella pagina del singolo stand: testo piano, il
+                              markup resta al modale. */}
+                          <MenuDescriptionText html={product.description} />
                           {product.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>
                               {/* Stessa etichetta della pagina del singolo
                                   stand e del modale prodotto. */}
                               <strong>Ingredienti: </strong>
                               {product.ingredients.join(', ')}
+                            </span>
+                          )}
+                          {product.allergens.length > 0 && (
+                            <span className={styles.menuAllergens}>
+                              <strong>Allergeni: </strong>
+                              {product.allergens
+                                .map((a) => ALLERGEN_LABELS[a] ?? a)
+                                .join(', ')}
                             </span>
                           )}
                         </div>
@@ -369,13 +377,19 @@ export function EventMenuPage() {
                         )}
                         <div className={styles.menuInfo}>
                           <strong className={styles.menuName}>{product.name}</strong>
-                          {product.description && (
-                            <span className={styles.menuDescription}>{product.description}</span>
-                          )}
+                          <MenuDescriptionText html={product.description} />
                           {product.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>
                               <strong>Ingredienti: </strong>
                               {product.ingredients.join(', ')}
+                            </span>
+                          )}
+                          {product.allergens.length > 0 && (
+                            <span className={styles.menuAllergens}>
+                              <strong>Allergeni: </strong>
+                              {product.allergens
+                                .map((a) => ALLERGEN_LABELS[a] ?? a)
+                                .join(', ')}
                             </span>
                           )}
                         </div>
@@ -424,7 +438,10 @@ export function EventMenuPage() {
               </h2>
               <p className={styles.productIngredients}>Stand: {selectedItem.standNumber != null ? `${selectedItem.standNumber} — ` : ''}{selectedItem.standName}</p>
               {selectedItem.description && (
-                <p className={styles.productIngredients}>{selectedItem.description}</p>
+                <div
+                  className={styles.productIngredients}
+                  dangerouslySetInnerHTML={{ __html: selectedItem.description }}
+                />
               )}
               {selectedItem.ingredients.length > 0 && (
                 <p className={styles.productIngredients}><strong>Ingredienti:</strong> {selectedItem.ingredients.join(', ')}</p>

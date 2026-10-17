@@ -8,6 +8,7 @@ import {
   formatCredits,
   formatEventDateRange,
   formatMonetaLine,
+  hasStandShortLink,
   isBareCurrencySymbol,
   standPublicUrl,
   standQrQuery,
@@ -41,6 +42,9 @@ const INCLUDE_PRICES_KEY = 'sfe-social-include-prices'
 /** Condivisa con l'export del prodotto: e' la stessa scelta di cosa mostrare
  *  di un piatto, non due impostazioni da tenere allineate a mano. */
 const INCLUDE_DESCRIPTIONS_KEY = 'sfe-social-include-descriptions'
+/** Solo per il testo del post: l'operatore decide se le descrizioni restano
+ *  HTML o diventano testo piano. */
+const INCLUDE_HTML_KEY = 'sfe-social-include-html'
 
 /** Quante colonne ha la griglia prodotti. */
 const GRID_COLS = 2
@@ -358,6 +362,22 @@ export function SocialMenuExport({ open, event, stand, menuItems, shortLinks, on
     }
   }, [includeDescriptions])
 
+  const [includeHtml, setIncludeHtml] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(INCLUDE_HTML_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(INCLUDE_HTML_KEY, includeHtml ? '1' : '0')
+    } catch {
+      /* localStorage non disponibile */
+    }
+  }, [includeHtml])
+
   const products = useMemo<SocialProduct[]>(() => {
     const out: SocialProduct[] = []
     for (const m of menuItems) {
@@ -399,10 +419,11 @@ export function SocialMenuExport({ open, event, stand, menuItems, shortLinks, on
         menuUrl,
         includePrices,
         includeDescriptions,
+        includeHtml,
         currencyName: event.currencyName ?? null,
         exchangeRate: event.exchangeRate ?? null,
       }),
-    [stand.name, stand.slogan, event.name, event.startDate, event.endDate, event.location, event.shortDescription, products, menuUrl, includePrices, includeDescriptions, event.currencyName, event.exchangeRate],
+    [stand.name, stand.slogan, event.name, event.startDate, event.endDate, event.location, event.shortDescription, products, menuUrl, includePrices, includeDescriptions, includeHtml, event.currencyName, event.exchangeRate],
   )
 
   useEffect(() => {
@@ -511,7 +532,7 @@ export function SocialMenuExport({ open, event, stand, menuItems, shortLinks, on
 
             <SocialFormatPicker format={format} onChange={setFormat} />
 
-            {!shortLinks?.standAlias && <ShortLinkNotice standId={stand.id} />}
+            {!hasStandShortLink(shortLinks) && <ShortLinkNotice />}
 
             <div className={styles.optionsRow}>
               <label className={styles.optionsLabel}>
@@ -535,13 +556,25 @@ export function SocialMenuExport({ open, event, stand, menuItems, shortLinks, on
                 />
                 <span>
                   Includi le descrizioni
-                  <em className={styles.optionsNote}>
-                    Solo nel testo del post, non nel poster: l&apos;immagine 4:5 ha
-                    poco spazio e una riga con la descrizione ne mostrerebbe uno o
-                    tre piatti invece degli otto.
-                  </em>
+                  <em className={styles.optionsNote}>Solo nel testo del post.</em>
                 </span>
               </label>
+              {includeDescriptions && (
+                <label className={styles.optionsLabel}>
+                  <input
+                    type="checkbox"
+                    checked={includeHtml}
+                    onChange={(e) => setIncludeHtml(e.target.checked)}
+                  />
+                  <span>
+                    Mantieni l&apos;HTML nelle descrizioni
+                    <em className={styles.optionsNote}>
+                      Solo nel testo del post: nel poster le descrizioni non entrano.
+                      Alcune piattaforme mostrano i tag alla lettera.
+                    </em>
+                  </span>
+                </label>
+              )}
             </div>
 
             <div className={styles.grid}>

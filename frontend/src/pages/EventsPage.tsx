@@ -1341,8 +1341,9 @@ export function EventsPage() {
                 <legend className={styles.legend}>Link brevi</legend>
                 <p className={styles.fieldHint}>
                   Un nome breve per l&apos;evento: il link <code>/show/event/…</code>{' '}
-                  porta alla stessa pagina. Ogni stand ne ha uno suo, creato dalla pagina
-                  dello stand.
+                  porta alla stessa pagina. Da questo si ricava anche il link breve di
+                  ogni stand, che aggiunge il nome dello stand (es.{' '}
+                  <code>/show/stand/nome-evento/nome-stand</code>).
                 </p>
                 <AliasManager entityType="event" entityRef={editingId} />
               </fieldset>

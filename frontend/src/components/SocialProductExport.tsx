@@ -8,6 +8,7 @@ import {
   formatCredits,
   formatEventDateRange,
   formatMonetaLine,
+  hasStandShortLink,
   isBareCurrencySymbol,
   standQrQuery,
   stripHtml,
@@ -436,7 +437,7 @@ export function SocialProductExport({ open, event, stand, menuItems, shortLinks,
           <>
             <SocialFormatPicker format={format} onChange={changeFormat} />
 
-            {!shortLinks?.standAlias && <ShortLinkNotice standId={stand.id} />}
+            {!hasStandShortLink(shortLinks) && <ShortLinkNotice />}
 
             <div className={styles.optionsRow}>
               <label className={styles.optionsLabel}>

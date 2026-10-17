@@ -13,6 +13,7 @@ import { SocialMenuExport } from '../components/SocialMenuExport'
 import { SocialProductExport } from '../components/SocialProductExport'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { ALLERGEN_LABELS } from '../lib/allergens'
+import { standAliasFromName, stripHtml } from '../lib/socialMenu'
 import type { StandShortLinks } from '../lib/socialMenu'
 import { trackOrderCreated, trackStandClick, trackProductClick } from '../lib/analytics'
 import type { UploadedImage } from '../lib/upload'
@@ -90,6 +91,21 @@ type CartItem = {
   unitPrice: number
 }
 
+/** Riga della descrizione **in elenco**: mostra il testo, non l'HTML.
+ *
+ *  Nella card compatta la descrizione e' una riga con `line-clamp`: un `<p>`
+ *  o un elenco non ci starebbero, e il markup verrebbe letto alla lettera.
+ *  La descrizione per esteso, con il suo markup, resta nel modale del
+ *  prodotto (`dangerouslySetInnerHTML`), che ha lo spazio per impaginarla.
+ *
+ *  Esportata perche' `EventMenuPage` usa lo stesso `module.scss` e deve
+ *  mostrare la stessa riga: due copie divergevano alla prima modifica. */
+export function MenuDescriptionText({ html }: { html: string | null | undefined }) {
+  const text = stripHtml(html)
+  if (!text) return null
+  return <span className={styles.menuDescription}>{text}</span>
+}
+
 export function EventStandMenuPage() {
   const { eventId, standId } = useParams<{ eventId: string; standId: string }>()
   const navigate = useNavigate()
@@ -112,13 +128,24 @@ export function EventStandMenuPage() {
   const [socialOpen, setSocialOpen] = useState(false)
   const [productSocialOpen, setProductSocialOpen] = useState(false)
   const [canExportSocial, setCanExportSocial] = useState(false)
-  const [shortLinks, setShortLinks] = useState<StandShortLinks>({
-    standAlias: null,
-    eventAlias: null,
-  })
+  const [standAliasDoc, setStandAliasDoc] = useState<string | null>(null)
+  const [eventAlias, setEventAlias] = useState<string | null>(null)
   const [reviewAvg, setReviewAvg] = useState<{ avg: number; count: number } | null>(null)
 
   const total = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
+
+  /* Il link breve dello stand si ricava da quello dell'evento piu' il nome
+     dello stand: non si crea un alias a parte. L'alias esplicito, se esiste
+     da prima, ha la precedenza. */
+  const shortLinks = useMemo<StandShortLinks>(
+    () => ({
+      standAlias: standAliasDoc,
+      eventAlias,
+      derivedStandAlias:
+        eventAlias && stand ? standAliasFromName(stand.name) || null : null,
+    }),
+    [standAliasDoc, eventAlias, stand],
+  )
 
   const themeData = useMemo(
     () =>
@@ -169,11 +196,15 @@ export function EventStandMenuPage() {
       .catch(() => setIsLoading(false))
   }, [eventId, standId])
 
-  /* I link brevi servono all'export social, al post e al QR: quello dello
-     stand e, per il link annidato, quello dell'evento. Si cercano solo se
-     l'operatore puo' esportare: la rotta degli alias e' protetta da
+  /* I link brevi servono all'export social, al post e al QR. Si cercano solo
+     se l'operatore puo' esportare: la rotta degli alias e' protetta da
      `authMiddleware`, quindi per un visitatore anonimo risponderebbe 401 e la
-     pagina continuerebbe comunque a funzionare. */
+     pagina continuerebbe comunque a funzionare.
+
+     Quello dello stand e' l'alias **esplicito**, se ne esiste uno creato in
+     passato; il segmento nuovo si ricava dal nome dello stand (vedi
+     `shortLinks`). Quello dell'evento e' indispensabile: e' quello che va
+     davanti. */
   useEffect(() => {
     if (!canExportSocial || !standId || !eventId) return
     let cancelled = false
@@ -192,10 +223,8 @@ export function EventStandMenuPage() {
            cui li mostra la pagina di amministrazione, quindi non e' una scelta
            nascosta. */
         if (!cancelled) {
-          setShortLinks({
-            standAlias: standData.items[0]?.text ?? null,
-            eventAlias: eventData.items[0]?.text ?? null,
-          })
+          setStandAliasDoc(standData.items[0]?.text ?? null)
+          setEventAlias(eventData.items[0]?.text ?? null)
         }
       } catch {
         /* nessun alias, o rotta non raggiungibile: si resta sul link lungo */
@@ -561,10 +590,9 @@ export function EventStandMenuPage() {
                           </strong>
                           {/* La descrizione si vede anche in elenco, non solo
                               nel modale: era il posto dove si leggeva cosa si
-                              sta mangiando. Stringa vuota = nessuna riga. */}
-                          {product?.description && (
-                            <span className={styles.menuDescription}>{product.description}</span>
-                          )}
+                              sta mangiando. In elenco pero' e' testo piano:
+                              il markup resta al modale, che ha spazio. */}
+                          <MenuDescriptionText html={product?.description} />
                           {product && product.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>
                               {/* Etichetta come nel modale: senza, una riga
@@ -572,6 +600,14 @@ export function EventStandMenuPage() {
                                   descrizione sopra. */}
                               <strong>Ingredienti: </strong>
                               {product.ingredients.join(', ')}
+                            </span>
+                          )}
+                          {product && product.allergens.length > 0 && (
+                            <span className={styles.menuAllergens}>
+                              <strong>Allergeni: </strong>
+                              {product.allergens
+                                .map((a) => ALLERGEN_LABELS[a] ?? a)
+                                .join(', ')}
                             </span>
                           )}
                         </div>
@@ -750,9 +786,7 @@ export function EventStandMenuPage() {
                             )}
                             <div className={styles.menuInfo}>
                               <strong className={styles.menuName}>{item.name}</strong>
-                              {item.description && (
-                                <span className={styles.menuDescription}>{item.description}</span>
-                              )}
+                              <MenuDescriptionText html={item.description} />
                               {item.standName && (
                                 <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                               )}
@@ -794,9 +828,7 @@ export function EventStandMenuPage() {
                         )}
                         <div className={styles.menuInfo}>
                           <strong className={styles.menuName}>{item.name}</strong>
-                          {item.description && (
-                            <span className={styles.menuDescription}>{item.description}</span>
-                          )}
+                          <MenuDescriptionText html={item.description} />
                           {item.standName && (
                             <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                           )}
@@ -850,7 +882,10 @@ export function EventStandMenuPage() {
                 {selectedItem.product.isFrozen && <span className={styles.frozenBadge}> *</span>}
               </h2>
               {selectedItem.product.description && (
-                <p className={styles.productDescription}>{selectedItem.product.description}</p>
+                <div
+                  className={styles.productDescription}
+                  dangerouslySetInnerHTML={{ __html: selectedItem.product.description }}
+                />
               )}
               {selectedItem.product.ingredients.length > 0 && (
                 <p className={styles.productIngredients}>

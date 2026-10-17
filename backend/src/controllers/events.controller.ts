@@ -900,7 +900,7 @@ export async function eventMenu(req: Request, res: Response) {
                 productId: product._id.toString(),
                 eventProductId: ep._id.toString(),
                 name: product.name,
-                description: product.description ?? null,
+                description: sanitizeHtmlContent(product.description ?? null),
                 price: ep.priceOverride ?? product.price,
                 ingredients: product.ingredients,
                 allergens: product.allergens ?? [],

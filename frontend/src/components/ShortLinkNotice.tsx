@@ -1,19 +1,18 @@
 import styles from './SocialExport.module.scss'
 
-/* Avviso sul link breve, mostrato nei due export quando lo stand non ha un
- * alias.
+/* Avviso sul link breve, mostrato nei due export quando il link breve dello
+ * stand non si puo' comporre.
  *
- *  Il testo dice la cosa vera: il link che verra' usato funziona lo stesso,
- *  e' solo lungo. Non e' un errore, quindi niente colore d'errore: e un
- *  consiglio, e il link porta gia' alla pagina dove si crea. */
-export function ShortLinkNotice({ standId }: { standId: string }) {
+ *  Il link breve dello stand si ricava da quello dell'**evento** (piu' il
+ *  nome dello stand), quindi e' sulla pagina dell'evento che va creato: e' li'
+ *  che punta il link, e il testo dice la cosa vera — il link lungo funziona lo
+ *  stesso, e' solo un consiglio, non un errore. */
+export function ShortLinkNotice() {
   return (
     <p className={styles.linkNotice}>
-      Questo stand non ha un link breve: nel post e nel QR finira&apos; l&apos;indirizzo
-      lungo con i codici. Funziona, ma per condividere conviene creare lo shortlink
-      dalla{' '}
-      <a href={`/admin/stands/${standId}`} target="_blank" rel="noopener noreferrer">
-        pagina dello stand
+      Nessun link breve: si consiglia la creazione nella{' '}
+      <a href="/admin/events" target="_blank" rel="noopener noreferrer">
+        pagina dell&apos;evento
       </a>
       .
     </p>

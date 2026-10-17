@@ -257,7 +257,15 @@ export function AdhesionsManagePage() {
               {expandedId === a.id && (
                 <div className={styles.details}>
                   {a.slogan && <p><strong>Slogan:</strong> {a.slogan}</p>}
-                  {a.description && <p><strong>Descrizione:</strong> {a.description}</p>}
+                  {/* La descrizione viaggia come HTML sanificato dal server
+                      (in scrittura e in lettura): va resa come markup, non
+                      come testo, altrimenti i tag si leggono alla lettera. */}
+                  {a.description && (
+                    <div>
+                      <strong>Descrizione:</strong>{' '}
+                      <span dangerouslySetInnerHTML={{ __html: a.description }} />
+                    </div>
+                  )}
                   {(a.banner || a.logo) && (
                     <div className={styles.imgRow}>
                       {a.banner && <img src={a.banner.url} alt="banner" className={styles.thumb} />}

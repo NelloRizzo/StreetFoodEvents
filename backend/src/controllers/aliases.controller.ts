@@ -4,9 +4,25 @@ import { Types } from 'mongoose';
 import { AliasModel } from '../models/alias.model';
 import { EventModel } from '../models/event.model';
 import { StandModel } from '../models/stand.model';
+import { standAliasFromName } from '../utils/alias-slug';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
+}
+
+/** Lo stand e' collegato all'evento? Il collegamento si legge da `eventIds`
+ *  oppure da `locations` (la numerazione per evento): non basta una delle due.
+ *  Senza questo controllo un link breve porterebbe alla pagina di uno stand
+ *  estraneo al contesto per cui e' stato scritto. */
+function isStandLinkedToEvent(
+    stand: {
+        eventIds?: { toString(): string }[] | null;
+        locations?: { eventId?: { toString(): string } | null }[] | null;
+    },
+    eventId: string
+): boolean {
+    return stand.eventIds?.some((id) => id.toString() === eventId) === true
+        || stand.locations?.some((loc) => loc.eventId?.toString() === eventId) === true;
 }
 
 function toAliasResponse(alias: {
@@ -202,18 +218,19 @@ export async function resolveAlias(req: Request, res: Response) {
 }
 
 /**
- * Link breve di uno stand **annidato nell'evento**: `/show/stand/<alias evento>/<alias stand>`.
+ * Link breve di uno stand **annidato nell'evento**: `/show/stand/<alias evento>/<segmento stand>`.
  *
- *  I due alias restano segmenti singoli e vengono composti qui, al momento della
- *  richiesta: `/show/stand/evento-2027/panino-doro` resta valido anche se il
- *  giorno dopo l'evento viene rinominato da `evento-2027` a `sf-2027`, perche'
- *  l'URL non contiene niente di scritto da riallineare. Il percorso non viene
- *  mai salvato da nessuna parte.
+ *  Il segmento dello stand e' l'alias **esplicito** se ne esiste uno (quelli
+ *  creati in passato), altrimenti il **nome dello stand ripulito**: lo
+ *  shortlink dello stand non si crea piu' a mano, si ricava da quello
+ *  dell'evento. Il percorso non viene mai salvato da nessuna parte: si compone
+ *  qui, al momento della richiesta, quindi rinominare l'alias dell'evento non
+ *  lascia sporgenti i link gia' stampati.
  *
  *  Il controllo che conta e' l'ultimo: lo stand deve essere **di quell'evento**.
  *  Senza, `/show/stand/evento-a/stand-b` porterebbe alla pagina di uno stand
  *  estraneo all'evento, cioe' un link breve che porta fuori dal contesto per
- *  cui e' stato scritto.
+ *  cui e' stato scritto. Vale sia per l'alias esplicito sia per il nome.
  */
 export async function resolveStandAliasInEvent(req: Request, res: Response) {
     const eventAlias = (req.params.eventAlias as string | undefined)?.trim().toLowerCase();
@@ -223,32 +240,38 @@ export async function resolveStandAliasInEvent(req: Request, res: Response) {
         return res.status(400).json({ message: 'Event alias and stand alias are required' });
     }
 
-    const [eventDoc, standDoc] = await Promise.all([
-        AliasModel.findOne({ text: eventAlias, entityType: 'event' }),
-        AliasModel.findOne({ text: standAlias, entityType: 'stand' })
-    ]);
+    const eventDoc = await AliasModel.findOne({ text: eventAlias, entityType: 'event' });
 
     if (!eventDoc) {
         return res.status(404).json({ message: 'event alias not found' });
     }
 
-    if (!standDoc) {
-        return res.status(404).json({ message: 'stand alias not found' });
-    }
+    const eventId = eventDoc.entityRef.toString();
 
-    const stand = await StandModel.findById(standDoc.entityRef)
-        .select('name eventIds locations')
-        .lean();
+    /* Prima l'alias esplicito, che ha la precedenza; se non c'e', o punta a
+       uno stand di un altro evento, si cerca per nome fra gli stand collegati
+       a questo evento. Gli stand sono pochi per evento, quindi il confronto in
+       memoria costa meno di una slugify in query (che MongoDB non sa fare). */
+    const explicit = await AliasModel.findOne({ text: standAlias, entityType: 'stand' });
+
+    let stand = explicit
+        ? await StandModel.findById(explicit.entityRef).select('name eventIds locations').lean()
+        : null;
+
+    if (!stand || !isStandLinkedToEvent(stand, eventId)) {
+        const candidates = await StandModel.find({
+            $or: [
+                { eventIds: eventDoc.entityRef },
+                { 'locations.eventId': eventDoc.entityRef }
+            ]
+        })
+            .select('name eventIds locations')
+            .lean();
+
+        stand = candidates.find((s) => standAliasFromName(s.name) === standAlias) ?? null;
+    }
 
     if (!stand) {
-        return res.status(404).json({ message: 'Referenced stand not found' });
-    }
-
-    const eventId = eventDoc.entityRef.toString();
-    const linked = stand.eventIds?.some((id) => id.toString() === eventId) === true
-        || stand.locations?.some((loc) => loc.eventId?.toString() === eventId) === true;
-
-    if (!linked) {
         return res.status(404).json({ message: 'Stand is not linked to that event' });
     }
 

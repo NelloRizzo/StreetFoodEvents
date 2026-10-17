@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 
 import { EventProductModel } from '../models/event-product.model';
+import { sanitizeHtmlContent } from '../utils/html-sanitizer';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -53,7 +54,7 @@ function toEventProductResponse(ep: {
             ? {
                   id: product!._id.toString(),
                   name: product!.name,
-                  description: product!.description ?? null,
+                  description: sanitizeHtmlContent(product!.description ?? null),
                   price: product!.price,
                   ingredients: product!.ingredients,
                   allergens: product!.allergens ?? [],

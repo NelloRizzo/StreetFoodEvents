@@ -102,6 +102,11 @@ const ingredientNodes = () =>
     el.textContent?.startsWith('Ingredienti: '),
   )
 
+const allergenNodes = () =>
+  [...document.querySelectorAll(`.${styles.menuAllergens}`)].filter((el) =>
+    el.textContent?.startsWith('Allergeni: '),
+  )
+
 describe('menu evento — descrizione del prodotto in elenco', () => {
   beforeEach(() => {
     apiRequest.mockClear()
@@ -163,5 +168,62 @@ describe('menu evento — descrizione del prodotto in elenco', () => {
        che non e' una lista di ingredienti. */
     expect(screen.getByText(/^Stand: /).textContent?.startsWith('Ingredienti: ')).toBe(false)
     expect(ingredientNodes()).toHaveLength(1)
+  })
+
+  /* La descrizione e' HTML sanificato: in elenco resta testo piano (una riga
+     sola, il markup la spezzerebbe), nel modale si vede come markup. */
+  it('in elenco il markup della descrizione diventa testo piano', async () => {
+    const conHtml: MenuItem = { ...productBase, description: '<p>Con <strong>peperoncino</strong> piccante</p>' }
+    menuResponse = { ...menuResponse, items: [conHtml], byCategory: { Special: [conHtml] } }
+    renderPage()
+    await screen.findByText('Salsiccia e caciocavallo')
+
+    const line = descNodes()[0]
+    expect(line.textContent).toBe('Con peperoncino piccante')
+    expect(line.querySelector('strong')).toBeNull()
+  })
+
+  it('nel modale il markup della descrizione viene reso', async () => {
+    const conHtml: MenuItem = { ...productBase, description: '<p>Con <strong>peperoncino</strong> piccante</p>' }
+    menuResponse = { ...menuResponse, items: [conHtml], byCategory: { Special: [conHtml] } }
+    renderPage()
+    fireEvent.click(await screen.findByText('Salsiccia e caciocavallo'))
+
+    const dialog = await screen.findByRole('dialog')
+    const strong = dialog.querySelector('strong')
+    expect(strong).not.toBeNull()
+    expect(strong!.textContent).toBe('peperoncino')
+  })
+})
+
+describe('menu evento — allergeni in elenco', () => {
+  beforeEach(() => {
+    apiRequest.mockClear()
+    const conAllergeni: MenuItem = { ...productBase, allergens: ['gluten', 'milk'] }
+    menuResponse = {
+      event: menuResponse.event,
+      categories: ['Special'],
+      items: [conAllergeni],
+      byCategory: { Special: [conAllergeni] },
+    }
+  })
+
+  it('mostra la riga allergeni con le etichette nella vista per stand', async () => {
+    renderPage()
+    await screen.findByText('Salsiccia e caciocavallo')
+
+    const lines = allergenNodes()
+    expect(lines).toHaveLength(1)
+    expect(lines[0].textContent).toBe('Allergeni: Glutine, Latte')
+  })
+
+  it('la mostra anche nella vista per categorie', async () => {
+    renderPage()
+    await screen.findByText('Salsiccia e caciocavallo')
+
+    fireEvent.click(screen.getByRole('tab', { name: /Per categorie/i }))
+
+    expect(allergenNodes()).toHaveLength(1)
+    expect(allergenNodes()[0].textContent).toBe('Allergeni: Glutine, Latte')
   })
 })

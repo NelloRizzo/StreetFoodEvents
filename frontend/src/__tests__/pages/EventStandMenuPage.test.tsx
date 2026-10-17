@@ -44,6 +44,9 @@ const standTwo = {
 /* Descrizione del prodotto principale: cambiata da ogni test. */
 let productDescription: string | null = DESCRIPTION
 let categoryDescription: string | null = null
+/* Allergeni del prodotto principale: le chiavi sono quelle del catalogo
+   `lib/allergens.ts`, a schermo devono uscirne le etichette. */
+let productAllergens: string[] = []
 /* Prodotti in menu: `null` = fixture standard (costruita al momento della
    fetch, cosi' i test che cambiano la descrizione sono visti), `[]` = stand
    senza menu. */
@@ -125,6 +128,11 @@ const ingredientNodes = () =>
     el.textContent?.startsWith('Ingredienti: '),
   )
 
+const allergenNodes = () =>
+  [...document.querySelectorAll(`.${styles.menuAllergens}`)].filter((el) =>
+    el.textContent?.startsWith('Allergeni: '),
+  )
+
 /* Fixture del menu letta al momento della fetch, così un test può cambiare
    i prodotti senza toccare il mock dell'API. */
 const buildMenu = () => [
@@ -139,7 +147,7 @@ const buildMenu = () => [
       description: productDescription,
       price: 5,
       ingredients: ['pane', 'cotto'],
-      allergens: [],
+      allergens: productAllergens,
       isFrozen: false,
       coverImage: null,
     },
@@ -152,6 +160,7 @@ const resetFixture = () => {
   apiRequest.mockClear()
   productDescription = DESCRIPTION
   categoryDescription = null
+  productAllergens = []
   authUser = null
   eventProducts = null
 }
@@ -194,6 +203,29 @@ describe('menu stand — descrizione del prodotto in elenco', () => {
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveTextContent(DESCRIPTION)
   })
+
+  /* La descrizione e' HTML sanificato: in elenco resta testo piano (una riga
+     sola, il markup la spezzerebbe), nel modale si vede come markup. */
+  it('in elenco il markup della descrizione diventa testo piano', async () => {
+    productDescription = '<p>Pane con <strong>cotto</strong></p>'
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    const line = descNodes()[0]
+    expect(line.textContent).toBe('Pane con cotto')
+    expect(line.querySelector('strong')).toBeNull()
+  })
+
+  it('nel modale il markup della descrizione viene reso', async () => {
+    productDescription = '<p>Pane con <strong>cotto</strong></p>'
+    renderPage()
+    fireEvent.click(await screen.findByText('Panino della casa'))
+
+    const dialog = await screen.findByRole('dialog')
+    const strong = dialog.querySelector('strong')
+    expect(strong).not.toBeNull()
+    expect(strong!.textContent).toBe('cotto')
+  })
 })
 
 describe('menu stand — etichetta degli ingredienti', () => {
@@ -221,6 +253,39 @@ describe('menu stand — etichetta degli ingredienti', () => {
     const standLine = screen.getByText(/^Stand: /)
     expect(standLine.textContent?.startsWith('Ingredienti: ')).toBe(false)
     expect(ingredientNodes()).toHaveLength(1)
+  })
+})
+
+describe('menu stand — allergeni in elenco', () => {
+  beforeEach(() => {
+    resetFixture()
+  })
+
+  it('mostra la riga allergeni nella card, con le etichette del catalogo', async () => {
+    productAllergens = ['gluten', 'milk']
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    const lines = allergenNodes()
+    expect(lines).toHaveLength(1)
+    expect(lines[0].textContent).toBe('Allergeni: Glutine, Latte')
+  })
+
+  it('non rende nessun elemento quando il prodotto non ha allergeni', async () => {
+    productAllergens = []
+    renderPage()
+    await screen.findByText('Panino della casa')
+
+    expect(allergenNodes()).toHaveLength(0)
+  })
+
+  it('resta visibile anche nel modale prodotto', async () => {
+    productAllergens = ['eggs']
+    renderPage()
+    fireEvent.click(await screen.findByText('Panino della casa'))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent('Allergeni: Uova')
   })
 })
 

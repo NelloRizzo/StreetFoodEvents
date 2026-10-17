@@ -40,6 +40,7 @@ App locale offline in `.local/` (backend+frontend+seed in un solo container, ved
 
 - **I push li fa SEMPRE l'operatore, manualmente.** L'agente non esegue mai `git push`, né `--force`, né `--tags`, anche se il branch è indietro, se un remoto sembra servire o se il commit sembra "ovvio". Al massimo dice quali commit sono pronti e lascia il comando all'umano. Vale anche per `git commit --amend` su un commit già pushato: prima chiedere, perché riscrive la storia.
 - **Un commit per ogni voce di TODO chiusa**: il changelog della voce va nello stesso commit del codice che la realizza.
+- **Per ogni TODO risolto va fatto un commit separato.** Mai accorpare più voci in un unico commit, anche se nascono dalla stessa sessione di lavoro o toccano gli stessi file: il commit dedicato è ciò che rende la storia leggibile e revertibile per singola voce. Se più voci vengono chiuse insieme, si fanno più commit in sequenza (uno per voce) e il changelog si spezza di conseguenza.
 - **`android/` non si tocca**: è lo sviluppo di un altro agente su un branch separato, già in `.gitignore`. Niente staging "per comodità" con `git add -A`, niente refactor "a tutto repo", niente artefatti che lo includano. Vale per l'intera cartella, non solo per i sorgenti.
 
 ## Backend (`backend/`)

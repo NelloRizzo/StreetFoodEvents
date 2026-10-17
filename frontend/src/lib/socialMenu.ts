@@ -114,18 +114,33 @@ export function formatMonetaLine(
   return `Moneta evento: ${name} (1 ${name} = ${euroLabel} €)`
 }
 
-/** I due link brevi che servono a chiudere il menu di uno stand.
+/** I pezzi del link breve che servono a chiudere il menu di uno stand.
  *
- *  Quello del **menu** porta lo stand dentro l'evento, quindi si compone con i
- *  due alias: `/show/stand/<alias evento>/<alias stand>`. I due alias restano
- *  segmenti singoli e vengono composti dal server al momento della richiesta,
- *  per cui rinominare l'alias dell'evento non lascia sporgenti i link gia'
- *  stampati. */
+ *  Quello del **menu** porta lo stand dentro l'evento, quindi si compone con
+ *  l'alias dell'evento e un segmento per lo stand:
+ *  `/show/stand/<alias evento>/<segmento stand>`. Il segmento e' l'alias
+ *  esplicito dello stand se ne esiste uno, altrimenti il **nome dello stand
+ *  ripulito**: lo shortlink dello stand non si crea piu' a mano, si ricava da
+ *  quello dell'evento. I pezzi restano segmenti singoli e vengono composti al
+ *  momento della richiesta, per cui rinominare l'alias dell'evento non lascia
+ *  sporgenti i link gia' stampati. */
 export type StandShortLinks = {
-  /** Alias dello stand, senza slash. */
+  /** Alias **esplicito** dello stand (documento Alias), senza slash.
+   *
+   *  Da quando lo shortlink dello stand si ricava dal nome, questo campo
+   *  resta per gli alias creati in passato: e' l'unico che, da solo, sa stare
+   *  in piedi (`/show/stand/<alias>`). */
   standAlias: string | null
   /** Alias dell'evento, senza slash: e' quello che va davanti. */
   eventAlias: string | null
+  /** Segmento dello stand ricavato dal suo **nome**, per il link annidato
+   *  nell'evento.
+   *
+   *  Non esiste nessun documento Alias per questo: il link si compone al
+   *  volo, come per gli altri segmenti. Vale **solo** dentro il link
+   *  dell'evento, quindi senza `eventAlias` resta inutilizzato — da solo
+   *  porterebbe a un 404. */
+  derivedStandAlias?: string | null
 }
 
 /** Come si chiama uno stand in un link breve: il nome ripulito di tutto cio'
@@ -134,9 +149,12 @@ export type StandShortLinks = {
  *  Riusa `fileSlug`, che fa gia' questa pulizia per i nomi dei file: due
  *  versioni della stessa regola andrebbero tenute allineate a mano. Il
  *  segnaposto di `fileSlug` ('senza-nome') qui diventa stringa vuota: un alias
- *  con quel nome sarebbe un alias falso, meglio che il campo resti da riempire.
- *  Espone l'idea anche senza alias, cosi' il campo della pagina stand puo'
- *  riempirsi da solo prima che l'operatore prema "Aggiungi". */
+ *  con quel nome sarebbe un alias falso, meglio restare sul link lungo.
+ *
+ *  **Gemella di `standAliasFromName` in `backend/src/utils/alias-slug.ts`**:
+ *  il link breve viene composto anche dal server (visita diretta, QR) e le due
+ *  implementazioni devono produrre la stessa stringa, altrimenti uno
+ *  shortlink condiviso non si risolve. Tenere allineate a mano. */
 export function standAliasFromName(name: string): string {
   /* Il minuscolo non e' facoltativo: il validatore degli alias accetta solo
      `[a-z0-9_-]` e il campo ha anche il `pattern` HTML, quindi proporre un
@@ -147,12 +165,12 @@ export function standAliasFromName(name: string): string {
 
 /** Link pubblico della pagina di uno stand.
  *
- *  Con l'alias si usa il link breve, che e' quello che si mette in un post e
- *  quello che va nel QR del poster: con gli ObjectId nel link il visitatore ne
- *  vede uno solo e il QR diventa illeggibile da lontano. Serve l'alias anche
- *  dell'evento, perche' il link breve del menu e' annidato. Senza si resta sul
- *  link lungo, che funziona, e l'export avvisa che conviene creare gli
- *  shortlink. */
+ *  Con l'alias dell'evento si usa il link breve, che e' quello che si mette in
+ *  un post e quello che va nel QR del poster: con gli ObjectId nel link il
+ *  visitatore ne vede uno solo e il QR diventa illeggibile da lontano. Il
+ *  segmento dello stand e' l'alias esplicito se c'e', altrimenti il suo nome
+ *  ripulito. Senza l'alias dell'evento si resta sul link lungo, che funziona,
+ *  e l'export avvisa che conviene crearlo. */
 export function standPublicUrl(input: {
   origin: string
   eventId: string
@@ -160,16 +178,35 @@ export function standPublicUrl(input: {
   shortLinks?: StandShortLinks
 }): string {
   const { origin, eventId, standId, shortLinks } = input
-  const standAlias = shortLinks?.standAlias
-  const eventAlias = shortLinks?.eventAlias
-  if (standAlias && eventAlias) return `${origin}/show/stand/${eventAlias}/${standAlias}`
+  const standAlias = shortLinks?.standAlias ?? null
+  const eventAlias = shortLinks?.eventAlias ?? null
+  /* Il nome dello stand vale solo dentro il link dell'evento: da solo
+     porterebbe a una pagina che non esiste. */
+  const derived = eventAlias ? (shortLinks?.derivedStandAlias ?? null) : null
+  const segment = standAlias || derived
+  if (segment && eventAlias) return `${origin}/show/stand/${eventAlias}/${segment}`
   if (standAlias) return `${origin}/show/stand/${standAlias}`
   return `${origin}/events/${eventId}/stands/${standId}`
 }
 
-/** Query per il QR del menu: con i due alias il server costruisce il link breve
- *  annidato, altrimenti il link lungo. Il server verifica che gli alias esistano
- *  e che lo stand sia di quell'evento, quindi non e' una fiducia cieca. */
+/** C'e' un link breve componibile per lo stand?
+ *
+ *  Serve l'alias dell'evento (e' quello che va davanti) e un segmento per lo
+ *  stand — alias esplicito o nome ripulito. Senza, l'export resta sul link
+ *  lungo e lo dichiara con `ShortLinkNotice`. */
+export function hasStandShortLink(shortLinks?: StandShortLinks | null): boolean {
+  if (!shortLinks) return false
+  if (shortLinks.eventAlias) {
+    return Boolean(shortLinks.standAlias || shortLinks.derivedStandAlias)
+  }
+  /* Senza l'evento resta il solo alias esplicito, che vale da solo. */
+  return Boolean(shortLinks.standAlias)
+}
+
+/** Query per il QR del menu: con l'alias dell'evento il server costruisce il
+ *  link breve annidato, altrimenti il link lungo. Il server verifica che
+ *  l'alias esista, che lo stand sia di quell'evento e che il segmento
+ *  corrisponda, quindi non e' una fiducia cieca. */
 export function standQrQuery(input: {
   eventId: string
   standId: string
@@ -177,8 +214,11 @@ export function standQrQuery(input: {
 }): string {
   const { eventId, standId, shortLinks } = input
   const params = new URLSearchParams({ eventId })
-  if (shortLinks?.standAlias) params.set('alias', shortLinks.standAlias)
-  if (shortLinks?.eventAlias) params.set('eventAlias', shortLinks.eventAlias)
+  const eventAlias = shortLinks?.eventAlias ?? null
+  const derived = eventAlias ? (shortLinks?.derivedStandAlias ?? null) : null
+  const segment = shortLinks?.standAlias || derived
+  if (segment) params.set('alias', segment)
+  if (eventAlias) params.set('eventAlias', eventAlias)
   return `/stands/${standId}/qrcode?${params.toString()}`
 }
 
@@ -207,6 +247,16 @@ export type SocialMenuCaptionInput = {
    *  storica alta 74px ne contiene due. Metterla nell'immagine farebbe
    *  passare da 8 prodotti a 1-3. Il testo non ha questo limite. */
   includeDescriptions?: boolean
+  /** Se `true` le descrizioni nel testo del post restano HTML, altrimenti
+   *  diventano testo piano.
+   *
+   *  Vale **solo** per il testo del post: il poster disegna sempre testo
+   *  piano (il canvas non ha markup) e nell'immagine le descrizioni non
+   *  entrano affatto. La scelta e' dell'operatore perche' la piattaforma di
+   *  destinazione puo' accettare o rifiutare l'HTML: la stessa descrizione
+   *  va bene come `<strong>` su un sito e come testo su un social che lo
+   *  mostra alla lettera. */
+  includeHtml?: boolean
   currencyName?: string | null
   exchangeRate?: number | null
 }
@@ -229,7 +279,14 @@ export function buildSocialMenuCaption(input: SocialMenuCaptionInput): string {
   const products = input.products
     .map((p) => ({
       name: p.name.trim(),
-      description: stripHtml(p.description),
+      /* In modalita' HTML il testo serve lo stesso, ma solo come controllo
+         "c'e' qualcosa da mostrare": un `<p></p>` vuoto è una descrizione
+         assente, non una riga vuota nel post. */
+      description: input.includeHtml
+        ? stripHtml(p.description)
+          ? (p.description ?? '').trim()
+          : ''
+        : stripHtml(p.description),
       price: p.price,
     }))
     .filter((p) => p.name.length > 0)

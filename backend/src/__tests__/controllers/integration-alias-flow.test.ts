@@ -203,6 +203,73 @@ describe('Alias creation → resolution integration', () => {
         expect(res.status).toBe(404);
     });
 
+    /* Lo shortlink dello stand non si crea a mano: si ricava dall'alias
+       dell'evento piu' il nome dello stand. Quindi il link annidato si risolve
+       anche senza nessun documento Alias per lo stand. */
+    it("risolve il link annidato dal nome dello stand, senza alias dello stand", async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const event = await EventModel.create({
+            name: 'Nome Stand',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2027-06-01'),
+            endDate: new Date('2027-06-07'),
+            currencyName: 'TC'
+        });
+
+        const stand = await StandModel.create({
+            name: 'Tris di Arrosticini',
+            eventIds: [event._id]
+        });
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'nomes', entityType: 'event', entityRef: event._id.toString() });
+
+        /* Nessun alias per lo stand: il segmento e' il nome ripulito. */
+        const res = await request(app).get('/api/resolve/stand/nomes/tris-di-arrosticini');
+
+        expect(res.status).toBe(200);
+        expect(res.body.eventId).toBe(event._id.toString());
+        expect(res.body.standId).toBe(stand._id.toString());
+        expect(res.body.entityName).toBe('Tris di Arrosticini');
+    });
+
+    /* Il nome vale solo **dentro** l'evento giusto: uno stand con lo stesso
+       nome in un altro evento non si deve risolvere da qui. */
+    it('non risolve dal nome uno stand di un altro evento', async () => {
+        app = createTestApp();
+        const { sessionToken } = await createAuthSession();
+
+        const eventA = await EventModel.create({
+            name: 'Evento A nome',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2027-06-01'),
+            endDate: new Date('2027-06-07'),
+            currencyName: 'TC'
+        });
+        const eventB = await EventModel.create({
+            name: 'Evento B nome',
+            location: { label: 'Loc', coordinates: { type: 'Point', coordinates: [12.5, 41.9] } },
+            startDate: new Date('2027-07-01'),
+            endDate: new Date('2027-07-07'),
+            currencyName: 'TC'
+        });
+
+        await StandModel.create({ name: 'Tris di Arrosticini', eventIds: [eventB._id] });
+
+        await request(app)
+            .post('/api/aliases')
+            .set('Cookie', `sid=${sessionToken}`)
+            .send({ text: 'ean', entityType: 'event', entityRef: eventA._id.toString() });
+
+        const res = await request(app).get('/api/resolve/stand/ean/tris-di-arrosticini');
+
+        expect(res.status).toBe(404);
+    });
+
     /* Lo stand puo' essere collegato a un evento anche solo da `locations`
        (la numerazione per evento): il collegamento non si legge solo da
        `eventIds`. */

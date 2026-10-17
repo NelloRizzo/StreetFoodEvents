@@ -270,6 +270,52 @@ describe('buildSocialMenuCaption', () => {
     expect(caption).not.toContain('<')
   })
 
+  /* La scelta e' dell'operatore perche' la piattaforma di destinazione puo'
+     accettare o rifiutare l'HTML: la stessa descrizione va bene come `<strong>`
+     su un sito e come testo su un social che lo mostra alla lettera. */
+  it('con includeHtml il markup resta nel testo del post', () => {
+    const caption = buildSocialMenuCaption({
+      ...base,
+      includeDescriptions: true,
+      includeHtml: true,
+      products: [
+        { name: 'Panino', description: '<p>Maiale e <strong>rosmarino</strong></p>', price: 12 },
+      ],
+    })
+    expect(caption).toContain('<strong>rosmarino</strong>')
+    expect(caption).toContain('• Panino\n  <p>')
+  })
+
+  /* Un editor vuoto produce `<p></p>`: e' una descrizione assente, non una
+     riga vuota nel post. */
+  it('con includeHtml una descrizione solo markup non aggiunge una riga', () => {
+    const caption = buildSocialMenuCaption({
+      ...base,
+      includeDescriptions: true,
+      includeHtml: true,
+      products: [
+        { name: 'Panino', description: '<p></p>', price: 12 },
+        { name: 'Arrosticini', description: '<p>   </p>', price: 10 },
+      ],
+    })
+    expect(caption).toContain('• Panino')
+    expect(caption).toContain('• Arrosticini')
+    expect(caption).not.toContain('<p></p>')
+    expect(caption).not.toMatch(/\n\s{2}\n/)
+  })
+
+  it('includeHtml senza includeDescriptions non mostra comunque nulla', () => {
+    const caption = buildSocialMenuCaption({
+      ...base,
+      includeHtml: true,
+      products: [
+        { name: 'Panino', description: '<p>Maiale e <strong>rosmarino</strong></p>', price: 12 },
+      ],
+    })
+    expect(caption).not.toContain('<strong>')
+    expect(caption).not.toContain('rosmarino')
+  })
+
   it('un piatto senza descrizione non aggiunge una riga vuota', () => {
     const caption = buildSocialMenuCaption({
       ...base,

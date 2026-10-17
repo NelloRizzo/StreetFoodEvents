@@ -379,6 +379,16 @@
   white-space: nowrap;
 }
 
+/* Allergeni in elenco: sono un dato di sicurezza alimentare, quindi non si
+   troncano (niente ellipsis, a differenza degli ingredienti) e vanno a capo
+   anche su liste lunghe. Colore rosso come nel modale prodotto. */
+.menuAllergens {
+  color: #c0392b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .menuRight {
   display: flex;
   align-items: center;

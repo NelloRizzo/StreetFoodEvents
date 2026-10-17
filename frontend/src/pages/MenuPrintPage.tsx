@@ -103,8 +103,12 @@ function buildMenuHtml(
             const frozenBadge = ep.product.isFrozen
               ? '<span style="color:#2980b9;font-weight:900;margin-left:0.25rem">*</span>'
               : ''
+            /* La descrizione e' HTML gia' sanitizzato dal server (`/event-products`
+               lo ripulisce in lettura): va inserita come markup, NON con `esc()`,
+               altrimenti i tag uscirebbero stampati alla lettera. Il `<div>` e non
+               un `<p>` perche' il markup puo' contenere blocchi (elenchi, paragrafi). */
             const desc = ep.product.description
-              ? `<p style="font-size:0.8rem;color:#587065;margin:0.15rem 0 0;font-style:italic">${esc(ep.product.description)}</p>`
+              ? `<div style="font-size:0.8rem;color:#587065;margin:0.15rem 0 0;font-style:italic">${ep.product.description}</div>`
               : ''
             return `<div style="border:1px solid #ddd;border-radius:12px;padding:0.75rem;background:#fff;break-inside:avoid">
               ${prodCover}
@@ -213,8 +217,10 @@ function categoryMenuFullHtml(
       const frozen = p.isFrozen
         ? `<span style="color:#2980b9;font-weight:900;margin-left:0.25rem">${allergenBadge}</span>`
         : ''
+      /* Stesso criterio del menu per stand: HTML sanitizzato dal server
+         (`/events/:id/menu` ripulisce in lettura), quindi markup e non `esc()`. */
       const desc = p.description
-        ? `<p style="font-size:0.8rem;color:#587065;margin:0.15rem 0 0;font-style:italic">${esc(p.description)}</p>`
+        ? `<div style="font-size:0.8rem;color:#587065;margin:0.15rem 0 0;font-style:italic">${p.description}</div>`
         : ''
       const standLabel = p.standNumber != null ? `#${p.standNumber} ${p.standName}` : p.standName
       return `<div style="border:1px solid #ddd;border-radius:12px;padding:0.75rem;background:#fff;break-inside:avoid">

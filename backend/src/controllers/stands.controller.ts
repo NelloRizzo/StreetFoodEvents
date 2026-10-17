@@ -6,6 +6,7 @@ import * as qrcode from 'qrcode';
 import { StandModel } from '../models/stand.model';
 import { AliasModel } from '../models/alias.model';
 import { sanitizeHtmlContent } from '../utils/html-sanitizer';
+import { standAliasFromName } from '../utils/alias-slug';
 import { RoleModel } from '../models/role.model';
 import { UserRoleModel } from '../models/user-role.model';
 import { UsageContractModel } from '../models/usage-contract.model';
@@ -446,15 +447,17 @@ export async function standQrCode(req: Request, res: Response) {
      l'alias dell'evento, il link annidato `/show/stand/<alias evento>/<alias
      stand>`.
 
-     Gli alias **non** vengono usati come arrivo ne' interpolati nell'URL: si
-     cercano nel database e l'URL si costruisce con il testo letto da li'. Se un
-     alias non esiste, o non e' di questo stand, o l'evento non combacia, si
-     cade sul link lungo senza fallire: il QR del menu deve esistere comunque,
-     e il link lungo funziona. */
+     Il segmento dello stand e' l'alias **esplicito** se esiste, altrimenti il
+     **nome dello stand ripulito**: lo shortlink dello stand non si crea piu' a
+     mano, si ricava da quello dell'evento. Il testo ricevuto non viene usato
+     come arrivo ne' interpolato nell'URL: si cerca l'alias nel database e, in
+     mancanza, si confronta con quello che produce il nome. Se non combacia, o
+     l'evento non e' quello giusto, si cade sul link lungo senza fallire: il QR
+     del menu deve esistere comunque, e il link lungo funziona. */
   const aliasText = (req.query.alias as string | undefined)?.trim().toLowerCase();
   const eventAliasText = (req.query.eventAlias as string | undefined)?.trim().toLowerCase();
 
-  const [standAlias, eventAlias] = await Promise.all([
+  const [explicitStandAlias, eventAlias] = await Promise.all([
     aliasText
       ? AliasModel.findOne({ text: aliasText, entityType: 'stand', entityRef: stand._id })
       : null,
@@ -466,11 +469,19 @@ export async function standQrCode(req: Request, res: Response) {
   const eventAliasMatchesStand =
     !!eventAlias && !!eventId && eventAlias.entityRef.toString() === eventId;
 
+  /* Il nome vale **solo** dentro il link dell'evento: da solo porterebbe a una
+     pagina che non esiste, quindi si accetta il segmento derivato solo se
+     l'alias dell'evento combacia. */
+  const derivedStandAlias =
+    eventAliasMatchesStand && aliasText && aliasText === standAliasFromName(stand.name)
+      ? aliasText
+      : null;
+
   const url = buildStandQrUrl({
     origin,
     standId,
     eventId,
-    standAliasText: standAlias?.text ?? null,
+    standAliasText: explicitStandAlias?.text ?? derivedStandAlias,
     eventAliasText: eventAliasMatchesStand ? eventAlias!.text : null
   });
 

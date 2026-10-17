@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 
 import { ProductModel, ALLERGEN_VALUES, type Allergen } from '../models/product.model';
 import { EventProductModel } from '../models/event-product.model';
+import { sanitizeHtmlContent } from '../utils/html-sanitizer';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -24,7 +25,11 @@ function toProductResponse(product: {
     return {
         id: product._id.toString(),
         name: product.name,
-        description: product.description ?? null,
+        /* HTML del prodotto: sanitizzato anche in lettura (difesa in
+         * profondita'), come fanno gli eventi. I record scritti prima della
+         * regola possono avere markup non filtrato, e il frontend lo rende
+         * come markup — non deve dipendere dalla sola scrittura. */
+        description: sanitizeHtmlContent(product.description ?? null),
         ingredients: product.ingredients,
         allergens: product.allergens ?? [],
         isFrozen: product.isFrozen ?? false,
@@ -90,7 +95,7 @@ export async function createProduct(req: Request, res: Response) {
 
     const product = await ProductModel.create({
         name,
-        description: description ?? null,
+        description: sanitizeHtmlContent(description ?? null),
         ingredients: Array.isArray(ingredients) ? ingredients : [],
         allergens: validAllergens,
         isFrozen: Boolean(isFrozen),
@@ -137,7 +142,7 @@ export async function updateProduct(req: Request, res: Response) {
     }
 
     if (description !== undefined) {
-        product.description = description;
+        product.description = sanitizeHtmlContent(description);
     }
 
     if (ingredients !== undefined) {

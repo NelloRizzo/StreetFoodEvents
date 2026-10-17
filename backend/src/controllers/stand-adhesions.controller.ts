@@ -10,6 +10,7 @@ import { UserModel } from '../models/user.model';
 import { UserRoleModel } from '../models/user-role.model';
 import { hashAdhesionToken, generateAdhesionAccessToken } from '../utils/adhesion-access-token';
 import { generateActivationToken } from '../utils/activation-token';
+import { sanitizeHtmlContent } from '../utils/html-sanitizer';
 import { sendActivationEmail } from '../services/email.service';
 import { nextStandNumber } from '../utils/stand-number';
 
@@ -73,6 +74,33 @@ function pick(body: Record<string, unknown>, fields: readonly string[]): Record<
         }
     }
     return out;
+}
+
+/** Sanifica i prodotti embedded di un'adesione (descrizione HTML).
+ *  Il wizard non ha un editor ricco, ma l'operatore puo' comunque incollare
+ *  HTML nel campo: si pulisce qui perche' la descrizione viene poi resa come
+ *  markup nella pagina di gestione. Un valore non stringa resta com'e'. */
+function sanitizeProductDescriptions(products: unknown): unknown {
+    if (!Array.isArray(products)) return products;
+    return products.map((p) => {
+        if (!p || typeof p !== 'object') return p;
+        const product = p as Record<string, unknown>;
+        if (typeof product.description === 'string') {
+            return { ...product, description: sanitizeHtmlContent(product.description) };
+        }
+        return product;
+    });
+}
+
+/** Applica la sanificazione ai campi testuali HTML di un'adesione. */
+function sanitizeAdhesionText(data: Record<string, unknown>): Record<string, unknown> {
+    if (typeof data.description === 'string') {
+        data.description = sanitizeHtmlContent(data.description);
+    }
+    if (data.products !== undefined) {
+        data.products = sanitizeProductDescriptions(data.products);
+    }
+    return data;
 }
 
 async function isAdminForEvent(userId: string, eventId: string) {
@@ -199,14 +227,14 @@ function toAdhesionResponse(adhesion: {
         standName: adhesion.standName,
         standType: adhesion.standType ?? 'food',
         slogan: adhesion.slogan ?? null,
-        description: adhesion.description ?? null,
+        description: typeof adhesion.description === 'string' ? sanitizeHtmlContent(adhesion.description) : null,
         banner: adhesion.banner ?? null,
         logo: adhesion.logo ?? null,
         contactName: adhesion.contactName ?? null,
         contactEmail: adhesion.contactEmail ?? null,
         contactPhone: adhesion.contactPhone ?? null,
         contactSocial: adhesion.contactSocial ?? null,
-        products: adhesion.products ?? [],
+        products: sanitizeProductDescriptions(adhesion.products ?? []),
         haccpConfirmed: adhesion.haccpConfirmed ?? false,
         haccpNote: adhesion.haccpNote ?? null,
         acceptsPointLight: adhesion.acceptsPointLight ?? false,
@@ -344,6 +372,7 @@ export async function createAdhesion(req: Request, res: Response) {
     }
 
     const data = pick(body, EDITABLE_FIELDS);
+    sanitizeAdhesionText(data);
     data.eventId = new Types.ObjectId(eventId);
     if (resolvedStandId) {
         data.standId = resolvedStandId;
@@ -475,6 +504,7 @@ export async function updateAdhesion(req: Request, res: Response) {
     }
 
     const body = pick((req.body ?? {}) as Record<string, unknown>, EDITABLE_FIELDS);
+    sanitizeAdhesionText(body);
 
     const standRef = typeof body.standId === 'string' ? body.standId : null;
     let resolvedStandId: Types.ObjectId | null = null;
@@ -610,7 +640,7 @@ export async function approveAdhesion(req: Request, res: Response) {
             type: adhesion.standType ?? 'food',
             name: adhesion.standName,
             slogan: adhesion.slogan ?? null,
-            description: adhesion.description ?? null,
+            description: sanitizeHtmlContent(adhesion.description ?? null),
             eventIds: [adhesion.eventId],
             numbers: [{ eventId: adhesion.eventId, number }],
             locations: [],

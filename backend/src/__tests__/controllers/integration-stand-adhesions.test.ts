@@ -153,6 +153,41 @@ describe('Integration — Stand Adhesions', () => {
         expect(res.body.item.standId).toBe(stand._id.toString());
     });
 
+    /* La descrizione dello stand e dei prodotti embedded viene resa come
+       markup nella pagina di gestione: si sanifica in scrittura e in lettura
+       anche se il wizard non ha un editor ricco, perche' l'HTML si puo'
+       incollare comunque nel campo. */
+    it('sanitizes the stand and product descriptions', async () => {
+        const { adminToken, event, stand } = await setupEnvironment();
+
+        const payload = completePayload(stand._id.toString()) as Record<string, unknown>;
+        payload.description = '<p>Buono</p><script>alert(1)</script>';
+        payload.products = [
+            {
+                name: 'Burger classico',
+                description: '<p>Manzo</p><script>alert(1)</script>',
+                price: 8,
+                ingredients: 'Pane, manzo',
+                allergens: ['gluten'],
+                isFrozen: false
+            }
+        ];
+
+        const res = await request(app)
+            .post(`/api/events/${event._id}/adhesions`)
+            .set('Cookie', [`sid=${adminToken}`])
+            .send(payload);
+
+        expect(res.status).toBe(201);
+        expect(res.body.item.description).toContain('<p>Buono</p>');
+        expect(res.body.item.description).not.toContain('<script');
+        expect(res.body.item.description).not.toContain('alert');
+        const product = res.body.item.products[0];
+        expect(product.description).toContain('<p>Manzo</p>');
+        expect(product.description).not.toContain('<script');
+        expect(product.description).not.toContain('alert');
+    });
+
     it('create: plasticFreePractices round-trips with computed score', async () => {
         const { adminToken, event, stand } = await setupEnvironment();
 

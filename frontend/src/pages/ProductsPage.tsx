@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
 import { ALLERGEN_OPTIONS, ALLERGEN_LABELS } from '../lib/allergens'
+import { stripHtml } from '../lib/socialMenu'
 import { type UploadedImage } from '../lib/upload'
 import { ImageUploader } from '../components/ImageUploader'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { OverlayPanel } from '../components/OverlayPanel'
+import { RichEditor } from '../components/RichEditor'
 import styles from './ProductsPage.module.scss'
 
 type Product = {
@@ -93,9 +95,14 @@ export function ProductsPage() {
   }
 
   const handleSubmit = async () => {
+    /* Un editor vuoto produce markup (`<p></p>`): senza il controllo il
+       pallino dell'elenco resterebbe con una descrizione che sembra esserci
+       ma non si legge. Il backend sanifica comunque. */
+    const description = stripHtml(form.description) ? form.description.trim() : null
+
     const bodyJson = {
       name: form.name,
-      description: form.description.trim() || null,
+      description,
       ingredients: form.ingredients.split(',').map((s) => s.trim()).filter(Boolean),
       allergens: form.allergens,
       isFrozen: form.isFrozen,
@@ -172,9 +179,19 @@ export function ProductsPage() {
               <input id="prod-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             </div>
 
+            {/* La descrizione e' HTML sanificato (il backend ripulisce in
+                scrittura e in lettura) e viene resa come markup nel menu:
+                un'area di testo mostrerebbe i tag alla lettera all'operatore
+                e glieli farebbe salvare come se fossero testo. */}
             <div className={styles.field}>
-              <label htmlFor="prod-desc">Descrizione</label>
-              <textarea id="prod-desc" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Descrizione breve del prodotto (opzionale)" />
+              <label>Descrizione</label>
+              <RichEditor
+                value={form.description}
+                onChange={(html) => setForm({ ...form, description: html })}
+                placeholder="Descrizione breve del prodotto (opzionale)"
+                maxLength={2000}
+                imageUploadType="product"
+              />
             </div>
 
             <div className={styles.field}>
@@ -243,8 +260,12 @@ export function ProductsPage() {
                   {product.isFrozen && <span className={styles.frozenBadge}>*</span>}
                 </strong>
                 <span className={styles.cardPrice}>{product.price.toFixed(2)} &euro;</span>
-                {product.description && (
-                  <span className={styles.cardIngredients}>{product.description}</span>
+                {/* In elenco la descrizione resta testo piano: nella card e'
+                    una riga sola e il markup la spezzerebbe su piu' righe,
+                    rompendo l'allineamento del catalogo. Il markup si vede
+                    nel menu pubblico. */}
+                {product.description && stripHtml(product.description) && (
+                  <span className={styles.cardIngredients}>{stripHtml(product.description)}</span>
                 )}
                 {product.ingredients.length > 0 && (
                   <span className={styles.cardIngredients}>Ingredienti: {product.ingredients.join(', ')}</span>

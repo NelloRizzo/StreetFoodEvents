@@ -120,4 +120,59 @@ describe('Products API', () => {
         const found = await ProductModel.findById(product._id);
         expect(found).toBeNull();
     });
+
+    /* La descrizione e' HTML reso come markup nel menu: va sanificata in
+       scrittura e anche in lettura, perche' un record scritto prima della
+       regola (o modificato fuori dall'app) non deve poter iniettare script. */
+    describe('descrizione HTML', () => {
+        it('sanifica la descrizione alla creazione', async () => {
+            app = createTestApp();
+            const { sessionToken } = await createAuthSession();
+
+            const res = await request(app)
+                .post('/api/products')
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({
+                    name: 'Panino',
+                    price: 5,
+                    description: '<p>Pane</p><script>alert(1)</script>'
+                });
+
+            expect(res.status).toBe(201);
+            expect(res.body.item.description).toContain('<p>Pane</p>');
+            expect(res.body.item.description).not.toContain('<script');
+            expect(res.body.item.description).not.toContain('alert');
+        });
+
+        it('sanifica la descrizione in modifica', async () => {
+            app = createTestApp();
+            const { sessionToken } = await createAuthSession();
+            const product = await ProductModel.create({ name: 'Panino', price: 5 });
+
+            const res = await request(app)
+                .patch(`/api/products/${product._id}`)
+                .set('Cookie', `sid=${sessionToken}`)
+                .send({ description: '<img src=x onerror=alert(1)>' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.item.description).not.toContain('onerror');
+            expect(res.body.item.description).not.toContain('alert');
+        });
+
+        it('sanifica la descrizione anche in lettura su record non filtrati', async () => {
+            app = createTestApp();
+            /* Scritto direttamente sul modello, come un record storico:
+               la lettura non deve fidarsi di cio' che trova. */
+            await ProductModel.create({
+                name: 'Legacy',
+                price: 5,
+                description: '<p>Ok</p><script>alert(1)</script>'
+            });
+
+            const res = await request(app).get('/api/products');
+            expect(res.status).toBe(200);
+            expect(res.body.items[0]!.description).not.toContain('<script');
+            expect(res.body.items[0]!.description).not.toContain('alert');
+        });
+    });
 });
