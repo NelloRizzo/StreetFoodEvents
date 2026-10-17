@@ -7,55 +7,8 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
 
-## Idee e implementazioni future
-Qui stanno le voci **non urgenti**: analizzate e rimandate di proposito, non dimenticate. Ogni voce porta con sé la valutazione, così non va rifatta da capo.
-
-- **PWA clienti — ottimizzazione touch** (valutata Ott 2026, **non fatta per scelta**): è l'unica delle quattro voci sotto che merita davvero il lavoro, e costerebbe poco. Due difetti misurati: ① il pulsante più toccato dell'app (`.addBtn` nel menu stand, `EventStandMenuPage.module.scss:345`) ha `padding: 0.4rem 0.9rem` e **nessun `min-height`** → alta ≈29px: passa il minimo WCAG AA (24px) ma è sotto i 44px raccomandati da Apple e i 48dp di Material; sulle pagine pubbliche ci sono 316 blocchi di stile e sole 13 dichiarazioni `min-height`. ② **100+ regole `:hover` in ~60 file e zero `@media (hover: hover)`**: su telefono lo stile hover resta applicato dopo il tocco finché non si tocca altro. Intervento proposto, tutto CSS e senza toccare l'architettura: `touch-action: manipulation` in `global.scss`, hover sotto `@media (hover: hover)` e `min-height` con token condiviso. **Ambito consigliato: solo pagine pubbliche** — l'admin è desktop e lì il problema touch non esiste.
-- **PWA clienti — push notifications** (valutata Ott 2026, **consigliata rimandare**): il caso d'uso ovvio ("il tuo ordine è pronto") è già coperto dalla pagina di tracking e dal display pubblico, che in un evento restano accese. Servirebbero davvero alla postazione di cucina, ma l'ostacolo è serio: `vite.customer.config.ts` usa la strategia predefinita `generateSW`, e **Workbox in quella modalità non supporta gli handler `push`** → serve passare a `injectManifest` con un `sw.ts` proprio, riscrivendo l'app-shell offline che oggi funziona. Servono inoltre VAPID, `web-push` lato backend, modello `PushSubscription`, gestione delle subscription morte (410) e il vincolo di Render free (un solo processo). **Decisivo: sull'app locale non è possibile**, perché `.local/docker-compose.yml:16` serve su `http://<host>:4000` e service worker e push richiedono un contesto sicuro: per usarle in piazza servirebbe TLS con certificato autofirmato da installare a mano su ogni telefono. Su iOS funzionano solo con la PWA installata nella home screen.
-- **PWA clienti — gesture** (valutata Ott 2026, **consigliata cancellare**): non c'è nessuna interazione che le richieda (niente carousel da scorrere, niente drag-and-drop lato cliente; Leaflet gestisce già pan e zoom al tocco). Implementare gesture senza un caso d'uso porta a navigazioni accidentali proprio mentre un visitatore sta ordinando.
-- **PWA clienti — verifica del layout responsive** (valutata Ott 2026): è QA, non una feature. Non esiste tooling di test visivo (solo vitest unitari), quindi sarebbe un giro manuale sulle pagine pubbliche; l'unico controllo automatico sensato coprirebbe la regola "bersagli di tocco", non l'aspetto reale.
-- **PWA clienti — stato**: installabile (manifest, `standalone`, icone maskable e apple-touch), con prompt di installazione (`CustomerPwaPrompt.tsx`: `beforeinstallprompt`, riconoscimento standalone, dismissal persistito), app-shell offline (workbox precache + `navigateFallback: '/customers/index.html'` con denylist delle API), viewport touch-ready (`width=device-width, viewport-fit=cover`) e 59 media query. Le route admin restano fuori dal bundle customer e non vengono cacheate.
-
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
-
-## Pubblicazione social — analisi problematiche (ricerca Ago 2026)
-Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-side) e hostate su Cloudinary con URL pubblico — requisito indispensabile: Meta fa fetch dell'immagine dall'URL passato.
-
-**Facebook**:
-- Profili personali NON postabili via API (dal 2018) → solo Pagine (`POST /{page-id}/photos` con `url=`).
-- Permessi `pages_manage_posts` + `pages_read_engagement` (+ `publish_video`); utente con task CREATE_CONTENT/MANAGE sulla Page; Page access token.
-- Multi-business ⇒ App Review + Business Verification (Tech Provider); uso interno su nostre Page ⇒ Standard Access senza review ma gestione token manuale.
-- Rischio errore 368 (anti-spam) pubblicando molte foto simili in sequenza.
-
-**Instagram**:
-- Solo account professional (Business/Creator); due varianti: Instagram Login (`graph.instagram.com`, permessi `instagram_business_content_publish`) o Facebook Login (`instagram_content_publish` + Page token). Da scegliere a monte.
-- Flusso asincrono container→media_publish con polling `status_code`; immagini SOLO JPEG; rate limit 100 post/24h per account (50 caroselli; carousel max 10 foto = 1 post).
-- PPA (Page Publishing Authorization) può bloccare la pubblicazione su alcune Page; App Review come FB per uso multi-business.
-
-**TikTok**:
-- Client non auditato = post SOLO privati (`SELF_ONLY`) e max 5 utenti/24h ⇒ inutilizzabile in produzione senza audit (UX mockup + compliance + approvazione TikTok).
-- UX obbligatorie: dropdown privacy senza default, consenso esplicito pre-publish ("Music Usage Confirmation"); ~15 post/giorno per creator; scope `video.publish`; URL ownership per PULL_FROM_URL.
-
-**Trasversale**:
-- OAuth multi-tenant per organizzatore vs unico account piattaforma; token Page ~60 giorni (refresh flow necessario).
-- Nessuno scheduler/coda nel backend (Render free = 1 processo): servirebbe modello `SocialPost { photoIds[], platforms[], status, attempts, lastError }` + loop in-process o enqueue inline in createEventPhoto.
-- GDPR: nessun consenso sul documento EventPhoto oggi; cancellare la foto locale NON la rimuove dai social.
-- Rate limit rendono irrealistico il post per-singola-foto: batch/carousel quasi obbligatorio.
-
-**Opzioni**: (A) semi-automatica con selezione dalla galleria [consigliata]; (B) carousel giornaliero automatico (10 migliori foto); (C) Web Share API nativa (zero review, funziona anche su profili); (D) bridge Buffer/Zapier/Make.
-
-**Stato**: IMPLEMENTATA (Ago 2026) — opzione (A): trigger manuale dalla galleria, account UNICO della piattaforma, solo Meta. Vedi CHANGELOG Agosto 2026. Restano aperti:
-- OAuth multi-tenant per organizzatore (oggi solo account piattaforma); refresh token Page ~60 giorni.
-- TikTok (richiede audit app; post SELF_ONLY senza).
-- Carousel/batch automatico giornaliero; gestione GDPR della rimozione dal social (cancellare la foto locale NON la rimuove dai social).
-- Pubblicazione dall'account dell'utente che scatta + tag automatico dell'evento: VALUTATA E SCARTATA (Ago 2026) — i profili Facebook personali non sono postabili via API dal 2018 (servirebbe OAuth multi-utente con Pagina/IG professional per ogni fotografo + App Review Meta); il tag evento realistico è la @menzione dell'handle nel caption, non il tag foto.
-
-## Visualizzazione Google Maps su EventMapPage (feature futura)
-- Mostrare stand e POI dell'evento anche su una visualizzazione "Google Maps" scelta dall'utente nella mappa.
-- Orientamento: soluzione **ufficiale con API key** (Google Maps JavaScript API), non endpoint tile non ufficiali (violano i ToS Google).
-- Richiede: chiave API Google Cloud (Maps JavaScript API) configurata come `VITE_GOOGLE_MAPS_KEY`, vista/mappa dedicata con marker custom per evento, stand e POI (popup come l'attuale pagina Leaflet).
-- Stato attuale: EventMapPage usa Leaflet con tile Esri (Satellite + Mappa); marker già renderizzati come overlay, ma nessuna base layer Google.
 
 ---
 
@@ -192,4 +145,49 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
   - performance delle diverse aree (discutere).
 - **Nota**: la stima visitatori è già implementata in-app (`GET /api/events/:eventId/visitors`), l'eventuale push dei dati in GTM è valutabile in futuro.
 
+### 16. PWA clienti — valutazioni rimandate (Ott 2026)
+Queste voci completano **10. App Mobile (PWA)** e sono **non urgenti**: analizzate e rimandate di proposito, non dimenticate. Ogni voce porta con sé la misura e la valutazione, così non va rifatta da capo. **Indicazioni per gli agenti**: non vanno implementate d'iniziativa senza una richiesta esplicita; l'ultima voce descrive **cosa esiste già**, non un lavoro da fare.
 
+- **Ottimizzazione touch** (valutata Ott 2026, **non fatta per scelta**): è l'unica voce di valutazione che merita davvero il lavoro, e costerebbe poco. Due difetti misurati: ① il pulsante più toccato dell'app (`.addBtn` nel menu stand, `EventStandMenuPage.module.scss:345`) ha `padding: 0.4rem 0.9rem` e **nessun `min-height`** → alta ≈29px: passa il minimo WCAG AA (24px) ma è sotto i 44px raccomandati da Apple e i 48dp di Material; sulle pagine pubbliche ci sono 316 blocchi di stile e sole 13 dichiarazioni `min-height`. ② **100+ regole `:hover` in ~60 file e zero `@media (hover: hover)`**: su telefono lo stile hover resta applicato dopo il tocco finché non si tocca altro. Intervento proposto, tutto CSS e senza toccare l'architettura: `touch-action: manipulation` in `global.scss`, hover sotto `@media (hover: hover)` e `min-height` con token condiviso. **Ambito consigliato: solo pagine pubbliche** — l'admin è desktop e lì il problema touch non esiste.
+- **Push notifications** (valutata Ott 2026, **consigliata rimandare**): il caso d'uso ovvio ("il tuo ordine è pronto") è già coperto dalla pagina di tracking e dal display pubblico, che in un evento restano accese. Servirebbero davvero alla postazione di cucina, ma l'ostacolo è serio: `vite.customer.config.ts` usa la strategia predefinita `generateSW`, e **Workbox in quella modalità non supporta gli handler `push`** → serve passare a `injectManifest` con un `sw.ts` proprio, riscrivendo l'app-shell offline che oggi funziona. Servono inoltre VAPID, `web-push` lato backend, modello `PushSubscription`, gestione delle subscription morte (410) e il vincolo di Render free (un solo processo). **Decisivo: sull'app locale non è possibile**, perché `.local/docker-compose.yml:16` serve su `http://<host>:4000` e service worker e push richiedono un contesto sicuro: per usarle in piazza servirebbe TLS con certificato autofirmato da installare a mano su ogni telefono. Su iOS funzionano solo con la PWA installata nella home screen.
+- **Gesture** (valutata Ott 2026, **consigliata cancellare**): non c'è nessuna interazione che le richieda (niente carousel da scorrere, niente drag-and-drop lato cliente; Leaflet gestisce già pan e zoom al tocco). Implementare gesture senza un caso d'uso porta a navigazioni accidentali proprio mentre un visitatore sta ordinando.
+- **Verifica del layout responsive** (valutata Ott 2026): è QA, non una feature. Non esiste tooling di test visivo (solo vitest unitari), quindi sarebbe un giro manuale sulle pagine pubbliche; l'unico controllo automatico sensato coprirebbe la regola "bersagli di tocco", non l'aspetto reale.
+- **Stato attuale**: installabile (manifest, `standalone`, icone maskable e apple-touch), con prompt di installazione (`CustomerPwaPrompt.tsx`: `beforeinstallprompt`, riconoscimento standalone, dismissal persistito), app-shell offline (workbox precache + `navigateFallback: '/customers/index.html'` con denylist delle API), viewport touch-ready (`width=device-width, viewport-fit=cover`) e 59 media query. Le route admin restano fuori dal bundle customer e non vengono cachate.
+
+### 17. Pubblicazione social — analisi problematiche (ricerca Ago 2026)
+Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-side) e hostate su Cloudinary con URL pubblico — requisito indispensabile: Meta fa fetch dell'immagine dall'URL passato.
+
+**Facebook**:
+- Profili personali NON postabili via API (dal 2018) → solo Pagine (`POST /{page-id}/photos` con `url=`).
+- Permessi `pages_manage_posts` + `pages_read_engagement` (+ `publish_video`); utente con task CREATE_CONTENT/MANAGE sulla Page; Page access token.
+- Multi-business ⇒ App Review + Business Verification (Tech Provider); uso interno su nostre Page ⇒ Standard Access senza review ma gestione token manuale.
+- Rischio errore 368 (anti-spam) pubblicando molte foto simili in sequenza.
+
+**Instagram**:
+- Solo account professional (Business/Creator); due varianti: Instagram Login (`graph.instagram.com`, permessi `instagram_business_content_publish`) o Facebook Login (`instagram_content_publish` + Page token). Da scegliere a monte.
+- Flusso asincrono container→media_publish con polling `status_code`; immagini SOLO JPEG; rate limit 100 post/24h per account (50 caroselli; carousel max 10 foto = 1 post).
+- PPA (Page Publishing Authorization) può bloccare la pubblicazione su alcune Page; App Review come FB per uso multi-business.
+
+**TikTok**:
+- Client non auditato = post SOLO privati (`SELF_ONLY`) e max 5 utenti/24h ⇒ inutilizzabile in produzione senza audit (UX mockup + compliance + approvazione TikTok).
+- UX obbligatorie: dropdown privacy senza default, consenso esplicito pre-publish ("Music Usage Confirmation"); ~15 post/giorno per creator; scope `video.publish`; URL ownership per PULL_FROM_URL.
+
+**Trasversale**:
+- OAuth multi-tenant per organizzatore vs unico account piattaforma; token Page ~60 giorni (refresh flow necessario).
+- Nessuno scheduler/coda nel backend (Render free = 1 processo): servirebbe modello `SocialPost { photoIds[], platforms[], status, attempts, lastError }` + loop in-process o enqueue inline in createEventPhoto.
+- GDPR: nessun consenso sul documento EventPhoto oggi; cancellare la foto locale NON la rimuove dai social.
+- Rate limit rendono irrealistico il post per-singola-foto: batch/carousel quasi obbligatorio.
+
+**Opzioni**: (A) semi-automatica con selezione dalla galleria [consigliata]; (B) carousel giornaliero automatico (10 migliori foto); (C) Web Share API nativa (zero review, funziona anche su profili); (D) bridge Buffer/Zapier/Make.
+
+**Stato**: IMPLEMENTATA (Ago 2026) — opzione (A): trigger manuale dalla galleria, account UNICO della piattaforma, solo Meta. Vedi CHANGELOG Agosto 2026. Restano aperti:
+- OAuth multi-tenant per organizzatore (oggi solo account piattaforma); refresh token Page ~60 giorni.
+- TikTok (richiede audit app; post SELF_ONLY senza).
+- Carousel/batch automatico giornaliero; gestione GDPR della rimozione dal social (cancellare la foto locale NON la rimuove dai social).
+- Pubblicazione dall'account dell'utente che scatta + tag automatico dell'evento: VALUTATA E SCARTATA (Ago 2026) — i profili Facebook personali non sono postabili via API dal 2018 (servirebbe OAuth multi-utente con Pagina/IG professional per ogni fotografo + App Review Meta); il tag evento realistico è la @menzione dell'handle nel caption, non il tag foto.
+
+### 18. Visualizzazione Google Maps su EventMapPage (feature futura)
+- Mostrare stand e POI dell'evento anche su una visualizzazione "Google Maps" scelta dall'utente nella mappa.
+- Orientamento: soluzione **ufficiale con API key** (Google Maps JavaScript API), non endpoint tile non ufficiali (violano i ToS Google).
+- Richiede: chiave API Google Cloud (Maps JavaScript API) configurata come `VITE_GOOGLE_MAPS_KEY`, vista/mappa dedicata con marker custom per evento, stand e POI (popup come l'attuale pagina Leaflet).
+- Stato attuale: EventMapPage usa Leaflet con tile Esri (Satellite + Mappa); marker già renderizzati come overlay, ma nessuna base layer Google.
