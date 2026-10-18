@@ -91,16 +91,39 @@ type CartItem = {
   unitPrice: number
 }
 
-/** Riga della descrizione **in elenco**: mostra il testo, non l'HTML.
+/** Riga della descrizione **in elenco**: mostra testo o HTML a seconda
+ * dell'uso.
  *
- *  Nella card compatta la descrizione e' una riga con `line-clamp`: un `<p>`
- *  o un elenco non ci starebbero, e il markup verrebbe letto alla lettera.
- *  La descrizione per esteso, con il suo markup, resta nel modale del
- *  prodotto (`dangerouslySetInnerHTML`), che ha lo spazio per impaginarla.
+ *  Nella versione di default (`asHtml=false`) la descrizione viene ridotta a
+ *  testo piano (`stripHtml`) perche' in una riga con `line-clamp` un blocco
+ *  HTML (`<p>`, `<ul>`, `<ol>`) non viene troncato in modo pulito e il markup
+ *  verrebbe comunque letto in modo poco leggibile. Il markup completo resta
+ *  nel modale del prodotto (`dangerouslySetInnerHTML`), che ha lo spazio
+ *  necessario.
+ *
+ *  Nel menu di uno **singolo stand** (`EventStandMenuPage`) si vuole
+ *  mostrare l'HTML anche nell'elenco compatto: passando `asHtml=true` il
+ *  contenuto viene renderizzato con `dangerouslySetInnerHTML` dentro un
+ *  contenitore con `line-clamp`. L'HTML e' gia' sanitizzato lato server.
  *
  *  Esportata perche' `EventMenuPage` usa lo stesso `module.scss` e deve
  *  mostrare la stessa riga: due copie divergevano alla prima modifica. */
-export function MenuDescriptionText({ html }: { html: string | null | undefined }) {
+export function MenuDescriptionText({
+  html,
+  asHtml = false,
+}: {
+  html: string | null | undefined
+  asHtml?: boolean
+}) {
+  if (!html) return null
+  if (asHtml) {
+    return (
+      <div
+        className={styles.menuDescription}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    )
+  }
   const text = stripHtml(html)
   if (!text) return null
   return <span className={styles.menuDescription}>{text}</span>
@@ -592,7 +615,7 @@ export function EventStandMenuPage() {
                               nel modale: era il posto dove si leggeva cosa si
                               sta mangiando. In elenco pero' e' testo piano:
                               il markup resta al modale, che ha spazio. */}
-                          <MenuDescriptionText html={product?.description} />
+                          <MenuDescriptionText html={product?.description} asHtml />
                           {product && product.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>
                               {/* Etichetta come nel modale: senza, una riga
@@ -786,7 +809,7 @@ export function EventStandMenuPage() {
                             )}
                             <div className={styles.menuInfo}>
                               <strong className={styles.menuName}>{item.name}</strong>
-                              <MenuDescriptionText html={item.description} />
+                              <MenuDescriptionText html={item.description} asHtml />
                               {item.standName && (
                                 <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                               )}
@@ -828,7 +851,7 @@ export function EventStandMenuPage() {
                         )}
                         <div className={styles.menuInfo}>
                           <strong className={styles.menuName}>{item.name}</strong>
-                          <MenuDescriptionText html={item.description} />
+                          <MenuDescriptionText html={item.description} asHtml />
                           {item.standName && (
                             <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                           )}
