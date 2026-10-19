@@ -4,6 +4,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 import { apiRequest } from '../lib/api'
+import { downloadCsv } from '../lib/csv'
+import { analyticsCsvFilename, buildAnalyticsCsv } from '../lib/analyticsCsv'
 import {
   aggregateHourlyByHour,
   fetchEventAnalytics,
@@ -377,6 +379,20 @@ export function EventAnalyticsPage() {
     hourDayKey ? `Giorno del grafico orario: ${formatDayKey(hourDayKey)}` : null,
   ].filter(Boolean).join(' \u00b7 ')
 
+  /* Esportazione: un solo file con tutte le sezioni, nello stesso ordine
+     della pagina e col FILTRO ATTIVO (periodo, stand, giorno del grafico
+     orario) — un csv senza il perimetro è inutilizzabile appena se ne salva
+     un secondo. La builder è pura (in `lib/analyticsCsv.ts`), quindi testata
+     senza DOM; qui resta solo il download. */
+  const handleExportCsv = () => {
+    const scope = {
+      standName: selectedStandName,
+      hourDayKey: hourDayKey || null,
+      exportedAt: new Date(),
+    }
+    downloadCsv(analyticsCsvFilename(data, scope), buildAnalyticsCsv(data, scope))
+  }
+
   return (
     <div className={styles.page}>
       <div className="page-shell">
@@ -418,6 +434,14 @@ export function EventAnalyticsPage() {
                 className={styles.dateInput}
               />
             </div>
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              onClick={handleExportCsv}
+              title="Scarica tutte le sezioni della pagina in un unico file CSV"
+            >
+              Esporta CSV
+            </button>
             <button type="button" className={styles.secondaryBtn} onClick={() => window.print()}>
               Stampa
             </button>

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+import { csvCell, downloadCsv, sanitizeFilename } from '../lib/csv'
 import {
   fetchOrders,
   fetchEventReport,
@@ -29,29 +30,6 @@ const statusLabels: Record<string, string> = {
 const today = () => new Date().toISOString().split('T')[0]
 
 type StandInfo = { id: string; name: string }
-
-function csvCell(value: string | number): string {
-  const str = String(value)
-  return str.includes(',') || str.includes('"') || str.includes('\n')
-    ? `"${str.replace(/"/g, '""')}"`
-    : str
-}
-
-function downloadCsv(filename: string, content: string) {
-  const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
-}
-
-function sanitizeFilename(value: string): string {
-  return value.replace(/[^a-zA-Z0-9_-]+/g, '-') || 'report'
-}
 
 export function EventOrdersPage() {
   const { eventId } = useParams<{ eventId: string }>()
