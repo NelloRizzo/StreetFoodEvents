@@ -192,3 +192,17 @@ Punti a favore: le foto sono già composte con cornice+hashtag nel JPEG (client-
 - Orientamento: soluzione **ufficiale con API key** (Google Maps JavaScript API), non endpoint tile non ufficiali (violano i ToS Google).
 - Richiede: chiave API Google Cloud (Maps JavaScript API) configurata come `VITE_GOOGLE_MAPS_KEY`, vista/mappa dedicata con marker custom per evento, stand e POI (popup come l'attuale pagina Leaflet).
 - Stato attuale: EventMapPage usa Leaflet con tile Esri (Satellite + Mappa); marker già renderizzati come overlay, ma nessuna base layer Google.
+
+### 19. Warning di compilazione — inventario e stime (Ott 2026)
+Risposta alla nota del supervisore «Quanto lavoro ci vuole per eliminare tutte le warnings di compilazione?». Inventario misurato il 19/10/2026, non a occhio:
+
+- **Backend: zero warning.** `npm run lint` (0 errori, 0 warning), `npm run typecheck` pulito, `npm run build` senza avvisi. Non c'è nulla da fare.
+- **Frontend — ESLint: 10 warning, tutti `react-hooks/exhaustive-deps`, 0 errori.** Per file:
+  - `ImageUploader.tsx:19` — l'inizializzazione condizionale di `images` rende le dipendenze del `useCallback` instabili: va wrappata in un `useMemo` proprio. **Banale.**
+  - `MapPicker.tsx:108` e `:117` — due `useEffect` senza dipendenze (`center`, `onChange`, `resetCenter`, `currentLat/Lng`…); il `onChange` però viene dai componenti chiamanti, quindi serve `useCallback` a monte in più pagine. **Il caso più scomodo.**
+  - `EventCashierPage.tsx:181` (`stands`), `EventsPage.tsx:380` (`fetchEvents`), `OrderDetailPage.tsx:57` (`load`), `StandDetailPage.tsx:142` e `:239` (`fetchStand`, `fetchStations`, `checkFavorite`, `fetchEventProducts`) — `useEffect` che richiedono `useCallback` sui fetch definiti nel body: refactor meccanico, ma ognuno va verificato per non introdurre loop di fetch (il motivo per cui le dipendenze sono state lasciate fuori).
+  - `EventDetailPage.tsx:117` e `EventStandMenuPage.tsx:168` — due `useMemo` che mancano `event`: aggiungere la dipendenza è un attimo, verificare che non ricalcoli troppo spesso.
+  - **Stima: 2–4 ore** per tutti e 10.
+- **Frontend — vite build: un solo chunk da 2,18 MB (621 kB gzip) > soglia 500 kB.** La correzione vera è il code splitting con `React.lazy`/`Suspense` sulle rotte del router principale: **mezza giornata** incluse la verifica dello stato di caricamento su ogni rotta. Alzare `chunkSizeWarningLimit` silenzia l'avviso senza ridurre il bundle — è mascheramento, non fix, e non va fatto.
+- **`PLUGIN_TIMINGS`** (avviso del build tool sul tempo di `vite:css`): è un'informazione sugli strumenti di build, non un difetto del codice — non è eliminabile.
+- **Totale realistico per arrivare a zero warning: circa 1 giorno** (2–4 h ESLint + mezza giornata code splitting). Non è urgente: i warning attuali non indicano bug, sono scelte note di dipendenze React.
