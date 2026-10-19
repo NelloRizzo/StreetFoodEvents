@@ -170,9 +170,10 @@ describe('menu evento — descrizione del prodotto in elenco', () => {
     expect(ingredientNodes()).toHaveLength(1)
   })
 
-  /* La descrizione e' HTML sanificato: in elenco resta testo piano (una riga
-     sola, il markup la spezzerebbe), nel modale si vede come markup. */
-  it('in elenco il markup della descrizione diventa testo piano', async () => {
+  /* La descrizione e' HTML sanificato ed esce come markup ANCHE in elenco
+     (stessa scelta del menu del singolo stand): il modale resta il posto
+     dove si vede per esteso. */
+  it('in elenco il markup della descrizione viene reso', async () => {
     const conHtml: MenuItem = { ...productBase, description: '<p>Con <strong>peperoncino</strong> piccante</p>' }
     menuResponse = { ...menuResponse, items: [conHtml], byCategory: { Special: [conHtml] } }
     renderPage()
@@ -180,7 +181,7 @@ describe('menu evento — descrizione del prodotto in elenco', () => {
 
     const line = descNodes()[0]
     expect(line.textContent).toBe('Con peperoncino piccante')
-    expect(line.querySelector('strong')).toBeNull()
+    expect(line.querySelector('strong')?.textContent).toBe('peperoncino')
   })
 
   it('nel modale il markup della descrizione viene reso', async () => {

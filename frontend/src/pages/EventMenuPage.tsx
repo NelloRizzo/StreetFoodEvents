@@ -263,9 +263,9 @@ export function EventMenuPage() {
                         )}
                         <div className={styles.menuInfo}>
                           <strong className={styles.menuName}>{product.name}</strong>
-                          {/* Descrizione in elenco (non solo nel modale), come
-                              nella pagina del singolo stand: testo piano, il
-                              markup resta al modale. */}
+                          {/* Descrizione in elenco in HTML, come nella pagina
+                              del singolo stand: il contenuto arriva gia'
+                              sanitizzato da `sanitizeHtmlContent`. */}
                           <MenuDescriptionText html={product.description} />
                           {product.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>

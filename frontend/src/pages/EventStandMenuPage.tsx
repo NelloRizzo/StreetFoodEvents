@@ -13,7 +13,7 @@ import { SocialMenuExport } from '../components/SocialMenuExport'
 import { SocialProductExport } from '../components/SocialProductExport'
 import { CurrencyDisplay } from '../components/CurrencyDisplay'
 import { ALLERGEN_LABELS } from '../lib/allergens'
-import { standAliasFromName, stripHtml } from '../lib/socialMenu'
+import { standAliasFromName } from '../lib/socialMenu'
 import type { StandShortLinks } from '../lib/socialMenu'
 import { trackOrderCreated, trackStandClick, trackProductClick } from '../lib/analytics'
 import type { UploadedImage } from '../lib/upload'
@@ -91,42 +91,27 @@ type CartItem = {
   unitPrice: number
 }
 
-/** Riga della descrizione **in elenco**: mostra testo o HTML a seconda
- * dell'uso.
+/** Riga della descrizione **in elenco**: il contenuto HTML (prodotta dal
+ *  RichEditor) viene renderizzata com'è, sia nella pagina del singolo stand
+ *  sia nel menù dell'evento — una sola riga di codice per entrambe, perche'
+ *  due copie divergono alla prima modifica. L'HTML arriva gia' sanitizzato
+ *  lato server (`sanitizeHtmlContent`).
  *
- *  Nella versione di default (`asHtml=false`) la descrizione viene ridotta a
- *  testo piano (`stripHtml`) perche' in una riga con `line-clamp` un blocco
- *  HTML (`<p>`, `<ul>`, `<ol>`) non viene troncato in modo pulito e il markup
- *  verrebbe comunque letto in modo poco leggibile. Il markup completo resta
- *  nel modale del prodotto (`dangerouslySetInnerHTML`), che ha lo spazio
- *  necessario.
+ *  GOTCHA: la riga vive dentro un `line-clamp: 2` (`.menuDescription`), che
+ *  serve a non far esplodere la card con descrizioni lunghe fino a 2000
+ *  caratteri; il testo intero resta nel modale prodotto. I tag di blocco
+ *  non hanno margini di default (reset globali su `p`/`ul`/`ol`/`h1-h3` in
+ *  `global.scss`), altrimenti i `<p>` spezzerebbero l'impaginazione compatta.
  *
- *  Nel menu di uno **singolo stand** (`EventStandMenuPage`) si vuole
- *  mostrare l'HTML anche nell'elenco compatto: passando `asHtml=true` il
- *  contenuto viene renderizzato con `dangerouslySetInnerHTML` dentro un
- *  contenitore con `line-clamp`. L'HTML e' gia' sanitizzato lato server.
- *
- *  Esportata perche' `EventMenuPage` usa lo stesso `module.scss` e deve
- *  mostrare la stessa riga: due copie divergevano alla prima modifica. */
-export function MenuDescriptionText({
-  html,
-  asHtml = false,
-}: {
-  html: string | null | undefined
-  asHtml?: boolean
-}) {
+ *  Esportata perche' `EventMenuPage` usa lo stesso `module.scss`. */
+export function MenuDescriptionText({ html }: { html: string | null | undefined }) {
   if (!html) return null
-  if (asHtml) {
-    return (
-      <div
-        className={styles.menuDescription}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    )
-  }
-  const text = stripHtml(html)
-  if (!text) return null
-  return <span className={styles.menuDescription}>{text}</span>
+  return (
+    <div
+      className={styles.menuDescription}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
 }
 
 export function EventStandMenuPage() {
@@ -615,7 +600,7 @@ export function EventStandMenuPage() {
                               nel modale: era il posto dove si leggeva cosa si
                               sta mangiando. In elenco pero' e' testo piano:
                               il markup resta al modale, che ha spazio. */}
-                          <MenuDescriptionText html={product?.description} asHtml />
+                          <MenuDescriptionText html={product?.description} />
                           {product && product.ingredients.length > 0 && (
                             <span className={styles.menuIngredients}>
                               {/* Etichetta come nel modale: senza, una riga
@@ -809,7 +794,7 @@ export function EventStandMenuPage() {
                             )}
                             <div className={styles.menuInfo}>
                               <strong className={styles.menuName}>{item.name}</strong>
-                              <MenuDescriptionText html={item.description} asHtml />
+                              <MenuDescriptionText html={item.description} />
                               {item.standName && (
                                 <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                               )}
@@ -851,7 +836,7 @@ export function EventStandMenuPage() {
                         )}
                         <div className={styles.menuInfo}>
                           <strong className={styles.menuName}>{item.name}</strong>
-                          <MenuDescriptionText html={item.description} asHtml />
+                          <MenuDescriptionText html={item.description} />
                           {item.standName && (
                             <span className={styles.menuIngredients}>Stand: {item.standNumber != null ? `${item.standNumber} — ` : ''}{item.standName}</span>
                           )}

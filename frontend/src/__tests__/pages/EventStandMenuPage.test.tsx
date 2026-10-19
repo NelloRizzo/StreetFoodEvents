@@ -204,16 +204,16 @@ describe('menu stand — descrizione del prodotto in elenco', () => {
     expect(dialog).toHaveTextContent(DESCRIPTION)
   })
 
-  /* La descrizione e' HTML sanificato: in elenco resta testo piano (una riga
-     sola, il markup la spezzerebbe), nel modale si vede come markup. */
-  it('in elenco il markup della descrizione diventa testo piano', async () => {
+  /* La descrizione e' HTML sanificato ed esce come markup anche in elenco:
+     formattazione, elenchi e link del RichEditor restano leggibili. */
+  it('in elenco il markup della descrizione viene reso', async () => {
     productDescription = '<p>Pane con <strong>cotto</strong></p>'
     renderPage()
     await screen.findByText('Panino della casa')
 
     const line = descNodes()[0]
     expect(line.textContent).toBe('Pane con cotto')
-    expect(line.querySelector('strong')).toBeNull()
+    expect(line.querySelector('strong')?.textContent).toBe('cotto')
   })
 
   it('nel modale il markup della descrizione viene reso', async () => {
