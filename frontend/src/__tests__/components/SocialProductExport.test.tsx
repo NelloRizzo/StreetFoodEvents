@@ -37,14 +37,26 @@ const coverImage: UploadedImage = {
 type MenuItem = {
   id: string
   priceOverride: number | null
-  product: { name: string; price: number; coverImage?: UploadedImage | null } | null
+  product: {
+    name: string
+    price: number
+    coverImage?: UploadedImage | null
+    ingredients?: string[]
+    allergens?: string[]
+  } | null
 }
 
 const menuItems: MenuItem[] = [
   {
     id: 'ep1',
     priceOverride: null,
-    product: { name: 'Panino della casa', price: 5, coverImage: null },
+    product: {
+      name: 'Panino della casa',
+      price: 5,
+      coverImage: null,
+      ingredients: ['farina', 'pomodoro', 'mozzarella'],
+      allergens: ['gluten', 'milk'],
+    },
   },
   {
     id: 'ep2',
@@ -54,7 +66,13 @@ const menuItems: MenuItem[] = [
   {
     id: 'ep3',
     priceOverride: null,
-    product: { name: 'Patatine', price: 3, coverImage },
+    product: {
+      name: 'Patatine',
+      price: 3,
+      coverImage,
+      ingredients: ['patate'],
+      allergens: [],
+    },
   },
 ]
 
@@ -96,12 +114,16 @@ class FakeImage {
 
 let downloads: string[] = []
 let postersDrawn = 0
+/* Testi effettivamente scritti sul canvas: serve a dire se il blocco
+   ingredienti/allergeni e' stato disegnato, non solo se la checkbox c'e'. */
+let drawnTexts: string[] = []
 
 beforeEach(() => {
   apiRequest.mockClear()
   apiPaths = []
   downloads = []
   postersDrawn = 0
+  drawnTexts = []
   localStorage.clear()
   globalThis.Image = FakeImage as unknown as typeof Image
 
@@ -110,6 +132,9 @@ beforeEach(() => {
     const noop = () => undefined
     const target: Record<string, unknown> = {
       measureText: (text: string) => ({ width: text.length * 9 }),
+      fillText: (text: string) => {
+        drawnTexts.push(String(text))
+      },
     }
     return new Proxy(target, {
       get(t, prop) {
@@ -286,5 +311,57 @@ describe('export prodotti per social', () => {
     renderModal([])
     expect(screen.getByText(/non ha ancora prodotti in menu/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Genera/ })).toBeNull()
+  })
+
+  it('la checkbox ingredienti/allergeni è spuntata di default e si ricorda la scelta', () => {
+    renderModal()
+    const box = screen.getByRole('checkbox', {
+      name: /ingredienti ed allergeni/i,
+    }) as HTMLInputElement
+    /* Il supervisore li ha chiesti come contenuto necessario: chi non vuole
+       li toglie, non chi li vuole aggiunge. */
+    expect(box).toBeChecked()
+
+    fireEvent.click(box)
+    expect(box).not.toBeChecked()
+    expect(localStorage.getItem('sfe-social-include-details')).toBe('0')
+
+    cleanup()
+    renderModal()
+    expect(
+      screen.getByRole('checkbox', { name: /ingredienti ed allergeni/i }),
+    ).not.toBeChecked()
+  })
+
+  it('con la checkbox attiva scrive ingredienti ed allergeni sul poster', async () => {
+    renderModal()
+    fireEvent.click(productChecks()[0])
+    await generate(1)
+
+    expect(drawnTexts).toContain('Ingredienti: farina, pomodoro, mozzarella')
+    /* Le etichette sono le corte del catalogo: "Glutine", non "Glutine
+       (frumento)" — sul poster la riga non deve esplodere. */
+    expect(drawnTexts).toContain('Allergeni: Glutine, Latte')
+  })
+
+  it('con la checkbox spenta quel testo non viene scritto', async () => {
+    renderModal()
+    fireEvent.click(screen.getByRole('checkbox', { name: /ingredienti ed allergeni/i }))
+    fireEvent.click(productChecks()[0])
+    await generate(1)
+
+    expect(drawnTexts.some((t) => t.startsWith('Ingredienti:'))).toBe(false)
+    expect(drawnTexts.some((t) => t.startsWith('Allergeni:'))).toBe(false)
+  })
+
+  it('un prodotto senza allergeni non scrive la riga "Allergeni:" vuota', async () => {
+    renderModal()
+    fireEvent.click(productChecks()[2])
+    await generate(1)
+
+    expect(drawnTexts).toContain('Ingredienti: patate')
+    /* Nessuna riga "Allergeni:" del tutto: il blocco e' vuoto, e una riga
+       con solo l'intestazione direbbe all'utente che il dato manca. */
+    expect(drawnTexts.some((t) => t.startsWith('Allergeni:'))).toBe(false)
   })
 })

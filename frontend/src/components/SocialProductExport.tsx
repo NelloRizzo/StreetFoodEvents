@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { apiRequest } from '../lib/api'
+import { ALLERGEN_LABELS } from '../lib/allergens'
 import {
   currencyInitial,
   fileSlug,
@@ -40,6 +41,10 @@ const INCLUDE_PRICES_KEY = 'sfe-social-include-prices'
 /** Condivisa con l'export del menu: e' la stessa scelta, non due da tenere
  *  allineate (come per i prezzi e per il formato). */
 const INCLUDE_DESCRIPTIONS_KEY = 'sfe-social-include-descriptions'
+/** «Dettagli» = ingredienti ed allergeni del prodotto: nel poster occupano
+ *  lo stesso blocco, quindi sono un'unica scelta. Le descrizioni hanno la
+ *  loro chiave (INCLUDE_DESCRIPTIONS_KEY). */
+const INCLUDE_DETAILS_KEY = 'sfe-social-include-details'
 
 /** Stessa chiave del menu: la scelta "mostra i prezzi" è la stessa
  *  preferenza dell'operatore, non una scelta per ogni export. */
@@ -49,7 +54,14 @@ type Props = {
   stand: SocialPosterStand
   menuItems: {
     id: string
-    product: { name: string; description?: string | null; price: number; coverImage?: UploadedImage | null } | null
+    product: {
+      name: string
+      description?: string | null
+      price: number
+      coverImage?: UploadedImage | null
+      ingredients?: string[]
+      allergens?: string[]
+    } | null
     priceOverride: number | null
   }[]
   onClose: () => void
@@ -63,6 +75,8 @@ type Product = {
   description?: string | null
   coverImage: UploadedImage | null
   price: number
+  ingredients: string[]
+  allergens: string[]
 }
 
 type GeneratedImage = {
@@ -102,7 +116,9 @@ function productLayout(m: PosterMetrics) {
  *
  *  La foto è l'unica parte che si espande con il formato: prende tutto lo
  *  spazio fra il prezzo e il footer, e si stringe attorno alla foto reale
- *  per non lasciare bande vuote dentro il riquadro. */
+ *  per non lasciare bande vuote dentro il riquadro. Su richiesta passano di
+ *  qui anche descrizione, ingredienti ed allergeni: condividono un budget di
+ *  righe calcolato sullo spazio che resta fino al footer. */
 async function generateProductPoster(
   ctx: CanvasRenderingContext2D,
   event: SocialPosterEvent,
@@ -116,6 +132,7 @@ async function generateProductPoster(
   includePrices: boolean,
   format: PosterFormatId,
   includeDescriptions = false,
+  includeDetails = false,
 ): Promise<void> {
   const m = posterMetrics(format)
   const W = m.width
@@ -169,28 +186,90 @@ async function generateProductPoster(
     cursor += Math.round(74 * m.vScale)
   }
 
-  // ── Descrizione (facoltativa), fra prezzo e foto ──
-  /* Sta sotto il prezzo e la foto si stringe di conseguenza: la foto e'
-     l'unica parte che si espande con il formato alto, quindi una descrizione
-     lunga si vede meglio in 9:16 che in 4:5. */
-  if (includeDescriptions && product.description) {
-    ctx.fillStyle = colors.inkSoft
-    ctx.font = `400 ${L.descFont}px "Segoe UI", Inter, sans-serif`
-    /* La descrizione e' HTML (gia' sanitizzato dal server): qui si stacca il
-       testo. Quattro righe: oltre, la foto non avrebbe piu' spazio. */
-    const descLines = wrapText(ctx, stripHtml(product.description), W - 240, 4)
-    descLines.forEach((line, i) => {
-      ctx.fillText(line, W / 2, cursor + i * L.descLh)
+  // ── Testo opzionale fra prezzo e foto: descrizione, ingredienti,
+  //    allergeni ──
+  /* Ogni riga di testo stringe la foto (che è l'unica parte che si espande
+     col formato alto), quindi i blocchi condividono un budget di righe
+     calcolato sullo spazio che resta fino al footer: il testo non entra mai
+     nel footer, la foto può arrivare a zero. Priorità dentro il budget —
+     allergeni, ingredienti, descrizione: gli allergeni sono dato di
+     sicurezza e il loro elenco non si taglia mai a metà (nell'uso reale sta
+     in tre righe, ben dentro il budget); gli ingredienti si accorciano con
+     "…" ; la descrizione cede per ultima, come ha sempre fatto (era già
+     limitata a quattro righe per lasciare spazio alla foto) e senza dettagli
+     il calcolo degenera esattamente nel comportamento storico. */
+  const gap = Math.round(26 * m.vScale)
+  const blockGap = Math.round(16 * m.vScale)
+  /* Ultima Y del testo: il riquadro foto inizia un `gap` dopo il testo e
+     finisce un `gap` prima del footer. */
+  const textLimit = m.footerY - gap - gap
+  const textFont = `400 ${L.descFont}px "Segoe UI", Inter, sans-serif`
+  const allergenFont = `700 ${L.descFont}px "Segoe UI", Inter, sans-serif`
+
+  const description = includeDescriptions ? product.description : null
+  const ingredients = includeDetails ? product.ingredients : []
+  /* La descrizione è HTML (già sanitizzato dal server): qui si stacca il
+     testo. Quattro righe: oltre, la foto non avrebbe più spazio. */
+  ctx.font = textFont
+  const descLines = description ? wrapText(ctx, stripHtml(description), W - 240, 4) : []
+  /* Il cap qui è solo un freno di sicurezza: il vincolo vero è il budget. */
+  const ingredientLines =
+    ingredients.length > 0 ? wrapText(ctx, `Ingredienti: ${ingredients.join(', ')}`, W - 240, 14) : []
+  ctx.font = allergenFont
+  const allergenLines =
+    includeDetails && product.allergens.length > 0
+      ? wrapText(
+          ctx,
+          `Allergeni: ${product.allergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(', ')}`,
+          W - 240,
+          14,
+        )
+      : []
+
+  const blockCount =
+    (descLines.length > 0 ? 1 : 0) + (ingredientLines.length > 0 ? 1 : 0) + (allergenLines.length > 0 ? 1 : 0)
+  const budget = Math.max(0, Math.floor((textLimit - cursor - blockCount * blockGap) / L.descLh))
+  /* L'atomicità degli allergeni ha la precedenza assoluta; il min con il
+     budget è una difesa teorica (un elenco di 14 etichette brevi sanno a
+     tre righe): meglio un taglio con "…" che testo finito dentro il footer. */
+  const allergenCount = Math.min(allergenLines.length, budget)
+  const ingredientCount = Math.min(ingredientLines.length, Math.max(0, budget - allergenCount))
+  const descCount = Math.min(descLines.length, Math.max(0, budget - allergenCount - ingredientCount))
+
+  /** Un blocco di testo centrato, con "…" sull'ultima riga quando il budget
+   *  lo ha accorciato. */
+  const drawBlock = (lines: string[], count: number, font: string, fill: string) => {
+    if (count <= 0) return
+    ctx.font = font
+    ctx.fillStyle = fill
+    lines.slice(0, count).forEach((line, i) => {
+      const cut = count < lines.length && i === count - 1
+      ctx.fillText(cut ? `${line}…` : line, W / 2, cursor + i * L.descLh)
     })
-    cursor += descLines.length * L.descLh + Math.round(16 * m.vScale)
+    cursor += count * L.descLh + blockGap
   }
+
+  drawBlock(descLines, descCount, textFont, colors.inkSoft)
+  drawBlock(ingredientLines, ingredientCount, textFont, colors.inkSoft)
+  /* Rosso come gli allergeni del menu stampato: è il dato che deve saltare
+     agli occhi. */
+  drawBlock(allergenLines, allergenCount, allergenFont, '#c0392b')
 
   // ── Foto: si stringe attorno alla foto reale (niente bande vuote dentro)
   //    e arriva fino al footer ──
-  const gap = Math.round(26 * m.vScale)
-  const area = { x: 100, y: cursor + gap, w: W - 200, h: m.footerY - gap - (cursor + gap) }
-  const box = fitPhotoBox(productImage, area)
-  drawPhotoBox(ctx, productImage, box.x, box.y, box.w, box.h, 28, product.name)
+  const area = {
+    x: 100,
+    y: cursor + gap,
+    w: W - 200,
+    h: Math.max(0, m.footerY - gap - (cursor + gap)),
+  }
+  /* Sotto un'altezza minima il riquadro arrotondato (raggio 28) degenera
+     in una lisca: con i dettagli il budget può lasciare alla foto pochi
+     pixel, e un poster senza foto si legge meglio di una riga. */
+  if (area.h >= Math.round(70 * m.vScale)) {
+    const box = fitPhotoBox(productImage, area)
+    drawPhotoBox(ctx, productImage, box.x, box.y, box.w, box.h, 28, product.name)
+  }
 
   drawPosterFooter(ctx, colors, m, {
     locationLabel: (event.location?.city ?? event.location?.label ?? '').trim(),
@@ -208,10 +287,18 @@ export async function generateProductPosterForPreview(
   ctx: CanvasRenderingContext2D,
   event: SocialPosterEvent,
   stand: SocialPosterStand,
-  product: { name: string; description?: string | null; price: number; coverImage?: UploadedImage | null },
+  product: {
+    name: string
+    description?: string | null
+    price: number
+    coverImage?: UploadedImage | null
+    ingredients?: string[]
+    allergens?: string[]
+  },
   includePrices: boolean,
   format: PosterFormatId,
   includeDescriptions = false,
+  includeDetails = false,
 ) {
   const productImage = product.coverImage?.url ? await loadImage(product.coverImage.url, true) : null
   await generateProductPoster(
@@ -224,6 +311,8 @@ export async function generateProductPosterForPreview(
       description: product.description ?? null,
       coverImage: product.coverImage ?? null,
       price: product.price,
+      ingredients: product.ingredients ?? [],
+      allergens: product.allergens ?? [],
     },
     productImage,
     null,
@@ -233,6 +322,7 @@ export async function generateProductPosterForPreview(
     includePrices,
     format,
     includeDescriptions,
+    includeDetails,
   )
 }
 
@@ -252,6 +342,15 @@ export function SocialProductExport({ open, event, stand, menuItems, shortLinks,
       return localStorage.getItem(INCLUDE_DESCRIPTIONS_KEY) === '1'
     } catch {
       return false
+    }
+  })
+  /* I dettagli partono inclusi: sono contenuto necessario dell'esportazione
+     (nota del supervisore), la checkbox serve per toglierli. */
+  const [includeDetails, setIncludeDetails] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(INCLUDE_DETAILS_KEY) !== '0'
+    } catch {
+      return true
     }
   })
   const [images, setImages] = useState<GeneratedImage[]>([])
@@ -285,6 +384,14 @@ export function SocialProductExport({ open, event, stand, menuItems, shortLinks,
   }, [includeDescriptions])
 
   useEffect(() => {
+    try {
+      localStorage.setItem(INCLUDE_DETAILS_KEY, includeDetails ? '1' : '0')
+    } catch {
+      /* localStorage non disponibile */
+    }
+  }, [includeDetails])
+
+  useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
     }
@@ -303,6 +410,8 @@ export function SocialProductExport({ open, event, stand, menuItems, shortLinks,
           description: m.product.description ?? null,
           coverImage: m.product.coverImage ?? null,
           price: m.priceOverride ?? m.product.price ?? 0,
+          ingredients: m.product.ingredients ?? [],
+          allergens: m.product.allergens ?? [],
         })
       }
     }
@@ -381,6 +490,7 @@ export function SocialProductExport({ open, event, stand, menuItems, shortLinks,
             includePrices,
             format,
             includeDescriptions,
+            includeDetails,
           )
           url = canvas.toDataURL('image/png')
         }
@@ -428,7 +538,8 @@ export function SocialProductExport({ open, event, stand, menuItems, shortLinks,
         <h2 className={styles.title}>Esporta i prodotti per social</h2>
         <p className={styles.hint}>
           Un&apos;immagine per prodotto, con lo stesso formato del menu dello stand: banda
-          dell&apos;evento, logo dello stand, foto e prezzo del prodotto, QR verso il menu.
+          dell&apos;evento, logo dello stand, foto e prezzo del prodotto, QR verso il menu, e se
+          richiesti anche ingredienti ed allergeni.
         </p>
 
         {products.length === 0 ? (
@@ -465,6 +576,22 @@ export function SocialProductExport({ open, event, stand, menuItems, shortLinks,
                   <em className={styles.optionsNote}>
                     Va fra il prezzo e la foto: su una descrizione lunga la foto
                     si stringe, quindi in 4:5 resta piu&apos; spazio che in 9:16.
+                  </em>
+                </span>
+              </label>
+
+              <label className={styles.optionsLabel}>
+                <input
+                  type="checkbox"
+                  checked={includeDetails}
+                  onChange={(e) => setIncludeDetails(e.target.checked)}
+                />
+                <span>
+                  Includi ingredienti ed allergeni
+                  <em className={styles.optionsNote}>
+                    Stanno sotto il prezzo: la foto si stringe, quindi in 4:5 resta
+                    meno spazio che in 9:16. L&apos;elenco degli allergeni non viene
+                    mai tagliato.
                   </em>
                 </span>
               </label>

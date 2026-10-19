@@ -10,6 +10,7 @@ import { describe, expect, it, beforeAll } from 'vitest'
 
 import { generatePoster } from '../../components/SocialMenuExport'
 import { generateProductPosterForPreview } from '../../components/SocialProductExport'
+import { ALLERGEN_LABELS } from '../../lib/allergens'
 import { posterMetrics, POSTER_FORMATS, type PosterFormatId } from '../../lib/socialCanvas'
 
 type Op = {
@@ -166,6 +167,52 @@ const products = Array.from({ length: 20 }, (_, i) => ({
 
 const FORMATS: PosterFormatId[] = ['feed', 'story']
 
+/** Tutti e 14 gli allergeni: il caso peggiore di elenco lungo. Nel poster
+ *  diventano "Allergeni: Glutine, Crostacei, ..." (134 caratteri, 3 righe
+ *  a 50 per riga): deve uscire per intero, mai tagliato a metà. */
+const ALL_ALLERGEN_KEYS = [
+  'gluten',
+  'crustaceans',
+  'eggs',
+  'fish',
+  'peanuts',
+  'soy',
+  'milk',
+  'tree-nuts',
+  'celery',
+  'mustard',
+  'sesame',
+  'sulphites',
+  'lupins',
+  'molluscs',
+]
+
+/** Ingredienti lunghi abbastanza da occupare 7 righe (309 caratteri):
+ *  servono a stringere il budget del 4:5 fino al punto in cui qualcosa
+ *  deve cedere. */
+const LONG_INGREDIENTS = [
+  'farina tipo 0',
+  'acqua',
+  'lievito madre',
+  'sale marino',
+  'pomodoro pelato',
+  'mozzarella di bufala',
+  'basilico fresco',
+  'olio extravergine',
+  'origano',
+  'pepe nero',
+  'aglio',
+  'zucchero',
+  'vino bianco',
+  'burro fuso',
+  'cipolla di Tropea',
+  'paprika dolce',
+  'semi di sesamo',
+  'aceto di vino rosso',
+  'peperoncino calabrese',
+  'sale affumicato',
+]
+
 beforeAll(() => {
   globalThis.Image = FakeImage as unknown as typeof Image
 })
@@ -176,21 +223,34 @@ async function drawMenu(format: PosterFormatId, withPrices: boolean) {
   return rec
 }
 
+/** Il prodotto porta sempre i dettagli nel fixture: è `withDetails` (cioè
+ *  la checkbox dell'export) a decidere se finiscono sull'immagine, non
+ *  l'assenza dei dati. */
 async function drawProduct(
   format: PosterFormatId,
   withPrices: boolean,
   name = 'Panino porchetta',
   withDescriptions = false,
+  withDetails = false,
+  extras: { ingredients?: string[]; allergens?: string[] } = {},
 ) {
   const rec = new Recorder()
   await generateProductPosterForPreview(
     rec.proxy,
     event,
     stand,
-    { name, price: 7, coverImage: null, description: products[0].description },
+    {
+      name,
+      price: 7,
+      coverImage: null,
+      description: products[0].description,
+      ingredients: extras.ingredients ?? LONG_INGREDIENTS,
+      allergens: extras.allergens ?? ALL_ALLERGEN_KEYS,
+    },
     withPrices,
     format,
     withDescriptions,
+    withDetails,
   )
   return rec
 }
@@ -343,5 +403,99 @@ describe.each(FORMATS)('poster di un prodotto — formato %s', (format) => {
       return rec.bigRects(200)[0].args[3]
     }
     expect(await heightOf('story')).toBeGreaterThan(await heightOf('feed'))
+  })
+})
+
+/* Corpi usati dai blocchi centrali: la descrizione e gli ingredienti
+   condividono lo stesso font (sono lo stesso tipo di testo), mentre gli
+   allergeni sono l'unico testo in grassetto 30px del poster. Le righe di
+   continuazione non ripetono l'intestazione, quindi il modo affidabile di
+   raggrupparle è il font con cui vengono disegnate, non il prefisso. */
+const TEXT_FONT = '400 30px "Segoe UI", Inter, sans-serif'
+const ALLERGEN_FONT = '700 30px "Segoe UI", Inter, sans-serif'
+
+/** I tre blocchi di testo centrale, come liste di righe complete. */
+function detailBlocks(rec: Recorder) {
+  const shared = rec.textOps().filter((o) => o.font === TEXT_FONT)
+  const fromIngredients = shared.findIndex((o) => o.text?.startsWith('Ingredienti:'))
+  return {
+    desc: fromIngredients >= 0 ? shared.slice(0, fromIngredients) : shared,
+    ingredients: fromIngredients >= 0 ? shared.slice(fromIngredients) : [],
+    allergens: rec.textOps().filter((o) => o.font === ALLERGEN_FONT),
+  }
+}
+
+describe.each(FORMATS)('poster del prodotto con ingredienti ed allergeni — formato %s', (format) => {
+  it('non disegna nulla fuori dal foglio', async () => {
+    for (const withPrices of [true, false]) {
+      const rec = await drawProduct(format, withPrices, 'Panino porchetta', true, true)
+      assertInside(rec, format)
+    }
+  })
+
+  it('scrive gli ingredienti e gli allergeni per intero, elenco completo', async () => {
+    const rec = await drawProduct(format, true, 'Panino porchetta', true, true)
+    const { ingredients, allergens } = detailBlocks(rec)
+    /* Ricomporere le righe con lo spazio deve dare la stringa intera: se una
+       riga fosse stata tagliata a metà (o un blocco chiuso prima della fine)
+       il confronto non torna. Gli allergeni in particolare non si tagliano
+       mai — sono dato di sicurezza alimentare. */
+    expect(ingredients.map((o) => o.text).join(' ')).toBe(`Ingredienti: ${LONG_INGREDIENTS.join(', ')}`)
+    expect(allergens.map((o) => o.text).join(' ')).toBe(
+      `Allergeni: ${ALL_ALLERGEN_KEYS.map((k) => ALLERGEN_LABELS[k]).join(', ')}`,
+    )
+  })
+
+  it('tutto il testo dei dettagli resta sopra il footer', async () => {
+    const m = posterMetrics(format)
+    const rec = await drawProduct(format, true, 'Panino porchetta', true, true)
+    const { desc, ingredients, allergens } = detailBlocks(rec)
+    const lines = [...desc, ...ingredients, ...allergens]
+    expect(lines.length).toBeGreaterThan(0)
+    for (const line of lines) {
+      expect(line.args[1], `riga "${line.text}"`).toBeLessThan(m.footerY)
+    }
+  })
+
+  it('senza la checkbox nessuno di quei testi viene scritto', async () => {
+    /* I dati sono nel prodotto: a mancare deve essere la scelta, non il
+       dato — altrimenti il test passerebbe anche con la checkbox rotta. */
+    const rec = await drawProduct(format, true, 'Panino porchetta', true, false)
+    expect(rec.textOps().some((o) => o.text?.startsWith('Ingredienti:'))).toBe(false)
+    expect(rec.textOps().some((o) => o.text?.startsWith('Allergeni:'))).toBe(false)
+    /* Le descrizioni hanno una scelta a parte e restano. */
+    expect(rec.textOps().some((o) => o.text?.startsWith('Descrizione lunga'))).toBe(true)
+  })
+})
+
+/* Il contenuto massimo (prezzo + descrizione + ingredienti a 7 righe +
+   tutti gli allergeni) costringe a scegliere cosa cede, e il 4:5 e' piu'
+   stretto del 9:16: li si verifica il compromesso invece di fidarsi del
+   budget. Valori calcolati: nel 4:5 il budget e' 11 righe (3 allergeni +
+   7 ingredienti + 1 di descrizione, con la foto residua a 5px che quindi
+   sparisce), nel 9:16 e' 18 e sta tutto con la foto ancora a 196px. */
+describe('con tutti i dettagli il formato decide cosa cede', () => {
+  it('nel 4:5 la descrizione si accorcia a una riga con "…" e la foto sparisce', async () => {
+    const rec = await drawProduct('feed', true, 'Panino porchetta', true, true)
+    const desc = detailBlocks(rec).desc
+    expect(desc).toHaveLength(1)
+    expect(desc[0].text?.endsWith('…')).toBe(true)
+    /* La foto senza immagine copre tutta l'area (x=100, larghezza piena):
+       qui non c'è nessun rettangolo in quella posizione. Senza la soglia
+       minima il riquadro resterebbe una lisca da 5px che sembrerebbe un
+       difetto di rendering. */
+    expect(rec.ops.filter((o) => o.kind === 'fillRect' && o.args[0] === 100)).toHaveLength(0)
+  })
+
+  it('nel 9:16 c\'e\' spazio per tutto e la foto resta', async () => {
+    const m = posterMetrics('story')
+    const rec = await drawProduct('story', true, 'Panino porchetta', true, true)
+    const desc = detailBlocks(rec).desc
+    expect(desc).toHaveLength(4)
+    /* Nessun taglio: la descrizione esce intera, come senza dettagli. */
+    expect(desc.some((l) => l.text?.endsWith('…'))).toBe(false)
+    const photo = rec.bigRects(70)
+    expect(photo).toHaveLength(1)
+    expect(photo[0].args[1] + photo[0].args[3]).toBeLessThanOrEqual(m.footerY)
   })
 })
