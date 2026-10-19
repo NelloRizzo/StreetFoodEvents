@@ -1,6 +1,6 @@
 # Regolamento standard di partecipazione alla manifestazione — Bozza
 
-> **Documento allegato all'adesione stand** (vedi `docs/ADESIONE_STAND.md`, Sezione I). Bozza standard da personalizzare per ogni evento/imprevisto legale. 
+> **Documento allegato all'adesione stand** (Sezione I — "Regolamento e clausola di esclusione" del modulo di adesione generato, `backend/src/services/adhesion-form.service.ts`). Bozza standard da personalizzare per ogni evento/imprevisto legale. 
 
 | | |
 |---|---|
@@ -16,7 +16,7 @@
 Il presente regolamento disciplina la partecipazione degli **stand** (di seguito "espositore") alla manifestazione organizzata dall'Organizzatore. L'espositore dichiara di averlo letto, compreso e accettato integralmente, unitamente alla clausola di esclusione di cui all'Art. 9 e al modulo di adesione.
 
 ## Art. 2 — Adesione e caparra
-1. L'adesione segue le modalità del modulo ufficiale (Sezioni A–H di `ADESIONE_STAND.md`).
+1. L'adesione segue le modalità del modulo ufficiale di adesione (sezioni A–J generate da `adhesion-form.service.ts`).
 2. Il **prezzo di partecipazione** e il suo termine di saldo sono indicati dall'Organizzatore.
 3. La **caparra** è dovuta per la prenotazione del posto; non è restituita (*salvo esplicita dichiarazione compresa nel contratto di adesione dell'espositore accettata dall'organizzatore*) in caso di recesso dell'espositore o di rifiuto dell'adesione per dati non conformi, ed è stornabile da quanto dovuto secondo le eventuali trattenute sulle vendite.
 
