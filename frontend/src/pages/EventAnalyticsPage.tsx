@@ -5,7 +5,13 @@ import 'leaflet/dist/leaflet.css'
 
 import { apiRequest } from '../lib/api'
 import { downloadCsv } from '../lib/csv'
-import { analyticsCsvFilename, buildAnalyticsCsv } from '../lib/analyticsCsv'
+import {
+  analyticsCsvFilename,
+  buildAnalyticsCsv,
+  buildStandDetailCsv,
+  buildTopProductsCsv,
+  type AnalyticsCsvScope,
+} from '../lib/analyticsCsv'
 import {
   aggregateHourlyByHour,
   fetchEventAnalytics,
@@ -379,18 +385,35 @@ export function EventAnalyticsPage() {
     hourDayKey ? `Giorno del grafico orario: ${formatDayKey(hourDayKey)}` : null,
   ].filter(Boolean).join(' \u00b7 ')
 
-  /* Esportazione: un solo file con tutte le sezioni, nello stesso ordine
-     della pagina e col FILTRO ATTIVO (periodo, stand, giorno del grafico
-     orario) — un csv senza il perimetro è inutilizzabile appena se ne salva
-     un secondo. La builder è pura (in `lib/analyticsCsv.ts`), quindi testata
-     senza DOM; qui resta solo il download. */
+  /* Esportazione: il file unico con tutte le sezioni, nello stesso ordine
+     della pagina, e — per le due tabelle con il pulsante in testa — la sola
+     sezione. Tutti e tre i file nascono dalla STESSA builder e portano la
+     stessa testata di perimetro (periodo, stand, giorno del grafico orario):
+     un csv senza il perimetro è inutilizzabile appena se ne salva un secondo.
+     Le builder sono pure (in `lib/analyticsCsv.ts`), quindi testate senza
+     DOM; qui resta solo il download. */
+  const currentScope = (): AnalyticsCsvScope => ({
+    standName: selectedStandName,
+    hourDayKey: hourDayKey || null,
+    exportedAt: new Date(),
+  })
   const handleExportCsv = () => {
-    const scope = {
-      standName: selectedStandName,
-      hourDayKey: hourDayKey || null,
-      exportedAt: new Date(),
-    }
+    const scope = currentScope()
     downloadCsv(analyticsCsvFilename(data, scope), buildAnalyticsCsv(data, scope))
+  }
+  const handleExportTopProducts = () => {
+    const scope = currentScope()
+    downloadCsv(
+      analyticsCsvFilename(data, scope, 'prodotti-piu-venduti'),
+      buildTopProductsCsv(data, scope),
+    )
+  }
+  const handleExportStandDetail = () => {
+    const scope = currentScope()
+    downloadCsv(
+      analyticsCsvFilename(data, scope, 'dettaglio-stand'),
+      buildStandDetailCsv(data, scope),
+    )
   }
 
   return (
@@ -782,7 +805,17 @@ export function EventAnalyticsPage() {
         </div>
 
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Prodotti pi&ugrave; venduti</div>
+          <div className={styles.cardTitleRow}>
+            <div className={styles.cardTitle}>Prodotti pi&ugrave; venduti</div>
+            <button
+              type="button"
+              className={`${styles.secondaryBtn} ${styles.cardExportBtn}`}
+              onClick={handleExportTopProducts}
+              title="Scarica questa tabella (con la testata di perimetro) in un file CSV"
+            >
+              Esporta CSV
+            </button>
+          </div>
           {data.topProducts.length === 0 ? (
             <p className={styles.empty}>Nessun prodotto venduto nel periodo.</p>
           ) : (
@@ -830,7 +863,17 @@ export function EventAnalyticsPage() {
         </div>
 
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Dettaglio per stand</div>
+          <div className={styles.cardTitleRow}>
+            <div className={styles.cardTitle}>Dettaglio per stand</div>
+            <button
+              type="button"
+              className={`${styles.secondaryBtn} ${styles.cardExportBtn}`}
+              onClick={handleExportStandDetail}
+              title="Scarica questa tabella (con la testata di perimetro) in un file CSV"
+            >
+              Esporta CSV
+            </button>
+          </div>
           {data.byStand.length === 0 ? (
             <p className={styles.empty}>Nessun dato disponibile.</p>
           ) : (

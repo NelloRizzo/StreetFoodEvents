@@ -69,6 +69,20 @@
   margin-bottom: 0.75rem;
 }
 
+/* Titolo e pulsante di esportazione sulla stessa riga. Il pulsante riusa
+   `.secondaryBtn`, che la stampa nasconde già: nel foglio il CSV non c'è. */
+.cardTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cardTitleRow .cardTitle {
+  margin-bottom: 0;
+}
+
 .cardNote {
   font-size: 0.8rem;
   color: var(--color-ink-soft);

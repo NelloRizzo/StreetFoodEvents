@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+import { downloadCsv } from '../lib/csv'
 import {
   fetchVisitorsEstimate,
   type VisitorsEstimate,
   type VisitorStandEstimate,
 } from '../lib/visitors'
+import { buildVisitorsStandCsv, visitorsCsvFilename } from '../lib/visitorsCsv'
 import styles from './VisitorsEstimatePage.module.scss'
 
 function fmtVisitors(n: number): string {
@@ -256,7 +258,21 @@ export function VisitorsEstimatePage() {
           )}
 
           <div className={styles.card}>
-            <div className={styles.cardTitle}>Dettaglio per stand</div>
+            <div className={styles.cardTitleRow}>
+              <div className={styles.cardTitle}>Dettaglio per stand</div>
+              <button
+                className={styles.secondaryBtn}
+                onClick={() =>
+                  downloadCsv(
+                    visitorsCsvFilename(data),
+                    buildVisitorsStandCsv(data, { exportedAt: new Date() }),
+                  )
+                }
+                title="Scarica questa tabella (con la testata di perimetro) in un file CSV"
+              >
+                Esporta CSV
+              </button>
+            </div>
             <p className={styles.cardNote}>
               La riga per stand &egrave; la somma di quel banco e resta grezza: la correzione delle
               sovrapposizioni si pu&ograve; fare solo a livello di evento, perch&eacute; solo l&igrave;

@@ -7,7 +7,16 @@ import {
   type AnalyticsStandRow,
   type EventAnalytics,
 } from './eventAnalytics'
-import { csvRow, sanitizeFilename } from './csv'
+import {
+  csvRow,
+  dateTime,
+  dateTimeOf,
+  euro,
+  num,
+  pct,
+  periodRangeLabel,
+  sanitizeFilename,
+} from './csv'
 
 /**
  * Esportazione CSV della pagina «Analisi vendite».
@@ -46,48 +55,9 @@ export type AnalyticsCsvScope = {
 
 const EMPTY_SECTION_ROW = 'Nessun dato nel periodo.'
 
-/** Numero con al massimo due cifre decimali (crediti o euro: i centesimi
- *  bastano) e **punto decimale**, come ogni altro CSV del progetto (vedi il
- *  resoconto incassi): una cella con la virgola finirebbe tra virgolette e in
- *  un foglio di calcolo una cifra virgolettata è testo, non numero. */
-function num(n: number): string {
-  return String(Math.round(n * 100) / 100)
-}
-
-/** Euro con due decimali, come la pagina (`fmtEuro`). */
-function euro(n: number): string {
-  return n.toFixed(2)
-}
-
-/** Percentuale 0-1 → numero con una cifra decimale, senza simbolo `%`
- *  (il valore arriva già come frazione, come lo stampa la pagina). */
-function pct(value: number | null): string {
-  if (value === null) return ''
-  return String(Math.round(value * 1000) / 10)
-}
-
 /** Durata nella notazione breve della pagina (`5'30"`), vuota se assente. */
 function duration(seconds: number | null): string {
   return seconds === null ? '' : formatSeconds(seconds)
-}
-
-/** Data/ora con parti numeriche: `01/10 18:30`. Niente `toLocaleString`,
- *  perché il risultato deve essere identico in ogni ambiente (e nei test). */
-function dateTime(iso: string): string {
-  const d = new Date(iso)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`
-}
-
-function dateTimeOf(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`
-}
-
-function periodLabel(data: EventAnalytics): string {
-  const { from, to } = data.window
-  if (!from && !to) return 'intero evento'
-  return `${from || 'inizio evento'} - ${to || 'fine evento'}`
 }
 
 /**
@@ -122,25 +92,100 @@ function kvSection(title: string, rows: (string | number)[][], out: string[]) {
   for (const row of rows) out.push(csvRow(...row))
 }
 
+/** Testata comune a tutti i file di questa pagina (unica o per tabella):
+ *  stesse etichette del `printScope` stampato, perché il file deve dire da
+ *  solo quale periodo e quale stand riporta — tre esportazioni somigliano e
+ *  non si sa più quale è quale. */
+function analyticsTestata(data: EventAnalytics, scope: AnalyticsCsvScope, out: string[]) {
+  const rate = data.exchangeRate || 1
+  out.push(csvRow(`Analisi vendite - ${data.eventName}`))
+  out.push(csvRow('Periodo', periodRangeLabel(data.window)))
+  out.push(csvRow('Stand', scope.standName ?? 'tutti'))
+  if (scope.hourDayKey) {
+    out.push(csvRow('Giorno del grafico orario', formatDayKey(scope.hourDayKey)))
+  }
+  out.push(csvRow('Valuta evento', data.currencyName))
+  out.push(csvRow('Tasso di cambio', `1 EUR = ${rate} ${data.currencyName}`))
+  out.push(csvRow('Esportato il', dateTimeOf(scope.exportedAt)))
+}
+
+/**
+ * Sezione «PRODOTTI PIÙ VENDUTI» (con la riga vuota di testa). La stessa
+ * funzione alimenta il file unico e l'export del solo pulsante in testa alla
+ * tabella: due versioni della stessa tabella divergono alla prima modifica.
+ */
+function topProductsSection(data: EventAnalytics, out: string[]) {
+  const cur = data.currencyName
+  out.push('')
+  out.push('PRODOTTI PIÙ VENDUTI')
+  out.push(csvRow('#', 'Prodotto', 'Stand', 'Quantità', `Ricavo (${cur})`))
+  if (data.topProducts.length === 0) {
+    out.push(csvRow(EMPTY_SECTION_ROW))
+  } else {
+    data.topProducts.forEach((p, i) => {
+      out.push(csvRow(i + 1, p.productName, p.standName, p.quantity, num(p.revenue)))
+    })
+  }
+}
+
+/**
+ * Sezione «DETTAGLIO PER STAND» con la riga TOTALE della pagina.
+ */
+function standDetailSection(data: EventAnalytics, out: string[]) {
+  const cur = data.currencyName
+  const { totals } = data
+  out.push('')
+  out.push('DETTAGLIO PER STAND')
+  out.push(csvRow(
+    'N.', 'Stand', 'Ordini', 'Quantità', `Fatturato (${cur})`, `Contanti (${cur})`,
+    `POS (${cur})`, `Crediti (${cur})`, 'Preparazione', `Guadagnati (${cur})`,
+    `Liquidati (${cur})`, `Da liquidare (${cur})`, 'Liquidazione',
+  ))
+  if (data.byStand.length === 0) {
+    out.push(csvRow(EMPTY_SECTION_ROW))
+    return
+  }
+  for (const s of data.byStand) {
+    out.push(csvRow(
+      s.number ?? '—',
+      s.standName,
+      s.orders,
+      s.quantity,
+      num(s.revenue),
+      num(s.cashRevenue),
+      num(s.posRevenue),
+      num(s.creditRevenue),
+      duration(s.avgPrepSeconds),
+      num(s.earnedCredits),
+      num(s.settledCredits),
+      num(s.remainingEarnedCredits),
+      settlementLabel(s),
+    ))
+  }
+  out.push(csvRow(
+    '—',
+    'TOTALE',
+    totals.orders,
+    totals.quantity,
+    num(totals.revenue),
+    num(totals.cashRevenue),
+    num(totals.posRevenue),
+    num(totals.creditRevenue),
+    duration(totals.avgPrepSeconds),
+    num(totals.settlements.earnedCredits),
+    num(totals.settlements.settledCredits),
+    num(totals.settlements.remainingEarnedCredits),
+    `${totals.settlements.settlementCount} totali`,
+  ))
+}
+
 export function buildAnalyticsCsv(data: EventAnalytics, scope: AnalyticsCsvScope): string {
   const rows: string[] = []
   const rate = data.exchangeRate || 1
   const { totals } = data
   const cur = data.currencyName
 
-  /* ── Testata ───────────────────────────────────────────────────────────
-     Stesse etichette del `printScope` stampato: il file deve dire da solo
-     quale periodo e quale stand riporta, altrimenti tre esportazioni
-     somigliano e non si sa quale è quale. */
-  rows.push(csvRow(`Analisi vendite - ${data.eventName}`))
-  rows.push(csvRow('Periodo', periodLabel(data)))
-  rows.push(csvRow('Stand', scope.standName ?? 'tutti'))
-  if (scope.hourDayKey) {
-    rows.push(csvRow('Giorno del grafico orario', formatDayKey(scope.hourDayKey)))
-  }
-  rows.push(csvRow('Valuta evento', cur))
-  rows.push(csvRow('Tasso di cambio', `1 EUR = ${rate} ${cur}`))
-  rows.push(csvRow('Esportato il', dateTimeOf(scope.exportedAt)))
+  analyticsTestata(data, scope, rows)
 
   /* ── Riepilogo ───────────────────────────────────────────────────────
      Le due righe «di cui» rendono esplicito che il fatturato include il netto
@@ -242,70 +287,42 @@ export function buildAnalyticsCsv(data: EventAnalytics, scope: AnalyticsCsvScope
     }
   }
 
-  /* ── Prodotti più venduti ────────────────────────────────────────────── */
-  rows.push('')
-  rows.push('PRODOTTI PIÙ VENDUTI')
-  rows.push(csvRow('#', 'Prodotto', 'Stand', 'Quantità', `Ricavo (${cur})`))
-  if (data.topProducts.length === 0) {
-    rows.push(csvRow(EMPTY_SECTION_ROW))
-  } else {
-    data.topProducts.forEach((p, i) => {
-      rows.push(csvRow(i + 1, p.productName, p.standName, p.quantity, num(p.revenue)))
-    })
-  }
-
-  /* ── Dettaglio per stand, con la riga TOTALE della pagina ──────────────── */
-  rows.push('')
-  rows.push('DETTAGLIO PER STAND')
-  rows.push(csvRow(
-    'N.', 'Stand', 'Ordini', 'Quantità', `Fatturato (${cur})`, `Contanti (${cur})`,
-    `POS (${cur})`, `Crediti (${cur})`, 'Preparazione', `Guadagnati (${cur})`,
-    `Liquidati (${cur})`, `Da liquidare (${cur})`, 'Liquidazione',
-  ))
-  if (data.byStand.length === 0) {
-    rows.push(csvRow(EMPTY_SECTION_ROW))
-  } else {
-    for (const s of data.byStand) {
-      rows.push(csvRow(
-        s.number ?? '—',
-        s.standName,
-        s.orders,
-        s.quantity,
-        num(s.revenue),
-        num(s.cashRevenue),
-        num(s.posRevenue),
-        num(s.creditRevenue),
-        duration(s.avgPrepSeconds),
-        num(s.earnedCredits),
-        num(s.settledCredits),
-        num(s.remainingEarnedCredits),
-        settlementLabel(s),
-      ))
-    }
-    rows.push(csvRow(
-      '—',
-      'TOTALE',
-      totals.orders,
-      totals.quantity,
-      num(totals.revenue),
-      num(totals.cashRevenue),
-      num(totals.posRevenue),
-      num(totals.creditRevenue),
-      duration(totals.avgPrepSeconds),
-      num(totals.settlements.earnedCredits),
-      num(totals.settlements.settledCredits),
-      num(totals.settlements.remainingEarnedCredits),
-      `${totals.settlements.settlementCount} totali`,
-    ))
-  }
+  /* ── Prodotti più venduti e dettaglio per stand: sezioni riusate anche
+        dai pulsanti in testa alle singole tabelle ─────────────────────────── */
+  topProductsSection(data, rows)
+  standDetailSection(data, rows)
 
   return rows.join('\r\n')
 }
 
-/** Nome file: `analisi-vendite-<stand>-<evento>-<da>_<a>.csv`. */
-export function analyticsCsvFilename(data: EventAnalytics, scope: AnalyticsCsvScope): string {
-  const standSlug = scope.standName ? sanitizeFilename(scope.standName) : 'tutti-gli-stand'
-  const from = sanitizeFilename(data.window.from || 'inizio')
-  const to = sanitizeFilename(data.window.to || 'fine')
-  return `analisi-vendite-${standSlug}-${sanitizeFilename(data.eventName)}-${from}_${to}.csv`
+/** Solo la tabella «Prodotti più venduti», con la testata di perimetro. */
+export function buildTopProductsCsv(data: EventAnalytics, scope: AnalyticsCsvScope): string {
+  const rows: string[] = []
+  analyticsTestata(data, scope, rows)
+  topProductsSection(data, rows)
+  return rows.join('\r\n')
+}
+
+/** Solo la tabella «Dettaglio per stand» (con TOTALE), con la testata. */
+export function buildStandDetailCsv(data: EventAnalytics, scope: AnalyticsCsvScope): string {
+  const rows: string[] = []
+  analyticsTestata(data, scope, rows)
+  standDetailSection(data, rows)
+  return rows.join('\r\n')
+}
+
+/** Nome file: `analisi-vendite[-<sezione>]-<stand>-<evento>-<da>_<a>.csv`.
+ *  Il pezzo di sezione serve a non sovrascrivere il file unico quando si
+ *  esporta una singola tabella dalla stessa pagina. */
+export function analyticsCsvFilename(
+  data: EventAnalytics,
+  scope: AnalyticsCsvScope,
+  sectionSlug?: string,
+): string {
+  const parts = ['analisi-vendite']
+  if (sectionSlug) parts.push(sectionSlug)
+  parts.push(scope.standName ? sanitizeFilename(scope.standName) : 'tutti-gli-stand')
+  parts.push(sanitizeFilename(data.eventName))
+  parts.push(`${sanitizeFilename(data.window.from || 'inizio')}_${sanitizeFilename(data.window.to || 'fine')}`)
+  return `${parts.join('-')}.csv`
 }

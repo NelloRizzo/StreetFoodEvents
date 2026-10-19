@@ -30,7 +30,7 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 
 ### 3. Statistiche Avanzate Evento — **IMPLEMENTATA** (Ott 2026)
 - **Fatto**: pagina `Analisi vendite` (`/admin/events/:eventId/analytics`) + endpoint `GET /api/events/:eventId/analytics` con vendite per ora, prodotti più venduti, tempo medio di preparazione (bucket a confini fissi) e vendite per stand. Grafici in CSS, non librerie. Vedi CHANGELOG Ottobre 2026.
-- **Scostamento dal piano originale**: la `mappa calore presenze` è diventata una **mappa delle vendite per stand** (cerchi Leaflet proporzionali al fatturato): dei visitatori non c'è il GPS, quindi non esiste un dato di posizione aggregabile. **Export CSV fatto** (Ott 2026: pulsante «Esporta CSV», un unico file con tutte le sezioni e il filtro attivo — vedi CHANGELOG); per il PDF vale la stampa già esistente (`window.print`), non è previsto un export dedicato.
+- **Scostamento dal piano originale**: la `mappa calore presenze` è diventata una **mappa delle vendite per stand** (cerchi Leaflet proporzionali al fatturato): dei visitatori non c'è il GPS, quindi non esiste un dato di posizione aggregabile. **Export CSV fatto** (Ott 2026: pulsante «Esporta CSV» in testata con un unico file contenente tutte le sezioni e il filtro attivo; da una seconda iterativa anche i **pulsanti «Esporta CSV» in testa alle tabelle** — dettaglio per stand e prodotti più venduti in Analisi vendite, dettaglio per stand in Stima visitatori — per scaricare la sola tabella col filtro attivo — vedi CHANGELOG); per il PDF vale la stampa già esistente (`window.print`), non è previsto un export dedicato.
 - **Motivazione**: supporto decisionale per organizzatori
 
 ### 6. Multi-lingua (i18n) — Piano dettagliato (Ago 2026)
@@ -83,7 +83,7 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 - **Formati**: CSV, Excel (xlsx), PDF con grafe
 - **API**: `/api/export/:type` con filtri data/evento/stand
 - **Frontend**: pulsanti export con filtri, preview
-- **Stato attuale**: esiste solo l'export CSV **client-side** del resoconto incassi (`EventOrdersPage`) e quello di `Analisi vendite` (`lib/analyticsCsv.ts`); entrambi importano le convenzioni da **`frontend/src/lib/csv.ts`** (separatore virgola, punto decimale, BOM UTF-8) — non ricopiare le funzioni. L'export server-side di ordini/transazioni/utenti qui descritto resta da fare.
+- **Stato attuale**: esiste l'export CSV **client-side** del resoconto incassi (`EventOrdersPage`), quello di `Analisi vendite` (`lib/analyticsCsv.ts`, file unico + pulsanti in testa alle tabelle per singola sezione) e quello del dettaglio per stand della stima visitatori (`lib/visitorsCsv.ts`); tutti importano le convenzioni da **`frontend/src/lib/csv.ts`** (separatore virgola, punto decimale, BOM UTF-8, helper `num`/`pct`/`dateTime`) — non ricopiare le funzioni. L'export server-side di ordini/transazioni/utenti qui descritto resta da fare.
 - **Motivazione**: compliance fiscale, analisi esterne
 
 ### 8. Sistema Abbonamenti

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { analyticsCsvFilename, buildAnalyticsCsv, type AnalyticsCsvScope } from '../../lib/analyticsCsv'
+import { analyticsCsvFilename, buildAnalyticsCsv, buildStandDetailCsv, buildTopProductsCsv, type AnalyticsCsvScope } from '../../lib/analyticsCsv'
 import {
   type AnalyticsHourBucket,
   type AnalyticsStandRow,
@@ -292,5 +292,61 @@ describe('analyticsCsvFilename', () => {
       .toBe('analisi-vendite-tutti-gli-stand-Notti-Cilentine-2026-10-01_2026-10-03.csv')
     expect(analyticsCsvFilename(makeData({ eventName: 'Festa & Sagra', window: { from: '', to: '' } }), scopeWith({ standName: 'Panino "duro"' })))
       .toBe('analisi-vendite-Panino-duro-Festa-Sagra-inizio_fine.csv')
+  })
+
+  it('accoda il pezzo di sezione per non sovrascrivere il file unico', () => {
+    expect(analyticsCsvFilename(makeData(), scopeWith(), 'dettaglio-stand'))
+      .toBe('analisi-vendite-dettaglio-stand-tutti-gli-stand-Notti-Cilentine-2026-10-01_2026-10-03.csv')
+    expect(analyticsCsvFilename(makeData(), scopeWith(), 'prodotti-piu-venduti'))
+      .toBe('analisi-vendite-prodotti-piu-venduti-tutti-gli-stand-Notti-Cilentine-2026-10-01_2026-10-03.csv')
+  })
+})
+
+/* I pulsanti in testa alle due tabelle scaricano una sezione sola: stessa
+   builder (e dunque stesse righe) del file unico, con la testata di
+   perimetro davanti. */
+describe('buildStandDetailCsv', () => {
+  it('porta la testata di perimetro e SOLO la sezione del dettaglio', () => {
+    const csv = buildStandDetailCsv(makeData(), scopeWith())
+    expect(csv).toContain('Analisi vendite - Notti Cilentine')
+    expect(csv).toContain('Stand,tutti')
+    expect(csv).toContain('Esportato il,19/10/2026 15:42')
+    expect(csv).toContain('DETTAGLIO PER STAND')
+    expect(csv).toContain('—,TOTALE,10,25,')
+    /* Le altre sezioni non devono entrare: il file è la tabella, non la pagina. */
+    expect(csv).not.toContain('RIEPILOGO')
+    expect(csv).not.toContain('PRODOTTI PIÙ VENDUTI')
+    expect(csv).not.toContain('VENDITE PER ORA')
+  })
+
+  it('rispetta il filtro stand nella testata', () => {
+    const csv = buildStandDetailCsv(makeData(), scopeWith({ standName: 'Panineria' }))
+    expect(csv).toContain('Stand,Panineria')
+    expect(analyticsCsvFilename(makeData(), scopeWith({ standName: 'Panineria' }), 'dettaglio-stand'))
+      .toBe('analisi-vendite-dettaglio-stand-Panineria-Notti-Cilentine-2026-10-01_2026-10-03.csv')
+  })
+
+  it('lascia la riga "Nessun dato" quando la tabella e\' vuota', () => {
+    const csv = buildStandDetailCsv(makeData({ byStand: [] }), scopeWith())
+    expect(csv).toContain('DETTAGLIO PER STAND')
+    expect(csv).toContain('Nessun dato nel periodo.')
+  })
+})
+
+describe('buildTopProductsCsv', () => {
+  it('porta la testata e SOLO l\'elenco dei prodotti', () => {
+    const csv = buildTopProductsCsv(makeData(), scopeWith({ hourDayKey: '2026-10-02' }))
+    expect(csv).toContain('Analisi vendite - Notti Cilentine')
+    expect(csv).toContain('Giorno del grafico orario,2 ott')
+    expect(csv).toContain('PRODOTTI PIÙ VENDUTI')
+    expect(csv).toContain('1,Panino,Panineria,12,60')
+    expect(csv).not.toContain('DETTAGLIO PER STAND')
+    expect(csv).not.toContain('RIEPILOGO')
+  })
+
+  it('lascia la riga "Nessun dato" quando non ci sono prodotti', () => {
+    const csv = buildTopProductsCsv(makeData({ topProducts: [] }), scopeWith())
+    expect(csv).toContain('PRODOTTI PIÙ VENDUTI')
+    expect(csv).toContain('Nessun dato nel periodo.')
   })
 })

@@ -50,3 +50,48 @@ export function downloadCsv(filename: string, content: string) {
 export function sanitizeFilename(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'file'
 }
+
+/* ── Formati numerici e date ──────────────────────────────────────────────
+   Convivono qui perché le regole devono essere identiche in ogni export
+   (vedi l'intestazione del modulo): una copia per pagina diverge alla prima
+   modifica e due fogli esportati dalla stessa pagina non si sommano più. */
+
+/** Numero con al massimo due cifre decimali (crediti o euro: i centesimi
+ *  bastano) e **punto decimale**: una cella con la virgola finirebbe tra
+ *  virgolette e in un foglio di calcolo una cifra virgolettata è testo,
+ *  non numero. */
+export function num(n: number): string {
+  return String(Math.round(n * 100) / 100)
+}
+
+/** Euro con due decimali. */
+export function euro(n: number): string {
+  return n.toFixed(2)
+}
+
+/** Percentuale 0-1 → numero con una cifra decimale, **senza** simbolo `%`
+ *  (l'intestazione di colonna lo dichiara). */
+export function pct(value: number | null): string {
+  if (value === null) return ''
+  return String(Math.round(value * 1000) / 10)
+}
+
+/** Data/ora con parti numeriche: `01/10 18:30`. Niente `toLocaleString`,
+ *  perché il risultato deve essere identico in ogni ambiente (e nei test). */
+export function dateTime(iso: string): string {
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+/** Data/ora completa `01/10/2026 18:30`, per la testata dei file. */
+export function dateTimeOf(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+/** Etichetta periodo `da - a`, con fallback per gli estremi mancanti. */
+export function periodRangeLabel(window: { from: string; to: string }): string {
+  if (!window.from && !window.to) return 'intero evento'
+  return `${window.from || 'inizio evento'} - ${window.to || 'fine evento'}`
+}

@@ -57,6 +57,14 @@
   cursor: pointer;
 }
 
+/* Esportazione di una singola tabella: il bottone sta in testa alla card,
+   quindi deve essere più piccolo di quello della toolbar. */
+.cardExportBtn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
@@ -412,6 +420,7 @@
 @media print {
   .headerActions,
   .dayGroup,
+  .cardExportBtn,
   .note {
     display: none;
   }
