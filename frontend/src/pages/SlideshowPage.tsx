@@ -279,7 +279,14 @@ export function SlideshowPage() {
               <>
                 <button className={styles.adPanelClose} onClick={() => setAdOpen(false)} title="Chiudi">×</button>
                 {currentAd ? (
-                  <img key={currentAd.id} src={currentAd.image.url} alt={currentAd.name ?? ''} className={styles.adPanelImage} />
+                  <img
+                    key={currentAd.id}
+                    src={currentAd.image.url}
+                    alt={currentAd.name ?? ''}
+                    className={`${styles.adPanelImage} ${ads.length > 1 ? styles.adPanelImageNext : ''}`}
+                    onClick={ads.length > 1 ? () => setAdIndex(weightedPickIndex(ads, adIndex)) : undefined}
+                    title={ads.length > 1 ? 'Passa alla prossima' : undefined}
+                  />
                 ) : (
                   <span className={styles.adPanelEmpty}>Nessun advertisement</span>
                 )}

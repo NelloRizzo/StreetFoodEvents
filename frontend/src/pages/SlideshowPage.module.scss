@@ -164,6 +164,11 @@
   animation: adFade 0.5s ease;
 }
 
+/* Click sull'immagine = salta alla prossima ad (solo quando ce n'e' piu' di una). */
+.adPanelImageNext {
+  cursor: pointer;
+}
+
 .adPanelEmpty {
   flex: 1;
   display: flex;
