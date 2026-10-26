@@ -1288,7 +1288,11 @@ const [showCashSetup, setShowCashSetup] = useState(true)
               <button
                 type="button"
                 className={cambioStyles.btnQr}
-                onClick={() => setShowScanner(true)}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setShowScanner(true)
+                }}
                 disabled={linking}
                 title="Scansiona il QR personale del cliente per collegarlo all'evento"
               >
@@ -1470,6 +1474,7 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                   className={cambioStyles.exTextBtn}
                   onClick={() => setRefundAmount((targetBalance / rateSafe).toFixed(2))}
                   disabled={!targetUserId || targetBalance <= 0 || submitting === 'refund'}
+                  style={{ display: 'none' }}
                 >
                   Rimborsa tutto il saldo (€{(targetBalance / rateSafe).toFixed(2)})
                 </button>
