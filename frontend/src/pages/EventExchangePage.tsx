@@ -645,9 +645,10 @@ const [showCashSetup, setShowCashSetup] = useState(true)
 
   const handleTopUp = async () => {
     if (!eventId || !targetUserId || !topUpAmount || !activeCassa) return
-    const amount = parseFloat(topUpAmount)
-    if (!amount || amount <= 0) return
-    if (amount / rateSafe > (cassaBalance?.euroContent ?? 0) + 0.005) {
+    const euroAmount = parseFloat(topUpAmount)
+    if (!euroAmount || euroAmount <= 0) return
+    const amount = Math.round(euroAmount * rateSafe * 100) / 100
+    if (euroAmount > (cassaBalance?.euroContent ?? 0) + 0.005) {
       setModal({ open: true, variant: 'alert', title: 'Importo non disponibile', message: `Disponibilità in cassa: ${fmtEur(cassaBalance?.euroContent ?? 0)}.` })
       return
     }
@@ -659,9 +660,8 @@ const [showCashSetup, setShowCashSetup] = useState(true)
       })
       setTopUpAmount('')
       setTopUpDesc('')
-      trackCurrencyExchange({ eventId, amount, type: 'topup' })
-      const euro = amount / (rate || 1)
-      setModal({ open: true, variant: 'alert', title: 'Carico completato', message: `Caricati ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'} → €${euro.toFixed(2)}. Nuovo saldo: ${res.newBalance}` })
+      trackCurrencyExchange({ eventId, amount: euroAmount, type: 'topup' })
+      setModal({ open: true, variant: 'alert', title: 'Carico completato', message: `Caricati ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'} → €${euroAmount.toFixed(2)}. Nuovo saldo: ${res.newBalance}` })
       fetchData()
       fetchCassaBalance()
     } catch (err) {
@@ -673,13 +673,14 @@ const [showCashSetup, setShowCashSetup] = useState(true)
 
   const handleRefund = async () => {
     if (!eventId || !targetUserId || !refundAmount || !activeCassa) return
-    const amount = parseFloat(refundAmount)
-    if (!amount || amount <= 0) return
+    const euroAmount = parseFloat(refundAmount)
+    if (!euroAmount || euroAmount <= 0) return
+    const amount = Math.round(euroAmount * rateSafe * 100) / 100
     if (amount > targetBalance + 0.005) {
       setModal({ open: true, variant: 'alert', title: 'Saldo insufficiente', message: `Saldo cliente insufficiente. Massimo rimborsabile: ${fmt(targetBalance)} ${currencyName}.` })
       return
     }
-    if (amount / rateSafe > (cassaBalance?.euroContent ?? 0) + 0.005) {
+    if (euroAmount > (cassaBalance?.euroContent ?? 0) + 0.005) {
       setModal({ open: true, variant: 'alert', title: 'Importo non disponibile', message: `Disponibilità in cassa: ${fmtEur(cassaBalance?.euroContent ?? 0)}.` })
       return
     }
@@ -691,9 +692,8 @@ const [showCashSetup, setShowCashSetup] = useState(true)
       })
       setRefundAmount('')
       setRefundDesc('')
-      trackCurrencyExchange({ eventId, amount, type: 'refund' })
-      const real = amount / (rate || 1)
-      setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'} → €${real.toFixed(2)}. Nuovo saldo: ${res.newBalance}` })
+      trackCurrencyExchange({ eventId, amount: euroAmount, type: 'refund' })
+      setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati €${euroAmount.toFixed(2)} → ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'}. Nuovo saldo: ${res.newBalance}` })
       fetchData()
       fetchCassaBalance()
     } catch (err) {
@@ -1356,9 +1356,10 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                   <label className={cambioStyles.fieldRow} style={{ flex: '0 0 9rem' }}>
                     <span className={cambioStyles.fieldLabel}>Importo {currencyName}</span>
                     <input
+                      className={cambioStyles.fieldInput}
                       type="number"
                       min="0.01"
-                      step={rate >= 1 ? '0.01' : '1'}
+                      step={1}
                       max={topUpMaxEuro * rate}
                       value={topUpAmount}
                       onChange={(e) => setTopUpAmount(e.target.value)}
@@ -1374,12 +1375,12 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                   <div className={cambioStyles.refundInline}>
                     {topUpAmount && parseFloat(topUpAmount) > 0 && (
                       <span className={cambioStyles.preview}>
-                        ≈ {(parseFloat(topUpAmount) / rateSafe).toFixed(2)} €
+                        ≈ {(parseFloat(topUpAmount) * rate).toFixed(2)} {currencyName}
                       </span>
                     )}
-                    {topUpAmount && parseFloat(topUpAmount) > 0 && (parseFloat(topUpAmount) / rateSafe) > (cassaBalance?.euroContent ?? 0) + 0.005 && (
+                    {topUpAmount && parseFloat(topUpAmount) > 0 && parseFloat(topUpAmount) > (cassaBalance?.euroContent ?? 0) + 0.005 && (
                       <span className={cambioStyles.cassaLockedInline}>
-                        Importo superiore alla disponibilità: massimo {fmtEur((cassaBalance?.euroContent ?? 0))}
+                        Importo superiore alla disponibilità: massimo {fmtEur(cassaBalance?.euroContent ?? 0)}
                       </span>
                     )}
                   </div>
@@ -1410,10 +1411,10 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                     !topUpAmount ||
                     !activeCassa ||
                     submitting === 'topup' ||
-                    (parseFloat(topUpAmount) / rateSafe) > (cassaBalance?.euroContent ?? 0) + 0.005
+                    parseFloat(topUpAmount) > (cassaBalance?.euroContent ?? 0) + 0.005
                   }
                 >
-                  {submitting === 'topup' ? 'Caricamento...' : `Carica ${currencyName}`}
+                  {submitting === 'topup' ? 'Caricamento...' : `Carica`}
                 </button>
                 {paymentMethod === 'pos' && (
                   <p className={cambioStyles.statSub}>
@@ -1433,12 +1434,13 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                 </p>
                 <div className={cambioStyles.refundRow}>
                   <label className={cambioStyles.fieldRow} style={{ flex: '0 0 9rem' }}>
-                    <span className={cambioStyles.fieldLabel}>Importo {currencyName}</span>
+                    <span className={cambioStyles.fieldLabel}>Importo €</span>
                     <input
+                      className={cambioStyles.fieldInput}
                       type="number"
                       min="0.01"
                       step="0.01"
-                      max={isRealCustomer ? targetBalance : undefined}
+                      max={isRealCustomer ? targetBalance / rateSafe : undefined}
                       value={refundAmount}
                       onChange={(e) => setRefundAmount(e.target.value)}
                       onBlur={() => {
@@ -1453,7 +1455,7 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                   <div className={cambioStyles.refundInline}>
                     {refundAmount && parseFloat(refundAmount) > 0 && !refundOverBalance && (
                       <span className={cambioStyles.preview}>
-                        ≈ {fmtEur(parseFloat(refundAmount) / rateSafe)}
+                        ≈ {fmt(parseFloat(refundAmount) * rateSafe)} {currencyName}
                       </span>
                     )}
                     {refundOverBalance && (
@@ -1466,10 +1468,10 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                 <button
                   type="button"
                   className={cambioStyles.exTextBtn}
-                  onClick={() => setRefundAmount(targetBalance.toFixed(2))}
+                  onClick={() => setRefundAmount((targetBalance / rateSafe).toFixed(2))}
                   disabled={!targetUserId || targetBalance <= 0 || submitting === 'refund'}
                 >
-                  Rimborsa tutto il saldo ({fmt(targetBalance)} {currencyName})
+                  Rimborsa tutto il saldo (€{(targetBalance / rateSafe).toFixed(2)})
                 </button>
                 <label className={cambioStyles.fieldRow}>
                   <span className={cambioStyles.fieldLabel}>Restituisci con</span>
