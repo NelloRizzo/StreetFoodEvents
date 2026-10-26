@@ -28,7 +28,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   manage: 'Gestione',
   products: 'Prodotti',
   'event-products': 'Prodotti per evento',
-  'event-users': 'Portafogli eventi',
   favorites: 'Preferiti',
   orders: 'Ordini',
   order: 'Cassa stand',

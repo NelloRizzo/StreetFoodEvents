@@ -9,8 +9,13 @@ export const exchangeRouter = Router();
 exchangeRouter.use(asyncHandler(authMiddleware));
 
 exchangeRouter.get('/:eventId/users', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.listUsers));
+/* Collega un utente registrato al portafoglio dell'evento (QR personale).
+ * Registrata PRIMA di /:eventUserId: 'link' e' un segmento statico. */
+exchangeRouter.post('/:eventId/users/link', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.linkRegisteredUser));
 /* Saldo di un singolo wallet: polling leggero della postazione (niente lista). */
 exchangeRouter.get('/:eventId/users/:eventUserId/balance', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.getEventUserBalance));
+/* Correzione manuale del saldo (senza denaro): accredito o addebito. */
+exchangeRouter.post('/:eventId/users/:eventUserId/adjustment', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.adjustBalance));
 exchangeRouter.get('/:eventId/balance', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.getBalance));
 exchangeRouter.get('/:eventId/transactions', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.listTransactions));
 exchangeRouter.post('/:eventId/top-up', asyncHandler(hasRole(['exchange-admin', 'platform-admin'], { eventParam: 'eventId' })), asyncHandler(exchangeController.topUp));

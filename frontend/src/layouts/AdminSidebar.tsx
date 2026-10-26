@@ -144,9 +144,6 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
       ? [{
           label: 'Finanziario',
           items: [
-            ...(isPlatformAdmin || manageEvent
-              ? [{ label: 'Portafogli eventi', to: '/admin/event-users', icon: '\u{1F4B3}' } as SidebarItem]
-              : []),
             ...(canManageFinance
               ? [
                   { label: 'Cambio', to: `${basePath}/exchange`, icon: '\u{1F504}' } as SidebarItem,

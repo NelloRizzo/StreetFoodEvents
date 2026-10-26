@@ -4,7 +4,6 @@ import { PublicLayout } from './layouts/PublicLayout'
 import { AdminLayout } from './layouts/AdminLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { EventProductsPage } from './pages/EventProductsPage'
-import { EventUsersPage } from './pages/EventUsersPage'
 import { EventsPage } from './pages/EventsPage'
 import { FavoritesPage } from './pages/FavoritesPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -132,7 +131,9 @@ export const router = createBrowserRouter([
       { path: 'stands/:standId/orders', element: <ParamRedirect build={(p) => `/admin/stands/${p.standId}/orders`} /> },
       { path: 'products', element: <Navigate to="/admin/products" replace /> },
       { path: 'event-products', element: <Navigate to="/admin/event-products" replace /> },
-      { path: 'event-users', element: <Navigate to="/admin/event-users" replace /> },
+      /* La pagina "Portafogli eventi" e' stata eliminata: i portafogli si
+       * gestiscono dalla cassa di cambio del evento. */
+      { path: 'event-users', element: <Navigate to="/admin/dashboard" replace /> },
       { path: 'favorites', element: <Navigate to="/admin/favorites" replace /> },
       { path: 'orders/:orderId', element: <ParamRedirect build={(p) => `/admin/orders/${p.orderId}`} /> },
       { path: 'staff', element: <Navigate to="/admin/staff" replace /> },
@@ -183,7 +184,6 @@ export const router = createBrowserRouter([
       { path: 'products', element: <ProductsPage /> },
       { path: 'categories', element: <CategoriesPage /> },
       { path: 'event-products', element: <EventProductsPage /> },
-      { path: 'event-users', element: <EventUsersPage /> },
       { path: 'favorites', element: <FavoritesPage /> },
       { path: 'orders/:orderId', element: <OrderDetailPage /> },
       { path: 'staff', element: <StaffPage /> },

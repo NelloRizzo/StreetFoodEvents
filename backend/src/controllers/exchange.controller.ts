@@ -22,6 +22,11 @@ function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
 }
 
+/** Errore di chiave duplicata di Mongo (indice unico violato). */
+function isDuplicateKeyError(error: unknown): boolean {
+    return typeof error === 'object' && error !== null && (error as { code?: number }).code === 11000;
+}
+
 function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -232,6 +237,90 @@ async function getEventFromParam(req: Request, res: Response) {
     return { event, eventId };
 }
 
+type ExchangeUserProfile = { firstName?: string | null; lastName?: string | null; email?: string | null };
+
+/* Il `userId` arriva in due forme: ObjectId (documento non popolato) oppure
+ * documento popolato con il profilo. La funzione mette le due nello stesso
+ * modo, cosi' il mappone del client e' unico. */
+function readUserProfile(userId: unknown): { userId: string | null; profile: ExchangeUserProfile | null } {
+    if (!userId) return { userId: null, profile: null };
+    if (typeof userId === 'object') {
+        const populated = userId as { _id?: Types.ObjectId } & ExchangeUserProfile;
+        return { userId: populated._id?.toString() ?? null, profile: populated };
+    }
+    return { userId: String(userId), profile: null };
+}
+
+function toExchangeUserItem(
+    eventUser: {
+        _id: Types.ObjectId;
+        eventId: Types.ObjectId;
+        userId?: unknown;
+        balance?: number;
+        isActive?: boolean;
+        joinedAt?: Date;
+        displayName?: string | null;
+    },
+    profile?: ExchangeUserProfile | null
+) {
+    const { userId, profile: populated } = readUserProfile(eventUser.userId);
+    const person = profile ?? populated;
+
+    return {
+        id: eventUser._id.toString(),
+        eventId: eventUser.eventId.toString(),
+        userId,
+        firstName: person?.firstName ?? (!userId && eventUser.displayName ? eventUser.displayName : null),
+        lastName: person?.lastName ?? null,
+        email: person?.email ?? null,
+        balance: eventUser.balance ?? 0,
+        isAnonymous: !userId,
+        /* Il "cliente generico" e' l'anonimo condiviso dell'evento (nessun
+         * userId e nessun displayName): e' il destinatario predefinito delle
+         * operazioni senza cliente. Gli anonimi con nome vengono creati dal
+         * pulsante "+ Crea" e NON sono il generico. */
+        isGeneric: !userId && !eventUser.displayName,
+        isActive: eventUser.isActive ?? true,
+        joinedAt: eventUser.joinedAt,
+        displayName: eventUser.displayName ?? null
+    };
+}
+
+/**
+ * Sintesi degli accrediti per cliente: quante volte e quanti crediti sono
+ * entrati nel portafoglio.
+ *
+ * Solo i CREDITI reali: i 'refund' con direction 'credit' sono il rimborso di
+ * un ordine annullato (i crediti tornano al portafoglio, non e' un accredito
+ * del banco) e i 'purchase' sono addebiti. Senza questo dato l'elenco dei
+ * clienti non dice a chi sono stati accreditati crediti (nota del supervisore).
+ */
+async function creditSummaryByEventUser(eventId: string) {
+    const stats = await EventUserTransactionModel.aggregate<{
+        _id: Types.ObjectId;
+        count: number;
+        total: number;
+        lastAt: Date | null;
+    }>([
+        { $match: { eventId: new Types.ObjectId(eventId), direction: 'credit', type: { $ne: 'refund' } } },
+        {
+            $group: {
+                _id: '$eventUserId',
+                count: { $sum: 1 },
+                total: { $sum: '$amount' },
+                lastAt: { $max: '$occurredAt' }
+            }
+        }
+    ]);
+
+    return new Map<string, { count: number; total: number; lastAt: Date | null }>(
+        stats.map((stat) => [
+            stat._id.toString(),
+            { count: stat.count, total: roundEuro(stat.total), lastAt: stat.lastAt ?? null }
+        ])
+    );
+}
+
 async function listUsers(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
@@ -246,26 +335,134 @@ async function listUsers(req: Request, res: Response) {
         .sort({ 'userId': 1 })
         .lean();
 
-    const items = eventUsers.map((eu) => ({
-        id: eu._id.toString(),
-        eventId: eu.eventId.toString(),
-        userId: eu.userId?._id?.toString() ?? null,
-        firstName: (eu.userId as { firstName?: string })?.firstName ?? (!eu.userId && (eu as { displayName?: string }).displayName ? (eu as { displayName?: string }).displayName! : null),
-        lastName: (eu.userId as { lastName?: string })?.lastName ?? null,
-        email: (eu.userId as { email?: string })?.email ?? null,
-        balance: eu.balance,
-        isAnonymous: !eu.userId,
-        /* Il "cliente generico" e' l'anonimo condiviso dell'evento (nessun
-         * userId e nessun displayName): e' il destinatario predefinito delle
-         * operazioni senza cliente. Gli anonimi con nome vengono creati dal
-         * pulsante "+ Crea" e NON sono il generico. */
-        isGeneric: !eu.userId && !eu.displayName,
-        isActive: eu.isActive,
-        joinedAt: eu.joinedAt,
-        displayName: (eu as { displayName?: string }).displayName ?? null
-    }));
+    const creditsByEventUser = await creditSummaryByEventUser(eventCtx.eventId);
+
+    const items = eventUsers.map((eu) => {
+        const credits = creditsByEventUser.get(eu._id.toString());
+        return {
+            ...toExchangeUserItem(eu),
+            // Campi "piatti" (non un oggetto annidato): il frontend li legge
+            // nella stessa riga della lista e un oggetto annidato costringerebbe
+            // a entrare nel dettaglio del campo, che il React Compiler tratta
+            // come una lettura "sporca" e bloccherebbe la memoizzazione.
+            creditsCount: credits?.count ?? 0,
+            creditsTotal: credits?.total ?? 0,
+            creditsLastAt: credits?.lastAt ?? null
+        };
+    });
 
     return res.status(200).json({ items });
+}
+
+/**
+ * Collega un utente registrato al portafoglio dell'evento (il cliente mostra
+ * il suo QR personale e l'operatore lo scansiona). Idempotente: ricollegare
+ * lo stesso utente non crea un doppione, restituisce il wallet esistente.
+ */
+async function linkRegisteredUser(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const userId = (req.body as { userId?: unknown }).userId;
+    if (typeof userId !== 'string' || !isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid userId' });
+    }
+
+    const user = await UserModel.findById(userId).select('_id firstName lastName email');
+    if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+
+    const profile = { firstName: user.firstName, lastName: user.lastName, email: user.email };
+
+    const existing = await EventUserModel.findOne({ eventId: eventCtx.eventId, userId: user._id });
+    if (existing) {
+        return res.status(200).json({
+            item: toExchangeUserItem(existing, profile),
+            alreadyLinked: true
+        });
+    }
+
+    try {
+        const created = await EventUserModel.create({
+            eventId: eventCtx.eventId,
+            userId: user._id,
+            balance: 0,
+            isActive: true,
+            joinedAt: new Date()
+        });
+
+        return res.status(201).json({
+            item: toExchangeUserItem(created, profile),
+            alreadyLinked: false
+        });
+    } catch (error) {
+        /* Indice unico su (eventId, userId): due collegamenti in simultanea
+         * fanno scattare il duplicato invece di creare un doppione. */
+        if (isDuplicateKeyError(error)) {
+            const justCreated = await EventUserModel.findOne({ eventId: eventCtx.eventId, userId: user._id });
+            if (justCreated) {
+                return res.status(200).json({
+                    item: toExchangeUserItem(justCreated, profile),
+                    alreadyLinked: true
+                });
+            }
+        }
+
+        throw error;
+    }
+}
+
+/**
+ * Correzione manuale del saldo: accredito o addebito SENZA movimento di denaro
+ * (nessuna cassa, nessun report di incasso). Serve a correggere un errore di
+ * accredito o di rimborso senza toccare i contanti.
+ */
+async function adjustBalance(req: Request, res: Response) {
+    const eventCtx = await getEventFromParam(req, res);
+    if (!eventCtx) return;
+
+    const { eventUserId } = req.params as { eventUserId: string };
+    if (typeof eventUserId !== 'string' || !isValidObjectId(eventUserId)) {
+        return res.status(400).json({ message: 'Valid eventUserId is required' });
+    }
+
+    const body = req.body as { direction?: unknown; amount?: unknown; description?: unknown };
+    if (body.direction !== 'credit' && body.direction !== 'debit') {
+        return res.status(400).json({ message: 'Invalid direction' });
+    }
+
+    const amount = Number(body.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ message: 'Invalid amount' });
+    }
+
+    const eventUser = await EventUserModel.findOne({ _id: eventUserId, eventId: eventCtx.eventId });
+    if (!eventUser) {
+        return res.status(404).json({ message: 'Event user not found for this event' });
+    }
+
+    try {
+        const result = await createEventUserTransaction({
+            eventUserId: eventUser._id,
+            type: 'adjustment',
+            direction: body.direction,
+            amount,
+            description: typeof body.description === 'string' && body.description.trim() ? body.description.trim() : null,
+            performedByUserId: req.user?.id ?? null
+        });
+
+        return res.status(201).json({
+            newBalance: result.eventUser.balance,
+            transaction: toTransactionResponse(result.transaction)
+        });
+    } catch (error) {
+        if (error instanceof EventUserTransactionError) {
+            return res.status(400).json({ message: error.message });
+        }
+
+        throw error;
+    }
 }
 
 /* Saldo di un singolo wallet: endpoint leggero pensato per il polling della
@@ -2395,6 +2592,8 @@ async function denominationReport(req: Request, res: Response) {
 
 export const exchangeController = {
     listUsers,
+    linkRegisteredUser,
+    adjustBalance,
     getEventUserBalance,
     getBalance,
     listTransactions,

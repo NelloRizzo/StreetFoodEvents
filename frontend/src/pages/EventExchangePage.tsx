@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { apiRequest } from '../lib/api'
 import { trackCurrencyExchange } from '../lib/analytics'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { QRScanner } from '../components/QRScanner'
 import { useAuth } from '../features/auth/auth-context'
 import cambioStyles from './EventExchangePage.module.scss'
 
@@ -20,6 +21,19 @@ type ExchangeUser = {
   isActive: boolean
   joinedAt: string
   displayName: string | null
+  /**
+   * Sintesi degli accrediti del cliente: quante volte e quanti crediti sono
+   * entrati nel portafoglio. Senza questo dato l'elenco non dice a chi sono
+   * stati accreditati crediti (nota del supervisore).
+   *
+   * Tre campi piatti e non un oggetto annidato: il frontend li legge gia' nella
+   * riga della lista, e un oggetto annidato costringerebbe a entrare nel
+   * dettaglio del campo (una lettura "sporca" per il React Compiler, che
+   * bloccherebbe la memoizzazione del polling del saldo).
+   */
+  creditsCount: number
+  creditsTotal: number
+  creditsLastAt: string | null
 }
 
 /** Come e' stato incassato l'importo reale: contanti (nel cassetto) o POS (carta). */
@@ -201,7 +215,7 @@ export function EventExchangePage() {
 const [floatEuro, setFloatEuro] = useState('')
 const [floatCredits, setFloatCredits] = useState('')
 const [savingFloat, setSavingFloat] = useState(false)
-const [showCashSetup, setShowCashSetup] = useState(false)
+const [showCashSetup, setShowCashSetup] = useState(true)
   const [mvCurrency, setMvCurrency] = useState<'euro' | 'credits'>('euro')
   const [mvDirection, setMvDirection] = useState<'in' | 'out'>('in')
   const [mvAmount, setMvAmount] = useState('')
@@ -220,6 +234,15 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   const [submitting, setSubmitting] = useState<'topup' | 'refund' | null>(null)
   const [guestName, setGuestName] = useState('')
   const [creatingGuest, setCreatingGuest] = useState(false)
+  /* Collegamento di un cliente registrato all'evento (QR personale). */
+  const [showScanner, setShowScanner] = useState(false)
+  const [linking, setLinking] = useState(false)
+  const [linkNotice, setLinkNotice] = useState<string | null>(null)
+  /* Correzione del saldo: accredito/addebito SENZA movimento di denaro. */
+  const [adjustDirection, setAdjustDirection] = useState<'credit' | 'debit'>('credit')
+  const [adjustAmount, setAdjustAmount] = useState('')
+  const [adjustDesc, setAdjustDesc] = useState('')
+  const [adjusting, setAdjusting] = useState(false)
 
   const [modal, setModal] = useState<{ open: boolean; variant: 'confirm' | 'alert'; title: string; message: string }>({
     open: false, variant: 'alert', title: '', message: ''
@@ -330,7 +353,7 @@ const [showCashSetup, setShowCashSetup] = useState(false)
   const [threshEuro, setThreshEuro] = useState('')
   const [threshCredits, setThreshCredits] = useState('')
   const [savingThresh, setSavingThresh] = useState(false)
-  const [showCashRequests, setShowCashRequests] = useState(true)
+  const [showCashRequests, setShowCashRequests] = useState(false)
   const autoSentRef = useRef<Set<string>>(new Set())
 
   const fetchMyRequests = useCallback(async () => {
@@ -734,6 +757,78 @@ const [showCashSetup, setShowCashSetup] = useState(false)
     }
   }
 
+  /**
+   * Il cliente mostra il suo QR personale (dal proprio profilo): l'operatore lo
+   * scansiona e il cliente viene collegato al portafoglio dell'evento, cosi'
+   * puo' pagare con i crediti. Ricollegare lo stesso cliente non crea un
+   * doppione: il backend risponde "alreadyLinked".
+   */
+  const handleScan = async (qrData: string) => {
+    setShowScanner(false)
+    const userId = qrData.trim()
+    if (!eventId || !userId) return
+    setLinking(true)
+    try {
+      const res = await apiRequest<{
+        item: { id: string; firstName: string | null; lastName: string | null; email: string | null };
+        alreadyLinked: boolean;
+      }>(
+        `/exchange/${eventId}/users/link`,
+        { method: 'POST', bodyJson: { userId } }
+      )
+      await fetchUsers()
+      setSelectedUserId(res.item.id)
+      selectedUserIdRef.current = res.item.id
+      const name = `${res.item.firstName ?? ''} ${res.item.lastName ?? ''}`.trim() || res.item.email || 'cliente'
+      setLinkNotice(res.alreadyLinked
+        ? `${name} era già collegato a questo evento.`
+        : `Cliente collegato all'evento: ${name}.`)
+    } catch (err) {
+      setModal({
+        open: true,
+        variant: 'alert',
+        title: 'Collegamento non riuscito',
+        message: (err as { message?: string }).message || 'Il QR code non corrisponde a un utente valido.'
+      })
+    } finally {
+      setLinking(false)
+    }
+  }
+
+  /** Correzione del saldo: muove i crediti senza toccare la cassa. */
+  const handleAdjust = async () => {
+    if (!eventId || !targetUserId) return
+    const amount = Number(adjustAmount)
+    if (!amount || amount <= 0) return
+    setAdjusting(true)
+    try {
+      const res = await apiRequest<{ newBalance: number }>(
+        `/exchange/${eventId}/users/${targetUserId}/adjustment`,
+        {
+          method: 'POST',
+          bodyJson: {
+            direction: adjustDirection,
+            amount,
+            description: adjustDesc.trim() || undefined,
+          }
+        }
+      )
+      setAdjustAmount('')
+      setAdjustDesc('')
+      setModal({
+        open: true,
+        variant: 'alert',
+        title: 'Correzione registrata',
+        message: `Nuovo saldo: ${res.newBalance} ${currencyName}.`
+      })
+      await fetchUsers()
+    } catch (err) {
+      setModal({ open: true, variant: 'alert', title: 'Errore', message: (err as { message?: string }).message || 'Correzione non riuscita' })
+    } finally {
+      setAdjusting(false)
+    }
+  }
+
   const selectedUser = users.find((u) => u.id === selectedUserId) ?? null
   /* Il trattino nella select NON e' "nessun cliente": e' il cliente anonimo.
    * Cariche e rimborsi non hanno bisogno di un cliente registrato, quindi se
@@ -1089,60 +1184,62 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 </button>
 
                 {showCashSetup && (
-                  <div className={cambioStyles.formGrid}>
-                    <div className={cambioStyles.formCard}>
-                      <h3 style={{ marginTop: 0 }}>Imposta fondo cassa</h3>
-                      <p className={cambioStyles.statSub}>Contenuto iniziale della cassa (euro e token separatamente). I valori lasciati vuoti restano invariati.</p>
-                      <label className={cambioStyles.field}>
-                        Fondo Euro
-                        <input type="number" min="0" step="0.01" value={floatEuro}
-                          onChange={(e) => setFloatEuro(e.target.value)}
-                          placeholder={cassaBalance.cashFloat ? String(cassaBalance.cashFloat.euro) : '0'} />
-                      </label>
-                      <label className={cambioStyles.field}>
-                        Fondo {currencyName}
-                        <input type="number" min="0" step="0.01" value={floatCredits}
-                          onChange={(e) => setFloatCredits(e.target.value)}
-                          placeholder={cassaBalance.cashFloat ? String(cassaBalance.cashFloat.credits) : '0'} />
-                      </label>
-                      <button className={cambioStyles.btnTopUp} onClick={handleSaveFloat} disabled={savingFloat || (floatEuro === '' && floatCredits === '')}>
-                        {savingFloat ? 'Salvataggio...' : 'Salva fondo cassa'}
-                      </button>
-                    </div>
-
-                    <div className={cambioStyles.formCard}>
-                      <h3 style={{ marginTop: 0 }}>Registra movimento</h3>
-                      <p className={cambioStyles.statSub}>Carico o prelievo di contanti/token dalla cassa (trasferimenti verso o da altre casse).</p>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <label className={cambioStyles.field} style={{ flex: 1 }}>
-                          Valuta
-                          <select className={cambioStyles.userSelect} value={mvCurrency} onChange={(e) => setMvCurrency(e.target.value as 'euro' | 'credits')}>
-                            <option value="euro">Euro</option>
-                            <option value="credits">{currencyName}</option>
-                          </select>
+                  <div className={cambioStyles.cassaRequest}>
+                    <div className={cambioStyles.formGrid}>
+                      <div className={cambioStyles.formCard}>
+                        <h3 style={{ marginTop: 0 }}>Imposta fondo cassa</h3>
+                        <p className={cambioStyles.statSub}>Contenuto iniziale della cassa (euro e token separatamente). I valori lasciati vuoti restano invariati.</p>
+                        <label className={cambioStyles.field}>
+                          Fondo Euro
+                          <input type="number" min="0" step="0.01" value={floatEuro}
+                            onChange={(e) => setFloatEuro(e.target.value)}
+                            placeholder={cassaBalance.cashFloat ? String(cassaBalance.cashFloat.euro) : '0'} />
                         </label>
-                        <label className={cambioStyles.field} style={{ flex: 1 }}>
-                          Tipo
-                          <select className={cambioStyles.userSelect} value={mvDirection} onChange={(e) => setMvDirection(e.target.value as 'in' | 'out')}>
-                            <option value="in">Carico (entra)</option>
-                            <option value="out">Prelievo (esce)</option>
-                          </select>
+                        <label className={cambioStyles.field}>
+                          Fondo {currencyName}
+                          <input type="number" min="0" step="0.01" value={floatCredits}
+                            onChange={(e) => setFloatCredits(e.target.value)}
+                            placeholder={cassaBalance.cashFloat ? String(cassaBalance.cashFloat.credits) : '0'} />
                         </label>
+                        <button className={cambioStyles.btnTopUp} onClick={handleSaveFloat} disabled={savingFloat || (floatEuro === '' && floatCredits === '')}>
+                          {savingFloat ? 'Salvataggio...' : 'Salva fondo cassa'}
+                        </button>
                       </div>
-                      <label className={cambioStyles.field}>
-                        Importo
-                        <input type="number" min="0.01" step="0.01" value={mvAmount}
-                          onChange={(e) => setMvAmount(e.target.value)} />
-                      </label>
-                      <label className={cambioStyles.field}>
-                        Note (opzionale)
-                        <input type="text" value={mvDesc} onChange={(e) => setMvDesc(e.target.value)} />
-                      </label>
-                      <button className={mvDirection === 'in' ? cambioStyles.btnTopUp : cambioStyles.btnRefund}
-                        onClick={handleAddMovement}
-                        disabled={addingMovement || !mvAmount}>
-                        {addingMovement ? 'Registrazione...' : mvDirection === 'in' ? 'Registra carico' : 'Registra prelievo'}
-                      </button>
+
+                      <div className={cambioStyles.formCard}>
+                        <h3 style={{ marginTop: 0 }}>Registra movimento</h3>
+                        <p className={cambioStyles.statSub}>Carico o prelievo di contanti/token dalla cassa (trasferimenti verso o da altre casse).</p>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <label className={cambioStyles.field} style={{ flex: 1 }}>
+                            Valuta
+                            <select className={cambioStyles.userSelect} value={mvCurrency} onChange={(e) => setMvCurrency(e.target.value as 'euro' | 'credits')}>
+                              <option value="euro">Euro</option>
+                              <option value="credits">{currencyName}</option>
+                            </select>
+                          </label>
+                          <label className={cambioStyles.field} style={{ flex: 1 }}>
+                            Tipo
+                            <select className={cambioStyles.userSelect} value={mvDirection} onChange={(e) => setMvDirection(e.target.value as 'in' | 'out')}>
+                              <option value="in">Carico (entra)</option>
+                              <option value="out">Prelievo (esce)</option>
+                            </select>
+                          </label>
+                        </div>
+                        <label className={cambioStyles.field}>
+                          Importo
+                          <input type="number" min="0.01" step="0.01" value={mvAmount}
+                            onChange={(e) => setMvAmount(e.target.value)} />
+                        </label>
+                        <label className={cambioStyles.field}>
+                          Note (opzionale)
+                          <input type="text" value={mvDesc} onChange={(e) => setMvDesc(e.target.value)} />
+                        </label>
+                        <button className={mvDirection === 'in' ? cambioStyles.btnTopUp : cambioStyles.btnRefund}
+                          onClick={handleAddMovement}
+                          disabled={addingMovement || !mvAmount}>
+                          {addingMovement ? 'Registrazione...' : mvDirection === 'in' ? 'Registra carico' : 'Registra prelievo'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1169,11 +1266,22 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.isAnonymous
-                      ? (u.displayName ? `\u{1F464} ${u.displayName} (saldo: ${fmt(balanceOf(u))})` : `\u{1F464} Non collegato a clienti (saldo: ${fmt(balanceOf(u))})`)
-                      : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''}) - saldo: ${fmt(balanceOf(u))}`}
+                      ? (u.displayName ? `\u{1F464} ${u.displayName}` : `\u{1F464} Non collegato a clienti`)
+                      : `${u.firstName || ''} ${u.lastName || ''} (${u.email || ''})`}
+                    {' - saldo: '}{fmt(balanceOf(u))}
+                    {u.creditsCount ? ` · accrediti ${u.creditsCount}` : ''}
                   </option>
                 ))}
               </select>
+              <button
+                type="button"
+                className={cambioStyles.btnQr}
+                onClick={() => setShowScanner(true)}
+                disabled={linking}
+                title="Scansiona il QR personale del cliente per collegarlo all'evento"
+              >
+                {linking ? '...' : '📷 QR'}
+              </button>
               <div className={cambioStyles.guestCreate}>
                 <input type="text" placeholder="Nome cliente..." value={guestName}
                   className={cambioStyles.guestInput}
@@ -1186,12 +1294,40 @@ const [showCashSetup, setShowCashSetup] = useState(false)
               </div>
             </div>
 
+            {showScanner && <QRScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
+
+            {linkNotice && <p className={cambioStyles.notice}>{linkNotice}</p>}
+
             {targetUser && (
-              <p className={cambioStyles.userInfo}>
-                Saldo: <strong>{fmt(targetBalance)}</strong>
-                <span className={cambioStyles.eurValue}> ({fmtEur(targetBalance / rateSafe)})</span>
-                {targetUser.isAnonymous ? ' - non collegato a clienti' : ''}
-              </p>
+              <div className={cambioStyles.userCard}>
+                <div className={cambioStyles.userCardName}>
+                  {targetUser.isAnonymous
+                    ? (targetUser.displayName ? `\u{1F464} ${targetUser.displayName}` : `\u{1F464} Non collegato a clienti`)
+                    : `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim()}
+                  {!targetUser.isAnonymous && targetUser.email ? ` · ${targetUser.email}` : ''}
+                </div>
+                <div className={cambioStyles.userCardRow}>
+                  Saldo: <strong>{fmt(targetBalance)}</strong>
+                  <span className={cambioStyles.eurValue}> ({fmtEur(targetBalance / rateSafe)})</span>
+                  {targetUser.isAnonymous ? ' - non collegato a clienti' : ''}
+                </div>
+                <div className={cambioStyles.userCardRow}>
+                  {/* La sintesi degli accrediti si calcola dentro la lista dei
+                   * clienti: il React Compiler considera "sporco" un valore
+                   * letto dal cliente selezionato e passato a una funzione, e
+                   * bloccherebbe la memoizzazione del polling del saldo. */}
+                  {users.map((u) => (u.id === targetUser.id
+                    ? (u.creditsCount > 0
+                        ? (
+                          <span key={u.id}>
+                            Accrediti: {u.creditsCount} per {fmt(u.creditsTotal)} {currencyName}
+                            {' · ultimo '}{new Date(u.creditsLastAt ?? '').toLocaleString('it-IT')}
+                          </span>
+                        )
+                        : <span key={u.id} className={cambioStyles.userCardNone}>Mai accreditato</span>)
+                    : null))}
+                </div>
+              </div>
             )}
 
             {!activeCassa && (
@@ -1210,10 +1346,10 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                     onChange={(e) => setTopUpAmount(e.target.value)}
                     disabled={!targetUserId || !activeCassa || submitting === 'topup'} />
                 </label>
-                <label className={cambioStyles.field}>
-                  Incasso con
+                <label className={cambioStyles.fieldRow}>
+                  <span className={cambioStyles.fieldLabel}>Incasso con</span>
                   <select
-                    className={cambioStyles.userSelect}
+                    className={cambioStyles.userSelectInline}
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                     disabled={!targetUserId || !activeCassa || submitting === 'topup'}
@@ -1299,6 +1435,45 @@ const [showCashSetup, setShowCashSetup] = useState(false)
                 <button className={cambioStyles.btnRefund} onClick={handleRefund}
                   disabled={!targetUserId || !refundAmount || refundOverBalance || !activeCassa || submitting === 'refund'}>
                   {submitting === 'refund' ? 'Rimborso in corso...' : 'Rimborsa'}
+                </button>
+              </div>
+            </section>
+
+            <section>
+              <h2 className={cambioStyles.exSectionTitle}>Correzione saldo (senza denaro)</h2>
+              <div className={cambioStyles.formCard}>
+                <p className={cambioStyles.statSub}>
+                  Corregge un accredito o un rimborso sbagliato: muove i crediti del
+                  cliente <strong>senza</strong> toccare la cassa (nessun incasso, nessun
+                  movimento di denaro).
+                </p>
+                <label className={cambioStyles.field}>
+                  Operazione
+                  <select
+                    className={cambioStyles.userSelect}
+                    value={adjustDirection}
+                    onChange={(e) => setAdjustDirection(e.target.value as 'credit' | 'debit')}
+                    disabled={!targetUserId || adjusting}
+                  >
+                    <option value="credit">Accredita (aggiunge crediti)</option>
+                    <option value="debit">Addebita (toglie crediti)</option>
+                  </select>
+                </label>
+                <label className={cambioStyles.field}>
+                  Importo {currencyName}
+                  <input type="number" min="0.01" step="0.01" value={adjustAmount}
+                    onChange={(e) => setAdjustAmount(e.target.value)}
+                    disabled={!targetUserId || adjusting} />
+                </label>
+                <label className={cambioStyles.field}>
+                  Note (opzionale)
+                  <input type="text" value={adjustDesc}
+                    onChange={(e) => setAdjustDesc(e.target.value)}
+                    disabled={!targetUserId || adjusting} />
+                </label>
+                <button className={cambioStyles.exTextBtn} onClick={handleAdjust}
+                  disabled={!targetUserId || !adjustAmount || adjusting}>
+                  {adjusting ? 'Registrazione...' : 'Registra correzione'}
                 </button>
               </div>
             </section>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { apiRequest } from '../lib/api'
 import { ConfirmModal } from '../components/ConfirmModal'
-import styles from './EventUsersPage.module.scss'
+import styles from './UserRolesPage.module.scss'
 
 type ModalState = { open: boolean; variant: 'alert' | 'confirm'; title: string; message: string; onConfirm?: () => void; danger?: boolean }
 

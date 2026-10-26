@@ -11,7 +11,6 @@ import morgan from 'morgan';
 import { env } from './config/env';
 import { authRouter } from './routes/auth.routes';
 import { eventProductsRouter } from './routes/event-products.routes';
-import { eventUsersRouter } from './routes/event-users.routes';
 import { eventsRouter } from './routes/events.routes';
 import { favoritesRouter } from './routes/favorites.routes';
 import { ordersRouter } from './routes/orders.routes';
@@ -89,7 +88,6 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/events', eventsRouter);
-app.use('/api/event-users', eventUsersRouter);
 app.use('/api/event-products', eventProductsRouter);
 app.use('/api/favorites', favoritesRouter);
 app.use('/api/orders', ordersRouter);

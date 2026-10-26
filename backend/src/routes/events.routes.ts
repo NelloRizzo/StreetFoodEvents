@@ -13,7 +13,6 @@ import {
     listEvents,
     updateEvent
 } from '../controllers/events.controller';
-import { listEventUsersByEvent } from '../controllers/event-users.controller';
 import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.middleware';
 import { hasRole } from '../middlewares/role.middleware';
 import { asyncHandler } from '../utils/async-handler';
@@ -32,5 +31,3 @@ eventsRouter.post('/', asyncHandler(authMiddleware), asyncHandler(hasRole(['plat
 eventsRouter.post('/:eventId/duplicate', asyncHandler(authMiddleware), asyncHandler(hasRole(['platform-admin', 'event-admin'])), asyncHandler(duplicateEvent));
 eventsRouter.patch('/:eventId', asyncHandler(authMiddleware), asyncHandler(hasRole(['platform-admin', 'event-admin'])), asyncHandler(updateEvent));
 eventsRouter.delete('/:eventId', asyncHandler(authMiddleware), asyncHandler(hasRole(['platform-admin', 'event-admin'])), asyncHandler(deleteEvent));
-
-eventsRouter.get('/:eventId/users', asyncHandler(authMiddleware), asyncHandler(listEventUsersByEvent));

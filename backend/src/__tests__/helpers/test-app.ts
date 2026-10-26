@@ -9,7 +9,6 @@ import { stationsRouter } from '../../routes/stations.routes';
 import { productsRouter } from '../../routes/products.routes';
 import { usersRouter } from '../../routes/users.routes';
 import { eventProductsRouter } from '../../routes/event-products.routes';
-import { eventUsersRouter } from '../../routes/event-users.routes';
 import { favoritesRouter } from '../../routes/favorites.routes';
 import { ordersRouter } from '../../routes/orders.routes';
 import { aliasesRouter, resolveRouter } from '../../routes/aliases.routes';
@@ -54,7 +53,6 @@ export function createTestApp() {
     app.use('/api/products', productsRouter);
     app.use('/api/users', usersRouter);
     app.use('/api/event-products', eventProductsRouter);
-    app.use('/api/event-users', eventUsersRouter);
     app.use('/api/favorites', favoritesRouter);
     app.use('/api/orders', ordersRouter);
     app.use('/api/aliases', aliasesRouter);
