@@ -859,6 +859,11 @@ const [showCashSetup, setShowCashSetup] = useState(true)
   const rate = balance?.exchangeRate ?? 1
   const rateSafe = rate || 1
   const currencyName = balance?.currencyName ?? 'crediti'
+  const isRealCustomer = !!targetUser && !targetUser.isAnonymous
+  const refundOverBalance =
+    !!refundAmount &&
+    (parseFloat(refundAmount) > targetBalance + 0.005 ||
+      parseFloat(refundAmount) / rateSafe > (cassaBalance?.euroContent ?? 0) + 0.005)
   /* Il rimborso si inserisce in EURO (e' euro che l'operatore conta) ma il
    * saldo del cliente e' in token: il massimo e' il saldo convertito, e il
    * messaggio di superamento riporta la valuta del campo. */
