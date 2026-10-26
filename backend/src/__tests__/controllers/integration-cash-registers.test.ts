@@ -150,6 +150,9 @@ describe('Integration: cash registers (multi-cassa)', () => {
             .set('Cookie', cookie)
             .send({ name: 'Banco A' });
         const firstId = first.body.item.id;
+        /* Prima cassa dell'evento: nessuna soglia da ereditare, quindi parte
+         * dai default (100/100) senza che il banco debba configurarle. */
+        expect(first.body.item.lowThreshold).toEqual({ euro: 100, credits: 100 });
 
         await request(app)
             .patch(`/api/exchange/${event._id}/cash-registers/${firstId}`)
@@ -262,6 +265,14 @@ describe('Integration: cash registers (multi-cassa)', () => {
             .send({ name: 'Banco A' });
         const id = open.body.item.id;
 
+        /* Il fondo si imposta prima delle operazioni: il carico consegna token
+         * fisici e senza token in cassettiera viene rifiutato. */
+        const float = await request(app)
+            .post(`/api/exchange/${event._id}/cash-float`)
+            .set('Cookie', cookie)
+            .send({ euro: 200, credits: 300, cashRegisterId: id });
+        expect(float.status).toBe(200);
+
         await request(app)
             .post(`/api/exchange/${event._id}/top-up`)
             .set('Cookie', cookie)
@@ -271,12 +282,6 @@ describe('Integration: cash registers (multi-cassa)', () => {
             .post(`/api/exchange/${event._id}/refund`)
             .set('Cookie', cookie)
             .send({ eventUserId: wallet._id.toString(), amount: 10, cashRegisterId: id });
-
-        const float = await request(app)
-            .post(`/api/exchange/${event._id}/cash-float`)
-            .set('Cookie', cookie)
-            .send({ euro: 200, credits: 300, cashRegisterId: id });
-        expect(float.status).toBe(200);
 
         await request(app)
             .post(`/api/exchange/${event._id}/cash-movements`)

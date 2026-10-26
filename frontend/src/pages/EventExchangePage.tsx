@@ -563,7 +563,7 @@ const [showCashSetup, setShowCashSetup] = useState(true)
     try {
       const res = await apiRequest<{ item: CashRegister }>(`/exchange/${eventId}/cash-registers`, {
         method: 'POST',
-        bodyJson: cassaName.trim() ? { name: cassaName.trim() } : {}
+        bodyJson: cassaName.trim() ? { name: cassaName.trim(), lowThreshold: { euro: 100, credits: 100 } } : { lowThreshold: { euro: 100, credits: 100 } }
       })
       setCassaName('')
       setDuplicateCassa(null)
@@ -593,7 +593,7 @@ const [showCashSetup, setShowCashSetup] = useState(true)
     try {
       const res = await apiRequest<{ item: CashRegister }>(`/exchange/${eventId}/cash-registers`, {
         method: 'POST',
-        bodyJson: { name: cassaName.trim() || duplicate.name, force: true, cashRegisterToClose: duplicate.id }
+        bodyJson: { name: cassaName.trim() || duplicate.name, force: true, cashRegisterToClose: duplicate.id, lowThreshold: { euro: 100, credits: 100 } }
       })
       setCassaName('')
       setDuplicateCassa(null)
@@ -852,10 +852,12 @@ const [showCashSetup, setShowCashSetup] = useState(true)
   /* Il rimborso si inserisce in EURO (e' euro che l'operatore conta) ma il
    * saldo del cliente e' in token: il massimo e' il saldo convertito, e il
    * messaggio di superamento riporta la valuta del campo. */
-  const refundMaxEuro = targetBalance / rateSafe
+  const refundMaxEuro = Math.min(targetBalance / rateSafe, cassaBalance?.euroContent ?? Infinity)
+  const topUpMaxEuro = (cassaBalance?.creditsContent ?? 0) / rateSafe
   const refundEuro = parseFloat(refundAmount)
   const refundTokens = Math.round(refundEuro * rateSafe * 100) / 100
-  const refundOverBalance = !!refundAmount && refundTokens > targetBalance + 0.005
+  const isRealCustomer = !!targetUser && !targetUser.isAnonymous
+  const refundOverBalance = !!refundAmount && (refundEuro > (cassaBalance?.euroContent ?? 0) + 0.005 || (isRealCustomer && refundTokens > targetBalance + 0.005))
 
   /* Polling del SOLO cliente generico: un documento, niente lista, quindi
    * costa poco anche con molti clienti. Gli altri clienti non vengono
@@ -1342,7 +1344,7 @@ const [showCashSetup, setShowCashSetup] = useState(true)
               <div className={cambioStyles.formCard}>
                 <label className={cambioStyles.field}>
                   Importo €
-                  <input type="number" min="0.01" step="0.01" value={topUpAmount}
+                  <input type="number" min="0.01" step="0.01" max={topUpMaxEuro} value={topUpAmount}
                     onChange={(e) => setTopUpAmount(e.target.value)}
                     disabled={!targetUserId || !activeCassa || submitting === 'topup'} />
                 </label>
@@ -1389,35 +1391,50 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                   <span className={cambioStyles.eurValue}> ({fmtEur(targetBalance / rateSafe)})</span>
                   {targetUser?.isAnonymous ? ' · non collegato a clienti' : ''}
                 </p>
-                <label className={cambioStyles.field}>
-                  Importo €
-                  <input type="number" min="0.01" max={refundMaxEuro} step="0.01" value={refundAmount}
-                    onChange={(e) => setRefundAmount(e.target.value)}
-                    disabled={!targetUserId || !activeCassa || submitting === 'refund'} />
-                </label>
+                <div className={cambioStyles.refundRow}>
+                  <label className={cambioStyles.field} style={{ flex: '0 0 7rem' }}>
+                    Importo €
+                    <input
+                      type="number"
+                      min="0.01"
+                      max={refundMaxEuro}
+                      step="0.01"
+                      value={refundAmount}
+                      onChange={(e) => setRefundAmount(e.target.value)}
+                      onBlur={() => {
+                        if (!refundAmount) return;
+                        const n = parseFloat(refundAmount);
+                        if (!Number.isFinite(n) || n <= 0) return;
+                        setRefundAmount(n.toFixed(2));
+                      }}
+                      disabled={!targetUserId || !activeCassa || submitting === 'refund'}
+                    />
+                  </label>
+                  <div className={cambioStyles.refundInline}>
+                    {refundAmount && refundEuro > 0 && !refundOverBalance && (
+                      <span className={cambioStyles.preview}>
+                        ≈ {fmt(refundTokens)} {currencyName}
+                      </span>
+                    )}
+                    {refundOverBalance && (
+                      <span className={cambioStyles.cassaLockedInline}>
+                        Importo superiore al saldo: massimo {fmtEur(refundMaxEuro)} ({fmt(targetBalance)} {currencyName}).
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <button
                   type="button"
                   className={cambioStyles.exTextBtn}
                   onClick={() => setRefundAmount(refundMaxEuro.toFixed(2))}
-                  disabled={!targetUserId || targetBalance <= 0 || submitting === 'refund'}
+                  disabled={!targetUserId || (!isRealCustomer && targetBalance <= 0) || submitting === 'refund'}
                 >
                   Rimborsa tutto il saldo ({fmtEur(refundMaxEuro)})
                 </button>
-                {refundAmount && refundEuro > 0 && !refundOverBalance && (
-                  <p className={cambioStyles.preview}>
-                    ≈ {fmt(refundTokens)} {currencyName}
-                  </p>
-                )}
-                {refundOverBalance && (
-                  <p className={cambioStyles.cassaLocked}>
-                    Importo superiore al saldo: massimo {fmtEur(refundMaxEuro)}
-                    {' '}({fmt(targetBalance)} {currencyName}).
-                  </p>
-                )}
-                <label className={cambioStyles.field}>
-                  Restituisci con
+                <label className={cambioStyles.fieldRow}>
+                  <span className={cambioStyles.fieldLabel}>Restituisci con</span>
                   <select
-                    className={cambioStyles.userSelect}
+                    className={cambioStyles.userSelectInline}
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                     disabled={!targetUserId || !activeCassa || submitting === 'refund'}

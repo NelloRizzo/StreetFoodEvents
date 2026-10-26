@@ -129,6 +129,10 @@ function extractRealSplit(rows: RealByMethodRow[]) {
 
 const roundEuro = (n: number) => Math.round((n || 0) * 100) / 100;
 
+/* Soglie di sicurezza con cui nasce una cassa quando non c'e' nulla da
+ * ereditare: il banco non deve riconfigurarle a ogni apertura. */
+const DEFAULT_LOW_THRESHOLD = { euro: 100, credits: 100 } as const;
+
 /**
  * Normalizza il metodo di pagamento reale di top-up/refund.
  * `undefined`/null → 'cash' (default), valore non valido → null (400 al chiamante).
@@ -859,6 +863,7 @@ async function topUp(req: Request, res: Response) {
     }
 
     let cashRegisterId: Types.ObjectId | null = null;
+    let cashRegisterDoc: { _id: Types.ObjectId; cashFloat?: { euro?: number | null; credits?: number | null } | null } | null = null;
     if (req.body.cashRegisterId) {
         if (typeof req.body.cashRegisterId !== 'string' || !isValidObjectId(req.body.cashRegisterId)) {
             return res.status(400).json({ message: 'Valid cashRegisterId is required' });
@@ -874,6 +879,7 @@ async function topUp(req: Request, res: Response) {
             return res.status(400).json({ message: 'Cassa chiusa, operazione non ammessa' });
         }
         cashRegisterId = cashRegister._id;
+        cashRegisterDoc = cashRegister;
     }
 
     const eventUser = await EventUserModel.findById(eventUserId);
@@ -883,6 +889,23 @@ async function topUp(req: Request, res: Response) {
 
     const exchangeRate = eventCtx.event.exchangeRate ?? 1;
     const creditAmount = Math.round(amount * exchangeRate * 100) / 100;
+
+    /* Il carico consegna token FISICI: non si possono emettere piu' token di
+     * quelli che la cassa ha in cassettiera, qualunque sia il metodo di
+     * incasso (il POS incassa sul terminale, ma i token escono dalla cassa).
+     * Senza cassa (record legacy, nessun fondo tracciato) non c'e' un
+     * contenuto da confrontare e il controllo non si applica. */
+    if (cashRegisterDoc) {
+        const content = computeCashRegisterContent(
+            cashRegisterDoc.cashFloat ?? {},
+            await getCashRegisterStats(eventCtx.eventId, cashRegisterDoc._id)
+        );
+        if (creditAmount > content.creditsContent + 0.005) {
+            return res.status(400).json({
+                message: `Token insufficienti in cassa: la cassa ha ${content.creditsContent.toFixed(2)} ${eventCtx.event.currencyName}, il carico ne richiede ${creditAmount.toFixed(2)}. Chiedi un rifornimento alla cassa master o imposta il fondo cassa.`
+            });
+        }
+    }
 
     try {
         const result = await createEventUserTransaction({
@@ -941,6 +964,7 @@ async function refund(req: Request, res: Response) {
     }
 
     let cashRegisterId: Types.ObjectId | null = null;
+    let cashRegisterDoc: { _id: Types.ObjectId; cashFloat?: { euro?: number | null; credits?: number | null } | null } | null = null;
     if (req.body.cashRegisterId) {
         if (typeof req.body.cashRegisterId !== 'string' || !isValidObjectId(req.body.cashRegisterId)) {
             return res.status(400).json({ message: 'Valid cashRegisterId is required' });
@@ -956,6 +980,7 @@ async function refund(req: Request, res: Response) {
             return res.status(400).json({ message: 'Cassa chiusa, operazione non ammessa' });
         }
         cashRegisterId = cashRegister._id;
+        cashRegisterDoc = cashRegister;
     }
 
     const eventUser = await EventUserModel.findById(eventUserId);
@@ -966,16 +991,37 @@ async function refund(req: Request, res: Response) {
     const exchangeRate = eventCtx.event.exchangeRate ?? 1;
     const currencyName = eventCtx.event.currencyName;
 
-    /* L'importo del rimborso e' in moneta evento (crediti), non in euro: se il
-     * cassiere digita gli euro sbaglia sempre il saldo. Rispondiamo subito con
-     * entrambi i numeri invece di far fallire la transazione piu' a valle. */
+    /* L'importo del rimborso è in moneta evento (crediti). Il limite è il
+     * cliente REALE: solo lui "possiede" i crediti del suo portafoglio. Per il
+     * cliente generico ("Non collegato a clienti") il portafoglio è solo un
+     * contenitore contabile: nessun portafoglio può andare sotto zero (la
+     * quadratura dei token si romperebbe), quindi se è vuoto il messaggio dice
+     * cosa fare invece di far fallire la transazione a valle. */
+    const isRealCustomer = !!eventUser.userId;
     if (amount > eventUser.balance) {
         return res.status(400).json({
-            message: `Saldo insufficiente: il cliente ha ${eventUser.balance} ${currencyName}, ne hai chiesti ${amount} ${currencyName} (${roundEuro(amount / exchangeRate)} €).`
+            message: isRealCustomer
+                ? `Saldo insufficiente: il cliente ha ${eventUser.balance} ${currencyName}, ne hai chiesti ${amount} ${currencyName} (${roundEuro(amount / exchangeRate)} €).`
+                : `Il portafoglio «Non collegato a clienti» ha ${eventUser.balance} ${currencyName}, non può rimborsarne ${amount}: collega il cliente con il QR (o carica i crediti sul suo portafoglio) e ripeti l'operazione.`
         });
     }
 
     const realAmount = Math.round(amount / exchangeRate * 100) / 100;
+
+    /* Il rimborso in CONTANTI esce dal cassettone: non si possono restituire
+     * più euro di quelli che la cassa ha dentro. Il rimborso POS restituisce
+     * sulla carta e non svuota la cassa, quindi non ha questo limite. */
+    if (cashRegisterDoc && paymentMethod === 'cash') {
+        const content = computeCashRegisterContent(
+            cashRegisterDoc.cashFloat ?? {},
+            await getCashRegisterStats(eventCtx.eventId, cashRegisterDoc._id)
+        );
+        if (realAmount > content.euroContent + 0.005) {
+            return res.status(400).json({
+                message: `Contanti insufficienti in cassa: la cassa ha ${content.euroContent.toFixed(2)} €, il rimborso ne richiede ${realAmount.toFixed(2)} €. Restituisci col POS o chiedi un rifornimento alla cassa master.`
+            });
+        }
+    }
 
     try {
         const result = await createEventUserTransaction({
@@ -1606,7 +1652,9 @@ async function createCashRegister(req: Request, res: Response) {
     /* Le soglie di sicurezza appartengono alla POSTAZIONE, non alla singola
      * cassa: chiudere e riaprire una cassa non deve spegnere l'invio automatico
      * delle richieste alla master. La nuova cassa eredita le soglie dalla cassa
-     * che sta sostituendo, altrimenti dall'ultima cassa chiusa dell'evento. */
+     * che sta sostituendo, altrimenti dall'ultima cassa chiusa dell'evento.
+     * Senza nulla da ereditare parte dalle soglie di default (100 e 100): il
+     * banco non deve ricordarsi di configurarle a ogni apertura. */
     let inheritedLowThreshold: { euro: number | null; credits: number | null } | null =
         closedDuplicate && closedDuplicate.lowThreshold
             ? { euro: closedDuplicate.lowThreshold.euro ?? null, credits: closedDuplicate.lowThreshold.credits ?? null }
@@ -1630,7 +1678,7 @@ async function createCashRegister(req: Request, res: Response) {
         status: 'open',
         openedByUserId: req.user!.id,
         openedAt: new Date(),
-        lowThreshold: inheritedLowThreshold ?? null
+        lowThreshold: inheritedLowThreshold ?? DEFAULT_LOW_THRESHOLD
     });
 
     const openerMap = await loadOpenerNames([cashRegister]);
@@ -1703,11 +1751,12 @@ async function updateCashRegister(req: Request, res: Response) {
             const nextCredits = parseThreshold(credits);
             if (nextCredits === undefined) return res.status(400).json({ message: 'Invalid lowThreshold.credits' });
 
-            /* Entrambe le soglie a null => disattivate, si azzera il sottodocumento. */
-            cashRegister.lowThreshold =
-                nextEuro === null && nextCredits === null
-                    ? null
-                    : { euro: nextEuro, credits: nextCredits };
+            /* Entrambe le soglie a null => disattivate. Il sottodocumento resta
+             * con i due null: e' l'unico modo di distinguere "spente di
+             * proposito" da "mai configurate". Se lo si cancellasse, la cassa
+             * successiva ripartirebbe dalle soglie di default e la scelta
+             * dell'operatore verrebbe silenziosamente annullata. */
+            cashRegister.lowThreshold = { euro: nextEuro, credits: nextCredits };
         }
     }
 
@@ -2334,6 +2383,30 @@ async function getCashRegisterStats(
     };
 }
 
+/* Contenuto FISICO della cassa (contanti nel cassettone, token nella
+ * cassettiera). I POS non lo muovono: alimentano solo i report. Una sola
+ * funzione perche' gli stessi numeri decidono il massimo caricabile e il
+ * massimo rimborsabile in contanti: due copie divergerebbero e la UI
+ * mostrerebbe un contenuto diverso da quello usato per i controlli. */
+function computeCashRegisterContent(
+    float: { euro?: number | null; credits?: number | null },
+    stats: {
+        topUp: number;
+        refund: number;
+        topUpRealCash: number;
+        refundRealCash: number;
+        euroIn: number;
+        euroOut: number;
+        creditsIn: number;
+        creditsOut: number;
+    }
+) {
+    return {
+        euroContent: roundEuro((float.euro ?? 0) + stats.topUpRealCash - stats.refundRealCash + stats.euroIn - stats.euroOut),
+        creditsContent: Math.round(((float.credits ?? 0) - stats.topUp + stats.refund + stats.creditsIn - stats.creditsOut) * 100) / 100
+    };
+}
+
 async function getCashRegisterBalance(req: Request, res: Response) {
     const eventCtx = await getEventFromParam(req, res);
     if (!eventCtx) return;
@@ -2347,6 +2420,7 @@ async function getCashRegisterBalance(req: Request, res: Response) {
     const stats = await getCashRegisterStats(eventCtx.eventId, cashRegister._id, since);
 
     const float = cashRegister.cashFloat ?? { euro: 0, credits: 0, setAt: null };
+    const content = computeCashRegisterContent(float, stats);
 
     return res.status(200).json({
         id: cashRegister._id.toString(),
@@ -2375,8 +2449,8 @@ async function getCashRegisterBalance(req: Request, res: Response) {
         refundPosCount: stats.refundPosCount,
         // Il contenuto fisico della cassa conta SOLO i contanti: un top-up con POS
         // incassa sul terminale e non entra nel cassettone (idem il rimborso POS).
-        euroContent: roundEuro(float.euro + stats.topUpRealCash - stats.refundRealCash + stats.euroIn - stats.euroOut),
-        creditsContent: Math.round((float.credits - stats.topUp + stats.refund + stats.creditsIn - stats.creditsOut) * 100) / 100,
+        euroContent: content.euroContent,
+        creditsContent: content.creditsContent,
         cashMovements: {
             euroIn: stats.euroIn,
             euroOut: stats.euroOut,
