@@ -647,6 +647,10 @@ const [showCashSetup, setShowCashSetup] = useState(true)
     if (!eventId || !targetUserId || !topUpAmount || !activeCassa) return
     const amount = parseFloat(topUpAmount)
     if (!amount || amount <= 0) return
+    if (amount / rateSafe > (cassaBalance?.euroContent ?? 0) + 0.005) {
+      setModal({ open: true, variant: 'alert', title: 'Importo non disponibile', message: `Disponibilità in cassa: ${fmtEur(cassaBalance?.euroContent ?? 0)}.` })
+      return
+    }
     setSubmitting('topup')
     try {
       const res = await apiRequest<{ newBalance: number }>(`/exchange/${eventId}/top-up`, {
@@ -656,9 +660,8 @@ const [showCashSetup, setShowCashSetup] = useState(true)
       setTopUpAmount('')
       setTopUpDesc('')
       trackCurrencyExchange({ eventId, amount, type: 'topup' })
-      const rate = balance?.exchangeRate ?? 1
-      const credits = amount * rate
-      setModal({ open: true, variant: 'alert', title: 'Carico completato', message: `Caricati €${amount.toFixed(2)} → ${credits.toFixed(2)} ${balance?.currencyName ?? 'crediti'}. Nuovo saldo: ${res.newBalance}` })
+      const euro = amount / (rate || 1)
+      setModal({ open: true, variant: 'alert', title: 'Carico completato', message: `Caricati ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'} → €${euro.toFixed(2)}. Nuovo saldo: ${res.newBalance}` })
       fetchData()
       fetchCassaBalance()
     } catch (err) {
@@ -670,9 +673,16 @@ const [showCashSetup, setShowCashSetup] = useState(true)
 
   const handleRefund = async () => {
     if (!eventId || !targetUserId || !refundAmount || !activeCassa) return
-    /* Il campo e' in euro: si converte in token (unita' del saldo). */
-    const amount = Math.round(parseFloat(refundAmount) * (rate || 1) * 100) / 100
+    const amount = parseFloat(refundAmount)
     if (!amount || amount <= 0) return
+    if (amount > targetBalance + 0.005) {
+      setModal({ open: true, variant: 'alert', title: 'Saldo insufficiente', message: `Saldo cliente insufficiente. Massimo rimborsabile: ${fmt(targetBalance)} ${currencyName}.` })
+      return
+    }
+    if (amount / rateSafe > (cassaBalance?.euroContent ?? 0) + 0.005) {
+      setModal({ open: true, variant: 'alert', title: 'Importo non disponibile', message: `Disponibilità in cassa: ${fmtEur(cassaBalance?.euroContent ?? 0)}.` })
+      return
+    }
     setSubmitting('refund')
     try {
       const res = await apiRequest<{ newBalance: number }>(`/exchange/${eventId}/refund`, {
@@ -683,7 +693,7 @@ const [showCashSetup, setShowCashSetup] = useState(true)
       setRefundDesc('')
       trackCurrencyExchange({ eventId, amount, type: 'refund' })
       const real = amount / (rate || 1)
-      setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati €${real.toFixed(2)} → ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'}. Nuovo saldo: ${res.newBalance}` })
+      setModal({ open: true, variant: 'alert', title: 'Rimborso completato', message: `Rimborsati ${amount.toFixed(2)} ${balance?.currencyName ?? 'crediti'} → €${real.toFixed(2)}. Nuovo saldo: ${res.newBalance}` })
       fetchData()
       fetchCassaBalance()
     } catch (err) {
@@ -852,12 +862,7 @@ const [showCashSetup, setShowCashSetup] = useState(true)
   /* Il rimborso si inserisce in EURO (e' euro che l'operatore conta) ma il
    * saldo del cliente e' in token: il massimo e' il saldo convertito, e il
    * messaggio di superamento riporta la valuta del campo. */
-  const refundMaxEuro = Math.min(targetBalance / rateSafe, cassaBalance?.euroContent ?? Infinity)
-  const topUpMaxEuro = (cassaBalance?.creditsContent ?? 0) / rateSafe
-  const refundEuro = parseFloat(refundAmount)
-  const refundTokens = Math.round(refundEuro * rateSafe * 100) / 100
-  const isRealCustomer = !!targetUser && !targetUser.isAnonymous
-  const refundOverBalance = !!refundAmount && (refundEuro > (cassaBalance?.euroContent ?? 0) + 0.005 || (isRealCustomer && refundTokens > targetBalance + 0.005))
+  const topUpMaxEuro = (cassaBalance?.euroContent ?? 0) / rateSafe
 
   /* Polling del SOLO cliente generico: un documento, niente lista, quindi
    * costa poco anche con molti clienti. Gli altri clienti non vengono
@@ -1342,12 +1347,38 @@ const [showCashSetup, setShowCashSetup] = useState(true)
             <section>
               <h2 className={cambioStyles.exSectionTitle}>Carica (Reale &rarr; Virtuale)</h2>
               <div className={cambioStyles.formCard}>
-                <label className={cambioStyles.field}>
-                  Importo €
-                  <input type="number" min="0.01" step="0.01" max={topUpMaxEuro} value={topUpAmount}
-                    onChange={(e) => setTopUpAmount(e.target.value)}
-                    disabled={!targetUserId || !activeCassa || submitting === 'topup'} />
-                </label>
+                <div className={cambioStyles.refundRow}>
+                  <label className={cambioStyles.fieldRow} style={{ flex: '0 0 9rem' }}>
+                    <span className={cambioStyles.fieldLabel}>Importo {currencyName}</span>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step={rate >= 1 ? '0.01' : '1'}
+                      max={topUpMaxEuro * rate}
+                      value={topUpAmount}
+                      onChange={(e) => setTopUpAmount(e.target.value)}
+                      onBlur={() => {
+                        if (!topUpAmount) return
+                        const n = parseFloat(topUpAmount)
+                        if (!Number.isFinite(n) || n <= 0) return
+                        setTopUpAmount(n.toFixed(2))
+                      }}
+                      disabled={!targetUserId || !activeCassa || submitting === 'topup'}
+                    />
+                  </label>
+                  <div className={cambioStyles.refundInline}>
+                    {topUpAmount && parseFloat(topUpAmount) > 0 && (
+                      <span className={cambioStyles.preview}>
+                        ≈ {(parseFloat(topUpAmount) / rateSafe).toFixed(2)} €
+                      </span>
+                    )}
+                    {topUpAmount && parseFloat(topUpAmount) > 0 && (parseFloat(topUpAmount) / rateSafe) > (cassaBalance?.euroContent ?? 0) + 0.005 && (
+                      <span className={cambioStyles.cassaLockedInline}>
+                        Importo superiore alla disponibilità: massimo {fmtEur((cassaBalance?.euroContent ?? 0))}
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <label className={cambioStyles.fieldRow}>
                   <span className={cambioStyles.fieldLabel}>Incasso con</span>
                   <select
@@ -1360,20 +1391,24 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                     <option value="pos">POS (carta)</option>
                   </select>
                 </label>
-                {topUpAmount && parseFloat(topUpAmount) > 0 && (
-                  <p className={cambioStyles.preview}>
-                    ≈ {(parseFloat(topUpAmount) * rate).toFixed(2)} {currencyName}
-                  </p>
-                )}
                 <label className={cambioStyles.field}>
                   Note (opzionale)
                   <input type="text" value={topUpDesc}
                     onChange={(e) => setTopUpDesc(e.target.value)}
                     disabled={!targetUserId || !activeCassa || submitting === 'topup'} />
                 </label>
-                <button className={cambioStyles.btnTopUp} onClick={handleTopUp}
-                  disabled={!targetUserId || !topUpAmount || !activeCassa || submitting === 'topup'}>
-                  {submitting === 'topup' ? 'Caricamento...' : `Carica €`}
+                <button
+                  className={cambioStyles.btnTopUp}
+                  onClick={handleTopUp}
+                  disabled={
+                    !targetUserId ||
+                    !topUpAmount ||
+                    !activeCassa ||
+                    submitting === 'topup' ||
+                    (parseFloat(topUpAmount) / rateSafe) > (cassaBalance?.euroContent ?? 0) + 0.005
+                  }
+                >
+                  {submitting === 'topup' ? 'Caricamento...' : `Carica ${currencyName}`}
                 </button>
                 {paymentMethod === 'pos' && (
                   <p className={cambioStyles.statSub}>
@@ -1392,33 +1427,33 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                   {targetUser?.isAnonymous ? ' · non collegato a clienti' : ''}
                 </p>
                 <div className={cambioStyles.refundRow}>
-                  <label className={cambioStyles.field} style={{ flex: '0 0 7rem' }}>
-                    Importo €
+                  <label className={cambioStyles.fieldRow} style={{ flex: '0 0 9rem' }}>
+                    <span className={cambioStyles.fieldLabel}>Importo {currencyName}</span>
                     <input
                       type="number"
                       min="0.01"
-                      max={refundMaxEuro}
                       step="0.01"
+                      max={isRealCustomer ? targetBalance : undefined}
                       value={refundAmount}
                       onChange={(e) => setRefundAmount(e.target.value)}
                       onBlur={() => {
-                        if (!refundAmount) return;
-                        const n = parseFloat(refundAmount);
-                        if (!Number.isFinite(n) || n <= 0) return;
-                        setRefundAmount(n.toFixed(2));
+                        if (!refundAmount) return
+                        const n = parseFloat(refundAmount)
+                        if (!Number.isFinite(n) || n <= 0) return
+                        setRefundAmount(n.toFixed(2))
                       }}
                       disabled={!targetUserId || !activeCassa || submitting === 'refund'}
                     />
                   </label>
                   <div className={cambioStyles.refundInline}>
-                    {refundAmount && refundEuro > 0 && !refundOverBalance && (
+                    {refundAmount && parseFloat(refundAmount) > 0 && !refundOverBalance && (
                       <span className={cambioStyles.preview}>
-                        ≈ {fmt(refundTokens)} {currencyName}
+                        ≈ {fmtEur(parseFloat(refundAmount) / rateSafe)}
                       </span>
                     )}
                     {refundOverBalance && (
                       <span className={cambioStyles.cassaLockedInline}>
-                        Importo superiore al saldo: massimo {fmtEur(refundMaxEuro)} ({fmt(targetBalance)} {currencyName}).
+                        Importo superiore al saldo del cliente o alla disponibilità in cassa.
                       </span>
                     )}
                   </div>
@@ -1426,10 +1461,10 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                 <button
                   type="button"
                   className={cambioStyles.exTextBtn}
-                  onClick={() => setRefundAmount(refundMaxEuro.toFixed(2))}
-                  disabled={!targetUserId || (!isRealCustomer && targetBalance <= 0) || submitting === 'refund'}
+                  onClick={() => setRefundAmount(targetBalance.toFixed(2))}
+                  disabled={!targetUserId || targetBalance <= 0 || submitting === 'refund'}
                 >
-                  Rimborsa tutto il saldo ({fmtEur(refundMaxEuro)})
+                  Rimborsa tutto il saldo ({fmt(targetBalance)} {currencyName})
                 </button>
                 <label className={cambioStyles.fieldRow}>
                   <span className={cambioStyles.fieldLabel}>Restituisci con</span>
@@ -1449,8 +1484,11 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                     onChange={(e) => setRefundDesc(e.target.value)}
                     disabled={!targetUserId || !activeCassa || submitting === 'refund'} />
                 </label>
-                <button className={cambioStyles.btnRefund} onClick={handleRefund}
-                  disabled={!targetUserId || !refundAmount || refundOverBalance || !activeCassa || submitting === 'refund'}>
+                <button
+                  className={cambioStyles.btnRefund}
+                  onClick={handleRefund}
+                  disabled={!targetUserId || !refundAmount || refundOverBalance || !activeCassa || submitting === 'refund'}
+                >
                   {submitting === 'refund' ? 'Rimborso in corso...' : 'Rimborsa'}
                 </button>
               </div>
