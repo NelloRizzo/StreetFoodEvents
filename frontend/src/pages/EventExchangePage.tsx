@@ -1358,13 +1358,13 @@ const [showCashSetup, setShowCashSetup] = useState(true)
               <div className={cambioStyles.formCard}>
                 <div className={cambioStyles.refundRow}>
                   <label className={cambioStyles.fieldRow} style={{ flex: '0 0 9rem' }}>
-                    <span className={cambioStyles.fieldLabel}>Importo {currencyName}</span>
+                    <span className={cambioStyles.fieldLabel}>Importo €</span>
                     <input
                       className={cambioStyles.fieldInput}
                       type="number"
                       min="0.01"
                       step={1}
-                      max={topUpMaxEuro * rate}
+                      max={topUpMaxEuro}
                       value={topUpAmount}
                       onChange={(e) => setTopUpAmount(e.target.value)}
                       onBlur={() => {
@@ -1438,7 +1438,7 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                 </p>
                 <div className={cambioStyles.refundRow}>
                   <label className={cambioStyles.fieldRow} style={{ flex: '0 0 9rem' }}>
-                    <span className={cambioStyles.fieldLabel}>Importo €</span>
+                    <span className={cambioStyles.fieldLabel}>Importo {currencyName}</span>
                     <input
                       className={cambioStyles.fieldInput}
                       type="number"
