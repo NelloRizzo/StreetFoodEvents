@@ -69,6 +69,5 @@ frontend/src/data/comuni.csv
 android/.gradle/
 android/local.properties
 
-# Misc
-.cache/
-.eslintcache
+# Kilo agent definitions/config (local tooling)
+.kilo/
