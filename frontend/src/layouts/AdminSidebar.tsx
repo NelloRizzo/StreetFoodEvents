@@ -170,7 +170,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
           ...(canManagePhotos
             ? [
               { label: 'Galleria media', to: `${basePath}/gallery`, icon: '\u{1F5BC}' } as SidebarItem,
-              { label: 'Contest fotografici', to: `${basePath}/photo-contests`, icon: '\u{1FC6}' } as SidebarItem,
+              { label: 'Contest fotografici', to: `${basePath}/photo-contests`, icon: '\u{1F3C6}' } as SidebarItem,
               { label: 'Slideshow', to: `/events/${selectedEvent!.id}/slideshow`, external: true, icon: '\u{1F39E}' } as SidebarItem,
             ]
             : []),
