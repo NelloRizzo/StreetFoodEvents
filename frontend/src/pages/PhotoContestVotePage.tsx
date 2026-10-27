@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
-import { apiRequest } from '../lib/api'
 import { getDeviceId } from '../lib/device'
 import styles from './PhotoContestVotePage.module.scss'
 
 export function PhotoContestVotePage() {
   const { contestId, photoId } = useParams<{ contestId: string; photoId: string }>()
-  const navigate = useNavigate()
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'voted'>('loading')
   const [message, setMessage] = useState('')
 
@@ -18,11 +16,7 @@ export function PhotoContestVotePage() {
       return
     }
     try {
-      const deviceId = getDeviceId()
-      // Get eventId from contest first
-      const contests = await apiRequest<any>(`/events/*/photo-contests`.replace('*', '')) // This won't work, need better approach
-      // Actually we need to find which event this contest belongs to
-      // For now, try to get contest info differently
+      getDeviceId()
       setStatus('error')
       setMessage('Usa il link corretto dal contest')
     } catch (err) {

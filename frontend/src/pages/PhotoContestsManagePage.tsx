@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
-import { useAuth } from '../features/auth/auth-context'
 import styles from './PhotoContestsManagePage.module.scss'
 
 type PhotoContest = {
@@ -29,7 +28,6 @@ type EventPhoto = {
 
 export function PhotoContestsManagePage() {
   const { eventId } = useParams<{ eventId: string }>()
-  const { isAuthenticated } = useAuth()
   const [contests, setContests] = useState<PhotoContest[]>([])
   const [photos, setPhotos] = useState<EventPhoto[]>([])
   const [loading, setLoading] = useState(true)
