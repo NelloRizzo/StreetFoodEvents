@@ -126,6 +126,18 @@ Login: utente inattivo o senza password → 403 con messaggio distinto ("non anc
 | DELETE | `/api/events/:eventId/photos` | photo-admin | Cancella tutte le foto/video (delete Cloudinary con `resource_type` corretto) |
 | DELETE | `/api/events/:eventId/photos/:photoId` | auth | Cancella singola foto/video |
 
+### API routes — Photo Contest
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/events/:eventId/photo-contests` | no | Lista contest fotografici evento |
+| GET | `/api/events/:eventId/photo-contests/:contestId` | no | Dettaglio contest con foto, voti, ranking top-3 (deviceId opzionale per stato voto) |
+| POST | `/api/events/:eventId/photo-contests/:contestId/vote` | no | Vota foto (body `{ photoId, deviceId }`, 1 voto per dispositivo) |
+| POST | `/api/events/:eventId/photo-contests` | photo-admin/event-admin/platform-admin | Crea contest |
+| PATCH | `/api/events/:eventId/photo-contests/:contestId` | photo-admin/event-admin/platform-admin | Modifica contest (apri/chiudi/abilita voti) |
+| POST | `/api/events/:eventId/photo-contests/:contestId/entries` | photo-admin/event-admin/platform-admin | Imposta foto del contest (body `{ photoIds[] }`) |
+| POST | `/api/events/:eventId/photo-contests/:contestId/reset-votes` | photo-admin/event-admin/platform-admin | Reset tutti i voti |
+| POST | `/api/events/:eventId/photo-contests/:contestId/close` | photo-admin/event-admin/platform-admin | Chiudi contest |
+
 ### API routes — Frames
 | Method | Route | Auth | Description |
 |---|---|---|---|

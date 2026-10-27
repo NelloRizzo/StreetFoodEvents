@@ -1,0 +1,133 @@
+.page {
+  padding: 2rem 0;
+}
+
+.title {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.description {
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.resultsBanner {
+  background: #d4edda;
+  color: #155724;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.closedBanner {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.error {
+  color: #dc3545;
+  background: #f8d7da;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.success {
+  color: #155724;
+  background: #d4edda;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.votedMsg {
+  color: #007bff;
+  background: #e7f3ff;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.topCard {
+  box-shadow: 0 0 0 2px #ffd700;
+}
+
+.votedCard {
+  box-shadow: 0 0 0 2px #007bff;
+}
+
+.image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.cardInfo {
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.seq {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+.badge {
+  font-size: 1.2rem;
+}
+
+.voteCount {
+  margin-left: auto;
+  color: #666;
+  font-weight: 600;
+}
+
+.voteBtn {
+  width: 100%;
+  padding: 0.6rem;
+  background: #28a745;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.voteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.yourVote {
+  width: 100%;
+  padding: 0.6rem;
+  background: #007bff;
+  color: white;
+  text-align: center;
+  font-weight: 600;
+}

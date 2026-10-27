@@ -59,6 +59,7 @@
 - **Slideshow**: riproduzione automatica con controlli velocità
 - **Foto booth**: scatto webcam con anteprima cornice
 - **Email**: invio foto multiple a un indirizzo
+- **Photo Contest**: sistema votazione per dispositivo con QR per voto diretto, top-3 con badge, gestione admin (creazione contest, selezione foto dalla galleria, reset voti)
 
 #### 8. Contest e POI
 - **ContestPOI**: punti di interesse per caccia al tesoro
@@ -66,6 +67,7 @@
 - **Partecipazione anonima**: UUID salvato in localStorage
 - **Premiazione**: premi multipli con assegnazione automatica
 - **Pool sincronizzato**: POI auto-generati da stand e POI evento
+- **Photo Contest**: votazione fotografica per dispositivo, QR per voto diretto senza autenticazione, badge top-3, reset voti da admin
 
 #### 9. Sistema Ruoli
 - **Ruoli piattaforma**: `platform-admin` (amministratore totale)
@@ -114,6 +116,7 @@
 - **Mappa Evento**: `/events/:eventId/map` (Leaflet con marker numerati)
 - **Galleria**: `/events/:eventId/galleria` (foto + video + slideshow)
 - **Contest**: `/events/:eventId/contests` (lista + play + verifica)
+- **Photo Contest**: `/events/:eventId/photo-contests` (gestione admin) e `/events/:eventId/photo-contest/:contestId` (votazione)
 - **Ricevuta**: ordine singolo con QR code
 - **Alias**: `/show/:entityType/:alias` (link brevi)
 

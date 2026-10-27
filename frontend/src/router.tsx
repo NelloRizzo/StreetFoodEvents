@@ -72,6 +72,9 @@ import { ActivationPage } from './pages/ActivationPage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { ProductGuidePage } from './pages/ProductGuidePage'
 import { RicevutaLiquidazionePage } from './pages/RicevutaLiquidazionePage'
+import { PhotoContestsManagePage } from './pages/PhotoContestsManagePage'
+import { PhotoContestPage } from './pages/PhotoContestPage'
+import { PhotoContestVoteDirectPage } from './pages/PhotoContestVoteDirectPage'
 import { InformativaPrivacyPage } from './pages/InformativaPrivacyPage'
 import { AdhesionFormPublicPage } from './pages/AdhesionFormPublicPage'
 import { AdhesionFormManagePage } from './pages/AdhesionFormManagePage'
@@ -172,6 +175,8 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/adhesions', element: <AdhesionsManagePage /> },
       { path: 'events/:eventId/reviews', element: <ReviewsManagePage /> },
       { path: 'events/:eventId/reviews/qrcodes', element: <ReviewsQrCodesPage /> },
+      { path: 'events/:eventId/photo-contests', element: <PhotoContestsManagePage /> },
+      { path: 'events/:eventId/photo-contest/:contestId', element: <PhotoContestPage /> },
       { path: 'events/:eventId/stands/:standId/orders', element: <StandOrdersPage /> },
       { path: 'events/:eventId/stands/:standId/order', element: <CashierOrderPage /> },
 
@@ -214,6 +219,7 @@ export const router = createBrowserRouter([
   // PRIMA di show/:entityType/:alias: il link annidato ha un segmento in piu'.
   { path: 'show/stand/:eventAlias/:standAlias', element: <AliasRedirectPage /> },
   { path: 'show/:entityType/:alias', element: <AliasRedirectPage /> },
-  { path: 'attiva/:token', element: <ActivationPage /> },
+      { path: 'attiva/:token', element: <ActivationPage /> },
+  { path: 'events/:eventId/photo-contest/:contestId/vote/:photoId', element: <PhotoContestVoteDirectPage /> },
   { path: 'events/:eventId/adhesion-form', element: <AdhesionFormPublicPage /> },
 ])
