@@ -1203,13 +1203,13 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                         <p className={cambioStyles.statSub}>Contenuto iniziale della cassa (euro e token separatamente). I valori lasciati vuoti restano invariati.</p>
                         <label className={cambioStyles.field}>
                           Fondo Euro
-                          <input type="number" min="0" step="0.01" value={floatEuro}
+                          <input className={cambioStyles.fieldInput} type="number" min="0" step="0.01" value={floatEuro}
                             onChange={(e) => setFloatEuro(e.target.value)}
                             placeholder={cassaBalance.cashFloat ? String(cassaBalance.cashFloat.euro) : '0'} />
                         </label>
                         <label className={cambioStyles.field}>
                           Fondo {currencyName}
-                          <input type="number" min="0" step="0.01" value={floatCredits}
+                          <input className={cambioStyles.fieldInput} type="number" min="0" step="0.01" value={floatCredits}
                             onChange={(e) => setFloatCredits(e.target.value)}
                             placeholder={cassaBalance.cashFloat ? String(cassaBalance.cashFloat.credits) : '0'} />
                         </label>
@@ -1239,7 +1239,7 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                         </div>
                         <label className={cambioStyles.field}>
                           Importo
-                          <input type="number" min="0.01" step="0.01" value={mvAmount}
+                          <input className={cambioStyles.fieldInput} type="number" min="0.01" step="0.01" value={mvAmount}
                             onChange={(e) => setMvAmount(e.target.value)} />
                         </label>
                         <label className={cambioStyles.field}>
@@ -1431,11 +1431,6 @@ const [showCashSetup, setShowCashSetup] = useState(true)
             <section>
               <h2 className={cambioStyles.exSectionTitle}>Rimborsa (Virtuale &rarr; Reale)</h2>
               <div className={cambioStyles.formCard}>
-                <p className={cambioStyles.statSub}>
-                  Saldo cliente: <strong>{fmt(targetBalance)} {currencyName}</strong>
-                  <span className={cambioStyles.eurValue}> ({fmtEur(targetBalance / rateSafe)})</span>
-                  {targetUser?.isAnonymous ? ' · non collegato a clienti' : ''}
-                </p>
                 <div className={cambioStyles.refundRow}>
                   <label className={cambioStyles.fieldRow} style={{ flex: '0 0 9rem' }}>
                     <span className={cambioStyles.fieldLabel}>Importo {currencyName}</span>
@@ -1528,7 +1523,7 @@ const [showCashSetup, setShowCashSetup] = useState(true)
                 </label>
                 <label className={cambioStyles.field}>
                   Importo {currencyName}
-                  <input type="number" min="0.01" step="0.01" value={adjustAmount}
+                  <input className={cambioStyles.fieldInput} type="number" min="0.01" step="0.01" value={adjustAmount}
                     onChange={(e) => setAdjustAmount(e.target.value)}
                     disabled={!targetUserId || adjusting} />
                 </label>
