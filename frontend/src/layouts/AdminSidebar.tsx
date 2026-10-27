@@ -38,13 +38,13 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
   useEffect(() => {
     apiRequest<{ stands: MyStand[] }>('/auth/me/stands')
       .then((d) => setMyStands(d.stands))
-      .catch(() => {})
+      .catch(() => { })
     apiRequest<{ isPlatformAdmin: boolean; roles: RoleInfo[] }>('/auth/me/roles')
       .then((d) => {
         setIsPlatformAdmin(d.isPlatformAdmin)
         setRoles(d.roles)
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   useEffect(() => {
@@ -73,8 +73,8 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
   const nameCollator = new Intl.Collator('it', { sensitivity: 'base' })
   const managedStands = selectedEventId
     ? myStands
-        .filter((s) => s.eventIds.includes(selectedEventId))
-        .sort((a, b) => nameCollator.compare(a.name, b.name))
+      .filter((s) => s.eventIds.includes(selectedEventId))
+      .sort((a, b) => nameCollator.compare(a.name, b.name))
     : []
 
   const managedStandItems: SidebarItem[] = []
@@ -101,99 +101,100 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
   const sections: SidebarSection[] = [
     ...(manageEvent
       ? [{
-          label: 'Ordini',
-          items: [
-            { label: 'Cassa evento', to: `${basePath}/cashier`, icon: '\u{1F4B0}' },
-            { label: 'Ordini evento', to: `${basePath}/orders`, icon: '\u{1F4C4}' },
-          ],
-        } as SidebarSection]
+        label: 'Ordini',
+        items: [
+          { label: 'Cassa evento', to: `${basePath}/cashier`, icon: '\u{1F4B0}' },
+          { label: 'Ordini evento', to: `${basePath}/orders`, icon: '\u{1F4C4}' },
+        ],
+      } as SidebarSection]
       : []),
     ...(managedStandItems.length > 0
       ? [{ label: 'Operativo', items: managedStandItems } as SidebarSection]
       : []),
     ...(isPlatformAdmin || manageEvent
       ? [{
-          label: 'Gestione',
-          items: [
-            ...(isPlatformAdmin
-              ? [
-                  { label: 'Eventi', to: '/admin/events', icon: '\u{1F4C5}' } as SidebarItem,
-                  { label: 'Stand', to: '/admin/stands', icon: '\u{1F3EA}' } as SidebarItem,
-                  { label: 'Prodotti', to: '/admin/products', icon: '\u{1F6D2}' } as SidebarItem,
-                  { label: 'Prodotti per evento', to: '/admin/event-products', icon: '\u{1F4E6}' } as SidebarItem,
-                  { label: 'Categorie', to: '/admin/categories', icon: '\u{1F3F7}' } as SidebarItem,
-                  { label: 'Staff', to: '/admin/staff', icon: '\u{1F465}' } as SidebarItem,
-                ]
-              : []),
-            ...(manageEvent
-              ? [
-                  { label: 'Numerazione Stand', to: `${basePath}/stands-manage`, icon: '\u{1F3EA}' } as SidebarItem,
-                  { label: 'Cornici Evento', to: `${basePath}/frames`, icon: '\u{1F5BC}' } as SidebarItem,
-                  { label: 'Contest evento', to: `${basePath}/contest-manage`, icon: '\u{1F3C6}' } as SidebarItem,
-                  { label: 'Promozioni e Coupon', to: `${basePath}/promotions`, icon: '\u{1F3AB}' } as SidebarItem,
-                  { label: 'Adesione stand', to: `${basePath}/stand-adhesion`, icon: '\u{1F4DD}' } as SidebarItem,
-                  { label: 'Adesioni da approvare', to: `${basePath}/adhesions`, icon: '\u{1F4CB}' } as SidebarItem,
-                  { label: 'Recensioni', to: `${basePath}/reviews`, icon: '\u{2B50}' } as SidebarItem,
-                  { label: 'Stampa Menu', to: '/admin/menu-print', icon: '\u{1F5A8}' } as SidebarItem,
-                ]
-              : []),
-          ],
-        } as SidebarSection]
+        label: 'Gestione',
+        items: [
+          ...(isPlatformAdmin
+            ? [
+              { label: 'Eventi', to: '/admin/events', icon: '\u{1F4C5}' } as SidebarItem,
+              { label: 'Stand', to: '/admin/stands', icon: '\u{1F3EA}' } as SidebarItem,
+              { label: 'Prodotti', to: '/admin/products', icon: '\u{1F6D2}' } as SidebarItem,
+              { label: 'Prodotti per evento', to: '/admin/event-products', icon: '\u{1F4E6}' } as SidebarItem,
+              { label: 'Categorie', to: '/admin/categories', icon: '\u{1F3F7}' } as SidebarItem,
+              { label: 'Staff', to: '/admin/staff', icon: '\u{1F465}' } as SidebarItem,
+            ]
+            : []),
+          ...(manageEvent
+            ? [
+              { label: 'Numerazione Stand', to: `${basePath}/stands-manage`, icon: '\u{1F3EA}' } as SidebarItem,
+              { label: 'Cornici Evento', to: `${basePath}/frames`, icon: '\u{1F5BC}' } as SidebarItem,
+              { label: 'Contest evento', to: `${basePath}/contest-manage`, icon: '\u{1F3C6}' } as SidebarItem,
+              { label: 'Promozioni e Coupon', to: `${basePath}/promotions`, icon: '\u{1F3AB}' } as SidebarItem,
+              { label: 'Adesione stand', to: `${basePath}/stand-adhesion`, icon: '\u{1F4DD}' } as SidebarItem,
+              { label: 'Adesioni da approvare', to: `${basePath}/adhesions`, icon: '\u{1F4CB}' } as SidebarItem,
+              { label: 'Recensioni', to: `${basePath}/reviews`, icon: '\u{2B50}' } as SidebarItem,
+              { label: 'Stampa Menu', to: '/admin/menu-print', icon: '\u{1F5A8}' } as SidebarItem,
+            ]
+            : []),
+        ],
+      } as SidebarSection]
       : []),
     ...(isPlatformAdmin || manageEvent || canManageFinance
       ? [{
-          label: 'Finanziario',
-          items: [
-            ...(canManageFinance
-              ? [
-                  { label: 'Cambio', to: `${basePath}/exchange`, icon: '\u{1F504}' } as SidebarItem,
-                  { label: 'Master Cambio', to: `${basePath}/cash-registers`, icon: '\u{1F4CA}' } as SidebarItem,
-                  { label: 'Liquidazione', to: `${basePath}/settlements`, icon: '\u{1F4B8}' } as SidebarItem,
-                ]
-              : []),
-          ],
-        } as SidebarSection]
+        label: 'Finanziario',
+        items: [
+          ...(canManageFinance
+            ? [
+              { label: 'Cambio', to: `${basePath}/exchange`, icon: '\u{1F504}' } as SidebarItem,
+              { label: 'Master Cambio', to: `${basePath}/cash-registers`, icon: '\u{1F4CA}' } as SidebarItem,
+              { label: 'Liquidazione', to: `${basePath}/settlements`, icon: '\u{1F4B8}' } as SidebarItem,
+            ]
+            : []),
+        ],
+      } as SidebarSection]
       : []),
     ...(canSeeStats
       ? [{
-          label: 'Statistiche',
-          items: [
-            { label: 'Analisi vendite', to: `${basePath}/analytics`, icon: '\u{1F4C8}' } as SidebarItem,
-            { label: 'Stima visitatori', to: `${basePath}/visitors`, icon: '\u{1F4CA}' } as SidebarItem,
-          ],
-        } as SidebarSection]
+        label: 'Statistiche',
+        items: [
+          { label: 'Analisi vendite', to: `${basePath}/analytics`, icon: '\u{1F4C8}' } as SidebarItem,
+          { label: 'Stima visitatori', to: `${basePath}/visitors`, icon: '\u{1F4CA}' } as SidebarItem,
+        ],
+      } as SidebarSection]
       : []),
     ...(isPlatformAdmin || canManagePhotos
       ? [{
-          label: 'Foto',
-          items: [
-            ...(canManagePhotos
-              ? [
-                  { label: 'Galleria media', to: `${basePath}/gallery`, icon: '\u{1F5BC}' } as SidebarItem,
-                  { label: 'Slideshow', to: `/events/${selectedEvent!.id}/slideshow`, external: true, icon: '\u{1F39E}' } as SidebarItem,
-                ]
-              : []),
-            ...(isPlatformAdmin
-              ? [{ label: 'Cornici', to: '/admin/frames', icon: '\u{1F5BC}' } as SidebarItem]
-              : []),
-            ...(isPlatformAdmin
-              ? [{ label: 'Advertisement', to: '/admin/advertisements', icon: '\u{1F4F1}' } as SidebarItem]
-              : []),
-          ],
-        } as SidebarSection]
+        label: 'Foto',
+        items: [
+          ...(canManagePhotos
+            ? [
+              { label: 'Galleria media', to: `${basePath}/gallery`, icon: '\u{1F5BC}' } as SidebarItem,
+              { label: 'Contest fotografici', to: `${basePath}/photo-contests`, icon: '\u{1FC6}' } as SidebarItem,
+              { label: 'Slideshow', to: `/events/${selectedEvent!.id}/slideshow`, external: true, icon: '\u{1F39E}' } as SidebarItem,
+            ]
+            : []),
+          ...(isPlatformAdmin
+            ? [{ label: 'Cornici', to: '/admin/frames', icon: '\u{1F5BC}' } as SidebarItem]
+            : []),
+          ...(isPlatformAdmin
+            ? [{ label: 'Advertisement', to: '/admin/advertisements', icon: '\u{1F4F1}' } as SidebarItem]
+            : []),
+        ],
+      } as SidebarSection]
       : []),
     ...(isPlatformAdmin
       ? [{
-          label: 'Piattaforma',
-          items: [
-            { label: 'Utenti', to: '/admin/users', icon: '\u{1F464}' },
-            { label: 'Ruoli', to: '/admin/user-roles', icon: '\u{1F511}' },
-            { label: 'Contratti d\'uso', to: '/admin/usage-contracts', icon: '\u{1F4C4}' },
-            { label: 'Documenti', to: '/admin/documents', icon: '\u{1F4C4}' },
-            { label: 'Guide', to: '/guide/event-cashier', icon: '\u{1F4D6}' },
-            { label: 'Volantino', to: '/flyer', icon: '\u{1F4E2}' },
-          ],
-        } as SidebarSection]
+        label: 'Piattaforma',
+        items: [
+          { label: 'Utenti', to: '/admin/users', icon: '\u{1F464}' },
+          { label: 'Ruoli', to: '/admin/user-roles', icon: '\u{1F511}' },
+          { label: 'Contratti d\'uso', to: '/admin/usage-contracts', icon: '\u{1F4C4}' },
+          { label: 'Documenti', to: '/admin/documents', icon: '\u{1F4C4}' },
+          { label: 'Guide', to: '/guide/event-cashier', icon: '\u{1F4D6}' },
+          { label: 'Volantino', to: '/flyer', icon: '\u{1F4E2}' },
+        ],
+      } as SidebarSection]
       : []),
     ...(canWriteBlog
       ? [{
