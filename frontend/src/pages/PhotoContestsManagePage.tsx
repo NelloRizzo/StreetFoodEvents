@@ -167,9 +167,16 @@ export function PhotoContestsManagePage() {
                   <button onClick={() => handleResetVotes(contest._id)} className={styles.buttonSmall}>
                     Reset voti
                   </button>
-                  {contest.status !== 'closed' && (
+                  {contest.status !== 'closed' ? (
                     <button onClick={() => handleCloseContest(contest._id)} className={styles.buttonSmallDanger}>
                       Chiudi contest
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleUpdateContest(contest._id, { status: 'open', votingEnabled: true })}
+                      className={styles.buttonSmall}
+                    >
+                      Riapri contest
                     </button>
                   )}
                 </div>
