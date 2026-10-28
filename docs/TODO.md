@@ -5,20 +5,7 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 - _(nessun bug aperto: vedi CHANGELOG.md)_
 
 ## Prossime Implementazioni
-- _(nessuna altra implementazione immediata è stata programmata)_ 
-
-### 20. Votazione foto in galleria evento (da approvare)
-- **Requisiti** (nota supervisore):
-  - Ogni dispositivo può votare una sola volta una sola foto di un evento
-  - L'amministratore della galleria può resettare i voti
-  - Ad ogni reset vanno aggiunti badge sulle tre foto più votate (numeri 1,2,3 o stelle oro/argento/bronzo)
-  - Domanda: è possibile individuare l'autore della foto anche se essa è fatta in forma anonima?
-- **Analisi fattibilità**:
-  - **Voto per dispositivo**: serve ID stabile (UUID in localStorage + cookie). Modello `PhotoVote { eventId, photoId, deviceId, votedAt }` con indice unico `(eventId, photoId, deviceId)`. Aggiungere `EventPhoto.voteCount` denorm.
-  - **Reset voti**: azione per `photo-admin`/`event-admin`/`platform-admin` che elimina tutti i voti dell'evento (o selezionati). Dopo reset ricalcolare top3 e mostrare badge.
-  - **Badge top3**: calcolare per conteggio voti dopo voto/reset. Da definire gestione pareggi.
-  - **Autore foto anonime**: `EventPhoto.uploadedBy` può essere null se upload anonimo. Se caricata in forma anonima **non è generalmente possibile identificare l'autore** - non c'è meccanismo per farlo retroattivamente.
-- **Ambito da confermare**: reset globale per evento o per selezione? Gestione pareggi per top3?
+- _(nessuna altra implementazione immediata è stata programmata)_
 
 ## Adesione Stand a Manifestazione
 - **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).

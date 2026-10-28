@@ -37,11 +37,10 @@ export async function getPhotoContest(req: Request, res: Response) {
     const contest = await PhotoContestModel.findOne({ _id: contestId, eventId }).lean();
     if (!contest) return res.status(404).json({ message: 'Contest non trovato' });
 
-    const entries = await PhotoContestEntryModel.find({ contestId }).sort({ order: 1, addedAt: 1 }).lean();
-    const photoIds = entries.map((e: any) => e.photoId);
-
-    const photos = await EventPhotoModel.find({ _id: { $in: photoIds } }).lean();
+    // Tutte le foto della galleria partecipano automaticamente al contest
+    const photos = await EventPhotoModel.find({ eventId, type: 'image' }).sort({ sequenceNumber: 1, createdAt: 1 }).lean();
     const photoMap = new Map(photos.map((p: any) => [String(p._id), p]));
+    const photoIds = photos.map((p: any) => String(p._id));
 
     let votes: any[] = [];
     if (contest.status === 'closed' || contest.resultsPublished) {
@@ -192,22 +191,11 @@ export async function updatePhotoContest(req: Request, res: Response) {
 export async function setPhotoContestEntries(req: Request, res: Response) {
   try {
     const { eventId, contestId } = req.params as any;
-    const { photoIds } = req.body || {};
-
     const contest = await PhotoContestModel.findOne({ _id: contestId, eventId });
     if (!contest) return res.status(404).json({ message: 'Contest non trovato' });
 
+    // Tutte le foto della galleria partecipano automaticamente al contest
     await PhotoContestEntryModel.deleteMany({ contestId });
-
-    if (Array.isArray(photoIds) && photoIds.length > 0) {
-      const entries = photoIds.map((pid: string, idx: number) => ({
-        contestId,
-        photoId: pid,
-        order: idx
-      }));
-      await PhotoContestEntryModel.insertMany(entries);
-    }
-
     return res.json({ ok: true });
   } catch (error) {
     console.error('setPhotoContestEntries error', error);
@@ -240,11 +228,11 @@ export async function votePhotoContest(req: Request, res: Response) {
       return res.status(403).json({ message: 'Contest fotografico chiuso' });
     }
 
-    const entry = await PhotoContestEntryModel.findOne({ contestId, photoId }).session(session);
-    if (!entry) {
+    const photo = await EventPhotoModel.findOne({ _id: photoId, eventId }).session(session);
+    if (!photo || (photo as any).type !== 'image') {
       await session.abortTransaction();
       session.endSession();
-      return res.status(400).json({ message: 'Foto non inclusa in questo contest' });
+      return res.status(400).json({ message: 'Foto non valida per questo contest' });
     }
 
     const dh = hashDeviceId(deviceId);

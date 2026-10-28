@@ -19,35 +19,20 @@ type PhotoContest = {
   createdAt: string
 }
 
-type EventPhoto = {
-  id: string
-  type: 'image' | 'video'
-  image: { url: string } | null
-  sequenceNumber: number
-}
-
 export function PhotoContestsManagePage() {
   const { eventId } = useParams<{ eventId: string }>()
   const [contests, setContests] = useState<PhotoContest[]>([])
-  const [photos, setPhotos] = useState<EventPhoto[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [selectedContest, setSelectedContest] = useState<PhotoContest | null>(null)
-  const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set())
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     if (!eventId) return
     try {
-      const [contestsRes, photosRes] = await Promise.all([
-        apiRequest<{ items: PhotoContest[] }>(`/events/${eventId}/photo-contests`),
-        apiRequest<{ items: EventPhoto[] }>(`/events/${eventId}/photos`)
-      ])
+      const contestsRes = await apiRequest<{ items: PhotoContest[] }>(`/events/${eventId}/photo-contests`)
       setContests(contestsRes.items)
-      setPhotos(photosRes.items.filter(p => p.type === 'image'))
       setLoading(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore')
@@ -99,33 +84,6 @@ export function PhotoContestsManagePage() {
 
   const handleSelectContest = async (contest: PhotoContest) => {
     setSelectedContest(contest)
-    setSelectedPhotoIds(new Set())
-  }
-
-  const togglePhoto = (photoId: string) => {
-    setSelectedPhotoIds(prev => {
-      const next = new Set(prev)
-      if (next.has(photoId)) next.delete(photoId)
-      else next.add(photoId)
-      return next
-    })
-  }
-
-  const handleSaveEntries = async () => {
-    if (!eventId || !selectedContest) return
-    setSaving(true)
-    setError('')
-    try {
-      await apiRequest(`/events/${eventId}/photo-contests/${selectedContest._id}/entries`, {
-        method: 'POST',
-        bodyJson: { photoIds: Array.from(selectedPhotoIds) }
-      })
-      alert('Foto aggiunte al contest')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Errore')
-    } finally {
-      setSaving(false)
-    }
   }
 
   const handleResetVotes = async (contestId: string) => {
@@ -197,7 +155,7 @@ export function PhotoContestsManagePage() {
                 </div>
                 <div className={styles.contestActions}>
                   <button onClick={() => handleSelectContest(contest)} className={styles.buttonSmall}>
-                    Gestisci foto
+                    Visualizza partecipanti
                   </button>
                   <button
                     onClick={() => handleUpdateContest(contest._id, { votingEnabled: !contest.votingEnabled, status: !contest.votingEnabled ? 'open' : 'draft' })}
@@ -221,26 +179,11 @@ export function PhotoContestsManagePage() {
 
         {selectedContest && (
           <section className={styles.section}>
-            <h2>Aggiungi foto a: {selectedContest.title}</h2>
-            <p>Seleziona le foto dalla galleria da includere nel contest</p>
-            <div className={styles.photoGrid}>
-              {photos.map(photo => (
-                <div
-                  key={photo.id}
-                  className={`${styles.photoCard} ${selectedPhotoIds.has(photo.id) ? styles.photoSelected : ''}`}
-                  onClick={() => togglePhoto(photo.id)}
-                >
-                  {photo.image && <img src={photo.image.url} alt={`Foto ${photo.sequenceNumber}`} />}
-                  <span className={styles.photoSeq}>#{photo.sequenceNumber}</span>
-                </div>
-              ))}
-            </div>
+            <h2>Partecipanti al contest: {selectedContest.title}</h2>
+            <p>Tutte le foto della galleria partecipano automaticamente al contest.</p>
             <div className={styles.saveRow}>
-              <button onClick={handleSaveEntries} disabled={saving || selectedPhotoIds.size === 0} className={styles.button}>
-                {saving ? 'Salvataggio...' : `Salva ${selectedPhotoIds.size} foto`}
-              </button>
               <button onClick={() => setSelectedContest(null)} className={styles.buttonSecondary}>
-                Annulla
+                Chiudi
               </button>
             </div>
           </section>
