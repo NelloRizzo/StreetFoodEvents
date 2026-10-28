@@ -67,14 +67,34 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
 
   const startWithDevice = useCallback(async (deviceId?: string) => {
     setError(null)
+    let s: MediaStream | null = null
     try {
-      const video = deviceId
-        ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-        : { facingMode: 'environment' as const, width: { ideal: 1920 }, height: { ideal: 1080 } }
-      const s = await navigator.mediaDevices.getUserMedia({ video, audio: false })
+      try {
+        const videoConstraints: MediaTrackConstraints = deviceId
+          ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+          : { width: { ideal: 1920 }, height: { ideal: 1080 } }
+        s = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false })
+      } catch {
+        try {
+          s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
+        } catch {
+          try {
+            s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'user' } }, audio: false })
+          } catch {
+            s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+          }
+        }
+      }
+
+      if (!s) throw new Error('Nessuno stream ottenuto')
       streamRef.current = s
       if (videoRef.current) {
         videoRef.current.srcObject = s
+        try {
+          await videoRef.current.play()
+        } catch {
+          /* ignore autoplay errors */
+        }
       }
       const track = s.getVideoTracks()[0]
       const activeId = track?.getSettings?.().deviceId
@@ -82,14 +102,21 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
         try { localStorage.setItem(CAMERA_STORAGE_KEY, activeId) } catch { /* ignore */ }
       }
       setWaitingChoice(false)
-    } catch {
-      setError('Fotocamera non disponibile')
+    } catch (e) {
+      console.error('getUserMedia failed', e)
+      setError('Impossibile accedere alla fotocamera. Verifica i permessi del browser o prova a ricaricare la pagina.')
+      setWaitingChoice(false)
     }
   }, [])
 
   const initCamera = useCallback(async () => {
     let all: MediaDeviceInfo[] = []
     try {
+      // Prova a ottenere i permessi per avere etichette dispositivi corrette
+      try {
+        const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        tmp.getTracks().forEach((t) => t.stop())
+      } catch { /* ignora se permesso negato, prova comunque enumerate */ }
       all = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput')
     } catch { /* ignore */ }
     setDevices(all)
@@ -115,7 +142,9 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
     stopStream()
     loadEvent()
     initCamera()
-    return stopStream
+    return () => {
+      stopStream()
+    }
   }, [open, eventId, initCamera, loadEvent, stopStream])
 
   const switchTo = async (deviceId: string) => {
