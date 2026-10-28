@@ -26,6 +26,7 @@ export function PhotoContestsManagePage() {
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [selectedContest, setSelectedContest] = useState<PhotoContest | null>(null)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
