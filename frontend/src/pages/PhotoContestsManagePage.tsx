@@ -156,7 +156,7 @@ export function PhotoContestsManagePage() {
                 </div>
                 <div className={styles.contestActions}>
                   <button onClick={() => handleSelectContest(contest)} className={styles.buttonSmall}>
-                    Visualizza partecipanti
+                    Info
                   </button>
                   <button
                     onClick={() => handleUpdateContest(contest._id, { votingEnabled: !contest.votingEnabled, status: !contest.votingEnabled ? 'open' : 'draft' })}
