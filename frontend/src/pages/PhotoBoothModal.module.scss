@@ -214,6 +214,43 @@
   cursor: default;
 }
 
+/* ── Conferma di salvataggio ── */
+.savedBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 0.75rem 0.5rem;
+}
+
+.savedIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: var(--color-brand);
+  color: #fffaf2;
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.savedTitle {
+  margin: 1rem 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--color-ink-strong);
+}
+
+.savedText {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--color-ink);
+  line-height: 1.45;
+}
+
 /* ── Mobile first: fullscreen capture ── */
 @media (max-width: 600px) {
   .overlay {

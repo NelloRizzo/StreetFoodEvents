@@ -38,10 +38,17 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
   const [captured, setCaptured] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [saved, setSaved] = useState(false)
+  /* Numero di sequenza della foto appena salvata: la conferma deve dire
+     *cosa* e' stato salvato, non solo che e' andata bene. */
+  const [savedNumber, setSavedNumber] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  /* «Scatta un'altra» deve riaprire la fotocamera DOPO che il <video> e' di
+     nuovo nel DOM: l'effetto qui sotto aspettando il commit evita il classico
+     stream assegnato a un elemento non ancora montato. */
+  const restartRef = useRef(false)
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop())
@@ -67,7 +74,7 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
 
   const startWithDevice = useCallback(async (deviceId?: string) => {
     setError(null)
-    let s: MediaStream | null = null
+    let s: MediaStream | null
     try {
       try {
         const videoConstraints: MediaTrackConstraints = deviceId
@@ -137,6 +144,7 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
   useEffect(() => {
     if (!open) return
     setSaved(false)
+    setSavedNumber(null)
     setError(null)
     setWaitingChoice(false)
     stopStream()
@@ -146,6 +154,16 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
       stopStream()
     }
   }, [open, eventId, initCamera, loadEvent, stopStream])
+
+  /* Esegue il riavvio richiesto da «Scatta un'altra»: gira dopo ogni render ma
+     fa qualcosa solo quando il ref e' stato alzato, quindi non c'e' nessun
+     elenco di dipendenze da tenere allineato. */
+  useEffect(() => {
+    if (!open || !restartRef.current) return
+    restartRef.current = false
+    stopStream()
+    void initCamera()
+  })
 
   const switchTo = async (deviceId: string) => {
     stopStream()
@@ -290,6 +308,8 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
         const errData = await res.json().catch(() => null)
         throw new Error(errData?.message ?? 'Upload fallito')
       }
+      const body = (await res.json().catch(() => null)) as { item?: { sequenceNumber?: number } } | null
+      setSavedNumber(typeof body?.item?.sequenceNumber === 'number' ? body.item.sequenceNumber : null)
       setSaved(true)
       setCaptured(null)
     } catch (err) {
@@ -312,8 +332,28 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
         {error && <p className={styles.error}>{error}</p>}
 
         {saved ? (
-          <div className={styles.actions}>
-            <button className={styles.save} onClick={onClose}>Chiudi</button>
+          <div className={styles.savedBox} role="status">
+            <span className={styles.savedIcon} aria-hidden="true">✓</span>
+            <h3 className={styles.savedTitle}>Foto salvata!</h3>
+            <p className={styles.savedText}>
+              {savedNumber != null
+                ? `È la foto n. ${savedNumber} della galleria dell'evento.`
+                : "La trovi nella galleria dell'evento."}{' '}
+              Grazie per aver partecipato!
+            </p>
+            <div className={styles.actions}>
+              <button
+                className={styles.retake}
+                onClick={() => {
+                  setSaved(false)
+                  setError(null)
+                  restartRef.current = true
+                }}
+              >
+                Scatta un&apos;altra
+              </button>
+              <button className={styles.save} onClick={onClose}>Chiudi</button>
+            </div>
           </div>
         ) : waitingChoice ? (
           <div className={styles.devicePicker}>
