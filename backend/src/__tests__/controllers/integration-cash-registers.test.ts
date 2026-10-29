@@ -343,6 +343,13 @@ describe('Integration: cash registers (multi-cassa)', () => {
             .send({ name: 'Banco A' });
         const id = open.body.item.id;
 
+        /* Il carico consegna token fisici: senza token in cassettiera la cassa
+         * lo rifiuta, quindi il fondo va impostato prima delle operazioni. */
+        await request(app)
+            .post(`/api/exchange/${event._id}/cash-float`)
+            .set('Cookie', cookie)
+            .send({ euro: 0, credits: 100, cashRegisterId: id });
+
         const from = new Date();
         await request(app)
             .post(`/api/exchange/${event._id}/top-up`)
@@ -366,7 +373,8 @@ describe('Integration: cash registers (multi-cassa)', () => {
         expect(report.body.totals.sinceTopUpCount).toBe(1);
         expect(report.body.totals.sinceRefundCount).toBe(1);
         expect(report.body.totals.euroContent).toBe(17.5);
-        expect(report.body.totals.creditsContent).toBe(-35);
+        /* 100 di fondo - 40 emessi (20 EUR x 2) + 5 rientrati dal rimborso */
+        expect(report.body.totals.creditsContent).toBe(65);
 
         const future = new Date(Date.now() + 60_000).toISOString();
         const reportBefore = await request(app)
@@ -440,6 +448,10 @@ describe('Integration: cash registers (multi-cassa)', () => {
             .set('Cookie', cookie)
             .send({ name: 'Banco B' });
 
+        await request(app)
+            .post(`/api/exchange/${event._id}/cash-float`)
+            .set('Cookie', cookie)
+            .send({ euro: 200, credits: 100, cashRegisterId: a.body.item.id });
         await request(app)
             .post(`/api/exchange/${event._id}/top-up`)
             .set('Cookie', cookie)
