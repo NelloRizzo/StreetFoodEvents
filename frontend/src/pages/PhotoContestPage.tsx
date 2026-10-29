@@ -17,10 +17,9 @@ type PhotoContest = {
 }
 
 type ContestItem = {
-  entryId: string
   photoId: string
   photo: {
-    id: string
+    _id: string
     type: 'image' | 'video'
     image: { url: string } | null
     sequenceNumber: number

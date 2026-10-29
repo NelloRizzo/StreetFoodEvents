@@ -62,25 +62,14 @@ export async function getPhotoContest(req: Request, res: Response) {
       .sort((a, b) => b.count - a.count);
 
     const rankByPhoto = new Map<string, number>();
-    if (itemsWithCounts.length > 0) {
-      let currentRank = 1;
-      let i = 0;
-      while (i < itemsWithCounts.length && currentRank <= 3) {
-        const countAtRank = itemsWithCounts[i].count;
-        // find all with this count starting at i
-        let j = i;
-        while (j < itemsWithCounts.length && itemsWithCounts[j].count === countAtRank) {
-          if (currentRank <= 3) {
-            rankByPhoto.set(itemsWithCounts[j].photoId, currentRank);
-          }
-          j++;
-        }
-        currentRank++;
-        i = j;
-        if (i < itemsWithCounts.length && itemsWithCounts[i].count === itemsWithCounts[i - 1].count) {
-          // should not happen
-        }
-      }
+    let currentRank = 1;
+    let previousCount: number | null = null;
+    for (const row of itemsWithCounts) {
+      // gli ex aequo restano sullo stesso rank, il successivo scala di uno
+      if (previousCount !== null && row.count !== previousCount) currentRank++;
+      if (currentRank > 3) break;
+      rankByPhoto.set(row.photoId, currentRank);
+      previousCount = row.count;
     }
 
     let hasVoted = false;
@@ -105,13 +94,14 @@ export async function getPhotoContest(req: Request, res: Response) {
       }
     }
 
-    const items = entries
-      .map((e: any) => {
-        const pid = String(e.photoId);
-        const photo = photoMap.get(pid);
-        if (!photo) return null;
+    /* Le foto partecipano tutte automaticamente: `photos` e' gia' la lista
+       ordinata della galleria, quindi non esistono piu' record `Entry` da
+       attraversare (la vecchia `entries.map` referenziava una variabile
+       rimossa e faceva fallire l'endpoint con un ReferenceError). */
+    const items = photos
+      .map((photo: any) => {
+        const pid = String(photo._id);
         return {
-          entryId: e._id,
           photoId: pid,
           photo,
           voteCount: contest.showVotesCount || contest.resultsPublished || contest.status === 'closed' ? (voteCountByPhoto.get(pid) || 0) : undefined,

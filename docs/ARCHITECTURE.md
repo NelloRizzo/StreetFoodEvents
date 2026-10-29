@@ -178,6 +178,14 @@ Considerazioni progettuali e decisioni architetturali.
 - **Slideshow**: i video in griglia girano muted/loop/autoplay/playsInline (display pubblico senza audio); nel modale fullscreen i controlli sono attivi.
 - **Cosa NON fare**: non eliminare foto da Cloudinary senza prima cancellare il record DB — il controller fa prima `findOneAndDelete` poi delete (con il giusto `resource_type`). Non usare `fs` per foto/video — tutto su Cloudinary. Non usare `multerImageUpload` per i video (limite 10 MB e fileFilter solo immagini). Non fare `deleteImage()` su un video — il `destroy` di default è `resource_type: image` e fallirebbe.
 
+## Photo Contest
+- **Tutte le foto della galleria partecipano automaticamente** (28 Ott 2026): il contest non ha più un elenco di partecipanti, quindi il dettaglio (`getPhotoContest`) si costruisce da `EventPhotoModel.find({ eventId, type: 'image' })` ordinato per `sequenceNumber` poi `createdAt`. **Non aggiungere letture di `PhotoContestEntry`**: il modello e la route `POST /:contestId/entries` sono codice morto (la route fa solo `deleteMany` e risponde `ok`).
+- **Il difetto che questo ha già causato**: rimuovere la query `entries` lasciando la `entries.map(...)` dentro il controller produce un `ReferenceError` a runtime (500 sul dettaglio) **e** un typecheck rosso. Il photo contest **non ha test**: una modifica a quel controller va coperta o verificata a mano prima di dire «fatto».
+- **Voto per dispositivo, non per foto**: `PhotoContestVote` ha l'indice unico `(contestId, deviceIdHash)` — un solo voto per dispositivo per contest. `deviceIdHash` è lo sha256 del `deviceId` in `localStorage` (`getDeviceId()` frontend, `hashDeviceId()` backend): è **deterrenza**, non sicurezza (svuotando i dati del browser si rivota).
+- **Conteggi nascosti per scelta, rank sempre**: `voteCount` esce solo con `showVotesCount || resultsPublished || status === 'closed'`, mentre `rank` esce sempre perché serve alle medaglie 🥇🥈🥉 in pagina. Se un pannello admin deve mostrare i conteggi serve un flag dedicato, altrimenti si rompe l'impostazione «nascondi i voti».
+- **`requireDevicePhotoMatch` oggi è inefficace**: `createEventPhoto` non scrive mai `takenByDeviceIdHash` e il photo booth non manda `deviceId` nell'upload, quindi la condizione non può mai passare. La spunta resta a UI ma non protegge niente.
+- **Foto storiche senza `type`**: il filtro `{ type: 'image' }` esclude i documenti creati prima dell'introduzione del campo (che ha `default: 'image'` solo per i nuovi). Vale per il contest e per ogni futuro elenco di sole immagini.
+
 ## Frontend
 - React 19 + Vite 8 + TypeScript ~6.0 + SCSS Modules + React Router 7.
 - Vite proxy: `/api` → `http://127.0.0.1:4000`.
