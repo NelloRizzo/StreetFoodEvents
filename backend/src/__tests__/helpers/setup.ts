@@ -20,6 +20,7 @@ const collectionsToClear = [
     'sessions',
     'aliases',
     'eventphotos',
+    'eventphotolikes',
     'eventframes',
     'socialposts',
     'standsettlements',

@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
+import { PhotoLikeButton } from '../components/PhotoLikeButton'
 import { apiRequest } from '../lib/api'
+import { getDeviceId } from '../lib/device'
+import { medalForRank } from '../lib/photoLikes'
 import styles from './EventGalleryPage.module.scss'
 
 type EventPhoto = {
@@ -12,6 +15,9 @@ type EventPhoto = {
   sequenceNumber: number
   takenAt: string
   frameId: string | null
+  likeCount: number
+  liked: boolean
+  rank: number | null
 }
 
 export function PublicGalleryPage() {
@@ -21,19 +27,29 @@ export function PublicGalleryPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [lightboxPhoto, setLightboxPhoto] = useState<EventPhoto | null>(null)
 
+  /* Il deviceId nella query accende il cuore «mio»; conteggi e medaglie sono
+     pubblici e arrivano comunque. Ricaricare dopo un toggle serve perche' un
+     like nuovo puo' spostare il podio. */
+  const loadPhotos = useCallback(async () => {
+    if (!eventId) return
+    const res = await apiRequest<{ items: EventPhoto[] }>(
+      `/events/${eventId}/photos?deviceId=${encodeURIComponent(getDeviceId())}`
+    )
+    setPhotos(res.items)
+  }, [eventId])
+
   useEffect(() => {
     if (!eventId) return
     Promise.all([
       apiRequest<{ item: { name: string } }>(`/events/${eventId}`),
-      apiRequest<{ items: EventPhoto[] }>(`/events/${eventId}/photos`),
+      loadPhotos(),
     ])
-      .then(([ev, ph]) => {
+      .then(([ev]) => {
         setEventName(ev.item.name)
-        setPhotos(ph.items)
         setIsLoading(false)
       })
       .catch(() => setIsLoading(false))
-  }, [eventId])
+  }, [eventId, loadPhotos])
 
   if (isLoading) return null
 
@@ -68,6 +84,24 @@ export function PublicGalleryPage() {
               <span className={styles.seq}>#{photo.sequenceNumber}</span>
               {photo.type === 'video' && (
                 <span className={styles.videoBadge}>&#127916;</span>
+              )}
+              {photo.type === 'image' && photo.rank !== null && (
+                <span
+                  className={styles.medal}
+                  title={`${photo.rank}\u00ba posto per «mi piace»`}
+                  aria-label={`${photo.rank}\u00ba posto per «mi piace»`}
+                >
+                  {medalForRank(photo.rank)}
+                </span>
+              )}
+              {photo.type === 'image' && eventId && (
+                <PhotoLikeButton
+                  eventId={eventId}
+                  photoId={photo.id}
+                  likeCount={photo.likeCount}
+                  liked={photo.liked}
+                  onChange={() => { void loadPhotos() }}
+                />
               )}
             </div>
           ))}

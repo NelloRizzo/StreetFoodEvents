@@ -119,8 +119,9 @@ Login: utente inattivo o senza password → 403 con messaggio distinto ("non anc
 ### API routes — Photos
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| GET | `/api/events/:eventId/photos` | no | Lista media evento (foto e video) |
+| GET | `/api/events/:eventId/photos` | no | Lista media evento (foto e video) con `likeCount`/`liked`/`rank` per foto; `?deviceId=` rende personale `liked` (il conteggio resta pubblico) |
 | POST | `/api/events/:eventId/photos` | no (immagini) / auth (video) | Carica media: multipart con campo `image` (foto, 10 MB, anche anonimo) oppure `video` (fino a 100 MB, richiede auth — anonimo → 401) |
+| POST | `/api/events/:eventId/photos/:photoId/like` | optional auth | **Toggle** «mi piace» (body `{ deviceId }`): ripremere toglie il like. Un like per foto per dispositivo (`EventPhotoLike`), 400 senza `deviceId` o su un video, 404 se la foto non è dell'evento |
 | POST | `/api/events/:eventId/photos/send-email` | photo-print / photo-admin / platform-admin | Invia più foto selezionate a un unico indirizzo email (body: `email`, `photoIds[]`, `marketingConsent`) |
 | POST | `/api/events/:eventId/photos/:photoId/send-email` | photo-print / photo-admin / platform-admin | Invia una singola foto via email (body: `email`, `marketingConsent`) |
 | DELETE | `/api/events/:eventId/photos` | photo-admin | Cancella tutte le foto/video (delete Cloudinary con `resource_type` corretto) |

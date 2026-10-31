@@ -6,7 +6,8 @@ import {
     deleteEventPhoto,
     listEventPhotos,
     sendEventPhotoEmail,
-    sendEventPhotosEmail
+    sendEventPhotosEmail,
+    toggleEventPhotoLike
 } from '../controllers/event-photos.controller';
 import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.middleware';
 import { hasRole } from '../middlewares/role.middleware';
@@ -39,6 +40,12 @@ eventPhotosRouter.post(
     asyncHandler(authMiddleware),
     asyncHandler(hasRole(['photo-print', 'photo-admin', 'platform-admin'], { eventParam: 'eventId' })),
     asyncHandler(sendEventPhotosEmail)
+);
+
+eventPhotosRouter.post(
+    '/:photoId/like',
+    asyncHandler(optionalAuthMiddleware),
+    asyncHandler(toggleEventPhotoLike)
 );
 
 eventPhotosRouter.post(

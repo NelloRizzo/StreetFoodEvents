@@ -1,0 +1,52 @@
+.like {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 26px;
+  padding: 2px 9px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.like:hover {
+  background: var(--color-brand);
+}
+
+/* Il pulsante «attivo» resta del colore del brand: il cuore pieno da solo non
+   basta a distinguerlo in una griglia di miniature scure. */
+.liked {
+  background: var(--color-brand);
+}
+
+.liked:hover {
+  background: var(--color-brand-deep);
+}
+
+.like:active {
+  transform: scale(0.94);
+}
+
+.like:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.heart {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}

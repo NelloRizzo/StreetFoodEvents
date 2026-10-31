@@ -2,10 +2,13 @@ import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { EmailSubscriptionModel } from '../models/email-subscription.model';
 import { EventModel } from '../models/event.model';
+import { EventPhotoLikeModel } from '../models/event-photo-like.model';
 import { EventPhotoModel } from '../models/event-photo.model';
 import { deleteImage, deleteVideo, uploadImageBuffer, uploadVideoBuffer } from '../services/cloudinary-upload.service';
 import { isEmailConfigured, sendPhotoEmail, sendPhotosEmail } from '../services/email.service';
+import { hashDeviceId } from '../utils/device-hash';
 import { ensureEventStarted } from '../utils/event-schedule';
+import { rankByCount } from '../utils/photo-ranking';
 
 function isValidObjectId(value: string | undefined): value is string {
     return value !== undefined && Types.ObjectId.isValid(value);
@@ -37,6 +40,33 @@ function toPhotoResponse(photo: {
     };
 }
 
+/** Numero di «mi piace» per foto dell'evento, con il gradino (medaglia) e se
+ *  il dispositivo che sta guardando ha gia' messo il like. Il conteggio e'
+ *  pubblico (le medaglie si vedono nella galleria), il "mio like" no: dipende
+ *  dal deviceId passato dal client. */
+async function getLikeInfoByPhoto(eventId: string, deviceId: string) {
+    const likes = await EventPhotoLikeModel.find({ eventId }).select('photoId deviceIdHash').lean();
+    const deviceHash = deviceId ? hashDeviceId(deviceId) : '';
+
+    const countByPhoto = new Map<string, number>();
+    const likedByPhoto = new Set<string>();
+
+    for (const like of likes) {
+        /* `photoId` e' ObjectId ma la chiave della mappa e' la stringa: senza
+           String() il confronto con gli id della risposta non trova nulla. */
+        const photoId = String(like.photoId);
+        countByPhoto.set(photoId, (countByPhoto.get(photoId) ?? 0) + 1);
+        if (deviceHash && like.deviceIdHash === deviceHash) likedByPhoto.add(photoId);
+    }
+
+    // solo le prime tre posizioni: la medaglia e' l'unico uso del gradino
+    const rankByPhoto = new Map(
+        rankByCount(countByPhoto, { maxRank: 3 }).map((row) => [row.photoId, row.rank])
+    );
+
+    return { countByPhoto, likedByPhoto, rankByPhoto };
+}
+
 export async function listEventPhotos(req: Request, res: Response) {
     const { eventId } = req.params;
 
@@ -45,8 +75,77 @@ export async function listEventPhotos(req: Request, res: Response) {
     }
 
     const items = await EventPhotoModel.find({ eventId }).sort({ sequenceNumber: -1 });
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : '';
+    const { countByPhoto, likedByPhoto, rankByPhoto } = await getLikeInfoByPhoto(eventId, deviceId);
 
-    return res.status(200).json({ items: items.map(toPhotoResponse) });
+    return res.status(200).json({
+        items: items.map((photo) => {
+            const id = photo._id.toString();
+            return {
+                ...toPhotoResponse(photo),
+                likeCount: countByPhoto.get(id) ?? 0,
+                liked: likedByPhoto.has(id),
+                rank: rankByPhoto.get(id) ?? null
+            };
+        })
+    });
+}
+
+/* Toggle del «mi piace»: lo stesso dispositivo puo' togliere quello che ha
+   messo (ripressione = rimozione del record), altrimenti un tocco sbagliato
+   resterebbe per sempre. Un like per foto e per dispositivo, non uno per
+   galleria: lo stesso telefono puo' votare piu' foto. */
+export async function toggleEventPhotoLike(req: Request, res: Response) {
+    const { eventId, photoId } = req.params;
+
+    if (!isValidObjectId(eventId) || !isValidObjectId(photoId)) {
+        return res.status(400).json({ message: 'Invalid id' });
+    }
+
+    const { deviceId } = req.body ?? {};
+    if (typeof deviceId !== 'string' || !deviceId.trim()) {
+        return res.status(400).json({ message: 'deviceId richiesto' });
+    }
+
+    const photo = await EventPhotoModel.findOne({ _id: photoId, eventId }).select('type').lean();
+    if (!photo) {
+        return res.status(404).json({ message: 'Photo not found' });
+    }
+
+    if (photo.type !== 'image') {
+        return res.status(400).json({ message: 'I «mi piace» sono disponibili solo per le foto' });
+    }
+
+    const deviceIdHash = hashDeviceId(deviceId.trim());
+    const existing = await EventPhotoLikeModel.findOne({ photoId, deviceIdHash });
+
+    let liked: boolean;
+    if (existing) {
+        await EventPhotoLikeModel.deleteOne({ _id: existing._id });
+        liked = false;
+    } else {
+        try {
+            await EventPhotoLikeModel.create({
+                eventId,
+                photoId,
+                deviceIdHash,
+                userId: req.user?.id ?? null
+            });
+            liked = true;
+        } catch (error) {
+            /* Due richieste in parallelo dallo stesso dispositivo (doppio
+               tocco, due tab): l'indice unico fa fallire la seconda. Il like
+               esiste gia', quindi il risultato e' lo stesso e non e' un 500. */
+            const isDuplicateKey =
+                typeof error === 'object' && error !== null && (error as { code?: number }).code === 11000;
+            if (!isDuplicateKey) throw error;
+            liked = true;
+        }
+    }
+
+    const likeCount = await EventPhotoLikeModel.countDocuments({ photoId });
+
+    return res.status(200).json({ liked, likeCount });
 }
 
 export async function createEventPhoto(req: Request, res: Response) {
@@ -129,6 +228,9 @@ export async function deleteEventPhoto(req: Request, res: Response) {
         return res.status(404).json({ message: 'Photo not found' });
     }
 
+    // i «mi piace» non hanno senso senza la foto: nessun orfano da ripulire
+    await EventPhotoLikeModel.deleteMany({ photoId });
+
     if (photo.type === 'video' && photo.video?.publicId) {
         await deleteVideo(photo.video.publicId).catch(() => {});
     } else if (photo.image?.publicId) {
@@ -156,6 +258,7 @@ export async function deleteAllEventPhotos(req: Request, res: Response) {
         .filter((d): d is Promise<void> => d !== null);
 
     await EventPhotoModel.deleteMany({ eventId });
+    await EventPhotoLikeModel.deleteMany({ eventId });
 
     if (deletions.length > 0) {
         await Promise.all(deletions);

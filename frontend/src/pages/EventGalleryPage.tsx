@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { ConfirmModal } from '../components/ConfirmModal'
+import { PhotoLikeButton } from '../components/PhotoLikeButton'
 import { apiRequest } from '../lib/api'
 import { trackPhotosEmailSent } from '../lib/analytics'
+import { getDeviceId } from '../lib/device'
+import { medalForRank } from '../lib/photoLikes'
 import { useAuth } from '../features/auth/auth-context'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import styles from './EventGalleryPage.module.scss'
@@ -16,6 +19,9 @@ type EventPhoto = {
   sequenceNumber: number
   takenAt: string
   frameId: string | null
+  likeCount: number
+  liked: boolean
+  rank: number | null
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
@@ -70,6 +76,18 @@ export function EventGalleryPage() {
   const [eventDefaultFrameId, setEventDefaultFrameId] = useState<string | null>(null)
   const [frameOptions, setFrameOptions] = useState<{ id: string; name: string }[]>([])
   const [savingFrame, setSavingFrame] = useState(false)
+
+  /* Conteggi, «mio like» e medaglie arrivano insieme alla lista: il deviceId
+     nella query e' cio' che rende personale il cuore acceso (il conteggio
+     resta pubblico). Rileggere la lista dopo un toggle non e' pigrizia: un
+     like nuovo puo' cambiare chi sta sul podio. */
+  const loadPhotos = useCallback(async () => {
+    if (!eventId) return
+    const data = await apiRequest<{ items: EventPhoto[] }>(
+      `/events/${eventId}/photos?deviceId=${encodeURIComponent(getDeviceId())}`
+    )
+    setPhotos(data.items)
+  }, [eventId])
 
   const handleSendEmail = useCallback(async (to: string, consent?: boolean) => {
     if (!eventId || emailSending) return
@@ -178,16 +196,15 @@ export function EventGalleryPage() {
 
     Promise.all([
       apiRequest<{ item: { name: string; defaultFrameId: string | null } }>(`/events/${eventId}`),
-      apiRequest<{ items: EventPhoto[] }>(`/events/${eventId}/photos`),
+      loadPhotos(),
     ])
-      .then(([ev, ph]) => {
+      .then(([ev]) => {
         setEventName(ev.item.name)
         setEventDefaultFrameId(ev.item.defaultFrameId ?? null)
-        setPhotos(ph.items)
         setIsLoading(false)
       })
       .catch(() => setIsLoading(false))
-  }, [eventId])
+  }, [eventId, loadPhotos])
 
   useEffect(() => {
     if (!eventId || !isAuthenticated) return
@@ -302,7 +319,8 @@ export function EventGalleryPage() {
     setDeleting(true)
     try {
       await Promise.all([...selectedIds].map((id) => apiRequest(`/events/${eventId}/photos/${id}`, { method: 'DELETE' })))
-      setPhotos((prev) => prev.filter((p) => !selectedIds.has(p.id)))
+      /* ricarica, non filtro locale: togliere una foto puo' cambiare il podio */
+      await loadPhotos()
       setSelectedIds(new Set())
     } catch {
       /* not required */
@@ -394,8 +412,7 @@ export function EventGalleryPage() {
         throw new Error(errData?.message ?? 'Upload fallito')
       }
 
-      const data = await apiRequest<{ items: EventPhoto[] }>(`/events/${eventId}/photos`)
-      setPhotos(data.items)
+      await loadPhotos()
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Upload video fallito. Riprova.')
     } finally {
@@ -547,6 +564,24 @@ export function EventGalleryPage() {
               <span className={styles.seq}>#{photo.sequenceNumber}</span>
               {photo.type === 'video' && (
                 <span className={styles.videoBadge}>&#127916;</span>
+              )}
+              {photo.type === 'image' && photo.rank !== null && (
+                <span
+                  className={styles.medal}
+                  title={`${photo.rank}\u00ba posto per «mi piace»`}
+                  aria-label={`${photo.rank}\u00ba posto per «mi piace»`}
+                >
+                  {medalForRank(photo.rank)}
+                </span>
+              )}
+              {photo.type === 'image' && eventId && (
+                <PhotoLikeButton
+                  eventId={eventId}
+                  photoId={photo.id}
+                  likeCount={photo.likeCount}
+                  liked={photo.liked}
+                  onChange={() => { void loadPhotos() }}
+                />
               )}
               {hasPrintRole && photo.type === 'image' && (
                 <>

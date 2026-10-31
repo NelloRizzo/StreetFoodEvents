@@ -14,6 +14,7 @@ import { CounterModel } from '../models/counter.model';
 import { StationModel } from '../models/station.model';
 import { EventProductModel } from '../models/event-product.model';
 import { EventPhotoModel } from '../models/event-photo.model';
+import { EventPhotoLikeModel } from '../models/event-photo-like.model';
 import { EventFrameModel } from '../models/event-frame.model';
 import { POIModel } from '../models/poi.model';
 import { ContestParticipationModel } from '../models/contest-participation.model';
@@ -158,6 +159,16 @@ async function run() {
     console.log('[EventPhotos]');
     await removeOrphans('Invalid eventId', EventPhotoModel, {
         eventId: { $nin: validEventIds },
+    });
+
+    // 12b. Photo likes («mi piace» della galleria)
+    console.log('[EventPhotoLikes]');
+    const validPhotoIds = (await EventPhotoModel.find().select('_id').lean()).map((p) => p._id);
+    await removeOrphans('Invalid eventId', EventPhotoLikeModel, {
+        eventId: { $nin: validEventIds },
+    });
+    await removeOrphans('Invalid photoId', EventPhotoLikeModel, {
+        photoId: { $nin: validPhotoIds },
     });
 
     // 13. EventFrames
