@@ -84,7 +84,11 @@ async function createEvent(name = 'Contest Event') {
     });
 }
 
-async function createPhoto(eventId: Types.ObjectId | string, sequenceNumber: number) {
+async function createPhoto(
+    eventId: Types.ObjectId | string,
+    sequenceNumber: number,
+    overrides: Record<string, unknown> = {}
+) {
     return EventPhotoModel.create({
         eventId,
         type: 'image',
@@ -97,7 +101,8 @@ async function createPhoto(eventId: Types.ObjectId | string, sequenceNumber: num
             bytes: 1234
         },
         sequenceNumber,
-        takenAt: new Date()
+        takenAt: new Date(),
+        ...overrides
     });
 }
 
@@ -286,5 +291,138 @@ describe('Integration: classifica del contest fotografico (pannello Info)', () =
            completa passa solo dalla rotta admin */
         expect(res.body.items[0].voteCount).toBeUndefined();
         expect(res.body.items[0].rank).toBe(1);
+    });
+});
+
+/* Il dettaglio pubblico e' il percorso che il 28 Ott e' rimasto rotto per
+ * giorni (500 `entries is not defined`) senza che nessun test lo notasse:
+ * qui si copre il contratto che il frontend legge davvero, non solo il
+ * flag `showVotesCount`. */
+describe('Integration: dettaglio pubblico del contest fotografico', () => {
+    it('elenca tutte le foto della galleria in ordine di scatto, con gradini e voto del dispositivo', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const first = await createPhoto(event._id, 1);
+        const second = await createPhoto(event._id, 2);
+        await createPhoto(event._id, 3);
+        const contest = await createContest(event._id, { showVotesCount: false });
+
+        await vote(contest._id, second._id, 'a');
+        await vote(contest._id, second._id, 'b');
+        await vote(contest._id, first._id, 'c');
+
+        const res = await request(app)
+            .get(`/api/events/${event._id}/photo-contests/${contest._id}`)
+            .query({ deviceId: 'a' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.isOpen).toBe(true);
+
+        /* partecipano TUTTE le foto della galleria, non solo quelle votate, e
+           l'ordine e' quello della galleria (numero di scatto) */
+        expect(
+            res.body.items.map((row: { photo: { sequenceNumber: number } }) => row.photo.sequenceNumber)
+        ).toEqual([1, 2, 3]);
+        expect(res.body.items.map((row: { rank: number | null }) => row.rank)).toEqual([2, 1, null]);
+        expect(res.body.items[0].photo.image.url).toBe('https://cloudinary.test/photo-1.jpg');
+
+        /* il conteggio resta nascosto al pubblico con `showVotesCount` spento... */
+        expect(
+            res.body.items.map((row: { voteCount?: number }) => row.voteCount)
+        ).toEqual([undefined, undefined, undefined]);
+
+        /* ...ma il dispositivo sa sempre se ha votato e per quale foto */
+        expect(res.body.hasVoted).toBe(true);
+        expect(res.body.votedPhotoId).toBe(second._id.toString());
+    });
+
+    it('risponde hasVoted falso (e votedPhotoId null) a un altro dispositivo o senza deviceId', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const photo = await createPhoto(event._id, 1);
+        const contest = await createContest(event._id);
+        await vote(contest._id, photo._id, 'a');
+
+        const otherDevice = await request(app)
+            .get(`/api/events/${event._id}/photo-contests/${contest._id}`)
+            .query({ deviceId: 'z' });
+        expect(otherDevice.status).toBe(200);
+        expect(otherDevice.body.hasVoted).toBe(false);
+        expect(otherDevice.body.votedPhotoId).toBeNull();
+
+        const anonymous = await request(app).get(
+            `/api/events/${event._id}/photo-contests/${contest._id}`
+        );
+        expect(anonymous.status).toBe(200);
+        expect(anonymous.body.hasVoted).toBe(false);
+        expect(anonymous.body.votedPhotoId).toBeNull();
+    });
+
+    it('segna isTakenByThisDevice solo per le foto scattate da quel dispositivo', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        await createPhoto(event._id, 1);
+        const mine = await createPhoto(event._id, 2, {
+            takenByDeviceIdHash: hashDeviceId('a')
+        });
+        const contest = await createContest(event._id);
+
+        const res = await request(app)
+            .get(`/api/events/${event._id}/photo-contests/${contest._id}`)
+            .query({ deviceId: 'a' });
+
+        expect(res.status).toBe(200);
+        expect(
+            res.body.items.map((row: { photoId: string; isTakenByThisDevice: boolean }) => [
+                row.photoId,
+                row.isTakenByThisDevice
+            ])
+        ).toEqual([
+            [expect.any(String), false],
+            [mine._id.toString(), true]
+        ]);
+
+        /* un altro dispositivo non eredita il riconoscimento */
+        const other = await request(app)
+            .get(`/api/events/${event._id}/photo-contests/${contest._id}`)
+            .query({ deviceId: 'z' });
+        expect(other.body.items.every((row: { isTakenByThisDevice: boolean }) => row.isTakenByThisDevice === false)).toBe(true);
+    });
+
+    it('risponde 404 per un contest di un altro evento', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        const otherEvent = await createEvent('Other Event');
+        const contest = await createContest(otherEvent._id);
+
+        const res = await request(app).get(
+            `/api/events/${event._id}/photo-contests/${contest._id}`
+        );
+
+        expect(res.status).toBe(404);
+    });
+
+    it('riporta isOpen falso fuori dalla finestra temporale del contest', async () => {
+        app = createTestApp();
+        const event = await createEvent();
+        await createPhoto(event._id, 1);
+        const future = await createContest(event._id, {
+            startsAt: new Date(Date.now() + 60 * 60 * 1000)
+        });
+        const expired = await createContest(event._id, {
+            endsAt: new Date(Date.now() - 60 * 60 * 1000)
+        });
+
+        const futureRes = await request(app).get(
+            `/api/events/${event._id}/photo-contests/${future._id}`
+        );
+        expect(futureRes.status).toBe(200);
+        expect(futureRes.body.isOpen).toBe(false);
+
+        const expiredRes = await request(app).get(
+            `/api/events/${event._id}/photo-contests/${expired._id}`
+        );
+        expect(expiredRes.status).toBe(200);
+        expect(expiredRes.body.isOpen).toBe(false);
     });
 });

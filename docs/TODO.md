@@ -13,7 +13,6 @@ _(ogni voce è separata dalle altre con una riga bianca)_
   - `PhotoContestEntryModel` e `POST /api/events/:eventId/photo-contests/:contestId/entries` **scrivono record che nessuno legge più** (dal 28 Ott tutte le foto della galleria partecipano): il frontend non chiama la route e `getPhotoContest` costruisce la lista da `EventPhoto`. Il modello si può rimuovere insieme alla route.
   - `requireDevicePhotoMatch` **non può mai passare**: confronta `EventPhoto.takenByDeviceIdHash`, campo che nessun percorso di creazione foto scrive. È un controllo che sembra una protezione e non lo è — va scritto il campo o rimosso il flag, non lasciato così.
   - `find({ type: 'image' })` **esclude le foto storiche** senza il campo `type` (il default dello schema vale in scrittura, non sui documenti già salvati): le foto anteriori al campo non compaiono nella galleria pubblica.
-  - `getPhotoContest` **è coperto solo in parte**: dal 31 Ott ha un test sul contratto «i voti si nascondono con `showVotesCount` spento», ma non sul percorso completo del dettaglio (lista foto, `hasVoted`, `takenByDeviceIdHash`) — è il motivo per cui il 500 del dettaglio era rimasto invisibile per giorni.
 
 ## Verifiche manuali in sospeso
 
