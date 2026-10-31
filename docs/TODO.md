@@ -7,8 +7,17 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
 
-## Adesione Stand a Manifestazione
-- **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
+## Debiti tecnici noti
+
+- **Photo contest — codice morto e controlli che non controllano** (rilevati Ott 2026 durante il fix del dettaglio contest, lasciati fuori per non allargare quel commit):
+  - `PhotoContestEntryModel` e `POST /api/events/:eventId/photo-contests/:contestId/entries` **scrivono record che nessuno legge più** (dal 28 Ott tutte le foto della galleria partecipano): il frontend non chiama la route e `getPhotoContest` costruisce la lista da `EventPhoto`. Il modello si può rimuovere insieme alla route.
+  - `requireDevicePhotoMatch` **non può mai passare**: confronta `EventPhoto.takenByDeviceIdHash`, campo che nessun percorso di creazione foto scrive. È un controllo che sembra una protezione e non lo è — va scritto il campo o rimosso il flag, non lasciato così.
+  - `find({ type: 'image' })` **esclude le foto storiche** senza il campo `type` (il default dello schema vale in scrittura, non sui documenti già salvati): le foto anteriori al campo non compaiono nella galleria pubblica.
+  - `getPhotoContest` **è coperto solo in parte**: dal 31 Ott ha un test sul contratto «i voti si nascondono con `showVotesCount` spento», ma non sul percorso completo del dettaglio (lista foto, `hasVoted`, `takenByDeviceIdHash`) — è il motivo per cui il 500 del dettaglio era rimasto invisibile per giorni.
+
+## Verifiche manuali in sospeso
+
+- **Photo booth con webcam** (dopo il fix del 29 Ott): scatto → conferma con il numero foto → «Scatta un'altra» → secondo scatto. Il flusso è coperto solo dal build, non da test automatici (la webcam non esiste nell'ambiente di test).
 
 ---
 
@@ -206,3 +215,7 @@ Risposta alla nota del supervisore «Quanto lavoro ci vuole per eliminare tutte 
 - **Frontend — vite build: un solo chunk da 2,18 MB (621 kB gzip) > soglia 500 kB.** La correzione vera è il code splitting con `React.lazy`/`Suspense` sulle rotte del router principale: **mezza giornata** incluse la verifica dello stato di caricamento su ogni rotta. Alzare `chunkSizeWarningLimit` silenzia l'avviso senza ridurre il bundle — è mascheramento, non fix, e non va fatto.
 - **`PLUGIN_TIMINGS`** (avviso del build tool sul tempo di `vite:css`): è un'informazione sugli strumenti di build, non un difetto del codice — non è eliminabile.
 - **Totale realistico per arrivare a zero warning: circa 1 giorno** (2–4 h ESLint + mezza giornata code splitting). Non è urgente: i warning attuali non indicano bug, sono scelte note di dipendenze React.
+
+### 20. Adesione Stand a Manifestazione
+- **Aperti**: pagamento online di quota di partecipazione e caparra tramite Payment Gateway (oggi i campi `participationFee`/`deposit` su `Event` con scadenze `participationFeeDeadline`/`depositDeadline` sono informativi, accettati con checkbox nel wizard; il payment gateway resta fuori scope). Futuro ruolo `stand-owner` dedicato (oggi si riusa `stand-admin`).
+

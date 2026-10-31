@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
+import { medalForRank } from '../lib/photoLikes'
 import styles from './PhotoContestsManagePage.module.scss'
 
 type PhotoContest = {
@@ -19,6 +20,16 @@ type PhotoContest = {
   createdAt: string
 }
 
+/* Una riga della classifica del pannello «Info»: solo le foto con almeno un
+   voto, ordinate per gradino (gli ex aequo condividono il gradino). */
+type ContestRankingRow = {
+  photoId: string
+  sequenceNumber: number | null
+  imageUrl: string | null
+  voteCount: number
+  rank: number
+}
+
 export function PhotoContestsManagePage() {
   const { eventId } = useParams<{ eventId: string }>()
   const [contests, setContests] = useState<PhotoContest[]>([])
@@ -27,6 +38,11 @@ export function PhotoContestsManagePage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [selectedContest, setSelectedContest] = useState<PhotoContest | null>(null)
+  const [ranking, setRanking] = useState<ContestRankingRow[] | null>(null)
+  const [rankingOpen, setRankingOpen] = useState(false)
+  const [totalVotes, setTotalVotes] = useState(0)
+  const [rankingLoading, setRankingLoading] = useState(false)
+  const [rankingError, setRankingError] = useState('')
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -70,6 +86,37 @@ export function PhotoContestsManagePage() {
     }
   }
 
+  /* La classifica del pannello «Info» e' una rotta admin: i conteggi arrivano
+     sempre, anche con «mostra voti» spento al pubblico. `isOpen` decide se
+     mostrarla o solo accennarla, cosi' non si legge una classifica ferma
+     credendo che sia la votazione in corso. */
+  const loadRanking = useCallback(async (contestId: string) => {
+    if (!eventId) return
+    setRankingLoading(true)
+    setRankingError('')
+    try {
+      const res = await apiRequest<{
+        isOpen: boolean
+        totalVotes: number
+        ranking: ContestRankingRow[]
+      }>(`/events/${eventId}/photo-contests/${contestId}/results`)
+      setRankingOpen(res.isOpen)
+      setTotalVotes(res.totalVotes)
+      setRanking(res.ranking)
+    } catch (err) {
+      setRankingError(err instanceof Error ? err.message : 'Errore')
+    } finally {
+      setRankingLoading(false)
+    }
+  }, [eventId])
+
+  /* Aprire/chiudere il contest o resettare i voti cambia la classifica: se il
+     pannello e' aperto su quel contest va riallineato, altrimenti mostrerebbe
+     il podio di un momento che non esiste piu'. */
+  const refreshRankingIfSelected = (contestId: string) => {
+    if (selectedContest?._id === contestId) void loadRanking(contestId)
+  }
+
   const handleUpdateContest = async (contestId: string, updates: Partial<PhotoContest>) => {
     if (!eventId) return
     try {
@@ -78,13 +125,18 @@ export function PhotoContestsManagePage() {
         bodyJson: updates
       })
       load()
+      refreshRankingIfSelected(contestId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore')
     }
   }
 
-  const handleSelectContest = async (contest: PhotoContest) => {
+  const handleSelectContest = (contest: PhotoContest) => {
     setSelectedContest(contest)
+    setRanking(null)
+    setRankingOpen(false)
+    setTotalVotes(0)
+    void loadRanking(contest._id)
   }
 
   const handleResetVotes = async (contestId: string) => {
@@ -95,6 +147,7 @@ export function PhotoContestsManagePage() {
       })
       alert('Voti resettati')
       load()
+      refreshRankingIfSelected(contestId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore')
     }
@@ -107,6 +160,7 @@ export function PhotoContestsManagePage() {
         method: 'POST'
       })
       load()
+      refreshRankingIfSelected(contestId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore')
     }
@@ -189,6 +243,57 @@ export function PhotoContestsManagePage() {
           <section className={styles.section}>
             <h2>Partecipanti al contest: {selectedContest.title}</h2>
             <p>Tutte le foto della galleria partecipano automaticamente al contest.</p>
+
+            {rankingLoading && <p className={styles.rankingHint}>Caricamento classifica...</p>}
+            {rankingError && <p className={styles.error}>{rankingError}</p>}
+
+            {!rankingLoading && !rankingError && ranking && (
+              rankingOpen ? (
+                <>
+                  <div className={styles.rankingHeader}>
+                    <span className={styles.rankingTotal}>
+                      {totalVotes} {totalVotes === 1 ? 'voto' : 'voti'}
+                    </span>
+                    <button
+                      onClick={() => { void loadRanking(selectedContest._id) }}
+                      className={styles.buttonSmall}
+                    >
+                      Aggiorna
+                    </button>
+                  </div>
+                  {ranking.length === 0 ? (
+                    <p className={styles.rankingHint}>Nessun voto registrato finora.</p>
+                  ) : (
+                    <ul className={styles.ranking}>
+                      {ranking.map((row) => (
+                        <li key={row.photoId} className={styles.rankingItem}>
+                          <span className={styles.rankingMedal}>
+                            {medalForRank(row.rank) ?? row.rank}
+                          </span>
+                          {row.imageUrl && (
+                            <img
+                              src={row.imageUrl}
+                              alt={`Foto ${row.sequenceNumber ?? ''}`}
+                              className={styles.rankingThumb}
+                              loading="lazy"
+                            />
+                          )}
+                          <span className={styles.rankingSeq}>#{row.sequenceNumber ?? '\u2014'}</span>
+                          <span className={styles.rankingVotes}>
+                            {row.voteCount} {row.voteCount === 1 ? 'voto' : 'voti'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              ) : (
+                <p className={styles.rankingHint}>
+                  La classifica compare mentre la votazione è attiva.
+                </p>
+              )
+            )}
+
             <div className={styles.saveRow}>
               <button onClick={() => setSelectedContest(null)} className={styles.buttonSecondary}>
                 Chiudi

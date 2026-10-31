@@ -5,10 +5,19 @@ import { PhotoContestModel } from '../models/photo-contest.model.js';
 import { PhotoContestEntryModel } from '../models/photo-contest-entry.model.js';
 import { PhotoContestVoteModel } from '../models/photo-contest-vote.model.js';
 import { EventPhotoModel } from '../models/event-photo.model.js';
-import { EventModel } from '../models/event.model.js';
 import { hashDeviceId } from '../utils/device-hash.js';
+import { rankByCount } from '../utils/photo-ranking.js';
 
-function isContestOpen(contest: any) {
+/* Solo i campi che decidono l'apertura: cosi' la funzione accetta sia il
+   documento Mongoose sia il risultato di `.lean()`. */
+type ContestSchedule = {
+  status?: string | null;
+  votingEnabled?: boolean | null;
+  startsAt?: Date | null;
+  endsAt?: Date | null;
+};
+
+function isContestOpen(contest: ContestSchedule | null) {
   if (!contest) return false;
   if (contest.status !== 'open') return false;
   if (!contest.votingEnabled) return false;
@@ -20,7 +29,7 @@ function isContestOpen(contest: any) {
 
 export async function listPhotoContests(req: Request, res: Response) {
   try {
-    const { eventId } = req.params as any;
+    const { eventId } = req.params;
     const contests = await PhotoContestModel.find({ eventId }).sort({ createdAt: -1 }).lean();
     return res.json({ items: contests });
   } catch (error) {
@@ -31,46 +40,31 @@ export async function listPhotoContests(req: Request, res: Response) {
 
 export async function getPhotoContest(req: Request, res: Response) {
   try {
-    const { eventId, contestId } = req.params as any;
-    const { deviceId } = req.query as any;
+    const { eventId, contestId } = req.params;
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : undefined;
 
     const contest = await PhotoContestModel.findOne({ _id: contestId, eventId }).lean();
     if (!contest) return res.status(404).json({ message: 'Contest non trovato' });
 
     // Tutte le foto della galleria partecipano automaticamente al contest
     const photos = await EventPhotoModel.find({ eventId, type: 'image' }).sort({ sequenceNumber: 1, createdAt: 1 }).lean();
-    const photoMap = new Map(photos.map((p: any) => [String(p._id), p]));
-    const photoIds = photos.map((p: any) => String(p._id));
+    const photoMap = new Map(photos.map((p) => [String(p._id), p]));
+    const photoIds = photos.map((p) => String(p._id));
 
-    let votes: any[] = [];
-    if (contest.status === 'closed' || contest.resultsPublished) {
-      votes = await PhotoContestVoteModel.find({ contestId }).lean();
-    } else {
-      // still compute for ranking if needed, but public can see counts if showVotesCount
-      votes = await PhotoContestVoteModel.find({ contestId }).lean();
-    }
+    const votes = await PhotoContestVoteModel.find({ contestId }).lean();
 
     const voteCountByPhoto = new Map<string, number>();
     for (const v of votes) {
-      const key = String((v as any).photoId);
+      const key = String(v.photoId);
       voteCountByPhoto.set(key, (voteCountByPhoto.get(key) || 0) + 1);
     }
 
-    // compute ranks with ties (all get badge if in top 3)
-    const itemsWithCounts = Array.from(voteCountByPhoto.entries())
-      .map(([photoId, count]) => ({ photoId, count }))
-      .sort((a, b) => b.count - a.count);
-
-    const rankByPhoto = new Map<string, number>();
-    let currentRank = 1;
-    let previousCount: number | null = null;
-    for (const row of itemsWithCounts) {
-      // gli ex aequo restano sullo stesso rank, il successivo scala di uno
-      if (previousCount !== null && row.count !== previousCount) currentRank++;
-      if (currentRank > 3) break;
-      rankByPhoto.set(row.photoId, currentRank);
-      previousCount = row.count;
-    }
+    /* Medaglie top-3 con gli ex aequo sullo stesso gradino, stessa regola
+       della galleria (`rankByCount`): se le due classifiche divergessero, la
+       stessa foto avrebbe una medaglia nel contest e un'altra nella galleria. */
+    const rankByPhoto = new Map<string, number>(
+      rankByCount(voteCountByPhoto, { maxRank: 3 }).map((row) => [row.photoId, row.rank])
+    );
 
     let hasVoted = false;
     let votedPhotoId: string | null = null;
@@ -79,7 +73,7 @@ export async function getPhotoContest(req: Request, res: Response) {
       const existing = await PhotoContestVoteModel.findOne({ contestId, deviceIdHash: dh }).lean();
       if (existing) {
         hasVoted = true;
-        votedPhotoId = String((existing as any).photoId);
+        votedPhotoId = String(existing.photoId);
       }
     }
 
@@ -88,7 +82,7 @@ export async function getPhotoContest(req: Request, res: Response) {
       const dh = hashDeviceId(deviceId);
       for (const pid of photoIds) {
         const p = photoMap.get(String(pid));
-        if (p && (p as any).takenByDeviceIdHash && (p as any).takenByDeviceIdHash === dh) {
+        if (p && p.takenByDeviceIdHash && p.takenByDeviceIdHash === dh) {
           devicePhotoMatchByPhoto.set(String(pid), true);
         }
       }
@@ -99,7 +93,7 @@ export async function getPhotoContest(req: Request, res: Response) {
        attraversare (la vecchia `entries.map` referenziava una variabile
        rimossa e faceva fallire l'endpoint con un ReferenceError). */
     const items = photos
-      .map((photo: any) => {
+      .map((photo) => {
         const pid = String(photo._id);
         return {
           photoId: pid,
@@ -124,9 +118,65 @@ export async function getPhotoContest(req: Request, res: Response) {
   }
 }
 
+/* Classifica per il pannello «Info» della gestione contest.
+ *
+ * Rotta ADMIN: i conteggi qui sono sempre esposti, anche con
+ * `showVotesCount` spento. Quel flag nasconde i voti al pubblico, non
+ * all'organizzatore che sta gestendo la votazione in corso (prima l'unico
+ * modo di vedere la classifica era pubblicare i risultati o chiudere il
+ * contest, cioe' due azioni irreversibili). */
+export async function getPhotoContestResults(req: Request, res: Response) {
+  try {
+    const { eventId, contestId } = req.params;
+
+    const contest = await PhotoContestModel.findOne({ _id: contestId, eventId }).lean();
+    if (!contest) return res.status(404).json({ message: 'Contest non trovato' });
+
+    const votes = await PhotoContestVoteModel.find({ contestId }).lean();
+    const voteCountByPhoto = new Map<string, number>();
+    for (const v of votes) {
+      const key = String(v.photoId);
+      voteCountByPhoto.set(key, (voteCountByPhoto.get(key) || 0) + 1);
+    }
+
+    const ranked = rankByCount(voteCountByPhoto);
+    const photos = await EventPhotoModel.find({
+      _id: { $in: ranked.map((row) => row.photoId) },
+      eventId
+    })
+      .select('sequenceNumber image')
+      .lean();
+    const photoMap = new Map(photos.map((p) => [String(p._id), p]));
+
+    const ranking = ranked
+      .map((row) => {
+        const photo = photoMap.get(row.photoId);
+        return {
+          photoId: row.photoId,
+          sequenceNumber: photo?.sequenceNumber ?? null,
+          imageUrl: photo?.image?.url ?? null,
+          voteCount: row.count,
+          rank: row.rank
+        };
+      })
+      /* il gradino raggruppa gli ex aequo, il numero di scatto li ordina */
+      .sort((a, b) => a.rank - b.rank || (a.sequenceNumber ?? 0) - (b.sequenceNumber ?? 0));
+
+    return res.json({
+      contest,
+      isOpen: isContestOpen(contest),
+      totalVotes: votes.length,
+      ranking
+    });
+  } catch (error) {
+    console.error('getPhotoContestResults error', error);
+    return res.status(500).json({ message: 'Errore nel recupero della classifica del contest' });
+  }
+}
+
 export async function createPhotoContest(req: Request, res: Response) {
   try {
-    const { eventId } = req.params as any;
+    const { eventId } = req.params;
     const { title, description, status, votingEnabled, startsAt, endsAt, resultsPublished, showVotesCount, requireDevicePhotoMatch } = req.body || {};
 
     const contest = await PhotoContestModel.create({
@@ -140,7 +190,7 @@ export async function createPhotoContest(req: Request, res: Response) {
       resultsPublished: !!resultsPublished,
       showVotesCount: showVotesCount !== undefined ? !!showVotesCount : true,
       requireDevicePhotoMatch: !!requireDevicePhotoMatch,
-      createdBy: (req as any).user?._id || null
+      createdBy: req.user?.id || null
     });
 
     return res.status(201).json({ item: contest });
@@ -152,8 +202,8 @@ export async function createPhotoContest(req: Request, res: Response) {
 
 export async function updatePhotoContest(req: Request, res: Response) {
   try {
-    const { eventId, contestId } = req.params as any;
-    const updates: any = {};
+    const { eventId, contestId } = req.params;
+    const updates: Record<string, string | boolean | Date | null> = {};
     const allowed = ['title', 'description', 'status', 'votingEnabled', 'startsAt', 'endsAt', 'resultsPublished', 'showVotesCount', 'requireDevicePhotoMatch'];
     for (const key of allowed) {
       if (req.body[key] !== undefined) {
@@ -180,7 +230,7 @@ export async function updatePhotoContest(req: Request, res: Response) {
 
 export async function setPhotoContestEntries(req: Request, res: Response) {
   try {
-    const { eventId, contestId } = req.params as any;
+    const { eventId, contestId } = req.params;
     const contest = await PhotoContestModel.findOne({ _id: contestId, eventId });
     if (!contest) return res.status(404).json({ message: 'Contest non trovato' });
 
@@ -197,7 +247,7 @@ export async function votePhotoContest(req: Request, res: Response) {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { eventId, contestId } = req.params as any;
+    const { eventId, contestId } = req.params;
     const { photoId, deviceId } = req.body || {};
 
     if (!photoId || !deviceId) {
@@ -219,7 +269,7 @@ export async function votePhotoContest(req: Request, res: Response) {
     }
 
     const photo = await EventPhotoModel.findOne({ _id: photoId, eventId }).session(session);
-    if (!photo || (photo as any).type !== 'image') {
+    if (!photo || photo.type !== 'image') {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({ message: 'Foto non valida per questo contest' });
@@ -235,7 +285,7 @@ export async function votePhotoContest(req: Request, res: Response) {
 
     if (contest.requireDevicePhotoMatch) {
       const photo = await EventPhotoModel.findById(photoId).session(session);
-      if (!photo || (photo as any).takenByDeviceIdHash !== dh) {
+      if (!photo || photo.takenByDeviceIdHash !== dh) {
         await session.abortTransaction();
         session.endSession();
         return res.status(403).json({ message: 'Può votare solo chi ha scattato questa foto da questo dispositivo' });
@@ -257,7 +307,7 @@ export async function votePhotoContest(req: Request, res: Response) {
 
 export async function resetPhotoContestVotes(req: Request, res: Response) {
   try {
-    const { eventId, contestId } = req.params as any;
+    const { eventId, contestId } = req.params;
     const contest = await PhotoContestModel.findOne({ _id: contestId, eventId });
     if (!contest) return res.status(404).json({ message: 'Contest non trovato' });
 
@@ -271,7 +321,7 @@ export async function resetPhotoContestVotes(req: Request, res: Response) {
 
 export async function closePhotoContest(req: Request, res: Response) {
   try {
-    const { eventId, contestId } = req.params as any;
+    const { eventId, contestId } = req.params;
     const contest = await PhotoContestModel.findOneAndUpdate(
       { _id: contestId, eventId },
       { status: 'closed', votingEnabled: false, closedAt: new Date() },

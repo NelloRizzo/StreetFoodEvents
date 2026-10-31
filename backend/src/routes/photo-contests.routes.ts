@@ -5,6 +5,7 @@ import { hasRole } from '../middlewares/role.middleware.js';
 import {
   listPhotoContests,
   getPhotoContest,
+  getPhotoContestResults,
   createPhotoContest,
   updatePhotoContest,
   setPhotoContestEntries,
@@ -22,6 +23,7 @@ router.post('/:contestId/vote', votePhotoContest);
 
 // Admin
 router.post('/', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin']), createPhotoContest);
+router.get('/:contestId/results', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin'], { eventParam: 'eventId' }), getPhotoContestResults);
 router.patch('/:contestId', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin']), updatePhotoContest);
 router.post('/:contestId/entries', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin']), setPhotoContestEntries);
 router.post('/:contestId/reset-votes', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin']), resetPhotoContestVotes);

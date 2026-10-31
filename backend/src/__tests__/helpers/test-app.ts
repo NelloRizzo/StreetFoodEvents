@@ -16,6 +16,7 @@ import { rolesRouter } from '../../routes/roles.routes';
 import { userRolesRouter } from '../../routes/user-roles.routes';
 import { userStationsRouter } from '../../routes/user-stations.routes';
 import { eventPhotosRouter } from '../../routes/event-photos.routes';
+import photoContestsRoutes from '../../routes/photo-contests.routes';
 import { eventFramesRouter } from '../../routes/event-frames.routes';
 import { poisRouter } from '../../routes/pois.routes';
 import { usageContractsRouter } from '../../routes/usage-contracts.routes';
@@ -61,6 +62,7 @@ export function createTestApp() {
     app.use('/api/user-roles', userRolesRouter);
     app.use('/api/user-stations', userStationsRouter);
     app.use('/api/events/:eventId/photos', eventPhotosRouter);
+    app.use('/api/events/:eventId/photo-contests', photoContestsRoutes);
     app.use('/api/events/:eventId/frames', eventFramesRouter);
     app.use('/api/frames', framesRouter);
     app.use('/api/pois', poisRouter);

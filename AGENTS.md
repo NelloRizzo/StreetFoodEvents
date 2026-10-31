@@ -132,6 +132,7 @@ Login: utente inattivo o senza password → 403 con messaggio distinto ("non anc
 |---|---|---|---|
 | GET | `/api/events/:eventId/photo-contests` | no | Lista contest fotografici evento |
 | GET | `/api/events/:eventId/photo-contests/:contestId` | no | Dettaglio contest con foto, voti, ranking top-3 (deviceId opzionale per stato voto) |
+| GET | `/api/events/:eventId/photo-contests/:contestId/results` | photo-admin/event-admin/platform-admin | **Classifica admin** del pannello «Info»: `{ contest, isOpen, totalVotes, ranking[{ photoId, sequenceNumber, imageUrl, voteCount, rank }] }`. I conteggi sono **sempre** esposti (il dettaglio pubblico li nasconde con `showVotesCount` spento); solo foto con ≥1 voto, ex aequo sullo stesso gradino |
 | POST | `/api/events/:eventId/photo-contests/:contestId/vote` | no | Vota foto (body `{ photoId, deviceId }`, 1 voto per dispositivo) |
 | POST | `/api/events/:eventId/photo-contests` | photo-admin/event-admin/platform-admin | Crea contest |
 | PATCH | `/api/events/:eventId/photo-contests/:contestId` | photo-admin/event-admin/platform-admin | Modifica contest (apri/chiudi/abilita voti) |
