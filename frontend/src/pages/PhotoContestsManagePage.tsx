@@ -16,7 +16,6 @@ type PhotoContest = {
   endsAt: string | null
   resultsPublished: boolean
   showVotesCount: boolean
-  requireDevicePhotoMatch: boolean
   createdAt: string
 }
 

@@ -47,8 +47,6 @@ export async function getPhotoContest(req: Request, res: Response) {
 
     // Tutte le foto della galleria partecipano automaticamente al contest
     const photos = await EventPhotoModel.find({ eventId, type: 'image' }).sort({ sequenceNumber: 1, createdAt: 1 }).lean();
-    const photoMap = new Map(photos.map((p) => [String(p._id), p]));
-    const photoIds = photos.map((p) => String(p._id));
 
     const votes = await PhotoContestVoteModel.find({ contestId }).lean();
 
@@ -76,17 +74,6 @@ export async function getPhotoContest(req: Request, res: Response) {
       }
     }
 
-    const devicePhotoMatchByPhoto = new Map<string, boolean>();
-    if (deviceId) {
-      const dh = hashDeviceId(deviceId);
-      for (const pid of photoIds) {
-        const p = photoMap.get(String(pid));
-        if (p && p.takenByDeviceIdHash && p.takenByDeviceIdHash === dh) {
-          devicePhotoMatchByPhoto.set(String(pid), true);
-        }
-      }
-    }
-
     /* Le foto partecipano tutte automaticamente: `photos` e' gia' la lista
        ordinata della galleria, quindi non esistono piu' record `Entry` da
        attraversare (la vecchia `entries.map` referenziava una variabile
@@ -98,8 +85,7 @@ export async function getPhotoContest(req: Request, res: Response) {
           photoId: pid,
           photo,
           voteCount: contest.showVotesCount || contest.resultsPublished || contest.status === 'closed' ? (voteCountByPhoto.get(pid) || 0) : undefined,
-          rank: rankByPhoto.get(pid) || null,
-          isTakenByThisDevice: devicePhotoMatchByPhoto.get(pid) || false
+          rank: rankByPhoto.get(pid) || null
         };
       })
       .filter(Boolean);
@@ -176,7 +162,7 @@ export async function getPhotoContestResults(req: Request, res: Response) {
 export async function createPhotoContest(req: Request, res: Response) {
   try {
     const { eventId } = req.params;
-    const { title, description, status, votingEnabled, startsAt, endsAt, resultsPublished, showVotesCount, requireDevicePhotoMatch } = req.body || {};
+    const { title, description, status, votingEnabled, startsAt, endsAt, resultsPublished, showVotesCount } = req.body || {};
 
     const contest = await PhotoContestModel.create({
       eventId,
@@ -188,7 +174,6 @@ export async function createPhotoContest(req: Request, res: Response) {
       endsAt: endsAt ? new Date(endsAt) : null,
       resultsPublished: !!resultsPublished,
       showVotesCount: showVotesCount !== undefined ? !!showVotesCount : true,
-      requireDevicePhotoMatch: !!requireDevicePhotoMatch,
       createdBy: req.user?.id || null
     });
 
@@ -203,7 +188,7 @@ export async function updatePhotoContest(req: Request, res: Response) {
   try {
     const { eventId, contestId } = req.params;
     const updates: Record<string, string | boolean | Date | null> = {};
-    const allowed = ['title', 'description', 'status', 'votingEnabled', 'startsAt', 'endsAt', 'resultsPublished', 'showVotesCount', 'requireDevicePhotoMatch'];
+    const allowed = ['title', 'description', 'status', 'votingEnabled', 'startsAt', 'endsAt', 'resultsPublished', 'showVotesCount'];
     for (const key of allowed) {
       if (req.body[key] !== undefined) {
         if (key === 'startsAt' || key === 'endsAt') {
@@ -265,15 +250,6 @@ export async function votePhotoContest(req: Request, res: Response) {
       await session.abortTransaction();
       session.endSession();
       return res.status(409).json({ message: 'Hai già votato in questo contest' });
-    }
-
-    if (contest.requireDevicePhotoMatch) {
-      const photo = await EventPhotoModel.findById(photoId).session(session);
-      if (!photo || photo.takenByDeviceIdHash !== dh) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(403).json({ message: 'Può votare solo chi ha scattato questa foto da questo dispositivo' });
-      }
     }
 
     await PhotoContestVoteModel.create([{ contestId, photoId, deviceIdHash: dh }], { session });

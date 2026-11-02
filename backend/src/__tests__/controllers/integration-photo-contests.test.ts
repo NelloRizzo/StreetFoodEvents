@@ -84,11 +84,7 @@ async function createEvent(name = 'Contest Event') {
     });
 }
 
-async function createPhoto(
-    eventId: Types.ObjectId | string,
-    sequenceNumber: number,
-    overrides: Record<string, unknown> = {}
-) {
+async function createPhoto(eventId: Types.ObjectId | string, sequenceNumber: number) {
     return EventPhotoModel.create({
         eventId,
         type: 'image',
@@ -101,8 +97,7 @@ async function createPhoto(
             bytes: 1234
         },
         sequenceNumber,
-        takenAt: new Date(),
-        ...overrides
+        takenAt: new Date()
     });
 }
 
@@ -358,13 +353,10 @@ describe('Integration: dettaglio pubblico del contest fotografico', () => {
         expect(anonymous.body.votedPhotoId).toBeNull();
     });
 
-    it('segna isTakenByThisDevice solo per le foto scattate da quel dispositivo', async () => {
+    it('non espone un\'identità del dispositivo né un flag «vota solo le tue foto»', async () => {
         app = createTestApp();
         const event = await createEvent();
         await createPhoto(event._id, 1);
-        const mine = await createPhoto(event._id, 2, {
-            takenByDeviceIdHash: hashDeviceId('a')
-        });
         const contest = await createContest(event._id);
 
         const res = await request(app)
@@ -372,21 +364,14 @@ describe('Integration: dettaglio pubblico del contest fotografico', () => {
             .query({ deviceId: 'a' });
 
         expect(res.status).toBe(200);
-        expect(
-            res.body.items.map((row: { photoId: string; isTakenByThisDevice: boolean }) => [
-                row.photoId,
-                row.isTakenByThisDevice
-            ])
-        ).toEqual([
-            [expect.any(String), false],
-            [mine._id.toString(), true]
-        ]);
-
-        /* un altro dispositivo non eredita il riconoscimento */
-        const other = await request(app)
-            .get(`/api/events/${event._id}/photo-contests/${contest._id}`)
-            .query({ deviceId: 'z' });
-        expect(other.body.items.every((row: { isTakenByThisDevice: boolean }) => row.isTakenByThisDevice === false)).toBe(true);
+        /* `requireDevicePhotoMatch` e `isTakenByThisDevice` sono stati rimossi
+           il 2 Nov 2026: `takenByDeviceIdHash` non era mai scritto, quindi il
+           flag non poteva che negare ogni voto. Se un giorno servirà davvero,
+           prima si scrive il campo (upload con deviceId), poi si aggiunge il
+           test della regola: mai un flag che non controlla niente. */
+        expect(res.body.contest.requireDevicePhotoMatch).toBeUndefined();
+        expect(res.body.items[0]).not.toHaveProperty('isTakenByThisDevice');
+        expect(res.body.items[0].photo).not.toHaveProperty('takenByDeviceIdHash');
     });
 
     it('risponde 404 per un contest di un altro evento', async () => {

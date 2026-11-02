@@ -82,15 +82,6 @@ const eventPhotoSchema = new Schema(
             type: Schema.Types.ObjectId,
             ref: 'User',
             default: null
-        },
-        takenByDeviceIdHash: {
-            type: String,
-            default: null,
-            trim: true
-        },
-        takenFromBooth: {
-            type: Boolean,
-            default: false
         }
     },
     {

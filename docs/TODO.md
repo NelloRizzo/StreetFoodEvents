@@ -9,9 +9,8 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 
 ## Debiti tecnici noti
 
-- **Photo contest — codice morto e controlli che non controllano** (rilevati Ott 2026 durante il fix del dettaglio contest, lasciati fuori per non allargare quel commit):
-  - `requireDevicePhotoMatch` **non può mai passare**: confronta `EventPhoto.takenByDeviceIdHash`, campo che nessun percorso di creazione foto scrive. È un controllo che sembra una protezione e non lo è — va scritto il campo o rimosso il flag, non lasciato così.
-  - `find({ type: 'image' })` **esclude le foto storiche** senza il campo `type` (il default dello schema vale in scrittura, non sui documenti già salvati): le foto anteriori al campo non compaiono nella galleria pubblica.
+- **Photo contest — foto storiche senza `type`** (rilevato Ott 2026 durante il fix del dettaglio contest, lasciato fuori per non allargare quel commit):
+  - `find({ type: 'image' })` **esclude le foto storiche** senza il campo `type` (il default dello schema vale in scrittura, non sui documenti già salvati).
 
 ## Verifiche manuali in sospeso
 
