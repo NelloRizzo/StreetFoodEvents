@@ -8,7 +8,6 @@ import {
   getPhotoContestResults,
   createPhotoContest,
   updatePhotoContest,
-  setPhotoContestEntries,
   votePhotoContest,
   resetPhotoContestVotes,
   closePhotoContest
@@ -25,7 +24,6 @@ router.post('/:contestId/vote', votePhotoContest);
 router.post('/', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin']), createPhotoContest);
 router.get('/:contestId/results', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin'], { eventParam: 'eventId' }), getPhotoContestResults);
 router.patch('/:contestId', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin']), updatePhotoContest);
-router.post('/:contestId/entries', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin']), setPhotoContestEntries);
 router.post('/:contestId/reset-votes', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin']), resetPhotoContestVotes);
 router.post('/:contestId/close', authMiddleware, hasRole(['photo-admin', 'event-admin', 'platform-admin']), closePhotoContest);
 

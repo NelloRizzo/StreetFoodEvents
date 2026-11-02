@@ -2,7 +2,6 @@ import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 
 import { PhotoContestModel } from '../models/photo-contest.model.js';
-import { PhotoContestEntryModel } from '../models/photo-contest-entry.model.js';
 import { PhotoContestVoteModel } from '../models/photo-contest-vote.model.js';
 import { EventPhotoModel } from '../models/event-photo.model.js';
 import { hashDeviceId } from '../utils/device-hash.js';
@@ -225,21 +224,6 @@ export async function updatePhotoContest(req: Request, res: Response) {
   } catch (error) {
     console.error('updatePhotoContest error', error);
     return res.status(500).json({ message: 'Errore nell\'aggiornamento del contest fotografico' });
-  }
-}
-
-export async function setPhotoContestEntries(req: Request, res: Response) {
-  try {
-    const { eventId, contestId } = req.params;
-    const contest = await PhotoContestModel.findOne({ _id: contestId, eventId });
-    if (!contest) return res.status(404).json({ message: 'Contest non trovato' });
-
-    // Tutte le foto della galleria partecipano automaticamente al contest
-    await PhotoContestEntryModel.deleteMany({ contestId });
-    return res.json({ ok: true });
-  } catch (error) {
-    console.error('setPhotoContestEntries error', error);
-    return res.status(500).json({ message: 'Errore nell\'aggiornamento delle foto del contest' });
   }
 }
 

@@ -136,7 +136,6 @@ Login: utente inattivo o senza password → 403 con messaggio distinto ("non anc
 | POST | `/api/events/:eventId/photo-contests/:contestId/vote` | no | Vota foto (body `{ photoId, deviceId }`, 1 voto per dispositivo) |
 | POST | `/api/events/:eventId/photo-contests` | photo-admin/event-admin/platform-admin | Crea contest |
 | PATCH | `/api/events/:eventId/photo-contests/:contestId` | photo-admin/event-admin/platform-admin | Modifica contest (apri/chiudi/abilita voti) |
-| POST | `/api/events/:eventId/photo-contests/:contestId/entries` | photo-admin/event-admin/platform-admin | Imposta foto del contest (body `{ photoIds[] }`) |
 | POST | `/api/events/:eventId/photo-contests/:contestId/reset-votes` | photo-admin/event-admin/platform-admin | Reset tutti i voti |
 | POST | `/api/events/:eventId/photo-contests/:contestId/close` | photo-admin/event-admin/platform-admin | Chiudi contest |
 

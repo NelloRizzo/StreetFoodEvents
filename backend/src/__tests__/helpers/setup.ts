@@ -22,7 +22,6 @@ const collectionsToClear = [
     'eventphotos',
     'eventphotolikes',
     'photocontests',
-    'photocontestentries',
     'photocontestvotes',
     'eventframes',
     'socialposts',
