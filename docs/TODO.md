@@ -4,7 +4,9 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Bug riscontrati in questa sessione
 - _(nessun bug aperto: vedi CHANGELOG.md)_
 
-- Dopo aver votato e aggiornato il pannello di Info, appaiono sempre 0 voti.
+- Dopo aver votato e aggiornato il pannello di Info, appaiono sempre 0 voti (non viene mostrata la classifica, benché sulle foto appaiano i badge).
+
+- Posso votare più di una foto in un evento.
 
 - nella pwa eliminiamo i pulsanti di esportazione social perché la schermata non ne consente la gestione.
 
@@ -19,7 +21,7 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Verifiche manuali in sospeso
 
 - **Photo booth con webcam** (dopo il fix del 29 Ott): scatto → conferma con il numero foto → «Scatta un'altra» → secondo scatto. Il flusso è coperto solo dal build, non da test automatici (la webcam non esiste nell'ambiente di test).
-  - DOPO TEST MANUALE: Funziona tutto correttamente, la voce può essere eliminata
+  - DOPO TEST MANUALE: Funziona tutto correttamente, questa voce può essere eliminata
 
 ---
 
