@@ -26,6 +26,38 @@ function isContestOpen(contest: ContestSchedule | null) {
   return true;
 }
 
+/* Le foto storiche non hanno il campo `type` (il default dello schema vale in
+   scrittura, non sui documenti gia' salvati): un filtro `type: 'image'` le
+   escluderebbe dal contest e dalla galleria. */
+const IMAGE_OR_UNTYPED = { type: 'image' };
+
+function isEligiblePhoto(photo: { type?: string | null } | null) {
+  if (!photo) return false;
+  return !photo.type || photo.type === 'image';
+}
+
+/* Un voto per dispositivo **per evento**: i contest di un evento sono la
+   stessa votazione (l'organizzatore puo' averne piu' di uno attivo), quindi
+   cambiando contest lo stesso dispositivo poteva votare di nuovo. */
+async function findDeviceVoteInEvent(
+  eventId: string,
+  deviceIdHash: string,
+  session?: mongoose.ClientSession
+) {
+  const contestsQuery = PhotoContestModel.find({ eventId }).select('_id');
+  if (session) contestsQuery.session(session);
+  const contests = await contestsQuery.lean();
+  const contestIds = contests.map((contest) => contest._id);
+  if (contestIds.length === 0) return null;
+
+  const voteQuery = PhotoContestVoteModel.findOne({
+    contestId: { $in: contestIds },
+    deviceIdHash
+  });
+  if (session) voteQuery.session(session);
+  return voteQuery.lean();
+}
+
 export async function listPhotoContests(req: Request, res: Response) {
   try {
     const { eventId } = req.params;
@@ -46,7 +78,9 @@ export async function getPhotoContest(req: Request, res: Response) {
     if (!contest) return res.status(404).json({ message: 'Contest non trovato' });
 
     // Tutte le foto della galleria partecipano automaticamente al contest
-    const photos = await EventPhotoModel.find({ eventId, type: 'image' }).sort({ sequenceNumber: 1, createdAt: 1 }).lean();
+    const photos = await EventPhotoModel.find({ eventId, ...IMAGE_OR_UNTYPED })
+      .sort({ sequenceNumber: 1, createdAt: 1 })
+      .lean();
 
     const votes = await PhotoContestVoteModel.find({ contestId }).lean();
 
@@ -66,8 +100,7 @@ export async function getPhotoContest(req: Request, res: Response) {
     let hasVoted = false;
     let votedPhotoId: string | null = null;
     if (deviceId) {
-      const dh = hashDeviceId(deviceId);
-      const existing = await PhotoContestVoteModel.findOne({ contestId, deviceIdHash: dh }).lean();
+      const existing = await findDeviceVoteInEvent(eventId, hashDeviceId(deviceId));
       if (existing) {
         hasVoted = true;
         votedPhotoId = String(existing.photoId);
@@ -238,18 +271,23 @@ export async function votePhotoContest(req: Request, res: Response) {
     }
 
     const photo = await EventPhotoModel.findOne({ _id: photoId, eventId }).session(session);
-    if (!photo || photo.type !== 'image') {
+    if (!isEligiblePhoto(photo)) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({ message: 'Foto non valida per questo contest' });
     }
 
     const dh = hashDeviceId(deviceId);
-    const existingVote = await PhotoContestVoteModel.findOne({ contestId, deviceIdHash: dh }).session(session);
+    const existingVote = await PhotoContestVoteModel.findOne({ contestId, deviceIdHash: dh }).session(session).lean();
     if (existingVote) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(409).json({ message: 'Hai già votato in questo contest' });
+      const sameContest = String(existingVote.contestId) === String(contest._id);
+      return sameContest
+        ? res.status(409).json({ message: 'Hai già votato in questo contest' })
+        : res.status(403).json({
+            message: 'Hai già votato in un altro contest di questo evento: un voto per evento'
+          });
     }
 
     await PhotoContestVoteModel.create([{ contestId, photoId, deviceIdHash: dh }], { session });
