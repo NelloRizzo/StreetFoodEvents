@@ -64,7 +64,7 @@ export function PhotoContestPage() {
   const handleVote = async (photoId: string) => {
     if (!eventId || !contestId || voting) return
     if (data?.hasVoted) {
-      setError('Hai già votato in questo contest')
+      setError('Hai già votato in questo evento: un voto per evento')
       return
     }
     setVoting(photoId)
@@ -106,7 +106,7 @@ export function PhotoContestPage() {
         
         {error && <p className={styles.error}>{error}</p>}
         {success && <p className={styles.success}>{success}</p>}
-        {hasVoted && !success && <p className={styles.votedMsg}>Hai già votato in questo contest</p>}
+        {hasVoted && !success && <p className={styles.votedMsg}>Hai già votato in questo evento: un voto per evento</p>}
 
         <div className={styles.grid}>
           {items.map((item) => (

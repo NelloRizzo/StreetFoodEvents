@@ -28,7 +28,7 @@ export function PhotoContestVoteDirectPage() {
       const msg = err instanceof Error ? err.message : 'Errore'
       if (msg.includes('già votato')) {
         setStatus('voted')
-        setMessage('Hai già votato in questo contest')
+        setMessage('Hai già votato in questo evento: un voto per evento')
       } else {
         setStatus('error')
         setMessage(msg)
