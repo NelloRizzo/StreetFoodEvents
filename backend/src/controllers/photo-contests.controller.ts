@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express';
-import mongoose from 'mongoose';
 
 import { PhotoContestModel } from '../models/photo-contest.model.js';
 import { PhotoContestVoteModel } from '../models/photo-contest-vote.model.js';
@@ -40,23 +39,17 @@ function isEligiblePhoto(photo: { type?: string | null } | null) {
    stessa votazione (l'organizzatore puo' averne piu' di uno attivo), quindi
    cambiando contest lo stesso dispositivo poteva votare di nuovo. */
 async function findDeviceVoteInEvent(
-  eventId: string,
-  deviceIdHash: string | undefined,
-  session?: mongoose.ClientSession
+  eventId: string | undefined,
+  deviceIdHash: string | undefined
 ) {
-  if (!deviceIdHash) return null;
-  const contestsQuery = PhotoContestModel.find({ eventId }).select('_id');
-  if (session) contestsQuery.session(session);
-  const contests = await contestsQuery.lean();
+  if (!eventId || !deviceIdHash) return null;
+  const contests = await PhotoContestModel.find({ eventId }).select('_id').lean();
   const contestIds = contests.map((contest) => contest._id);
   if (contestIds.length === 0) return null;
-
-  const voteQuery = PhotoContestVoteModel.findOne({
+  return PhotoContestVoteModel.findOne({
     contestId: { $in: contestIds },
     deviceIdHash
-  });
-  if (session) voteQuery.session(session);
-  return voteQuery.lean();
+  }).lean();
 }
 
 export async function listPhotoContests(req: Request, res: Response) {
@@ -247,56 +240,52 @@ export async function updatePhotoContest(req: Request, res: Response) {
 }
 
 export async function votePhotoContest(req: Request, res: Response) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     const { eventId, contestId } = req.params;
     const { photoId, deviceId } = req.body || {};
 
     if (!photoId || !deviceId) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({ message: 'Dati mancanti' });
     }
 
-    const contest = await PhotoContestModel.findOne({ _id: contestId, eventId }).session(session);
+    const contest = await PhotoContestModel.findOne({ _id: contestId, eventId }).lean();
     if (!contest) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({ message: 'Contest non trovato' });
     }
     if (!isContestOpen(contest)) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(403).json({ message: 'Contest fotografico chiuso' });
     }
 
-    const photo = await EventPhotoModel.findOne({ _id: photoId, eventId }).session(session);
+    const photo = await EventPhotoModel.findOne({ _id: photoId, eventId }).lean();
     if (!isEligiblePhoto(photo)) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({ message: 'Foto non valida per questo contest' });
     }
 
     const dh = hashDeviceId(deviceId);
     // Regola: un voto per dispositivo PER EVENTO (non per contest)
-    const existingVote = await findDeviceVoteInEvent(eventId, dh, session);
+    const existingVote = await findDeviceVoteInEvent(eventId, dh);
     if (existingVote) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(403).json({
         message: 'Hai già votato in un altro contest di questo evento: un voto per evento'
       });
     }
 
-    await PhotoContestVoteModel.create([{ contestId, photoId, deviceIdHash: dh }], { session });
-    await session.commitTransaction();
-    session.endSession();
+    try {
+      await PhotoContestVoteModel.create({ contestId, photoId, deviceIdHash: dh });
+    } catch (error) {
+      // Race tra due richieste parallele dallo stesso dispositivo: l'indice
+      // unico (contestId, deviceIdHash) scatta e risponde 11000. Il voto
+      // esiste gia', il risultato e' lo stesso → 403, non 500.
+      if (typeof error === 'object' && error !== null && (error as { code?: number }).code === 11000) {
+        return res.status(403).json({
+          message: 'Hai già votato in un altro contest di questo evento: un voto per evento'
+        });
+      }
+      throw error;
+    }
 
     return res.json({ ok: true });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     console.error('votePhotoContest error', error);
     return res.status(500).json({ message: 'Errore nel voto' });
   }
