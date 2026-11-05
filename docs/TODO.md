@@ -7,8 +7,6 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
 
-- nella pwa eliminiamo i pulsanti di esportazione social perché la schermata non ne consente la gestione.
-
 ## Debiti tecnici noti
 
 - **Photo contest — foto storiche senza `type`** (rilevato Ott 2026 durante il fix del dettaglio contest, lasciato fuori per non allargare quel commit):

@@ -7,6 +7,7 @@ import { broadcastOrderCreated } from '../lib/tracking'
 import { fetchReviewsSummary } from '../lib/reviews'
 import { useEventTheme } from '../features/theme/useEventTheme'
 import { useAuth } from '../features/auth/auth-context'
+import { isCustomersPwa } from '../lib/app-mode'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import { SocialMenuExport } from '../components/SocialMenuExport'
@@ -504,7 +505,7 @@ export function EventStandMenuPage() {
         {/* I due pulsanti di export stanno su una riga tutta loro: dentro
             `.headerActions` rubavano larghezza a `.headerText`, e il nome
             della manifestazione si restringeva sul telefono. */}
-        {viewMode === 'stand' && canExportSocial && user && (
+        {viewMode === 'stand' && canExportSocial && user && !isCustomersPwa() && (
           <div className={styles.exportRow}>
             <button
               type="button"

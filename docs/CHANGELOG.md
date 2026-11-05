@@ -4,6 +4,9 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **PWA clienti: rimossi i pulsanti «Esporta social» / «Esporta prodotti» dal menu stand.**
+  • Il menu stand (`EventStandMenuPage`) mostrava i pulsanti di export social agli operatori loggati (`canExportSocial && user`); nella build PWA (`/customers/`) la schermata non consente la gestione, quindi i pulsanti sono ora nascosti quando `isCustomersPwa()` è vero (flag di build `VITE_CUSTOMERS_BUILD` + rilevamento del path). Il sito operatore resta invariato.
+  • Verifica: frontend typecheck ✓, test `EventStandMenuPage` ✓. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **Photo contest: rimosso `PhotoContestEntry` e la route `POST /:contestId/entries` (codice morto).**
   • **Cosa faceva**: solo `PhotoContestEntryModel.deleteMany({ contestId })` e `{ ok: true }` — cancellava record che nessuno leggeva più, perché dal 28 Ott tutte le foto della galleria partecipano al contest e il dettaglio si costruisce da `EventPhoto`. Un endpoint che dichiara di «impostare le foto del contest» e in realtà non cambia niente è peggio del nulla: chi lo chiama (un tool, un test, una futura pagina) crede di aver cambiato i partecipanti e non lo scopre.
   • **Rimosso tutto insieme** — route, `setPhotoContestEntries`, `models/photo-contest-entry.model.ts` e la collezione `photocontestentries` dal reset del DB nei test — perché lasciare `model` + `setup` senza la route avrebbe continuato a dare l'idea che la collezione serva. **Nessun test ha dovuto cambiare**: nessuno nominava la rotta (verificato), il che conferma che era irraggiungibile dall'app.
