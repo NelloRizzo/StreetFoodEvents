@@ -4,6 +4,13 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **UI/UX pubblico: polish galleria, mappa, bottom bar, stand detail (piano di lavoro #3, tranche 3).**
+  • Galleria pubblica: titolo clamp più grande, sottotitolo più leggibile.
+  • Mappa evento: titolo più grande/bold, contenitore mappa con border-radius, ombra e bordo.
+  • Bottom bar: glassmorphism, stato attivo con gradiente brand e barra 3px.
+  • Stand detail: titolo bold con letter-spacing negativo.
+  • Solo pagine pubbliche; la parte admin resta invariata.
+  • Verifica: frontend build OK. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **UI/UX pubblico: header glassmorphism e brand mark a tema (piano di lavoro #3, tranche 2).**
   • PublicHeader: backdrop-filter blur+saturate, sfondo semitrasparente, ombra sottile, transizione.
   • Brand mark: gradiente brand→highlight, box-shadow a tema, rotazione leggera al hover.
