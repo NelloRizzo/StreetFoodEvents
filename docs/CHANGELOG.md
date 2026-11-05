@@ -4,6 +4,10 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **QR code: sezione admin per la generazione di tutti i QR (piano di lavoro #1).**
+  • Rimossi dalla pagina pubblica dell'evento i pulsanti QR (Evento/Menu) del menu "Altro", che non generavano il QR.
+  • Nuova pagina admin `/admin/events/:eventId/qrcodes` ("QR code" nella sidebar, sezione Gestione) che genera e scarica: QR Evento, QR Menu (primo stand visibile), QR Galleria, QR Scatto foto (photo booth), QR Contest evento. Nuovi endpoint `GET /api/events/:eventId/gallery-qrcode` e `.../photo-booth-qrcode`; il QR "scatto foto" apre la pagina evento con `?photoBooth=1` che auto-apre il photo booth.
+  • Verifica: backend typecheck e lint OK; frontend typecheck, build e 324 test OK. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **Photo contest: il voto è per evento e la scrittura è robusta (niente transazione).**
   • **Bug 1 (Info a 0 voti)**: `votePhotoContest` avvolgeva un singolo `insert` in una transazione Mongoose; su ambienti dove le transazioni falliscono (standalone mongod, timeout) il voto tornava 500 e il pannello «Info» restava a 0. Rimosso `mongoose.startSession()`/`startTransaction()`: l'insert è atomico per documento, e un errore di chiave duplicata (11000, race tra due richieste parallele dallo stesso dispositivo) viene ora tollerato e risponde 403 invece di 500.
   • **Bug 2 (più voti per evento)**: il controllo di voto esistente era per-contest (`findOne({ contestId, deviceIdHash })`), quindi lo stesso dispositivo poteva votare in più contest dello stesso evento. Ora `findDeviceVoteInEvent` cerca su tutti i contest dell'evento → un solo voto per dispositivo per evento (403 «Hai già votato in un altro contest di questo evento: un voto per evento»); `getPhotoContest` espone `hasVoted`/`votedPhotoId` coerenti con quella regola.

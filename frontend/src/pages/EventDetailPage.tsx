@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
 import { type UploadedImage } from '../lib/upload'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useEventTheme } from '../features/theme/useEventTheme'
-import { QRCodeDownload } from '../components/QRCodeDownload'
+
 import { CurrencyDisplay, isBareCurrencySymbol } from '../components/CurrencyDisplay'
 import { fetchFavorites, createFavorite, deleteFavorite } from '../lib/favorites'
 import { fetchReviewsSummary, type ReviewsSummary } from '../lib/reviews'
@@ -81,6 +81,10 @@ const STAND_TYPE_EMOJIS = {
 
 export function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>()
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('photoBooth') === '1') setShowPhotoBooth(true)
+  }, [searchParams])
   /* Nella PWA clienti alcune rotte della build operatore non sono montate nel
      customer-router: i link che le puntano cadrebbero nel catch-all e
      rimanderebbero alla home, quindi qui vengono nascosti. */
@@ -461,15 +465,8 @@ export function EventDetailPage() {
                     </>
                   )}
 
-                  <p className={styles.actionDropdownGroup}>QR code</p>
-                  {/* QRCodeDownload apre una modale in portal: il wrapper chiude
-                      il menu al click, altrimenti resterebbe aperto sotto. */}
-                  <div role="none" onClick={() => setAltroMenuOpen(false)}>
-                    <QRCodeDownload apiPath={`/events/${eventId}/qrcode`} fileName={`evento-${event.name}`} label="QR Evento" />
-                  </div>
-                  <div role="none" onClick={() => setAltroMenuOpen(false)}>
-                    <QRCodeDownload apiPath={`/events/${eventId}/menu-qrcode`} fileName={`menu-${event.name}`} label="QR Menu" />
-                  </div>
+                  {/* I QR code si generano ora dalla sezione admin (Gestione > QR code
+                      dell'evento): qui non servono e non funzionavano in pagina pubblica. */}
                 </div>
               )}
             </div>

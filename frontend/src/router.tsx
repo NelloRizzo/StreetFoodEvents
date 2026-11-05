@@ -83,6 +83,7 @@ import { AdhesionsManagePage } from './pages/AdhesionsManagePage'
 import { EventReviewPage } from './pages/EventReviewPage'
 import { StandReviewPage } from './pages/StandReviewPage'
 import { ReviewsManagePage } from './pages/ReviewsManagePage'
+import { EventQrCodesPage } from './pages/EventQrCodesPage'
 import { ReviewsQrCodesPage } from './pages/ReviewsQrCodesPage'
 import { ParamRedirect } from './components/ParamRedirect'
 
@@ -174,6 +175,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/stand-adhesion', element: <StandAdhesionWizardPage /> },
       { path: 'events/:eventId/adhesions', element: <AdhesionsManagePage /> },
       { path: 'events/:eventId/reviews', element: <ReviewsManagePage /> },
+      { path: 'events/:eventId/qrcodes', element: <EventQrCodesPage /> },
       { path: 'events/:eventId/reviews/qrcodes', element: <ReviewsQrCodesPage /> },
       { path: 'events/:eventId/photo-contests', element: <PhotoContestsManagePage /> },
       { path: 'events/:eventId/photo-contest/:contestId', element: <PhotoContestPage /> },

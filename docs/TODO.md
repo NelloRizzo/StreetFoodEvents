@@ -9,21 +9,19 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 Ordine concordato per le attivita aperte. Ogni voce va presa in sequenza;
 quando una viene chiusa si sposta in CHANGELOG.md e si rimuove da qui.
 
-1. QR code - sezione admin per la generazione di tutti i QR (priorita alta, dipendenza per la stampa del volantino e per la gallery).
+1. QR code - sezione admin per la generazione di tutti i QR (FATTO).
    - Rimuovere i pulsanti QR non funzionanti dalla pagina pubblica.
    - Aggiungere in admin una sezione che genera: QR evento, QR menu stand, QR scatto foto, QR gallery evento.
    - Riusare gli endpoint QR esistenti e aggiungere quelli mancanti.
 2. Slideshow - inserire i badge dei contest evento (priorita media, dipende da 1 per i QR foto).
    - Mostrare i badge (medaglie top-3) dei contest fotografici nella slideshow.
    - Riusare rankByCount e la rotta /results gia esistenti.
-3. UI/UX - aggiornamento verso uno stile del frontend piu ricco, moderno, accattivante (priorita bassa, lavoro trasversale).
-   - Da fare per ultimo: tocca tutte le pagine pubbliche e admin, rischio di regressioni.
+3. UI/UX - aggiornamento verso uno stile del frontend (SOLO PARTE PUBBLICA) piu ricco, moderno, accattivante (priorita bassa, lavoro trasversale).
+   - Da fare per ultimo: tocca tutte le pagine pubbliche.
    - Valutare dopo aver chiuso 1 e 2.
 
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
-
-- **QR code: sezione admin per la generazione di tutti i QR (nota supervisore)**: i pulsanti QR dell'evento e del menu evento in pagina pubblica non generano il QR. Rimuoverli dalla pagina pubblica e aggiungere in admin una sezione che genera tutti i QR che serviranno in futuro (QR evento, QR menu, QR scatto foto, QR gallery evento).
 
 - **Slideshow: inserire i badge dei contest evento** (nota supervisore): i badge dei contest fotografici vanno mostrati anche nella slideshow.
 
