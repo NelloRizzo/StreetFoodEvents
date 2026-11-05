@@ -29,7 +29,7 @@ function isContestOpen(contest: ContestSchedule | null) {
 /* Le foto storiche non hanno il campo `type` (il default dello schema vale in
    scrittura, non sui documenti gia' salvati): un filtro `type: 'image'` le
    escluderebbe dal contest e dalla galleria. */
-const IMAGE_OR_UNTYPED = { type: 'image' };
+const IMAGE_OR_UNTYPED = { $or: [{ type: 'image' }, { type: { $exists: false } }] };
 
 function isEligiblePhoto(photo: { type?: string | null } | null) {
   if (!photo) return false;
@@ -41,9 +41,10 @@ function isEligiblePhoto(photo: { type?: string | null } | null) {
    cambiando contest lo stesso dispositivo poteva votare di nuovo. */
 async function findDeviceVoteInEvent(
   eventId: string,
-  deviceIdHash: string,
+  deviceIdHash: string | undefined,
   session?: mongoose.ClientSession
 ) {
+  if (!deviceIdHash) return null;
   const contestsQuery = PhotoContestModel.find({ eventId }).select('_id');
   if (session) contestsQuery.session(session);
   const contests = await contestsQuery.lean();
@@ -278,16 +279,14 @@ export async function votePhotoContest(req: Request, res: Response) {
     }
 
     const dh = hashDeviceId(deviceId);
-    const existingVote = await PhotoContestVoteModel.findOne({ contestId, deviceIdHash: dh }).session(session).lean();
+    // Regola: un voto per dispositivo PER EVENTO (non per contest)
+    const existingVote = await findDeviceVoteInEvent(eventId, dh, session);
     if (existingVote) {
       await session.abortTransaction();
       session.endSession();
-      const sameContest = String(existingVote.contestId) === String(contest._id);
-      return sameContest
-        ? res.status(409).json({ message: 'Hai già votato in questo contest' })
-        : res.status(403).json({
-            message: 'Hai già votato in un altro contest di questo evento: un voto per evento'
-          });
+      return res.status(403).json({
+        message: 'Hai già votato in un altro contest di questo evento: un voto per evento'
+      });
     }
 
     await PhotoContestVoteModel.create([{ contestId, photoId, deviceIdHash: dh }], { session });

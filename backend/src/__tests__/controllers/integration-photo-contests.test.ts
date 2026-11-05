@@ -460,7 +460,7 @@ describe('Integration: flusso di voto (dalla rotta alla classifica)', () => {
         expect(detail.body.votedPhotoId).toBe(photo._id.toString());
     });
 
-    it('rifiuta il secondo voto dello stesso dispositivo sullo stesso contest', async () => {
+    it('rifiuta il secondo voto dello stesso dispositivo nello stesso evento', async () => {
         app = createTestApp();
         const event = await createEvent();
         const first = await createPhoto(event._id, 1);
@@ -475,7 +475,8 @@ describe('Integration: flusso di voto (dalla rotta alla classifica)', () => {
         const two = await request(app)
             .post(`/api/events/${event._id}/photo-contests/${contest._id}/vote`)
             .send({ photoId: second._id.toString(), deviceId: 'twice' });
-        expect(two.status).toBe(409);
+        expect(two.status).toBe(403);
+        expect(two.body.message).toMatch(/event/i);
 
         const count = await PhotoContestVoteModel.countDocuments({ contestId: contest._id });
         expect(count).toBe(1);
