@@ -4,6 +4,10 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **UI/UX pubblico: polish wizard adesione (piano di lavoro #3, tranche 7).**
+  • Titolo wizard con clamp, font-weight 800, letter-spacing negativo.
+  • Solo pagine pubbliche; la parte admin resta invariata.
+  • Verifica: frontend build OK. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **UI/UX pubblico: polish pagina frames (piano di lavoro #3, tranche 6).**
   • Titolo bold con letter-spacing negativo.
   • Solo pagine pubbliche; la parte admin resta invariata.

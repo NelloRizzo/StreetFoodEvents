@@ -35,10 +35,10 @@ Segnare FATTO quando chiusa e spostare in CHANGELOG.
 10. SlideshowPage - FATTO (tranche badge contest)
 11. EventContestsPage / ContestPlayPage - FATTO
 12. FramesPage / FlyerPage - FATTO
-13. TrackOrderPage / ReceiptPage
-14. StandDisplayPage (coda ordini)
-15. StandAdhesionWizardPage
-16. Pagine auth (Login/Register/Activation)
+13. TrackOrderPage / ReceiptPage - FATTO (gia moderno)
+14. StandDisplayPage (coda ordini) - FATTO (gia moderno)
+15. StandAdhesionWizardPage - FATTO - FATTO
+16. Pagine auth (Login/Register/Activation) - FATTO
 
 ## Debiti tecnici noti
 
