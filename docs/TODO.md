@@ -31,7 +31,7 @@ Segnare FATTO quando chiusa e spostare in CHANGELOG.
 6. PublicBottomBar - FATTO (tranche 3)
 7. EventMenuPage - FATTO (riusa stili EventStandMenuPage)
 8. StandDetailPage - FATTO (tranche 3)
-9. StandReviewPage / EventReviewPage - IN CORSO
+9. StandReviewPage / EventReviewPage - FATTO
 10. SlideshowPage - FATTO (tranche badge contest)
 11. EventContestsPage / ContestPlayPage
 12. FramesPage / FlyerPage
