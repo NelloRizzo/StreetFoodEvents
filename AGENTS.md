@@ -105,6 +105,9 @@ Login: utente inattivo o senza password → 403 con messaggio distinto ("non anc
 |---|---|---|---|
 | GET | `/api/events?public=true` | optional | Lista eventi pubblici e non terminati (`endDate >= now`). Senza `public=true`: tutti gli eventi (solo gestori/platform). |
 | GET | `/api/events/:eventId/menu-qrcode` | no | QR code (data URL) che linka al menu del primo stand visibile (`showOnMap !== false`) dell'evento. 404 se nessuno stand visibile. |
+| GET | `/api/events/:eventId/gallery-qrcode` | no | QR code (data URL) che linka alla galleria pubblica dell'evento (`/events/:eventId/gallery`). |
+| GET | `/api/events/:eventId/photo-booth-qrcode` | no | QR code (data URL) che linka alla pagina evento con `?photoBooth=1` (auto-apre il photo booth). |
+| GET | `/api/events/:eventId/contests-qrcode` | no | QR code (data URL) che linka alla pagina contest dell'evento. |
 | POST | `/api/events/:eventId/duplicate` | auth | Duplica l'evento come base operativa per la prossima edizione: copia configurazione (moneta, tema, fasce, tagli, categorie, **sponsor**, **timezone**), collega gli stand con rinumerazione progressiva, copia EventProduct e POI. NON copia wallet/ordini/transazioni/foto/contest, né le scadenze `participationFeeDeadline`/`depositDeadline`/`adhesionDeadline` (nuova edizione → null). Body opzionale `{ name, startDate, endDate, isPublic }` (default: nome+" (copia)", date +1 anno). |
 
 ### API routes — Alias

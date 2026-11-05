@@ -540,3 +540,13 @@ Considerazioni progettuali e decisioni architetturali.
 - **Base path e server locale**: la build di produzione dell'operatore usa `base: '/streetfoodevents/'` (da `VITE_BASE_URL`), ma `server.mjs` serve `dist/` alla **root** → in locale `/events/1` restituisce una pagina **bianca** (script 404, React non parte). Non è un bug del codice applicativo: per gli E2E che toccano l'app operatrice va ricostruito con `$env:VITE_BASE_URL='/'; npm run build` e poi ripristinata la build di produzione.
 - **E2E con utente autenticato**: per testare una feature gated sui ruoli serve simulare l'utente **e** i ruoli (stub di `/auth/me` e `/auth/me/roles` via `Page.addScriptToEvaluateOnNewDocument`): senza utente il gate salta e la UI di admin non compare **in nessuno dei due contesti**, quindi un confronto PWA-vs-operatore risulta verde senza provare nulla.
 - **Service worker e test**: gli E2E che toccano la PWA (`scripts/pwa-update-e2e.mjs`, `scripts/pwa-tracking.mjs`) pilotano Chrome headless via CDP nativo (nessuna dipendenza) e simulano un deploy appendendo un marker a `dist-customers/sw.js` (con restore in `cleanup()`).
+
+
+## QR code - sezione admin unificata (Nov 2026)
+- I QR non si generano piu in pagina pubblica: i pulsanti QR dell'evento e del menu evento (menu "Altro" di EventDetailPage) sono stati rimossi. La generazione vive ora in admin, pagina /admin/events/:eventId/qrcodes (EventQrCodesPage), che riusa QRCodeDownload su endpoint dedicati: event-qrcode, menu-qrcode, gallery-qrcode, photo-booth-qrcode, contests-qrcode.
+- Nuovi endpoint GET /api/events/:eventId/gallery-qrcode e .../photo-booth-qrcode: il primo punta a /events/:eventId/gallery, il secondo a /events/:eventId?photoBooth=1. La pagina evento legge il query param photoBooth=1 e auto-apre il PhotoBoothModal.
+- Pattern: ogni QR e un endpoint che restituisce { qrCode: dataUrl } generato con qrcode.toDataURL(url, { width: 400, margin: 2, color }), usando req.headers.origin come base (mai hardcodare l'origin). Il frontend non ha librerie QR: e il backend a generare il data URL.
+
+## Slideshow - badge dei contest fotografici (Nov 2026)
+- Medaglie top-3 sulle foto: la slideshow recupera i contest fotografici dell'evento (GET /photo-contests) e, per ciascuno, il dettaglio pubblico (che espone rank per foto) e costruisce una Map<photoId, rank> con il rank migliore tra i contest. Le foto sul podio (rank <= 3) mostrano la medaglia corrispondente in alto a destra (.contestBadge).
+- Nessun nuovo endpoint: riusa GET /photo-contests e GET /photo-contests/:contestId. Il rank e calcolato dal backend con rankByCount (stessa funzione della galleria e del pannello Info), quindi le medaglie sono coerenti ovunque.
