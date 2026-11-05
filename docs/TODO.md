@@ -9,8 +9,7 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 
 ## Debiti tecnici noti
 
-- **Photo contest — foto storiche senza `type`** (rilevato Ott 2026 durante il fix del dettaglio contest, lasciato fuori per non allargare quel commit):
-  - `find({ type: 'image' })` **esclude le foto storiche** senza il campo `type` (il default dello schema vale in scrittura, non sui documenti già salvati).
+- _(nessun debito tecnico aperto)_
 
 ---
 

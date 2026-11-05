@@ -4,6 +4,13 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Photo contest: il voto è per evento e la scrittura è robusta (niente transazione).**
+  • **Bug 1 (Info a 0 voti)**: `votePhotoContest` avvolgeva un singolo `insert` in una transazione Mongoose; su ambienti dove le transazioni falliscono (standalone mongod, timeout) il voto tornava 500 e il pannello «Info» restava a 0. Rimosso `mongoose.startSession()`/`startTransaction()`: l'insert è atomico per documento, e un errore di chiave duplicata (11000, race tra due richieste parallele dallo stesso dispositivo) viene ora tollerato e risponde 403 invece di 500.
+  • **Bug 2 (più voti per evento)**: il controllo di voto esistente era per-contest (`findOne({ contestId, deviceIdHash })`), quindi lo stesso dispositivo poteva votare in più contest dello stesso evento. Ora `findDeviceVoteInEvent` cerca su tutti i contest dell'evento → un solo voto per dispositivo per evento (403 «Hai già votato in un altro contest di questo evento: un voto per evento»); `getPhotoContest` espone `hasVoted`/`votedPhotoId` coerenti con quella regola.
+  • Verifica: backend typecheck ✓, suite completa **657 test ✓** (58 file), lint 0 errori. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+- **Photo contest: foto storiche senza `type` incluse nel dettaglio e nel voto.**
+  • Debito tecnico: `find({ type: 'image' })` escludeva le foto salvate prima dell'introduzione del campo `type` (il default dello schema vale in scrittura, non sui documenti già salvati). Ora `IMAGE_OR_UNTYPED = { $or: [{ type: 'image' }, { type: { $exists: false } }] }` in `getPhotoContest` e `isEligiblePhoto` accetta anche `type` assente/null. Test «accetta foto storiche senza campo type ed esclude i video» copre il caso.
+  • Verifica: backend typecheck ✓, suite completa **657 test ✓** (58 file), lint 0 errori. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **PWA clienti: rimossi i pulsanti «Esporta social» / «Esporta prodotti» dal menu stand.**
   • Il menu stand (`EventStandMenuPage`) mostrava i pulsanti di export social agli operatori loggati (`canExportSocial && user`); nella build PWA (`/customers/`) la schermata non consente la gestione, quindi i pulsanti sono ora nascosti quando `isCustomersPwa()` è vero (flag di build `VITE_CUSTOMERS_BUILD` + rilevamento del path). Il sito operatore resta invariato.
   • Verifica: frontend typecheck ✓, test `EventStandMenuPage` ✓. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
