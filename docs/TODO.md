@@ -8,17 +8,10 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 
 Ordine concordato per le attivita aperte. Ogni voce va presa in sequenza;
 quando una viene chiusa si sposta in CHANGELOG.md e si rimuove da qui.
+(Step 1 QR e step 2 slideshow badge: completati, vedi CHANGELOG Novembre 2026.)
 
-1. QR code - sezione admin per la generazione di tutti i QR (FATTO).
-   - Rimuovere i pulsanti QR non funzionanti dalla pagina pubblica.
-   - Aggiungere in admin una sezione che genera: QR evento, QR menu stand, QR scatto foto, QR gallery evento.
-   - Riusare gli endpoint QR esistenti e aggiungere quelli mancanti.
-2. Slideshow - inserire i badge dei contest evento (FATTO).
-   - Mostrare i badge (medaglie top-3) dei contest fotografici nella slideshow.
-   - Riusare rankByCount e la rotta /results gia esistenti.
-3. UI/UX - aggiornamento verso uno stile del frontend (SOLO PARTE PUBBLICA) piu ricco, moderno, accattivante (priorita bassa, lavoro trasversale).
-   - Da fare per ultimo: tocca tutte le pagine pubbliche.
-   - Valutare dopo aver chiuso 1 e 2.
+1. UI/UX - aggiornamento verso uno stile del frontend (SOLO PARTE PUBBLICA) piu ricco, moderno, accattivante (priorita bassa, lavoro trasversale).
+   - Da fare per ultimo: tocca tutte le pagine pubbliche; la parte admin resta com'è.
 
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
