@@ -18,6 +18,28 @@ quando una viene chiusa si sposta in CHANGELOG.md e si rimuove da qui.
 
 - **UI/UX: aggiornamento verso uno stile del frontend piu ricco, moderno, accattivante** (nota supervisore).
 
+## Classifica approvata (UI/UX pubblico)
+
+Ordine concordato (per impatto/effort) per la ristrutturazione della parte pubblica.
+Segnare FATTO quando chiusa e spostare in CHANGELOG.
+
+1. PublicGalleryPage - FATTO (tranche 1)
+2. EventMapPage - FATTO (tranche 3)
+3. EventStandMenuPage - FATTO (tranche 1)
+4. HomePage - FATTO (gia ben curata)
+5. EventDetailPage - FATTO (tranche 1)
+6. PublicBottomBar - FATTO (tranche 3)
+7. EventMenuPage - FATTO (riusa stili EventStandMenuPage)
+8. StandDetailPage - FATTO (tranche 3)
+9. StandReviewPage / EventReviewPage - IN CORSO
+10. SlideshowPage - FATTO (tranche badge contest)
+11. EventContestsPage / ContestPlayPage
+12. FramesPage / FlyerPage
+13. TrackOrderPage / ReceiptPage
+14. StandDisplayPage (coda ordini)
+15. StandAdhesionWizardPage
+16. Pagine auth (Login/Register/Activation)
+
 ## Debiti tecnici noti
 
 - _(nessun debito tecnico aperto)_
