@@ -7,6 +7,12 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
 
+- **QR code: sezione admin per la generazione di tutti i QR (nota supervisore)**: i pulsanti QR dell'evento e del menu evento in pagina pubblica non generano il QR. Rimuoverli dalla pagina pubblica e aggiungere in admin una sezione che genera tutti i QR che serviranno in futuro (QR evento, QR menu, QR scatto foto, QR gallery evento).
+
+- **Slideshow: inserire i badge dei contest evento** (nota supervisore): i badge dei contest fotografici vanno mostrati anche nella slideshow.
+
+- **UI/UX: aggiornamento verso uno stile del frontend piu ricco, moderno, accattivante** (nota supervisore).
+
 ## Debiti tecnici noti
 
 - _(nessun debito tecnico aperto)_
