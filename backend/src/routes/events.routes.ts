@@ -5,8 +5,10 @@ import {
     deleteEvent,
     duplicateEvent,
     eventContestsQrCode,
+    eventGalleryQrCode,
     eventMenu,
     eventMenuQrCode,
+    eventPhotoBoothQrCode,
     eventQrCode,
     getEventById,
     homeEvents,
@@ -26,6 +28,8 @@ eventsRouter.get('/:eventId/qrcode', asyncHandler(eventQrCode));
 eventsRouter.get('/:eventId/menu-qrcode', asyncHandler(eventMenuQrCode));
 eventsRouter.get('/:eventId/menu', asyncHandler(eventMenu));
 eventsRouter.get('/:eventId/contests-qrcode', asyncHandler(eventContestsQrCode));
+eventsRouter.get('/:eventId/gallery-qrcode', asyncHandler(eventGalleryQrCode));
+eventsRouter.get('/:eventId/photo-booth-qrcode', asyncHandler(eventPhotoBoothQrCode));
 
 eventsRouter.post('/', asyncHandler(authMiddleware), asyncHandler(hasRole(['platform-admin', 'event-admin'])), asyncHandler(createEvent));
 eventsRouter.post('/:eventId/duplicate', asyncHandler(authMiddleware), asyncHandler(hasRole(['platform-admin', 'event-admin'])), asyncHandler(duplicateEvent));
