@@ -4,14 +4,10 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Bug riscontrati in questa sessione
 - _(nessun bug aperto: vedi CHANGELOG.md)_
 
-- Dopo aver votato e aggiornato il pannello di Info, appaiono sempre 0 voti (non viene mostrata la classifica, benché sulle foto appaiano i badge).
-
-- Posso votare più di una foto in un evento.
-
-- nella pwa eliminiamo i pulsanti di esportazione social perché la schermata non ne consente la gestione.
-
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
+
+- nella pwa eliminiamo i pulsanti di esportazione social perché la schermata non ne consente la gestione.
 
 ## Debiti tecnici noti
 
