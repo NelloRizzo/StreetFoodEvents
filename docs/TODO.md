@@ -18,11 +18,6 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 - **Photo contest — foto storiche senza `type`** (rilevato Ott 2026 durante il fix del dettaglio contest, lasciato fuori per non allargare quel commit):
   - `find({ type: 'image' })` **esclude le foto storiche** senza il campo `type` (il default dello schema vale in scrittura, non sui documenti già salvati).
 
-## Verifiche manuali in sospeso
-
-- **Photo booth con webcam** (dopo il fix del 29 Ott): scatto → conferma con il numero foto → «Scatta un'altra» → secondo scatto. Il flusso è coperto solo dal build, non da test automatici (la webcam non esiste nell'ambiente di test).
-  - DOPO TEST MANUALE: Funziona tutto correttamente, questa voce può essere eliminata
-
 ---
 
 ## Feature Implementabili (AI-ready)
