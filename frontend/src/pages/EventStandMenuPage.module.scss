@@ -315,10 +315,14 @@
   border-radius: var(--radius-card);
   background: rgba(255, 250, 242, 0.84);
   cursor: pointer;
+  box-shadow: var(--shadow-card, 0 2px 8px rgba(45, 37, 26, 0.06));
+  transition: transform var(--ease-standard, 180ms ease), box-shadow var(--ease-standard, 180ms ease), border-color var(--ease-standard, 180ms ease);
 }
 
 .menuCard:hover {
   border-color: var(--color-brand);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(45, 37, 26, 0.1));
 }
 
 .thumb {
