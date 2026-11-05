@@ -4,41 +4,8 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Bug riscontrati in questa sessione
 - _(nessun bug aperto: vedi CHANGELOG.md)_
 
-## Piano di lavoro (ordine di esecuzione)
-
-Ordine concordato per le attivita aperte. Ogni voce va presa in sequenza;
-quando una viene chiusa si sposta in CHANGELOG.md e si rimuove da qui.
-(Step 1 QR e step 2 slideshow badge: completati, vedi CHANGELOG Novembre 2026.)
-
-1. UI/UX - aggiornamento verso uno stile del frontend (SOLO PARTE PUBBLICA) piu ricco, moderno, accattivante (FATTO - tranches 1-7).
-   - Da fare per ultimo: tocca tutte le pagine pubbliche; la parte admin resta com'è.
-
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
-
-- **UI/UX: aggiornamento verso uno stile del frontend piu ricco, moderno, accattivante** (nota supervisore).
-
-## Classifica approvata (UI/UX pubblico)
-
-Ordine concordato (per impatto/effort) per la ristrutturazione della parte pubblica.
-Segnare FATTO quando chiusa e spostare in CHANGELOG.
-
-1. PublicGalleryPage - FATTO (tranche 1)
-2. EventMapPage - FATTO (tranche 3)
-3. EventStandMenuPage - FATTO (tranche 1)
-4. HomePage - FATTO (gia ben curata)
-5. EventDetailPage - FATTO (tranche 1)
-6. PublicBottomBar - FATTO (tranche 3)
-7. EventMenuPage - FATTO (riusa stili EventStandMenuPage)
-8. StandDetailPage - FATTO (tranche 3)
-9. StandReviewPage / EventReviewPage - FATTO
-10. SlideshowPage - FATTO (tranche badge contest)
-11. EventContestsPage / ContestPlayPage - FATTO
-12. FramesPage / FlyerPage - FATTO
-13. TrackOrderPage / ReceiptPage - FATTO (gia moderno)
-14. StandDisplayPage (coda ordini) - FATTO (gia moderno)
-15. StandAdhesionWizardPage - FATTO - FATTO
-16. Pagine auth (Login/Register/Activation) - FATTO
 
 ## Debiti tecnici noti
 
