@@ -73,6 +73,7 @@ export function SlideshowPage() {
   const [ads, setAds] = useState<Advertisement[]>([])
   const [adOpen, setAdOpen] = useState(false)
   const [adIndex, setAdIndex] = useState(0)
+  const [contestRanks, setContestRanks] = useState<Map<string, number>>(new Map())
   const titleRef = useRef<HTMLInputElement>(null)
   const allRef = useRef<Photo[]>([])
   const refreshRef = useRef<() => void>(() => {})
@@ -113,6 +114,33 @@ export function SlideshowPage() {
     if (!eventId) return
     let cancelled = false
 
+    const fetchContestRanks = async () => {
+      try {
+        const contestsRes = await apiRequest<{ items: { _id: string }[] }>(`/events/${eventId}/photo-contests`)
+        const ranks = new Map<string, number>()
+        await Promise.all(
+          contestsRes.items.map(async (c) => {
+            try {
+              const detail = await apiRequest<{ items: { photoId: string; rank?: number | null }[] }>(
+                `/events/${eventId}/photo-contests/${c._id}`
+              )
+              for (const it of detail.items) {
+                if (it.rank && it.rank <= 3) {
+                  const prev = ranks.get(it.photoId)
+                  if (prev === undefined || it.rank < prev) ranks.set(it.photoId, it.rank)
+                }
+              }
+            } catch {
+              /* ignore */
+            }
+          })
+        )
+        if (!cancelled) setContestRanks(ranks)
+      } catch {
+        /* ignore */
+      }
+    }
+
     const fetchPhotos = () => {
       apiRequest<{ items: Photo[] }>(`/events/${eventId}/photos`)
         .then((res) => {
@@ -125,6 +153,7 @@ export function SlideshowPage() {
           )
         })
         .catch(() => {})
+      void fetchContestRanks()
     }
 
     fetchPhotos()
@@ -262,6 +291,11 @@ export function SlideshowPage() {
                     <img src={p.image.url} alt="" className={styles.photo} />
                   ) : null}
                   <span className={styles.badge}>{p.sequenceNumber}</span>
+                  {contestRanks.has(p.id) && (
+                    <span className={styles.contestBadge}>
+                      {contestRanks.get(p.id) === 1 ? '🥇' : contestRanks.get(p.id) === 2 ? '🥈' : '🥉'}
+                    </span>
+                  )}
                 </div>
               ))}
               {Array.from({ length: PHOTOS_PER_PAGE - batch.length }).map((_, i) => (

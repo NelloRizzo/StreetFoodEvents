@@ -4,6 +4,9 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Slideshow: badge dei contest fotografici (medaglie top-3) sulle foto (piano di lavoro #2).**
+  • La slideshow ora recupera i contest fotografici dell'evento e, per ciascuno, il dettaglio con i rank calcolati; le foto che risultano sul podio (rank <= 3) mostrano la medaglia corrispondente (🥇🥈🥉) in alto a destra. Riusa `rankByCount` lato backend (nessun nuovo endpoint).
+  • Verifica: frontend typecheck, build e 324 test OK. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **QR code: sezione admin per la generazione di tutti i QR (piano di lavoro #1).**
   • Rimossi dalla pagina pubblica dell'evento i pulsanti QR (Evento/Menu) del menu "Altro", che non generavano il QR.
   • Nuova pagina admin `/admin/events/:eventId/qrcodes` ("QR code" nella sidebar, sezione Gestione) che genera e scarica: QR Evento, QR Menu (primo stand visibile), QR Galleria, QR Scatto foto (photo booth), QR Contest evento. Nuovi endpoint `GET /api/events/:eventId/gallery-qrcode` e `.../photo-booth-qrcode`; il QR "scatto foto" apre la pagina evento con `?photoBooth=1` che auto-apre il photo booth.
