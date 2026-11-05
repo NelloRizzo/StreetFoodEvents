@@ -4,6 +4,11 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **UI/UX pubblico: header glassmorphism e brand mark a tema (piano di lavoro #3, tranche 2).**
+  • PublicHeader: backdrop-filter blur+saturate, sfondo semitrasparente, ombra sottile, transizione.
+  • Brand mark: gradiente brand→highlight, box-shadow a tema, rotazione leggera al hover.
+  • Solo pagine pubbliche; la parte admin resta invariata.
+  • Verifica: frontend build OK. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **UI/UX pubblico: polish del hero evento e delle card del menu stand (piano di lavoro #3, prima tranche).**
   • Hero evento: overlay più scuro e graduale, padding aumentato, titolo più grande/bold con letter-spacing negativo e text-shadow più marcato.
   • Card del menu stand: aggiunto box-shadow e transizione; hover con lift (-2px) e shadow più pronunciata.
