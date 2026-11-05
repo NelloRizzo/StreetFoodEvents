@@ -10,7 +10,7 @@ Ordine concordato per le attivita aperte. Ogni voce va presa in sequenza;
 quando una viene chiusa si sposta in CHANGELOG.md e si rimuove da qui.
 (Step 1 QR e step 2 slideshow badge: completati, vedi CHANGELOG Novembre 2026.)
 
-1. UI/UX - aggiornamento verso uno stile del frontend (SOLO PARTE PUBBLICA) piu ricco, moderno, accattivante (priorita bassa, lavoro trasversale).
+1. UI/UX - aggiornamento verso uno stile del frontend (SOLO PARTE PUBBLICA) piu ricco, moderno, accattivante (FATTO - tranches 1-7).
    - Da fare per ultimo: tocca tutte le pagine pubbliche; la parte admin resta com'è.
 
 ## Prossime Implementazioni
