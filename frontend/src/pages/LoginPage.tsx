@@ -123,7 +123,7 @@ export function LoginPage() {
             <Link to="/register">Registrati</Link>
           </p>
           <Link className="back-link" to="/">
-            Torna alla presentazione
+            Torna alla Home
           </Link>
         </section>
       </div>
