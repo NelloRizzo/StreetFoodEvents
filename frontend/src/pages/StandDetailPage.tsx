@@ -389,6 +389,7 @@ export function StandDetailPage() {
               apiPath={`/stands/${standId}/qrcode${selectedEventId ? `?eventId=${selectedEventId}` : ''}`}
               purpose={`stand-${stand.name}`}
               eventName={activeEvent?.name}
+              eventId={selectedEventId ?? undefined}
             />
           </div>
         </div>

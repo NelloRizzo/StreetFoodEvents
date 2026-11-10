@@ -171,6 +171,7 @@ export function StandManagePage() {
             apiPath={`/events/${selectedEventId}/reviews/qrcode?standId=${standId}`}
             purpose={`recensioni-${standName}`}
             eventName={selectedEvent?.name}
+            eventId={selectedEventId ?? undefined}
             label="QR recensioni"
           />
         )}

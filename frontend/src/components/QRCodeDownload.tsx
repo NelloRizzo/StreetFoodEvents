@@ -12,6 +12,8 @@ type Props = {
   purpose?: string
   /** Nome dell'evento associato (per distinguere i file scaricati). */
   eventName?: string
+  /** Id dell'evento: se `eventName` non è passato, il componente lo recupera da qui. */
+  eventId?: string
   label?: string
 }
 
@@ -25,11 +27,28 @@ function composeFileName(purpose?: string, eventName?: string): string {
   return parts.length > 0 ? parts.join('-') : 'qr-code'
 }
 
-export function QRCodeDownload({ apiPath, fileName, purpose, eventName, label }: Props) {
-  const resolvedFileName = fileName && fileName.trim() ? fileName.trim() : composeFileName(purpose, eventName)
+export function QRCodeDownload({ apiPath, fileName, purpose, eventName: eventNameProp, eventId, label }: Props) {
   const [open, setOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [resolvedEventName, setResolvedEventName] = useState<string>(eventNameProp ?? '')
+
+  useEffect(() => {
+    if (eventNameProp) {
+      setResolvedEventName(eventNameProp)
+      return
+    }
+    if (!eventId) return
+    let cancelled = false
+    apiRequest<{ item: { name: string } }>(`/events/${eventId}`)
+      .then((data) => { if (!cancelled) setResolvedEventName(data.item.name) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [eventNameProp, eventId])
+
+  const eventName = resolvedEventName
+  const resolvedFileName = fileName && fileName.trim() ? fileName.trim() : composeFileName(purpose, eventName)
+
   const handleOpen = async () => {
     if (qrDataUrl) {
       setOpen(true)

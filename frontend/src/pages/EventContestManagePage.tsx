@@ -176,7 +176,7 @@ export function EventContestManagePage() {
         <Link to={`/events/${eventId}/contests`} className={styles.actionBtn} style={{ marginBottom: '0.5rem', display: 'inline-block' }}>
           Vedi contest pubblici
         </Link>
-        <QRCodeDownload apiPath={`/events/${eventId}/contests-qrcode`} purpose="qr-contest" eventName={eventName} />
+        <QRCodeDownload apiPath={`/events/${eventId}/contests-qrcode`} purpose="qr-contest" eventName={eventName} eventId={eventId} />
 
         {/* Contest POI management */}
         <h3 style={{ color: 'var(--color-ink-strong)', fontSize: '1rem', margin: '1rem 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

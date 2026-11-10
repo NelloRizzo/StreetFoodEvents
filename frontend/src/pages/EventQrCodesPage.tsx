@@ -36,7 +36,7 @@ export function EventQrCodesPage() {
         {items.map((item) => (
           <div key={item.apiPath} className={styles.card}>
             <h2 className={styles.cardTitle}>{item.label}</h2>
-            <QRCodeDownload apiPath={item.apiPath} purpose={item.purpose} eventName={eventName} label="Mostra QR" />
+            <QRCodeDownload apiPath={item.apiPath} purpose={item.purpose} eventName={eventName} eventId={eventId} label="Mostra QR" />
           </div>
         ))}
       </div>

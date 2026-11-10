@@ -498,6 +498,7 @@ export function EventStandMenuPage() {
                 apiPath={`/stands/${standId}/qrcode?eventId=${eventId}`}
                 purpose={`menu-${stand.name}`}
                 eventName={event.name}
+                eventId={eventId}
               />
             </div>
           )}
