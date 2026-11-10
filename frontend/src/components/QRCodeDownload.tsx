@@ -6,11 +6,27 @@ import styles from './QRCodeDownload.module.scss'
 
 type Props = {
   apiPath: string
-  fileName: string
+  /** Nome file esplicito (ha la precedenza). Mantenuto per backward compat. */
+  fileName?: string
+  /** Cosa indica il QR (es. 'menu', 'contests', 'recensioni-evento'). */
+  purpose?: string
+  /** Nome dell'evento associato (per distinguere i file scaricati). */
+  eventName?: string
   label?: string
 }
 
-export function QRCodeDownload({ apiPath, fileName, label }: Props) {
+/** Compone un nome file sicuro da `purpose` + `eventName`. */
+function composeFileName(purpose?: string, eventName?: string): string {
+  const parts = [purpose, eventName]
+    .map((p) => (p ?? '').trim())
+    .filter(Boolean)
+    .map((p) => p.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/-+/g, '-'))
+    .filter(Boolean)
+  return parts.length > 0 ? parts.join('-') : 'qr-code'
+}
+
+export function QRCodeDownload({ apiPath, fileName, purpose, eventName, label }: Props) {
+  const resolvedFileName = fileName && fileName.trim() ? fileName.trim() : composeFileName(purpose, eventName)
   const [open, setOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -34,7 +50,7 @@ export function QRCodeDownload({ apiPath, fileName, label }: Props) {
     if (!qrDataUrl) return
     const link = document.createElement('a')
     link.href = qrDataUrl
-    link.download = `${fileName}.png`
+    link.download = `${resolvedFileName}.png`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -65,7 +81,7 @@ export function QRCodeDownload({ apiPath, fileName, label }: Props) {
             <h2 className={styles.title}>{label ?? 'QR Code'}</h2>
             <p className={styles.hint}>Inquadra per aprire la pagina</p>
 
-            <img src={qrDataUrl} alt={`QR ${fileName}`} className={styles.qrImage} />
+            <img src={qrDataUrl} alt={`QR ${resolvedFileName}`} className={styles.qrImage} />
 
             <button className={styles.dlBtn} onClick={handleDownload}>
               Scarica PNG

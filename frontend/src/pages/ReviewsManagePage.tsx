@@ -122,10 +122,11 @@ export function ReviewsManagePage() {
           <Link className={styles.printAllLink} to={`/admin/events/${eventId}/reviews/qrcodes`}>
             QR recensioni di tutti gli stand
           </Link>
-          <QRCodeDownload apiPath={`/events/${eventId}/reviews/qrcode`} fileName="recensioni-evento" label="QR recensioni evento" />
+          <QRCodeDownload apiPath={`/events/${eventId}/reviews/qrcode`} purpose="recensioni-evento" eventName={eventName} label="QR recensioni evento" />
           <QRCodeDownload
             apiPath={standId ? `/events/${eventId}/reviews/qrcode?standId=${standId}` : ''}
-            fileName={`recensioni-stand-${standId}`}
+            purpose={`recensioni-stand`}
+            eventName={eventName}
             label="QR recensioni stand"
           />
         </div>

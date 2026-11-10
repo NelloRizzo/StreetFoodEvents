@@ -7,7 +7,6 @@ _(ogni voce è separata dalle altre con una riga bianca)_
 ## Prossime Implementazioni
 - _(nessuna altra implementazione immediata è stata programmata)_
 
-- Scaricamento QR: il nome deve indicare "cosa" indica il QR generato e il nome dell'evento associato
 
 ## Debiti tecnici noti
 

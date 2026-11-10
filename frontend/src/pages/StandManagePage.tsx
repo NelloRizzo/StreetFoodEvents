@@ -169,7 +169,8 @@ export function StandManagePage() {
         {selectedEventId && (
           <QRCodeDownload
             apiPath={`/events/${selectedEventId}/reviews/qrcode?standId=${standId}`}
-            fileName={`recensioni-${standName}`}
+            purpose={`recensioni-${standName}`}
+            eventName={selectedEvent?.name}
             label="QR recensioni"
           />
         )}

@@ -387,7 +387,8 @@ export function StandDetailPage() {
             </button>
             <QRCodeDownload
               apiPath={`/stands/${standId}/qrcode${selectedEventId ? `?eventId=${selectedEventId}` : ''}`}
-              fileName={`stand-${stand.name}`}
+              purpose={`stand-${stand.name}`}
+              eventName={activeEvent?.name}
             />
           </div>
         </div>

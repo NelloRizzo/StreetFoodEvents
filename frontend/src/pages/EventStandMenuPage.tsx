@@ -496,7 +496,8 @@ export function EventStandMenuPage() {
               </Link>
               <QRCodeDownload
                 apiPath={`/stands/${standId}/qrcode?eventId=${eventId}`}
-                fileName={`menu-${stand.name}`}
+                purpose={`menu-${stand.name}`}
+                eventName={event.name}
               />
             </div>
           )}

@@ -1,19 +1,29 @@
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+import { apiRequest } from '../lib/api'
 import { QRCodeDownload } from '../components/QRCodeDownload'
 import styles from './EventQrCodesPage.module.scss'
 
 export function EventQrCodesPage() {
   const { eventId } = useParams<{ eventId: string }>()
+  const [eventName, setEventName] = useState('')
+
+  useEffect(() => {
+    if (!eventId) return
+    apiRequest<{ item: { name: string } }>(`/events/${eventId}`)
+      .then((data) => setEventName(data.item.name))
+      .catch(() => {})
+  }, [eventId])
 
   if (!eventId) return null
 
   const items = [
-    { label: 'QR Evento (pagina evento)', apiPath: `/events/${eventId}/qrcode`, fileName: `evento-${eventId}` },
-    { label: 'QR Menu (primo stand visibile)', apiPath: `/events/${eventId}/menu-qrcode`, fileName: `menu-${eventId}` },
-    { label: 'QR Galleria foto', apiPath: `/events/${eventId}/gallery-qrcode`, fileName: `gallery-${eventId}` },
-    { label: 'QR Scatto foto (photo booth)', apiPath: `/events/${eventId}/photo-booth-qrcode`, fileName: `photo-booth-${eventId}` },
-    { label: 'QR Contest evento', apiPath: `/events/${eventId}/contests-qrcode`, fileName: `contests-${eventId}` },
+    { label: 'QR Evento (pagina evento)', apiPath: `/events/${eventId}/qrcode`, purpose: 'qr-evento' },
+    { label: 'QR Menu (primo stand visibile)', apiPath: `/events/${eventId}/menu-qrcode`, purpose: 'qr-menu' },
+    { label: 'QR Galleria foto', apiPath: `/events/${eventId}/gallery-qrcode`, purpose: 'qr-galleria' },
+    { label: 'QR Scatto foto (photo booth)', apiPath: `/events/${eventId}/photo-booth-qrcode`, purpose: 'qr-photo-booth' },
+    { label: 'QR Contest evento', apiPath: `/events/${eventId}/contests-qrcode`, purpose: 'qr-contest' },
   ]
 
   return (
@@ -26,7 +36,7 @@ export function EventQrCodesPage() {
         {items.map((item) => (
           <div key={item.apiPath} className={styles.card}>
             <h2 className={styles.cardTitle}>{item.label}</h2>
-            <QRCodeDownload apiPath={item.apiPath} fileName={item.fileName} label="Mostra QR" />
+            <QRCodeDownload apiPath={item.apiPath} purpose={item.purpose} eventName={eventName} label="Mostra QR" />
           </div>
         ))}
       </div>

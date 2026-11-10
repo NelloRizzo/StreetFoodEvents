@@ -4,6 +4,9 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Scaricamento QR: nome file descrittivo.**
+  • Il componente `QRCodeDownload` compone ora il nome del file scaricato da `purpose` + `nome evento` (sanitizzato), invece di nomi generici (`recensioni-evento`, `menu-<stand>` senza evento). I call site principali (QR evento, menu stand, contest, recensioni, stand) passano `purpose`/`eventName` (o `fileName` esplicito per backward compat). I file scaricati indicano quindi cosa rappresenta il QR e l'evento associato.
+  • Verifica: frontend build OK. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **UI/UX pubblico: polish wizard adesione (piano di lavoro #3, tranche 7).**
   • Titolo wizard con clamp, font-weight 800, letter-spacing negativo.
   • Solo pagine pubbliche; la parte admin resta invariata.
