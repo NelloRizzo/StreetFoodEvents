@@ -603,7 +603,7 @@ export async function compareEvents(req: Request, res: Response) {
 
     const results = [];
     for (const id of ids) {
-        const event = await EventModel.findById(id).select('startDate endDate').lean();
+        const event = await EventModel.findById(id).select('startDate endDate feeBands').lean();
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
@@ -612,6 +612,7 @@ export async function compareEvents(req: Request, res: Response) {
             event.startDate ? new Date(event.startDate).toISOString() : undefined,
             event.endDate ? new Date(event.endDate).toISOString() : undefined,
         );
+        (data as Record<string, unknown>).feeBands = Array.isArray(event.feeBands) ? event.feeBands : [];
         results.push(data);
     }
     return res.status(200).json({ events: results });

@@ -9,11 +9,14 @@ type CompareVisitors = {
   settlementBasedEstimated: number | null
 }
 
+type CompareFeeBand = { maxAmount: number; feePercent: number; feeFlat: number }
+
 type CompareEvent = {
   eventId: string
   eventName: string
   currencyName: string
   exchangeRate: number
+  feeBands?: CompareFeeBand[]
   window: { from: string; to: string }
   visitors?: CompareVisitors
   totals: {
@@ -62,6 +65,24 @@ function isEuroCurrency(name: string | undefined): boolean {
 function ticketSuffix(e: CompareEvent, credits: number): string {
   if (isEuroCurrency(e.currencyName)) return '';
   return ` (${fmt(credits)} ${e.currencyName})`;
+}
+
+/* Replica di resolveSettlementFee (backend) per calcolare il fee potenziale
+   sul fatturato lordo dell'evento, usando le feeBands configurate. */
+function resolveFeePotenziale(feeBands: CompareFeeBand[] | undefined, grossEuro: number): { feePercent: number; feeFlat: number } {
+  const bands = Array.isArray(feeBands) ? feeBands : [];
+  if (bands.length === 0) return { feePercent: 0, feeFlat: 0 };
+  const capped = bands.filter((b) => (b.maxAmount ?? 0) > 0).sort((a, b) => (a.maxAmount ?? 0) - (b.maxAmount ?? 0));
+  const residual = bands.find((b) => (b.maxAmount ?? 0) <= 0);
+  const matching = capped.find((b) => grossEuro <= (b.maxAmount ?? 0)) ?? residual;
+  if (!matching) return { feePercent: 0, feeFlat: 0 };
+  return { feePercent: matching.feePercent ?? 0, feeFlat: matching.feeFlat ?? 0 };
+}
+
+function feePotenzialeEuro(e: CompareEvent, grossEuro: number): number {
+  const { feePercent, feeFlat } = resolveFeePotenziale(e.feeBands, grossEuro);
+  const fee = grossEuro * (feePercent / 100) + feeFlat;
+  return Math.min(grossEuro, fee);
 }
 
 function fmtSeconds(seconds: number | null): string {
@@ -135,8 +156,21 @@ export function EventComparePage() {
         { label: 'Crediti guadagnati', get: (e) => `${fmt(e.totals.settlements.earnedCredits / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.settlements.earnedCredits)}` },
         { label: 'Crediti liquidati', get: (e) => `${fmt(e.totals.settlements.settledCredits / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.settlements.settledCredits)}` },
         { label: 'Netto erogato', get: (e) => `${fmtEuro(e.totals.settlements.payoutEuro)} €` },
-        { label: 'Trattenute (fee)', get: (e) => `${fmtEuro(e.totals.settlements.feeEuro)} €` },
+        { label: 'Trattenute (fee, reali)', get: (e) => `${fmtEuro(e.totals.settlements.feeEuro)} €` },
+        { label: 'Trattenute (fee, potenziali)', get: (e) => {
+            const grossEuro = e.totals.revenue / (e.exchangeRate || 1);
+            return `${fmtEuro(feePotenzialeEuro(e, grossEuro))} €`;
+          } },
         { label: 'Lordo liquidazioni', get: (e) => `${fmtEuro(e.totals.settlements.grossEuro)} €` },
+        { label: 'Fatturato netto (dopo fee)', get: (e) => {
+            const rate = e.exchangeRate || 1;
+            const grossEuro = e.totals.revenue / rate;
+            const fee = feePotenzialeEuro(e, grossEuro);
+            const netEuro = grossEuro - fee;
+            const netCredits = e.totals.revenue - fee * rate;
+            const suffix = isEuroCurrency(e.currencyName) ? '' : ` (${fmt(netCredits)} ${e.currencyName})`;
+            return `${fmtEuro(netEuro)} €${suffix}`;
+          } },
         { label: 'Da liquidare', get: (e) => `${fmt(e.totals.settlements.remainingEarnedCredits / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.settlements.remainingEarnedCredits)}` },
         { label: 'Stand mai liquidati', get: (e) => String(e.totals.settlements.standsNeverSettled) },
         { label: 'Stima visitatori (prodotti)', get: (e) => (e.visitors ? fmt(e.visitors.productEstimated) : '—') },
