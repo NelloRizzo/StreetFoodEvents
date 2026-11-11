@@ -161,6 +161,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
         items: [
           { label: 'Analisi vendite', to: `${basePath}/analytics`, icon: '\u{1F4C8}' } as SidebarItem,
           { label: 'Stima visitatori', to: `${basePath}/visitors`, icon: '\u{1F4CA}' } as SidebarItem,
+          { label: 'Confronto eventi', to: '/admin/events/compare', icon: '\u{2696}' } as SidebarItem,
         ],
       } as SidebarSection]
       : []),
