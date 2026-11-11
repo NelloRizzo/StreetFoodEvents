@@ -43,11 +43,15 @@ function fmtEuro(n: number): string {
   return n.toFixed(2).replace('.', ',')
 }
 
-/* Se l'evento usa una moneta diversa dall'euro (ticket/crediti) con tasso
-   diverso da 1, aggiunge il corrispettivo in ticket tra parentesi. */
+/* Se l'evento usa una moneta diversa dall'euro (ticket/crediti), aggiunge il
+   corrispettivo in ticket tra parentesi. */
+function isEuroCurrency(name: string | undefined): boolean {
+  const n = (name ?? '').trim().toLowerCase();
+  return n === '' || n === 'euro' || n === 'eur' || n === '€';
+}
+
 function ticketSuffix(e: CompareEvent, credits: number): string {
-  const rate = e.exchangeRate || 1;
-  if (rate === 1) return '';
+  if (isEuroCurrency(e.currencyName)) return '';
   return ` (${fmt(credits)} ${e.currencyName})`;
 }
 
