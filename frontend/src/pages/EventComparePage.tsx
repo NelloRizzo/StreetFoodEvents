@@ -43,6 +43,14 @@ function fmtEuro(n: number): string {
   return n.toFixed(2).replace('.', ',')
 }
 
+/* Se l'evento usa una moneta diversa dall'euro (ticket/crediti) con tasso
+   diverso da 1, aggiunge il corrispettivo in ticket tra parentesi. */
+function ticketSuffix(e: CompareEvent, credits: number): string {
+  const rate = e.exchangeRate || 1;
+  if (rate === 1) return '';
+  return ` (${fmt(credits)} ${e.currencyName})`;
+}
+
 function fmtSeconds(seconds: number | null): string {
   if (seconds === null) return '—'
   const total = Math.round(seconds)
@@ -92,21 +100,21 @@ export function EventComparePage() {
   const rows: { label: string; get: (e: CompareEvent) => string }[] = data
     ? [
         { label: 'Periodo', get: (e) => `${new Date(e.window.from).toLocaleDateString('it-IT')} – ${new Date(e.window.to).toLocaleDateString('it-IT')}` },
-        { label: 'Fatturato', get: (e) => `${fmt(e.totals.revenue)} ${e.currencyName}` },
-        { label: 'Fatturato da ordini', get: (e) => `${fmt(e.totals.orderRevenue)} ${e.currencyName}` },
-        { label: 'Fatturato da liquidazioni', get: (e) => `${fmt(e.totals.revenue - e.totals.orderRevenue)} ${e.currencyName}` },
+        { label: 'Fatturato', get: (e) => `${fmt(e.totals.revenue / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.revenue)}` },
+        { label: 'Fatturato da ordini', get: (e) => `${fmt(e.totals.orderRevenue / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.orderRevenue)}` },
+        { label: 'Fatturato da liquidazioni', get: (e) => `${fmt((e.totals.revenue - e.totals.orderRevenue) / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.revenue - e.totals.orderRevenue)}` },
         { label: 'Ordini', get: (e) => String(e.totals.orders) },
         { label: 'Prodotti venduti', get: (e) => String(e.totals.quantity) },
         { label: 'Omaggi esclusi', get: (e) => String(e.totals.giftOrders) },
         { label: 'Annullati', get: (e) => String(e.totals.cancelledOrders) },
         { label: 'Clienti distinti', get: (e) => String(e.totals.distinctCustomers) },
-        { label: 'Scontrino medio', get: (e) => `${fmt(e.totals.avgOrderValue)} ${e.currencyName}` },
+        { label: 'Scontrino medio', get: (e) => `${fmt(e.totals.avgOrderValue / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.avgOrderValue)}` },
         { label: 'Tempo medio prep.', get: (e) => fmtSeconds(e.totals.avgPrepSeconds) },
         { label: 'Ordini arrivati a pronto', get: (e) => String(e.totals.prepOrders) },
-        { label: 'Crediti guadagnati', get: (e) => `${fmt(e.totals.settlements.earnedCredits)} ${e.currencyName}` },
-        { label: 'Crediti liquidati', get: (e) => `${fmt(e.totals.settlements.settledCredits)} ${e.currencyName}` },
+        { label: 'Crediti guadagnati', get: (e) => `${fmt(e.totals.settlements.earnedCredits / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.settlements.earnedCredits)}` },
+        { label: 'Crediti liquidati', get: (e) => `${fmt(e.totals.settlements.settledCredits / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.settlements.settledCredits)}` },
         { label: 'Netto erogato', get: (e) => `${fmtEuro(e.totals.settlements.payoutEuro)} €` },
-        { label: 'Da liquidare', get: (e) => `${fmt(e.totals.settlements.remainingEarnedCredits)} ${e.currencyName}` },
+        { label: 'Da liquidare', get: (e) => `${fmt(e.totals.settlements.remainingEarnedCredits / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.settlements.remainingEarnedCredits)}` },
         { label: 'Stand mai liquidati', get: (e) => String(e.totals.settlements.standsNeverSettled) },
       ]
     : []
@@ -122,7 +130,11 @@ export function EventComparePage() {
               <select value={a} onChange={(e) => setA(e.target.value)} className={styles.dateInput} aria-label="Evento A">
                 <option value="">— seleziona —</option>
                 {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>{ev.name}</option>
+                  <option key={ev.id} value={ev.id}>
+                    {ev.startDate
+                      ? `${ev.name} — ${new Date(ev.startDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+                      : ev.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -131,7 +143,11 @@ export function EventComparePage() {
               <select value={b} onChange={(e) => setB(e.target.value)} className={styles.dateInput} aria-label="Evento B">
                 <option value="">— seleziona —</option>
                 {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>{ev.name}</option>
+                  <option key={ev.id} value={ev.id}>
+                    {ev.startDate
+                      ? `${ev.name} — ${new Date(ev.startDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+                      : ev.name}
+                  </option>
                 ))}
               </select>
             </div>
