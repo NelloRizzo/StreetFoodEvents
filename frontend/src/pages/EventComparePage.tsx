@@ -27,6 +27,8 @@ type CompareEvent = {
       earnedCredits: number
       settledCredits: number
       payoutEuro: number
+      feeEuro: number
+      grossEuro: number
       remainingEarnedCredits: number
       standsNeverSettled: number
     }
@@ -118,6 +120,8 @@ export function EventComparePage() {
         { label: 'Crediti guadagnati', get: (e) => `${fmt(e.totals.settlements.earnedCredits / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.settlements.earnedCredits)}` },
         { label: 'Crediti liquidati', get: (e) => `${fmt(e.totals.settlements.settledCredits / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.settlements.settledCredits)}` },
         { label: 'Netto erogato', get: (e) => `${fmtEuro(e.totals.settlements.payoutEuro)} €` },
+        { label: 'Trattenute (fee)', get: (e) => `${fmtEuro(e.totals.settlements.feeEuro)} €` },
+        { label: 'Lordo liquidazioni', get: (e) => `${fmtEuro(e.totals.settlements.grossEuro)} €` },
         { label: 'Da liquidare', get: (e) => `${fmt(e.totals.settlements.remainingEarnedCredits / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.settlements.remainingEarnedCredits)}` },
         { label: 'Stand mai liquidati', get: (e) => String(e.totals.settlements.standsNeverSettled) },
       ]
