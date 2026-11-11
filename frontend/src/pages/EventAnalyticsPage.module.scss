@@ -57,6 +57,12 @@
   cursor: pointer;
 }
 
+.secondaryBtnActive {
+  background: var(--color-brand);
+  color: #fff;
+  border-color: var(--color-brand);
+}
+
 /* Esportazione di una singola tabella: il bottone sta in testa alla card,
    quindi deve essere più piccolo di quello della toolbar. */
 .cardExportBtn {
@@ -148,6 +154,11 @@
   min-height: 2px;
   background: var(--color-brand);
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.chartBarPeak {
+  background: var(--color-highlight, #e08b4c);
+  box-shadow: 0 0 0 2px var(--color-highlight, #e08b4c);
 }
 
 .chartValue {

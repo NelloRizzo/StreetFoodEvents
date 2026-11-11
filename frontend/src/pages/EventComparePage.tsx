@@ -1,0 +1,169 @@
+import { useCallback, useEffect, useState } from 'react'
+
+import { apiRequest } from '../lib/api'
+import styles from './EventAnalyticsPage.module.scss'
+
+type CompareEvent = {
+  eventId: string
+  eventName: string
+  currencyName: string
+  exchangeRate: number
+  window: { from: string; to: string }
+  totals: {
+    orders: number
+    quantity: number
+    revenue: number
+    orderRevenue: number
+    creditRevenue: number
+    posRevenue: number
+    cashRevenue: number
+    avgOrderValue: number
+    distinctCustomers: number
+    giftOrders: number
+    cancelledOrders: number
+    prepOrders: number
+    avgPrepSeconds: number | null
+    settlements: {
+      earnedCredits: number
+      settledCredits: number
+      payoutEuro: number
+      remainingEarnedCredits: number
+      standsNeverSettled: number
+    }
+  }
+}
+
+type EventOption = { id: string; name: string; startDate?: string }
+
+function fmt(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ',')
+}
+
+function fmtEuro(n: number): string {
+  return n.toFixed(2).replace('.', ',')
+}
+
+function fmtSeconds(seconds: number | null): string {
+  if (seconds === null) return '—'
+  const total = Math.round(seconds)
+  if (total < 60) return `${total}"`
+  const minutes = Math.floor(total / 60)
+  const rest = total % 60
+  return rest === 0 ? `${minutes}'` : `${minutes}'${rest}"`
+}
+
+export function EventComparePage() {
+  const [events, setEvents] = useState<EventOption[]>([])
+  const [a, setA] = useState('')
+  const [b, setB] = useState('')
+  const [data, setData] = useState<CompareEvent[] | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void apiRequest<{ items?: EventOption[] } | EventOption[]>('/events')
+      .then((res) => {
+        if (cancelled) return
+        const items = Array.isArray(res) ? res : (res.items ?? [])
+        setEvents(items.map((e) => ({ id: (e as { id?: string; _id?: string }).id ?? (e as { _id?: string })._id ?? '', name: e.name, startDate: e.startDate })))
+      })
+      .catch(() => { if (!cancelled) setEvents([]) })
+    return () => { cancelled = true }
+  }, [])
+
+  const compare = useCallback(async () => {
+    if (!a || !b || a === b) {
+      setError('Seleziona due eventi diversi.')
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+    try {
+      const res = await apiRequest<{ events: CompareEvent[] }>(`/events/compare?ids=${a},${b}`)
+      setData(res.events)
+    } catch {
+      setError('Impossibile caricare il confronto.')
+      setData(null)
+    }
+    setIsLoading(false)
+  }, [a, b])
+
+  const rows: { label: string; get: (e: CompareEvent) => string }[] = data
+    ? [
+        { label: 'Periodo', get: (e) => `${new Date(e.window.from).toLocaleDateString('it-IT')} – ${new Date(e.window.to).toLocaleDateString('it-IT')}` },
+        { label: 'Fatturato', get: (e) => `${fmt(e.totals.revenue)} ${e.currencyName}` },
+        { label: 'Fatturato da ordini', get: (e) => `${fmt(e.totals.orderRevenue)} ${e.currencyName}` },
+        { label: 'Fatturato da liquidazioni', get: (e) => `${fmt(e.totals.revenue - e.totals.orderRevenue)} ${e.currencyName}` },
+        { label: 'Ordini', get: (e) => String(e.totals.orders) },
+        { label: 'Prodotti venduti', get: (e) => String(e.totals.quantity) },
+        { label: 'Omaggi esclusi', get: (e) => String(e.totals.giftOrders) },
+        { label: 'Annullati', get: (e) => String(e.totals.cancelledOrders) },
+        { label: 'Clienti distinti', get: (e) => String(e.totals.distinctCustomers) },
+        { label: 'Scontrino medio', get: (e) => `${fmt(e.totals.avgOrderValue)} ${e.currencyName}` },
+        { label: 'Tempo medio prep.', get: (e) => fmtSeconds(e.totals.avgPrepSeconds) },
+        { label: 'Ordini arrivati a pronto', get: (e) => String(e.totals.prepOrders) },
+        { label: 'Crediti guadagnati', get: (e) => `${fmt(e.totals.settlements.earnedCredits)} ${e.currencyName}` },
+        { label: 'Crediti liquidati', get: (e) => `${fmt(e.totals.settlements.settledCredits)} ${e.currencyName}` },
+        { label: 'Netto erogato', get: (e) => `${fmtEuro(e.totals.settlements.payoutEuro)} €` },
+        { label: 'Da liquidare', get: (e) => `${fmt(e.totals.settlements.remainingEarnedCredits)} ${e.currencyName}` },
+        { label: 'Stand mai liquidati', get: (e) => String(e.totals.settlements.standsNeverSettled) },
+      ]
+    : []
+
+  return (
+    <div className={styles.page}>
+      <div className="page-shell">
+        <div className={styles.header}>
+          <h1 className={styles.title}>Confronto eventi</h1>
+          <div className={styles.headerActions}>
+            <div className={styles.dateGroup}>
+              <label className={styles.dateLabel}>Evento A</label>
+              <select value={a} onChange={(e) => setA(e.target.value)} className={styles.dateInput} aria-label="Evento A">
+                <option value="">— seleziona —</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>{ev.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.dateGroup}>
+              <label className={styles.dateLabel}>Evento B</label>
+              <select value={b} onChange={(e) => setB(e.target.value)} className={styles.dateInput} aria-label="Evento B">
+                <option value="">— seleziona —</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>{ev.name}</option>
+                ))}
+              </select>
+            </div>
+            <button type="button" className={styles.secondaryBtn} onClick={compare} disabled={isLoading}>
+              {isLoading ? 'Carico…' : 'Confronta'}
+            </button>
+          </div>
+        </div>
+
+        {error && <p className={styles.empty}>{error}</p>}
+
+        {data && (
+          <div className={styles.card}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Metrica</th>
+                  {data.map((e) => <th key={e.eventId}>{e.eventName}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.label}>
+                    <td>{row.label}</td>
+                    {data.map((e) => <td key={e.eventId} className={styles.num}>{row.get(e)}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

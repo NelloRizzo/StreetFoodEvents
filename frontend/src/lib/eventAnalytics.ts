@@ -179,6 +179,7 @@ export type EventAnalytics = {
     avgOrderValue: number
     distinctCustomers: number
     giftOrders: number
+    cancelledOrders: number
     prepOrders: number
     avgPrepSeconds: number | null
     settlements: AnalyticsSettlementTotals

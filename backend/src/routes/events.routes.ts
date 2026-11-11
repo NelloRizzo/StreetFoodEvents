@@ -15,6 +15,7 @@ import {
     listEvents,
     updateEvent
 } from '../controllers/events.controller';
+import { compareEvents } from '../controllers/analytics.controller';
 import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.middleware';
 import { hasRole } from '../middlewares/role.middleware';
 import { asyncHandler } from '../utils/async-handler';
@@ -23,6 +24,7 @@ export const eventsRouter = Router();
 
 eventsRouter.get('/', asyncHandler(optionalAuthMiddleware), asyncHandler(listEvents));
 eventsRouter.get('/home', asyncHandler(authMiddleware), asyncHandler(homeEvents));
+eventsRouter.get('/compare', asyncHandler(authMiddleware), asyncHandler(compareEvents));
 eventsRouter.get('/:eventId', asyncHandler(optionalAuthMiddleware), asyncHandler(getEventById));
 eventsRouter.get('/:eventId/qrcode', asyncHandler(eventQrCode));
 eventsRouter.get('/:eventId/menu-qrcode', asyncHandler(eventMenuQrCode));

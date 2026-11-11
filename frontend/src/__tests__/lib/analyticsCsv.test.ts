@@ -76,6 +76,7 @@ function makeData(overrides: Partial<EventAnalytics> = {}): EventAnalytics {
       avgOrderValue: 20,
       distinctCustomers: 8,
       giftOrders: 1,
+    cancelledOrders: 0,
       prepOrders: 9,
       avgPrepSeconds: 150,
       settlements: {

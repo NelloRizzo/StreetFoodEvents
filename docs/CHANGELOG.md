@@ -4,6 +4,15 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Statistiche Avanzate Evento — miglioramenti (TODO 3).**
+  • Nuove metriche nella pagina «Analisi vendite»: ordini annullati con tasso di cancellazione, media articoli per scontrino, evidenziazione dell'ora di punta nel grafico «Vendite per ora» (barra evidenziata). Il totale annullati entra anche nel CSV (sezione Riepilogo) e nel tipo `EventAnalytics.totals`.
+  • Auto-refresh opzionale (toggle «Auto: ON/OFF», polling 30s) per tenere la dashboard aggiornata durante l'evento.
+  • Confronto tra eventi (opzione C): nuovo endpoint `GET /api/events/compare?ids=a,b` che restituisce il riepilogo completo di ciascun evento (finestra = intero evento) con controllo di accesso per-evento; nuova pagina `EventComparePage` (`/admin/events/compare`) con selezione di due eventi e tabella affiancata delle metriche (fatturato, ordini, clienti, prep, liquidazioni). Refactor: `buildEventAnalytics` estratto da `getEventAnalytics` per riuso.
+  • Feature A (tracciamento edizioni via `seriesKey`) registrata in TODO come lavoro futuro.
+  • Test frontend per `EventAnalyticsPage` (render con dati mockati, metriche e grafico).
+  • Backend: `GET /api/events/:eventId/analytics` espone ora `totals.cancelledOrders`. Suite analytics 29 test verdi, typecheck pulito (backend+frontend), build OK.
+  • Restano aperti (non urgenti): refactor del componente monolitico (975 righe) in sotto-componenti e unificazione delle pagine «Analisi vendite» + «Stima visitatori» in una pagina con tab.
+  • Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **Note del supervisore analizzate e chiuse (nessuna modifica).**
   • «Posso votare più foto in galleria»: comportamento by design — un «mi piace» per foto per dispositivo, lo stesso telefono può mettere il cuore su più foto (distinto dal voto del contest fotografico, che è uno per dispositivo per evento). Documentato in ARCHITECTURE.md.
   • «Lo slideshow riporta la votazione aggiornata?»: sì — lo slideshow fa polling ogni 2 minuti e ad ogni poll rilegge i rank dei contest (`fetchContestRanks`), calcolati lato server; le medaglie si aggiornano entro ~2 minuti da un nuovo voto.

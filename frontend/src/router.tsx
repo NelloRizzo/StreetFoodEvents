@@ -36,6 +36,7 @@ import { EventOrdersPage } from './pages/EventOrdersPage'
 import { EventReportPage } from './pages/EventReportPage'
 import { VisitorsEstimatePage } from './pages/VisitorsEstimatePage'
 import { EventAnalyticsPage } from './pages/EventAnalyticsPage'
+import { EventComparePage } from './pages/EventComparePage'
 import { EventGalleryPage } from './pages/EventGalleryPage'
 import { EventFlyerPage } from './pages/EventFlyerPage'
 import { PublicGalleryPage } from './pages/PublicGalleryPage'
@@ -162,6 +163,7 @@ export const router = createBrowserRouter([
       { path: 'events/:eventId/report', element: <EventReportPage /> },
       { path: 'events/:eventId/visitors', element: <VisitorsEstimatePage /> },
       { path: 'events/:eventId/analytics', element: <EventAnalyticsPage /> },
+      { path: 'events/compare', element: <EventComparePage /> },
       { path: 'events/:eventId/exchange', element: <EventExchangePage /> },
       { path: 'events/:eventId/cash-registers', element: <CashRegistersPage /> },
       { path: 'events/:eventId/settlements', element: <StandSettlementsPage /> },

@@ -294,6 +294,8 @@ export function EventAnalyticsPage() {
      ogni ora di ogni giorno, quindi senza questo filtro le stesse fasce
      orarie si ripetono una volta al giorno. */
   const [hourDayKey, setHourDayKey] = useState('')
+  /* Auto-refresh: tiene la dashboard aggiornata durante l'evento. */
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
   // L'elenco stand serve solo alla select: non va ripollato con i dati.
   useEffect(() => {
@@ -345,6 +347,12 @@ export function EventAnalyticsPage() {
 
   useEffect(() => { void load() }, [load])
 
+  useEffect(() => {
+    if (!autoRefresh) return
+    const id = window.setInterval(() => { void load() }, 30000)
+    return () => window.clearInterval(id)
+  }, [autoRefresh, load])
+
   /* I bucket arrivano uno per ogni ora di ogni giorno: per il grafico si
      accorpano per ora locale (somma dei giorni) oppure si isolano sul giorno
      scelto, così la stessa fascia non compare più volte. */
@@ -358,6 +366,11 @@ export function EventAnalyticsPage() {
     () => Math.max(1, ...hourlyBuckets.map((h) => h.orders)),
     [hourlyBuckets],
   )
+  /* Ora di punta: la fascia con più ordini, evidenziata nel grafico. */
+  const peakHour = useMemo(() => {
+    if (hourlyBuckets.length === 0) return null
+    return hourlyBuckets.reduce((best, b) => (b.orders > best.orders ? b : best), hourlyBuckets[0]!)
+  }, [hourlyBuckets])
   const maxBucketCount = useMemo(
     () => Math.max(1, ...(data?.prepBuckets ?? []).map((b) => b.count)),
     [data],
@@ -465,6 +478,14 @@ export function EventAnalyticsPage() {
             >
               Esporta CSV
             </button>
+            <button
+              type="button"
+              className={`${styles.secondaryBtn} ${autoRefresh ? styles.secondaryBtnActive : ''}`}
+              onClick={() => setAutoRefresh((v) => !v)}
+              title="Aggiorna automaticamente ogni 30 secondi"
+            >
+              {autoRefresh ? 'Auto: ON' : 'Auto: OFF'}
+            </button>
             <button type="button" className={styles.secondaryBtn} onClick={() => window.print()}>
               Stampa
             </button>
@@ -485,7 +506,13 @@ export function EventAnalyticsPage() {
           <div className={styles.card}>
             <div className={styles.cardTitle}>Ordini</div>
             <div className={styles.bigValue}>{totals.orders}</div>
-            <div className={styles.cardNote}>{totals.quantity} prodotti &middot; {totals.giftOrders} omaggi esclusi</div>
+            <div className={styles.cardNote}>
+             {totals.quantity} prodotti &middot; {totals.giftOrders} omaggi esclusi
+             {totals.cancelledOrders > 0 && (
+               <> &middot; {totals.cancelledOrders} annullati ({Math.round((totals.cancelledOrders / Math.max(1, totals.orders + totals.cancelledOrders)) * 100)}%)</>
+             )}
+             {totals.orders > 0 && <> &middot; {fmtNumber(totals.quantity / totals.orders)} art./scontrino</>}
+           </div>
           </div>
           <div className={styles.card}>
             <div className={styles.cardTitle}>Clienti distinti</div>
@@ -767,7 +794,7 @@ export function EventAnalyticsPage() {
                 <div key={bucket.hour} className={styles.chartCol}>
                   <span className={styles.chartValue}>{bucket.orders}</span>
                   <div
-                    className={styles.chartBar}
+                    className={`${styles.chartBar} ${peakHour && bucket.hour === peakHour.hour ? styles.chartBarPeak : ''}`}
                     style={{ height: `${Math.round((bucket.orders / maxHourOrders) * 100)}%` }}
                     title={`${formatHourKey(bucket.hour)} — ${bucket.orders} ordini, ${bucket.quantity} prodotti, ${fmtNumber(bucket.revenue)} ${data.currencyName}`}
                   />

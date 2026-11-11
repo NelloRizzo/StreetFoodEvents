@@ -199,6 +199,7 @@ export function buildAnalyticsCsv(data: EventAnalytics, scope: AnalyticsCsvScope
     ['Ordini', totals.orders],
     ['Prodotti venduti', totals.quantity],
     ['Omaggi esclusi', totals.giftOrders],
+    ['Ordini annullati', totals.cancelledOrders],
     ['Clienti distinti', totals.distinctCustomers],
     ['Scontrino medio (crediti)', num(totals.avgOrderValue)],
     ['Tempo medio di preparazione', duration(totals.avgPrepSeconds)],

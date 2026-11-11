@@ -149,30 +149,30 @@ function readLatLng(coords: number[] | null | undefined): { lat: number; lng: nu
  * evento italiano. Allineare il bucket in UTC e convertirlo solo per l'etichetta
  * evita anche doppioni alle transizioni DST.
  */
-export async function getEventAnalytics(req: Request, res: Response) {
-    const eventId = req.params.eventId;
+export async function buildEventAnalytics(eventId: string, fromRaw?: string, toRaw?: string, standIdRaw?: string) {
+
 
     if (!isValidObjectId(eventId)) {
-        return res.status(400).json({ message: 'Invalid event id' });
+        throw Object.assign(new Error('Invalid event id'), { status: 400 });
     }
 
     const event = await EventModel.findById(eventId)
         /* `denominations` serve per il confronto "token emessi" della card token. */
         .select('name currencyName currencySymbol exchangeRate startDate endDate denominations');
     if (!event) {
-        return res.status(404).json({ message: 'Event not found' });
+        throw Object.assign(new Error('Event not found'), { status: 404 });
     }
 
     const eventIdObj = new Types.ObjectId(eventId);
 
-    const { from, to } = resolveDateWindow(event, req.query.from as string | undefined, req.query.to as string | undefined);
+    const { from, to } = resolveDateWindow(event, fromRaw, toRaw);
 
     const baseMatch: Record<string, unknown> = {
         eventId: eventIdObj,
         createdAt: { $gte: from, $lte: to }
     };
 
-    const standIdQuery = req.query.standId as string | undefined;
+    const standIdQuery = standIdRaw;
     const standFilter: Record<string, unknown> = standIdQuery && isValidObjectId(standIdQuery)
         ? { standId: new Types.ObjectId(standIdQuery) }
         : {};
@@ -212,7 +212,7 @@ export async function getEventAnalytics(req: Request, res: Response) {
         getTokenSpentByProduct({ eventId: eventIdObj, from, to, standId: standFilterId })
     ]);
 
-    const [hourlyRows, topProductRows, byStandRows, prepBucketRows, customerRows, giftRows] = await Promise.all([
+    const [hourlyRows, topProductRows, byStandRows, prepBucketRows, customerRows, giftRows, cancelledRows] = await Promise.all([
         /* Distribuzione per ora: i bucket sono allineati sull'ora UTC. */
         OrderModel.aggregate([
             { $match: salesMatch },
@@ -291,6 +291,11 @@ export async function getEventAnalytics(req: Request, res: Response) {
         ]),
 OrderModel.aggregate([
             { $match: { ...baseMatch, ...standFilter, status: { $ne: 'cancelled' }, isGift: true } },
+            { $count: 'count' }
+        ]),
+        /* Ordini cancellati nella finestra: metrica di qualità del servizio. */
+        OrderModel.aggregate([
+            { $match: { ...baseMatch, ...standFilter, status: 'cancelled' } },
             { $count: 'count' }
         ])
     ]);
@@ -491,7 +496,7 @@ OrderModel.aggregate([
     const orderRevenue = byStand.reduce((sum, row) => sum + row.orderRevenue, 0);
     const payoutCredits = byStand.reduce((sum, row) => sum + row.payoutCredits, 0);
 
-    return res.status(200).json({
+    return {
         eventId,
         eventName: event.name,
         currencyName: event.currencyName,
@@ -512,6 +517,7 @@ OrderModel.aggregate([
             avgOrderValue: orders > 0 ? round1(revenue / orders) : 0,
             distinctCustomers: (customerRows[0]?.customers ?? []).filter((c: unknown) => c !== null).length,
             giftOrders: giftRows[0]?.count ?? 0,
+            cancelledOrders: cancelledRows[0]?.count ?? 0,
             prepOrders,
             avgPrepSeconds: prepOrders > 0 ? Math.round(prepSeconds / prepOrders) : null,
             /* Liquidazioni: sezione a parte, mai sommata al fatturato. I crediti
@@ -540,5 +546,73 @@ OrderModel.aggregate([
         byStand,
         tokens: { ...tokenLedger, issued: buildIssuedTokens(event, tokenLedger) },
         tokensByProduct: tokenByProduct.products
-    });
+    };
+}
+
+
+export async function getEventAnalytics(req: Request, res: Response) {
+    const eventId = req.params.eventId as string;
+    try {
+        const data = await buildEventAnalytics(
+            eventId,
+            req.query.from as string | undefined,
+            req.query.to as string | undefined,
+            req.query.standId as string | undefined,
+        );
+        return res.status(200).json(data);
+    } catch (err) {
+        const status = (err as { status?: number }).status ?? 500;
+        const message = (err as { message?: string }).message ?? 'Internal error';
+        return res.status(status).json({ message });
+    }
+}
+
+export async function compareEvents(req: Request, res: Response) {
+    const idsRaw = (req.query.ids as string | undefined) ?? '';
+    const ids = idsRaw.split(',').map((s) => s.trim()).filter(Boolean);
+    if (ids.length < 2) {
+        return res.status(400).json({ message: 'Servono almeno due eventi (ids=a,b)' });
+    }
+    if (ids.some((id) => !Types.ObjectId.isValid(id))) {
+        return res.status(400).json({ message: 'Invalid event id' });
+    }
+
+    const userId = req.user?.id;
+    let isPlatformAdmin = false;
+    if (userId) {
+        const { UserRoleModel } = await import('../models/user-role.model');
+        const roles = await UserRoleModel.find({ userId, isActive: true }).populate('roleId').lean();
+        isPlatformAdmin = roles.some((ur) => {
+            const role = ur.roleId as { scope?: string; slug?: string } | null;
+            return role?.scope === 'platform' && role?.slug === 'platform-admin';
+        });
+    }
+    if (!isPlatformAdmin) {
+        const { UserRoleModel } = await import('../models/user-role.model');
+        for (const id of ids) {
+            const hasAccess = await UserRoleModel.exists({
+                userId,
+                eventId: new Types.ObjectId(id),
+                isActive: true,
+            });
+            if (!hasAccess) {
+                return res.status(403).json({ message: 'Accesso negato a uno degli eventi' });
+            }
+        }
+    }
+
+    const results = [];
+    for (const id of ids) {
+        const event = await EventModel.findById(id).select('startDate endDate').lean();
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        const data = await buildEventAnalytics(
+            id,
+            event.startDate ? new Date(event.startDate).toISOString() : undefined,
+            event.endDate ? new Date(event.endDate).toISOString() : undefined,
+        );
+        results.push(data);
+    }
+    return res.status(200).json({ events: results });
 }
