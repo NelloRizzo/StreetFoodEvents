@@ -3,12 +3,19 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiRequest } from '../lib/api'
 import styles from './EventAnalyticsPage.module.scss'
 
+type CompareVisitors = {
+  productEstimated: number
+  tokenBasedEstimated: number | null
+  settlementBasedEstimated: number | null
+}
+
 type CompareEvent = {
   eventId: string
   eventName: string
   currencyName: string
   exchangeRate: number
   window: { from: string; to: string }
+  visitors?: CompareVisitors
   totals: {
     orders: number
     quantity: number
@@ -95,7 +102,15 @@ export function EventComparePage() {
     setError(null)
     try {
       const res = await apiRequest<{ events: CompareEvent[] }>(`/events/compare?ids=${a},${b}`)
-      setData(res.events)
+      const withVisitors = await Promise.all(res.events.map(async (e) => {
+        try {
+          const v = await apiRequest<{ totals: { productEstimated: number; tokenBasedEstimated: number | null; settlementBasedEstimated: number | null } }>(`/events/${e.eventId}/visitors`)
+          return { ...e, visitors: { productEstimated: v.totals.productEstimated, tokenBasedEstimated: v.totals.tokenBasedEstimated, settlementBasedEstimated: v.totals.settlementBasedEstimated } }
+        } catch {
+          return e
+        }
+      }))
+      setData(withVisitors)
     } catch {
       setError('Impossibile caricare il confronto.')
       setData(null)
@@ -124,6 +139,9 @@ export function EventComparePage() {
         { label: 'Lordo liquidazioni', get: (e) => `${fmtEuro(e.totals.settlements.grossEuro)} €` },
         { label: 'Da liquidare', get: (e) => `${fmt(e.totals.settlements.remainingEarnedCredits / (e.exchangeRate || 1))} €${ticketSuffix(e, e.totals.settlements.remainingEarnedCredits)}` },
         { label: 'Stand mai liquidati', get: (e) => String(e.totals.settlements.standsNeverSettled) },
+        { label: 'Stima visitatori (prodotti)', get: (e) => (e.visitors ? fmt(e.visitors.productEstimated) : '—') },
+        { label: 'Stima visitatori (token)', get: (e) => (e.visitors && e.visitors.tokenBasedEstimated !== null ? fmt(e.visitors.tokenBasedEstimated) : '—') },
+        { label: 'Stima visitatori (liquidazioni)', get: (e) => (e.visitors && e.visitors.settlementBasedEstimated !== null ? fmt(e.visitors.settlementBasedEstimated) : '—') },
       ]
     : []
 
