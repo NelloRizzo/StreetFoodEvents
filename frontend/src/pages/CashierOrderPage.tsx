@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 import { apiRequest } from '../lib/api'
-import { createOrder, fetchOrders, fetchGiftStats, updateOrderStatus, cancelOrder, type GiftStats, type Order } from '../lib/orders'
+import { createOrder, fetchOrders, fetchGiftStats, updateOrderStatus, cancelOrder, markItemReady, type GiftStats, type Order } from '../lib/orders'
 import type { AppliedCoupon } from '../lib/promotions'
 import { trackCashierOrderCreated, trackOrderStatusUpdate } from '../lib/analytics'
 import { QRScanner } from '../components/QRScanner'
@@ -85,6 +85,8 @@ export function CashierOrderPage() {
   const [successOrder, setSuccessOrder] = useState<Order | null>(null)
   const [showVoidPrompt, setShowVoidPrompt] = useState(false)
   const [activeOrders, setActiveOrders] = useState<Order[]>([])
+  const [queueOrders, setQueueOrders] = useState<Order[]>([])
+  const [queueOpen, setQueueOpen] = useState(false)
   const [giftStats, setGiftStats] = useState<GiftStats | null>(null)
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null)
 
@@ -157,18 +159,41 @@ export function CashierOrderPage() {
     } catch { /* ignore */ }
   }, [eventId, standId])
 
+  const loadStationQueue = useCallback(async () => {
+    if (!eventId || !standId) return
+    try {
+      const data = await fetchOrders({ eventId, standId, status: 'preparing' })
+      setQueueOrders([...data.items].sort((a, b) => a.orderNumber - b.orderNumber))
+    } catch { /* ignore */ }
+  }, [eventId, standId])
+
   useEffect(() => {
     void loadActiveOrders()
     const interval = setInterval(loadActiveOrders, 10000)
     return () => clearInterval(interval)
   }, [loadActiveOrders])
 
+  useEffect(() => {
+    void loadStationQueue()
+    const interval = setInterval(loadStationQueue, 5000)
+    return () => clearInterval(interval)
+  }, [loadStationQueue])
+
   const handleDeliver = async (orderId: string) => {
     try {
       await updateOrderStatus(orderId, 'completed')
       trackOrderStatusUpdate({ orderId, eventId, standId, toStatus: 'completed' })
       loadActiveOrders()
+      loadStationQueue()
     } catch { setAlertMsg('Errore durante la consegna') }
+  }
+
+  const handleItemReady = async (orderId: string, eventProductId: string) => {
+    try {
+      await markItemReady(orderId, eventProductId)
+      void loadStationQueue()
+      void loadActiveOrders()
+    } catch { /* ignore */ }
   }
 
   useEffect(() => {
@@ -515,6 +540,60 @@ ${qrHtml}
               <p className={styles.empty}>Nessun prodotto disponibile per questo stand.</p>
             )}
           </div>
+        </div>
+
+        <div className={styles.ordersPanel}>
+          <button
+            type="button"
+            className={styles.ordersTitle}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+            onClick={() => setQueueOpen((v) => !v)}
+          >
+            Code postazioni {queueOpen ? '▲' : '▼'}
+          </button>
+          {queueOpen && (
+            <div className={styles.ordersList}>
+              {stations.map((station) => {
+                const stationOrders = queueOrders.filter((o) =>
+                  o.items.some((i) => i.stationId === station.id && !i.ready),
+                )
+                if (stationOrders.length === 0) return null
+                return (
+                  <div key={station.id} className={styles.orderCard}>
+                    <div className={styles.orderCardHeader}>
+                      <span className={styles.orderNumber}>{station.name}</span>
+                    </div>
+                    {stationOrders.map((o) => (
+                      <div key={o.id} className={styles.orderCardItems}>
+                        <span className={styles.orderNumber}>#{o.orderNumber}</span>
+                        {o.items
+                          .filter((i) => i.stationId === station.id)
+                          .map((item, idx) => (
+                            <span
+                              key={idx}
+                              className={`${styles.orderItem} ${item.ready ? styles.orderItemReady : ''}`}
+                            >
+                              {item.quantity}x {item.productName}
+                              {item.ready ? (
+                                <span className={styles.doneBadge}>&#10003;</span>
+                              ) : (
+                                <button
+                                  className={styles.deliverBtn}
+                                  onClick={() => handleItemReady(o.id, item.eventProductId)}
+                                >
+                                  Pronto
+                                </button>
+                              )}
+                            </span>
+                          ))}
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+              {queueOrders.length === 0 && <p className={styles.empty}>Nessun prodotto in preparazione.</p>}
+            </div>
+          )}
         </div>
 
         {activeOrders.length > 0 && (
