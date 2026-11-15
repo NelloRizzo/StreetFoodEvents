@@ -4,6 +4,16 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Analisi vendite — ricavato nelle vendite per ora.**
+  • La card «Vendite per ora» mostra ora una tabella per fascia oraria con ordini, prodotti, ricavato in token e ricavato in € (oltre al grafico esistente); tooltip delle barre aggiornato.
+  • Export CSV «Analisi vendite»: sezione VENDITE PER ORA con colonna aggiuntiva «Ricavo (EUR)».
+  • Export CSV ordini (EventOrdersPage): tabella unica `Stand,Prodotto,Quantita,Omaggi,Ricavi (EUR),Data-ora ordine` (rimosso il riepilogo per stand), una riga per articolo d'ordine.
+  • Verifica: frontend build OK, 326 test verdi. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+- **Photo Booth — fotocamera clippata alla cornice.**
+  • Il box video assume il rapporto d'aspetto dell'immagine della cornice (`frame.image.width/height`) con `overflow: hidden` e `object-fit: cover`, così la camera non fuoriesce dalla cornice. Verifica: frontend build OK. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
+- **Cassa stand — pannello code postazioni.**
+  • Nuovo pannello collassabile «Code postazioni» nella cassa dello stand per segnare pronti i prodotti di tutte le postazioni (riusa `markItemReady`), polling 5s, in aggiunta al pannello «Ordini in corso» esistente.
+  • Verifica: frontend build OK. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **Statistiche Avanzate Evento — miglioramenti (TODO 3).**
   • Nuove metriche nella pagina «Analisi vendite»: ordini annullati con tasso di cancellazione, media articoli per scontrino, evidenziazione dell'ora di punta nel grafico «Vendite per ora» (barra evidenziata). Il totale annullati entra anche nel CSV (sezione Riepilogo) e nel tipo `EventAnalytics.totals`.
   • Auto-refresh opzionale (toggle «Auto: ON/OFF», polling 30s) per tenere la dashboard aggiornata durante l'evento.
