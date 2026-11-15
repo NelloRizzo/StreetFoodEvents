@@ -542,16 +542,24 @@ ${qrHtml}
           </div>
         </div>
 
+        {!queueOpen ? (
+          <button
+            type="button"
+            className={styles.secondaryBtn}
+            onClick={() => setQueueOpen(true)}
+          >
+            Code postazioni
+          </button>
+        ) : (
         <div className={styles.ordersPanel}>
           <button
             type="button"
             className={styles.ordersTitle}
             style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}
-            onClick={() => setQueueOpen((v) => !v)}
+            onClick={() => setQueueOpen(false)}
           >
-            Code postazioni {queueOpen ? '▲' : '▼'}
+            Code postazioni ▲
           </button>
-          {queueOpen && (
             <div className={styles.ordersList}>
               {stations.map((station) => {
                 const stationOrders = queueOrders.filter((o) =>
@@ -593,8 +601,8 @@ ${qrHtml}
               })}
               {queueOrders.length === 0 && <p className={styles.empty}>Nessun prodotto in preparazione.</p>}
             </div>
-          )}
         </div>
+        )}
 
         {activeOrders.length > 0 && (
           <div className={styles.ordersPanel}>
