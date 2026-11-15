@@ -393,7 +393,14 @@ export function PhotoBoothModal({ open, eventId, onClose }: Props) {
                 </select>
               </div>
             )}
-            <div className={styles.videoBox}>
+            <div
+              className={styles.videoBox}
+              style={
+                frame?.image?.width && frame?.image?.height
+                  ? { aspectRatio: `${frame.image.width} / ${frame.image.height}` }
+                  : undefined
+              }
+            >
               <video ref={videoRef} autoPlay playsInline muted className={styles.video} />
               {frame && (
                 <img src={frame.image.url} alt={frame.name} className={styles.frameOverlay} crossOrigin="anonymous" />
