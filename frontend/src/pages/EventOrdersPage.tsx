@@ -149,44 +149,33 @@ export function EventOrdersPage() {
     if (!eventId || !report) return
     const rate = report.exchangeRate || 1
     const eur = (n: number) => (n / rate).toFixed(2)
-    const stands = filterStandId
-      ? report.stands.filter((s) => s.standId === filterStandId)
-      : report.stands
-    const products = filterStandId
-      ? report.productQuantities.filter((p) => p.standId === filterStandId)
-      : report.productQuantities
+    const standNameOf = (id: string) => stands.find((s) => s.id === id)?.name ?? id
+
+    const rows = (filterStandId
+      ? orders.filter((o) => o.standId === filterStandId)
+      : orders
+    ).filter((o) => o.status !== 'cancelled')
 
     const lines: string[] = [
       `Resoconto incassi - ${report.eventName}`,
       `Periodo,${new Date(startDate + 'T00:00:00').toLocaleDateString('it-IT')} - ${new Date(endDate + 'T00:00:00').toLocaleDateString('it-IT')}`,
       ``,
-      `RIEPILOGO`,
-      `Stand,Ordini totali,Pagati,Omaggi,Lordo (EUR),Contanti (EUR),Crediti (EUR),Rimborsi (EUR),Ordini sospesi,Importo sospeso (EUR)`,
-      ...stands.map((s) => [
-        csvCell(s.standName),
-        s.totalOrders,
-        s.paidOrders,
-        s.giftOrders,
-        eur(s.totalRevenue),
-        eur(s.cashRevenue),
-        eur(s.creditRevenue),
-        eur(s.refundedAmount),
-        s.pendingOrders,
-        eur(s.pendingAmount),
-      ].join(',')),
-      ``,
-      `PRODOTTI VENDUTI`,
-      `Stand,Prodotto,Quantita,Omaggi,Ricavi (EUR)`,
-      ...products.map((p) => [
-        csvCell(p.standName),
-        csvCell(p.productName),
-        p.quantity,
-        p.giftQuantity,
-        eur(p.revenue),
-      ].join(',')),
+      `Stand,Prodotto,Quantita,Omaggi,Ricavi (EUR),Data-ora ordine`,
+      ...rows.flatMap((o) =>
+        o.items.map((item) => [
+          csvCell(standNameOf(o.standId)),
+          csvCell(item.productName),
+          item.quantity,
+          o.isGift ? item.quantity : 0,
+          o.isGift ? eur(0) : eur(item.subtotal),
+          o.createdAt,
+        ].join(','))
+      ),
     ]
 
-    const standSlug = filterStandId ? sanitizeFilename(stands[0]?.standName ?? 'stand') : 'tutti-gli-stand'
+    const standSlug = filterStandId
+      ? sanitizeFilename(standNameOf(filterStandId))
+      : 'tutti-gli-stand'
     downloadCsv(
       `incassi-${standSlug}-${sanitizeFilename(report.eventName)}-${startDate}-${endDate}.csv`,
       lines.join('\r\n'),

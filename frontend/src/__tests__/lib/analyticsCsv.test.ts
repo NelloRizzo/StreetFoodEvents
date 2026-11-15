@@ -219,13 +219,13 @@ describe('buildAnalyticsCsv', () => {
   it('accorpa le ore per giorno locale e rispetta il filtro giorno', () => {
     /* Due bucket alle 18:00 di due giorni diversi + una fascia alle 19:00. */
     const all = buildAnalyticsCsv(makeData(), scopeWith())
-    expect(all).toContain('18:00,5,10,75')
-    expect(all).toContain('19:00,1,1,5')
+    expect(all).toContain('18:00,5,10,75,37.50')
+    expect(all).toContain('19:00,1,1,5,2.50')
     expect(all).not.toContain('Giorno del grafico orario')
 
     const day = buildAnalyticsCsv(makeData(), scopeWith({ hourDayKey: '2026-10-02' }))
     expect(day).toContain('Giorno del grafico orario,2 ott')
-    expect(day).toContain('18:00,3,6,45')
+    expect(day).toContain('18:00,3,6,45,22.50')
     expect(day).toContain('19:00,1,1,5')
     /* Il giorno precedente non deve comparire nemmeno sommato. */
     expect(day).not.toContain('18:00,5')

@@ -264,14 +264,14 @@ export function buildAnalyticsCsv(data: EventAnalytics, scope: AnalyticsCsvScope
   /* ── Vendite per ora: stessa vista del grafico ───────────────────────── */
   rows.push('')
   rows.push('VENDITE PER ORA')
-  rows.push(csvRow('Ora', 'Ordini', 'Prodotti', `Ricavo (${cur})`))
+  rows.push(csvRow('Ora', 'Ordini', 'Prodotti', `Ricavo (${cur})`, 'Ricavo (EUR)'))
   const hourly = aggregateHourlyByHour(filterBucketsByDay(data.hourly, scope.hourDayKey || null))
   if (hourly.length === 0) {
     rows.push(csvRow(EMPTY_SECTION_ROW))
   } else {
     for (const bucket of hourly) {
       rows.push(
-        csvRow(formatHourKey(bucket.hour), bucket.orders, bucket.quantity, num(bucket.revenue)),
+        csvRow(formatHourKey(bucket.hour), bucket.orders, bucket.quantity, num(bucket.revenue), euro(bucket.revenue / rate)),
       )
     }
   }

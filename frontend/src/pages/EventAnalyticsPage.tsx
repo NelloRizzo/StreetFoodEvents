@@ -789,6 +789,7 @@ export function EventAnalyticsPage() {
           {hourlyBuckets.length === 0 ? (
             <p className={styles.empty}>Nessun ordine nel periodo.</p>
           ) : (
+            <> 
             <div className={styles.chart}>
               {hourlyBuckets.map((bucket) => (
                 <div key={bucket.hour} className={styles.chartCol}>
@@ -796,12 +797,44 @@ export function EventAnalyticsPage() {
                   <div
                     className={`${styles.chartBar} ${peakHour && bucket.hour === peakHour.hour ? styles.chartBarPeak : ''}`}
                     style={{ height: `${Math.round((bucket.orders / maxHourOrders) * 100)}%` }}
-                    title={`${formatHourKey(bucket.hour)} — ${bucket.orders} ordini, ${bucket.quantity} prodotti, ${fmtNumber(bucket.revenue)} ${data.currencyName}`}
+                    title={`${formatHourKey(bucket.hour)} — ${bucket.orders} ordini, ${bucket.quantity} prodotti, ${fmtNumber(bucket.revenue)} ${data.currencyName} (${fmtNumber(bucket.revenue / (data.exchangeRate || 1))} €)`}
                   />
                   <span className={styles.chartLabel}>{formatHourKey(bucket.hour)}</span>
                 </div>
               ))}
             </div>
+            <div className={styles.tableWrap} style={{ marginTop: '1rem' }}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Ora</th>
+                    <th className={styles.num}>Ordini</th>
+                    <th className={styles.num}>Prodotti</th>
+                    <th className={styles.num}>Ricavato ({data.currencyName})</th>
+                    <th className={styles.num}>Ricavato (&euro;)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hourlyBuckets.map((bucket) => (
+                    <tr key={bucket.hour}>
+                      <td>{formatHourKey(bucket.hour)}</td>
+                      <td className={styles.num}>{bucket.orders}</td>
+                      <td className={styles.num}>{bucket.quantity}</td>
+                      <td className={styles.num}>{fmtNumber(bucket.revenue)}</td>
+                      <td className={styles.num}>{fmtNumber(bucket.revenue / (data.exchangeRate || 1))}</td>
+                    </tr>
+                  ))}
+                  <tr className={styles.tableTotals}>
+                    <td>Totale</td>
+                    <td className={styles.num}>{hourlyBuckets.reduce((s, b) => s + b.orders, 0)}</td>
+                    <td className={styles.num}>{hourlyBuckets.reduce((s, b) => s + b.quantity, 0)}</td>
+                    <td className={styles.num}>{fmtNumber(hourlyBuckets.reduce((s, b) => s + b.revenue, 0))}</td>
+                    <td className={styles.num}>{fmtNumber(hourlyBuckets.reduce((s, b) => s + b.revenue, 0) / (data.exchangeRate || 1))}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            </>
           )}
         </div>
 
