@@ -24,7 +24,7 @@ export function EventFramesPage() {
         const eventRoles = data.roles.filter(
           (r) => r.scope === 'platform' || (r.scope === 'event' && r.eventId === eventId)
         )
-        const ok = data.isPlatformAdmin || eventRoles.some((r) => r.slug === 'photo-admin')
+        const ok = data.isPlatformAdmin || eventRoles.some((r) => r.slug === 'photo-admin' || r.slug === 'event-admin')
         if (!ok) {
           setForbidden(true)
           setLoading(false)

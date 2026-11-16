@@ -176,7 +176,7 @@ export function AdminSidebar({ isMobileOpen, onMobileClose, onSelectEvent }: Adm
               { label: 'Slideshow', to: `/events/${selectedEvent!.id}/slideshow`, external: true, icon: '\u{1F39E}' } as SidebarItem,
             ]
             : []),
-          ...(isPlatformAdmin
+          ...(isPlatformAdmin || canManagePhotos
             ? [{ label: 'Cornici', to: '/admin/frames', icon: '\u{1F5BC}' } as SidebarItem]
             : []),
           ...(isPlatformAdmin
