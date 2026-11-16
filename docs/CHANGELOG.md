@@ -4,6 +4,10 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Cornici evento — permessi allineati.**
+  • `EventFramesPage` («Cornici Evento») ammette ora anche l'`event-admin` (prima richiedeva `photo-admin`), coerente con la sidebar che la mostrava già agli admin evento e con il `PATCH` evento consentito agli admin evento: un admin evento può finalmente impostare la cornice di default del proprio evento tra quelle globali disponibili.
+  • La voce «Cornici» (pagina globale di caricamento) nella sidebar è ora visibile anche ai `photo-admin` (`canManagePhotos`), non solo ai `platform-admin`, così chi gestisce le foto può caricare/eliminare cornici senza conoscere l'URL.
+  • Verifica: frontend build OK. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **Analisi vendite — ricavato nelle vendite per ora.**
   • La card «Vendite per ora» mostra ora una tabella per fascia oraria con ordini, prodotti, ricavato in token e ricavato in € (oltre al grafico esistente); tooltip delle barre aggiornato.
   • Export CSV «Analisi vendite»: sezione VENDITE PER ORA con colonna aggiuntiva «Ricavo (EUR)».
