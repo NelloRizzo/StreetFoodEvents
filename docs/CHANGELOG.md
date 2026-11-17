@@ -4,6 +4,9 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Ordini — pagamento in token senza wallet collegato.**
+  • Creando un ordine con pagamento in crediti, se il cliente (o l'ordine diretto) non è collegato all'evento, l'operatore autorizzato (platform/event cashier o ruolo stand) può comunque pagare in token come crediti amministrativi, senza errore «User is not linked to this event».
+  • Verifica: backend typecheck OK, 35 test ordini verdi. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **Cassa — pagamento in token con contanti disabilitati.**
   • Quando un evento ha «Pagamenti in contanti» disabilitati, le casse (stand, evento, menu pubblico) forzano il pagamento in crediti evento: il checkbox «Paga con crediti» viene bloccato su attivo, l'importo crediti viene impostato sul totale e il campo diventa di sola lettura, così l'ordine non può essere creato «da pagare» in contanti.
   • Verifica: frontend build OK, 326 test verdi. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
