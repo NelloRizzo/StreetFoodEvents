@@ -556,7 +556,7 @@ ${qrHtml}
         {!queueOpen ? (
           <button
             type="button"
-            className={styles.secondaryBtn}
+            className={styles.queueToggle}
             onClick={() => setQueueOpen(true)}
           >
             Code postazioni

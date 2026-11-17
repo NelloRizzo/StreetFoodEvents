@@ -227,6 +227,28 @@
   gap: 0.15em;
 }
 
+/* ── Toggle verticale per il pannello code postazioni (chiuso) ── */
+.queueToggle {
+  align-self: flex-start;
+  margin: 0.5rem 0.25rem;
+  padding: 0.75rem 0.4rem;
+  background: #0f3460;
+  color: #4caf50;
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.queueToggle:hover {
+  background: #1a3a6e;
+}
+
 /* ── Active orders panel ── */
 .ordersPanel {
   width: 260px;
