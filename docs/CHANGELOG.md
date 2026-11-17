@@ -4,6 +4,9 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Cassa stand — pannello code postazioni chiuso.**
+  • L'etichetta «Code postazioni» quando il pannello è chiuso è ora verticale, allineata in alto e con sfondo/bordo dedicato, invece di essere centrata senza stile.
+  • Verifica: frontend build OK, 326 test verdi. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **Ordini — pagamento in token senza wallet collegato.**
   • Creando un ordine con pagamento in crediti, se il cliente (o l'ordine diretto) non è collegato all'evento, l'operatore autorizzato (platform/event cashier o ruolo stand) può comunque pagare in token come crediti amministrativi, senza errore «User is not linked to this event».
   • Verifica: backend typecheck OK, 35 test ordini verdi. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
