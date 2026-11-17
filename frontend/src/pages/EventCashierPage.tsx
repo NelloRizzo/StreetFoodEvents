@@ -70,6 +70,8 @@ export function EventCashierPage() {
 
   const [eventName, setEventName] = useState('')
   const [eventCurrency, setEventCurrency] = useState<{ currencyName: string; currencySymbol: UploadedImage | null } | null>(null)
+  const [cashPaymentsEnabled, setCashPaymentsEnabled] = useState(true)
+  const [unifiedCashierEnabled, setUnifiedCashierEnabled] = useState(false)
   const [forbidden, setForbidden] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [stands, setStands] = useState<StandInfo[]>([])
@@ -105,6 +107,13 @@ export function EventCashierPage() {
   const total = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
 
   useEffect(() => {
+    if (!cashPaymentsEnabled && !unifiedCashierEnabled) {
+      setPayWithCredits(true)
+      setCreditAmount(total)
+    }
+  }, [cashPaymentsEnabled, unifiedCashierEnabled, total])
+
+  useEffect(() => {
     if (!eventId) return
 
     const init = async () => {
@@ -115,12 +124,14 @@ export function EventCashierPage() {
         )
         if (!hasAccess) { setForbidden(true); setIsLoading(false); return }
 
-        const eventData = await apiRequest<{ item: { name: string; currencyName: string; currencySymbol: UploadedImage | null } }>(`/events/${eventId}`)
+        const eventData = await apiRequest<{ item: { name: string; currencyName: string; currencySymbol: UploadedImage | null; cashPaymentsEnabled?: boolean; unifiedCashierEnabled?: boolean } }>(`/events/${eventId}`)
         setEventName(eventData.item.name)
         setEventCurrency({
           currencyName: eventData.item.currencyName,
           currencySymbol: eventData.item.currencySymbol,
         })
+        setCashPaymentsEnabled(eventData.item.cashPaymentsEnabled ?? true)
+        setUnifiedCashierEnabled(eventData.item.unifiedCashierEnabled ?? false)
 
         const standsData = await apiRequest<{ items: StandInfo[] }>(`/stands?eventId=${eventId}`)
         setStands(standsData.items)
@@ -585,14 +596,14 @@ ${qrHtml}
                 {!isGift && (
                   <div className={styles.paymentOptions}>
                     <label className={styles.checkbox}>
-                      <input type="checkbox" checked={payWithCredits} onChange={(e) => setPayWithCredits(e.target.checked)} />
+                      <input type="checkbox" checked={payWithCredits} disabled={cashPaymentsEnabled === false && !unifiedCashierEnabled} onChange={(e) => setPayWithCredits(e.target.checked)} />
                       Paga con crediti evento
                     </label>
                     <label className={styles.checkbox}>
-                      <input type="checkbox" checked={isPos} onChange={(e) => setIsPos(e.target.checked)} />
+                      <input type="checkbox" checked={isPos} disabled={cashPaymentsEnabled === false && !unifiedCashierEnabled} onChange={(e) => setIsPos(e.target.checked)} />
                       Incassa col POS (carta)
                     </label>
-                    {payWithCredits && total > 0 && (
+                    {(cashPaymentsEnabled === false && !unifiedCashierEnabled ? true : payWithCredits) && total > 0 && (
                       <div className={styles.creditField}>
                         <label>Crediti</label>
                         <input
@@ -601,7 +612,8 @@ ${qrHtml}
                           max={total}
                           step={0.01}
                           value={creditAmount}
-                          onChange={(e) => setCreditAmount(Number(e.target.value))}
+                          disabled={cashPaymentsEnabled === false && !unifiedCashierEnabled}
+                              onChange={(e) => setCreditAmount(Number(e.target.value))}
                         />
                         {creditAmount < total && (
                           <span className={styles.remainingHint}>

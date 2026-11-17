@@ -65,6 +65,8 @@ export function CashierOrderPage() {
 
   const [eventName, setEventName] = useState('')
   const [eventCurrency, setEventCurrency] = useState<{ currencyName: string; currencySymbol: UploadedImage | null } | null>(null)
+  const [cashPaymentsEnabled, setCashPaymentsEnabled] = useState(true)
+  const [unifiedCashierEnabled, setUnifiedCashierEnabled] = useState(false)
   const [standName, setStandName] = useState('')
   const [forbidden, setForbidden] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -100,6 +102,13 @@ export function CashierOrderPage() {
 
   const total = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
 
+  useEffect(() => {
+    if (!cashPaymentsEnabled && !unifiedCashierEnabled) {
+      setPayWithCredits(true)
+      setCreditAmount(total)
+    }
+  }, [cashPaymentsEnabled, unifiedCashierEnabled, total])
+
   const loadGiftStats = useCallback(async () => {
     if (!eventId || !standId) return
     try {
@@ -118,7 +127,7 @@ export function CashierOrderPage() {
         setStandName(stand.name)
 
         const [eventData, stationData, epData, usersData] = await Promise.all([
-          apiRequest<{ item: { name: string; currencyName: string; currencySymbol: UploadedImage | null } }>(`/events/${eventId}`),
+          apiRequest<{ item: { name: string; currencyName: string; currencySymbol: UploadedImage | null; cashPaymentsEnabled?: boolean; unifiedCashierEnabled?: boolean } }>(`/events/${eventId}`),
           apiRequest<{ items: Station[] }>(`/stations?standId=${standId}`),
           apiRequest<{ items: EventProduct[] }>(`/event-products?eventId=${eventId}&standId=${standId}`),
           apiRequest<{ items: User[] }>('/users'),
@@ -129,6 +138,8 @@ export function CashierOrderPage() {
           currencyName: eventData.item.currencyName,
           currencySymbol: eventData.item.currencySymbol,
         })
+        setCashPaymentsEnabled(eventData.item.cashPaymentsEnabled ?? true)
+        setUnifiedCashierEnabled(eventData.item.unifiedCashierEnabled ?? false)
         setStations(stationData.items)
         if (stationData.items.length > 0) setActiveStationId(stationData.items[0].id)
         setUsers(usersData.items)
@@ -710,15 +721,19 @@ ${qrHtml}
 
               {!isGift && (
                 <div className={styles.paymentOptions}>
-                  <label className={styles.checkbox}>
-                    <input type="checkbox" checked={payWithCredits} onChange={(e) => setPayWithCredits(e.target.checked)} />
-                    Paga con crediti evento
-                  </label>
-                  <label className={styles.checkbox}>
-                    <input type="checkbox" checked={isPos} onChange={(e) => setIsPos(e.target.checked)} />
-                    Incassa col POS (carta)
-                  </label>
-                  {payWithCredits && total > 0 && (
+                  {!(cashPaymentsEnabled === false && !unifiedCashierEnabled) && (
+                    <label className={styles.checkbox}>
+                      <input type="checkbox" checked={payWithCredits} onChange={(e) => setPayWithCredits(e.target.checked)} />
+                      Paga con crediti evento
+                    </label>
+                  )}
+                  {!(cashPaymentsEnabled === false && !unifiedCashierEnabled) && (
+                    <label className={styles.checkbox}>
+                      <input type="checkbox" checked={isPos} onChange={(e) => setIsPos(e.target.checked)} />
+                      Incassa col POS (carta)
+                    </label>
+                  )}
+                  {(cashPaymentsEnabled === false && !unifiedCashierEnabled ? true : payWithCredits) && total > 0 && (
                     <div className={styles.creditField}>
                       <label>Crediti</label>
                       <input
@@ -727,6 +742,7 @@ ${qrHtml}
                         max={total}
                         step={0.01}
                         value={creditAmount}
+                        disabled={cashPaymentsEnabled === false && !unifiedCashierEnabled}
                         onChange={(e) => setCreditAmount(Number(e.target.value))}
                       />
                       {creditAmount < total && (

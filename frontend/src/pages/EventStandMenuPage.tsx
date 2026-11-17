@@ -67,6 +67,8 @@ type Event = {
   currencyName: string
   currencySymbol: UploadedImage | null
   exchangeRate: number | null
+  cashPaymentsEnabled: boolean
+  unifiedCashierEnabled: boolean
   themeBrand: string | null
   themeText: string | null
   themeSurface: string | null
@@ -142,6 +144,16 @@ export function EventStandMenuPage() {
   const [reviewAvg, setReviewAvg] = useState<{ avg: number; count: number } | null>(null)
 
   const total = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
+
+  /* Se i pagamenti in contanti sono disabilitati (e non c'e' cassa unica),
+     il pagamento deve avvenire interamente in crediti evento: si forza la
+     modalita' crediti e si azzera il residuo in contanti. */
+  useEffect(() => {
+    if (event && event.cashPaymentsEnabled === false && !event.unifiedCashierEnabled) {
+      setPayWithCredits(true)
+      setCreditAmount(total)
+    }
+  }, [event, total])
 
   /* Il link breve dello stand si ricava da quello dell'evento piu' il nome
      dello stand: non si crea un alias a parte. L'alias esplicito, se esiste
@@ -732,15 +744,17 @@ export function EventStandMenuPage() {
                     </div>
 
                     <div className={styles.paymentOptions}>
-                      <label className={styles.checkbox}>
-                        <input
-                          type="checkbox"
-                          checked={payWithCredits}
-                          onChange={(e) => setPayWithCredits(e.target.checked)}
-                        />
-                        Paga con crediti wallet
-                      </label>
-                      {payWithCredits && total > 0 && (
+                      {!(event && event.cashPaymentsEnabled === false && !event.unifiedCashierEnabled) && (
+                        <label className={styles.checkbox}>
+                          <input
+                            type="checkbox"
+                            checked={payWithCredits}
+                            onChange={(e) => setPayWithCredits(e.target.checked)}
+                          />
+                          Paga con crediti wallet
+                        </label>
+                      )}
+                      {(event && event.cashPaymentsEnabled === false && !event.unifiedCashierEnabled ? true : payWithCredits) && total > 0 && (
                         <div className={styles.creditField}>
                           <label>Crediti da usare</label>
                           <input
@@ -749,6 +763,7 @@ export function EventStandMenuPage() {
                             max={total}
                             step={0.01}
                             value={creditAmount}
+                            disabled={event && event.cashPaymentsEnabled === false && !event.unifiedCashierEnabled}
                             onChange={(e) => setCreditAmount(Number(e.target.value))}
                           />
                           {creditAmount < total && (
