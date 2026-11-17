@@ -89,6 +89,7 @@ export function CashierOrderPage() {
   const [activeOrders, setActiveOrders] = useState<Order[]>([])
   const [queueOrders, setQueueOrders] = useState<Order[]>([])
   const [queueOpen, setQueueOpen] = useState(false)
+  const [activeOrdersOpen, setActiveOrdersOpen] = useState(true)
   const [giftStats, setGiftStats] = useState<GiftStats | null>(null)
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null)
 
@@ -615,9 +616,25 @@ ${qrHtml}
         </div>
         )}
 
-        {activeOrders.length > 0 && (
+        {activeOrders.length > 0 && !activeOrdersOpen && (
+          <button
+            type="button"
+            className={styles.queueToggle}
+            onClick={() => setActiveOrdersOpen(true)}
+          >
+            Ordini in corso
+          </button>
+        )}
+        {activeOrders.length > 0 && activeOrdersOpen && (
           <div className={styles.ordersPanel}>
-            <h2 className={styles.ordersTitle}>Ordini in corso</h2>
+            <button
+              type="button"
+              className={styles.ordersTitle}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+              onClick={() => setActiveOrdersOpen(false)}
+            >
+              Ordini in corso ▲
+            </button>
             <div className={styles.ordersList}>
               {activeOrders.map((o) => {
                 return (
