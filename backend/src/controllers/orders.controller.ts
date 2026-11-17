@@ -731,28 +731,42 @@ export async function createOrder(req: Request, res: Response) {    if (!req.use
                 }).session(session);
 
                 if (!eventUser) {
-                    throw new Error('User is not linked to this event');
+                    const userId = new Types.ObjectId(req.user.id);
+                    const platformAdminRole = await RoleModel.findOne({ slug: 'platform-admin', scope: 'platform' });
+                    const eventCashierRole = await RoleModel.findOne({ slug: 'event-cashier', scope: 'event' });
+
+                    const hasPlatformAdmin = platformAdminRole
+                        ? !!(await UserRoleModel.findOne({ userId, roleId: platformAdminRole._id, isActive: true }).session(session))
+                        : false;
+                    const hasEventCashier = eventCashierRole
+                        ? !!(await UserRoleModel.findOne({ userId, roleId: eventCashierRole._id, eventId, isActive: true }).session(session))
+                        : false;
+                    const hasStandRole = !!(await UserRoleModel.findOne({ userId, standId, isActive: true }).session(session));
+
+                    if (!hasPlatformAdmin && !hasEventCashier && !hasStandRole) {
+                        throw new Error('User is not linked to this event');
+                    }
+                } else {
+                    if (!eventUser.isActive) {
+                        throw new Error('User is not active for this event');
+                    }
+
+                    if (eventUser.balance < creditAmount) {
+                        throw new Error('Insufficient event currency balance');
+                    }
+
+                    const txnResult = await createEventUserTransaction({
+                        eventUserId: eventUser._id,
+                        type: 'purchase',
+                        direction: 'debit',
+                        amount: creditAmount,
+                        description: `Ordine #${orderItems.length} articoli presso lo stand`,
+                        performedByUserId: req.user.id,
+                        session
+                    });
+
+                    paymentTransactionId = txnResult.transaction._id as Types.ObjectId;
                 }
-
-                if (!eventUser.isActive) {
-                    throw new Error('User is not active for this event');
-                }
-
-                if (eventUser.balance < creditAmount) {
-                    throw new Error('Insufficient event currency balance');
-                }
-
-                const txnResult = await createEventUserTransaction({
-                    eventUserId: eventUser._id,
-                    type: 'purchase',
-                    direction: 'debit',
-                    amount: creditAmount,
-                    description: `Ordine #${orderItems.length} articoli presso lo stand`,
-                    performedByUserId: req.user.id,
-                    session
-                });
-
-                paymentTransactionId = txnResult.transaction._id as Types.ObjectId;
             }
         }
 
