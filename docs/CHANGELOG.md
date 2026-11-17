@@ -4,6 +4,9 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Gestione prodotti — pulsante Copia.**
+  • Nella pagina «Prodotti» ogni card ha ora un pulsante «Copia» che crea un nuovo prodotto con le stesse caratteristiche e descrizioni (nome, descrizione, ingredienti, allergeni, congelato, prezzo, immagine di copertina e galleria) di quello selezionato; l'elenco viene ricaricato dopo la creazione.
+  • Verifica: frontend build OK, 326 test verdi. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **Cornici evento — permessi allineati.**
   • `EventFramesPage` («Cornici Evento») ammette ora anche l'`event-admin` (prima richiedeva `photo-admin`), coerente con la sidebar che la mostrava già agli admin evento e con il `PATCH` evento consentito agli admin evento: un admin evento può finalmente impostare la cornice di default del proprio evento tra quelle globali disponibili.
   • La voce «Cornici» (pagina globale di caricamento) nella sidebar è ora visibile anche ai `photo-admin` (`canManagePhotos`), non solo ai `platform-admin`, così chi gestisce le foto può caricare/eliminare cornici senza conoscere l'URL.

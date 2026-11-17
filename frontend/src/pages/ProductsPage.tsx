@@ -151,6 +151,25 @@ export function ProductsPage() {
     await fetchProducts()
   }
 
+  const handleCopy = async (product: Product) => {
+    /* Duplica il prodotto con le stesse caratteristiche e descrizioni:
+       il backend crea un nuovo record, l'elenco viene ricaricato dopo. */
+    await apiRequest('/products', {
+      method: 'POST',
+      bodyJson: {
+        name: product.name,
+        description: product.description,
+        ingredients: product.ingredients,
+        allergens: product.allergens,
+        isFrozen: product.isFrozen,
+        price: product.price,
+        coverImage: product.coverImage,
+        gallery: product.gallery,
+      },
+    })
+    await fetchProducts()
+  }
+
   const handleDelete = async (id: string) => {
     setDeleteTarget(id)
   }
@@ -307,6 +326,9 @@ export function ProductsPage() {
               <div className={styles.cardActions}>
                 <button className={styles.textBtn} onClick={() => openEdit(product)}>
                   Modifica
+                </button>
+                <button className={styles.textBtn} onClick={() => handleCopy(product)}>
+                  Copia
                 </button>
                 <button className={styles.dangerBtn} onClick={() => handleDelete(product.id)}>
                   Elimina
