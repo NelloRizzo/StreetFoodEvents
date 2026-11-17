@@ -4,6 +4,9 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Cassa — pagamento in token con contanti disabilitati.**
+  • Quando un evento ha «Pagamenti in contanti» disabilitati, le casse (stand, evento, menu pubblico) forzano il pagamento in crediti evento: il checkbox «Paga con crediti» viene bloccato su attivo, l'importo crediti viene impostato sul totale e il campo diventa di sola lettura, così l'ordine non può essere creato «da pagare» in contanti.
+  • Verifica: frontend build OK, 326 test verdi. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **Gestione prodotti — pulsante Copia.**
   • Nella pagina «Prodotti» ogni card ha ora un pulsante «Copia» che crea un nuovo prodotto con le stesse caratteristiche e descrizioni (nome, descrizione, ingredienti, allergeni, congelato, prezzo, immagine di copertina e galleria) di quello selezionato; l'elenco viene ricaricato dopo la creazione.
   • Verifica: frontend build OK, 326 test verdi. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
