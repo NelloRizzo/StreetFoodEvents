@@ -4,6 +4,9 @@ Changelog del mese corrente (in ordine cronologico).
 Le voci piu vecchie sono archiviate in CHANGELOG_ANNUALE.md (storico, non in ordine cronologico).
 
 ## Novembre 2026
+- **Cassa stand — pannello ordini in corso chiudibile.**
+  • Il pannello «Ordini in corso» può ora essere chiuso (freccia ▲) e riaperto tramite l'etichetta verticale a lato, come il pannello «Code postazioni».
+  • Verifica: frontend build OK, 326 test verdi. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
 - **Cassa stand — pannello code postazioni chiuso.**
   • L'etichetta «Code postazioni» quando il pannello è chiuso è ora verticale, allineata in alto e con sfondo/bordo dedicato, invece di essere centrata senza stile.
   • Verifica: frontend build OK, 326 test verdi. Solo file cloud: **nessuna rigenerazione di `distro/local-app.tar` necessaria**.
